@@ -1,7 +1,7 @@
 # Trạng thái dự án
 
 > File này là "bộ nhớ" giữa các phiên. Đọc đầu tiên, cập nhật cuối cùng.
-> Cập nhật lần cuối: 2026-09-29 15:30 (phiên Claude, PC — nút "TRAIN THE AI" trong trình xem).
+> Cập nhật lần cuối: 2026-09-29 16:30 (phiên Claude, PC — train tự hồi phục khi crash, nút Power).
 
 ## Hướng đi
 
@@ -44,7 +44,11 @@
     Ctrl+C để lưu). Hiện bước, reward, số zombie, biểu đồ reward. Đóng game = dừng + lưu.
     Code: `TrainingServiceClient.cs`, `ArenaHud` (panel), `AiArenaController`. Hướng dẫn:
     `docs/TRAINING.md` mục 4.
-  - Test: Unity EditMode 29/29, CoreTests 58/58, pytest trainer 25/25.
+  - **Train bền + nút Power (feature/train-power, D-021):** mlagents crash thì service tự chạy lại
+    từ checkpoint (2 lần crash nhanh → CPU); lỗi service ghi `training_service.err.log` và hiện
+    lên bảng. Nút Power LIGHT/NORMAL/FAST/MAX = 32/64/128/256 arena cùng lúc (mặc định FAST,
+    MAX ~2 lần nhanh hơn mức cũ). Bảng đo ở `docs/TRAINING.md` mục 4.
+  - Test: Unity EditMode 32/32, CoreTests 58/58, pytest trainer 34/34.
   - **Smoke training 5 phút trên GPU:** mean reward −0.01 → 15.4, curriculum tự lên 2 zombie.
     AI học được thật; pipeline chạy đầu-cuối.
 
@@ -59,7 +63,8 @@
 | M2: trình xem AI chơi (T-010) | xong (`Xem-AI.cmd`) |
 | Đồ họa KayKit + hoạt ảnh cho trình xem AI | xong (D-018) |
 | Nút train trong trình xem AI | xong (D-020) — đã thử bật, dừng, đóng game: đều lưu êm |
-| M2: training thật, curriculum lên 16 zombie | `warrior-001` dừng ở 9.87M bước (reward ~130 ở 16 zombie trước khi đổi sang nút). Owner tự train tiếp bằng nút |
+| Train tự hồi phục khi crash + nút Power | xong (D-021) — đã thử đổi FAST→MAX lúc đang train: lưu + chạy lại trong 1 s |
+| M2: training thật, curriculum lên 16 zombie | `warrior-001` đang train ở mức MAX (10.5M bước lúc 16:22). Curriculum đang ở bài 1 zombie (mất khi kill cứng ở 9.5M, các phiên sau quá ngắn để leo lại) — cứ train liên tục là tự lên |
 | M2: ghi demo chơi tay → BC/GAIL | **chưa** |
 
 ## Việc tiếp theo (theo thứ tự)
@@ -95,6 +100,20 @@
   trước khi phát hành để đảm bảo game không gọi mạng.
 
 ## Nhật ký phiên (mới nhất trên cùng)
+
+### 2026-09-29 15:30–16:30 — Claude (PC): train "tự tắt", nút Power
+- Owner báo bấm TRAIN thì vài giây sau tự tắt. Nguyên nhân tìm được: mlagents crash `0xC0000409`
+  trong `nvcuda64.dll` ~7 s sau khi khởi động (1 lần trong 10 ngày log, chạy lại thì ổn), và giao
+  diện chỉ hiện "Stopped" khi service thoát nhanh (lỗi bị che bởi status cũ). Các lần STOP bằng
+  script trong lúc Claude test cũng trông như "tự tắt".
+- Sửa: service tự chạy lại từ checkpoint (tối đa 5, CPU sau 2 crash nhanh), ghi lỗi vào
+  `training_service.err.log`, viewer hiện lỗi khi service thoát sớm (`LaunchFailure`). Service
+  mới chờ tối đa 15 s cho service cũ nhả lock (đổi Power = dừng rồi chạy lại ngay).
+- Owner muốn train nhiều con cùng lúc → đo 13 cấu hình (bảng ở TRAINING.md), thêm nút Power.
+  "View speed" chỉ là tốc độ xem.
+- Kiểm trên bản build: TRAIN ở FAST (128 arena) chạy; đổi sang MAX khi đang train → lưu 10,220,014
+  và chạy lại 256 arena sau 1 s. pytest 34/34, EditMode 32/32. Để `warrior-001` train tiếp ở MAX.
+- Lưu ý khi lái viewer bằng script: cú click đầu vào cửa sổ chưa focus có thể bị nuốt → click lại.
 
 ### 2026-09-29 15:00–15:30 — Claude (PC): nút "TRAIN THE AI"
 - Owner không muốn phải nhờ Claude mỗi lần train → thêm service train chạy ngầm + bảng TRAINING

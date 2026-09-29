@@ -85,6 +85,37 @@ namespace PersonalArena.View.Tests
         }
 
         [Test]
+        public void LaunchFailure_IsNotHiddenByAnOlderFinalStatus()
+        {
+            DateTime launched = Now.AddSeconds(-5);
+
+            Assert.That(TrainingServiceClient.LaunchFailure(1, Status("stopped", 600), launched), Does.Contain("closed right away"));
+            Assert.That(TrainingServiceClient.LaunchFailure(3, null, launched), Does.Contain("already running"));
+            // The service explained itself after this launch.
+            Assert.That(TrainingServiceClient.LaunchFailure(1, Status("error", 1), launched), Is.Null);
+        }
+
+        [Test]
+        public void Power_BecomesServiceArguments()
+        {
+            TrainingPower power = new TrainingPower("FAST", 8, 16, 20f);
+
+            Assert.That(power.Fighters, Is.EqualTo(128));
+            Assert.That(power.Arguments(), Is.EqualTo(" --num-envs 8 --arena-agents 16 --time-scale 20.0"));
+        }
+
+        [Test]
+        public void Parse_ReadsThePowerFields()
+        {
+            TrainingStatus status = TrainingStatus.Parse(
+                "{\"state\": \"training\", \"num_envs\": 8, \"arena_agents\": 32, \"cpu\": true}");
+
+            Assert.That(status.num_envs, Is.EqualTo(8));
+            Assert.That(status.arena_agents, Is.EqualTo(32));
+            Assert.That(status.cpu, Is.True);
+        }
+
+        [Test]
         public void Paths_AreResolvedFromTheRunsFolder()
         {
             string runs = Path.Combine(Path.GetTempPath(), "PA-Root", "Trainer", "runs");

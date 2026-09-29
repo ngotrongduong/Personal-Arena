@@ -80,6 +80,31 @@ Từ gốc repo (`C:\PersonalArena`, nơi có `.venv-ml`):
   (dừng: tạo file `Trainer/runs/training_service.stop`).
 - **Đừng kill cứng** mlagents: checkpoint `.pt` vẫn còn nhưng tiến độ curriculum
   (`run_logs/training_status.json`) chỉ được lưu khi dừng êm → lần sau quay lại bài 1 zombie.
+- **Nút Power** (dưới nút train, D-021): bấm để đổi mức LIGHT / NORMAL / FAST / MAX = số game ẩn
+  × số warrior mỗi game (xem bảng đo bên dưới). Đổi lúc đang train → service lưu, dừng êm rồi tự
+  chạy lại với mức mới. Mức được nhớ giữa các lần mở. "View speed x1/x2/x4" (`Space`) chỉ là tốc
+  độ **xem**, không ảnh hưởng tốc độ train.
+- **Tự chạy lại khi crash** (D-021): nếu mlagents chết bất ngờ (ví dụ lỗi driver GPU
+  `0xC0000409` trong `nvcuda64.dll`), service tự tiếp tục từ checkpoint cuối, tối đa 5 lần liên
+  tiếp; crash nhanh 2 lần liền → chuyển sang train bằng CPU. Chạy êm ≥10 phút thì đếm lại từ 0.
+- Service lỗi thì bảng hiện chữ đỏ và ghi chi tiết vào `Trainer/runs/training_service.err.log`.
+- Tham số service: `--num-envs N --arena-agents M --time-scale T [--torch-device cpu]`.
+
+Số đo trên PC của owner (RTX 4070 Ti, 2026-09-29, mỗi mức ~110 s, dao động ±30%):
+
+| Game ẩn × arena mỗi game | time-scale | bước/giây | Mức |
+|---|---|---|---|
+| 2 × 16 = 32 | 20 | (chưa đo) | LIGHT — nhẹ máy |
+| 4 × 16 = 64 | 20 | ~1 650 | NORMAL (mức cũ) |
+| 4 × 32 = 128 | 20 | ~2 500 | FAST (mặc định) |
+| 4 × 64 = 256 | 20 | ~3 400 (2 lần đo) | MAX |
+| 8 × 16 / 12 × 16 | 20 | ~1 900 / ~2 100 | — thêm game kém hơn thêm arena |
+| 8 × 32 | 20 | 3 470 rồi 1 860 | — không ổn định |
+| 4 × 16 / 4 × 32 / 4 × 64 | 40 | ~2 400 / ~2 400 / ~2 900 | — x40 không lợi đều |
+
+Kết luận: nhồi nhiều arena vào ít game lợi hơn mở thêm game (mỗi game là một process Unity, tốn
+CPU); tăng time-scale không giúp chắc chắn. Mọi arena dùng chung một não, nên nhiều arena = nhiều
+kinh nghiệm mỗi giây. Luật chơi chạy theo tick cố định nên time-scale không đổi kết quả trận.
 
 ### Chi tiết
 

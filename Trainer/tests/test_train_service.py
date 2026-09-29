@@ -1,5 +1,6 @@
 import argparse
 import json
+import threading
 from pathlib import Path
 
 from Trainer import train_service
@@ -141,7 +142,23 @@ def test_trainer_command_resumes_with_service_settings(tmp_path: Path):
     assert command[command.index("--run-id") + 1] == "warrior-001"
     assert command[command.index("--base-port") + 1] == "5105"
     assert command[command.index("--results-dir") + 1] == str(tmp_path.resolve())
+    assert command[command.index("--time-scale") + 1] == "20.0"
     assert command[-1] == "--resume"
+
+
+def test_trainer_command_uses_the_viewer_power_setting(tmp_path: Path):
+    args = train_service.create_parser().parse_args(
+        ["--results-dir", str(tmp_path), "--num-envs", "8", "--arena-agents", "32", "--time-scale", "30"]
+    )
+    service = train_service.TrainingService(args)
+
+    command = service.trainer_command(train_service.RunPlan("warrior-001", "resume", 5), tmp_path / "c.yaml")
+
+    assert command[command.index("--num-envs") + 1] == "8"
+    assert command[command.index("--time-scale") + 1] == "30.0"
+    assert command[-3:] == ["--env-args", "--arena-agents", "32"]
+    status = service.status("training")
+    assert (status["num_envs"], status["arena_agents"]) == (8, 32)
 
 
 def test_status_payload_matches_the_viewer_fields(tmp_path: Path):
@@ -174,6 +191,19 @@ def test_a_second_service_cannot_take_the_lock(tmp_path: Path):
     second.close()
 
 
+def test_a_new_service_waits_for_the_old_one_to_exit(tmp_path: Path):
+    first = train_service.acquire_lock(tmp_path / "lock")
+    timer = threading.Timer(0.5, first.close)
+    timer.start()
+    try:
+        second = train_service.acquire_lock(tmp_path / "lock", wait_seconds=5.0)
+        assert second is not None
+        second.close()
+    finally:
+        timer.cancel()
+        first.close()
+
+
 def test_stop_file_and_missing_parent_request_a_stop(tmp_path: Path):
     args = argparse.Namespace(
         results_dir=str(tmp_path), behavior="Warrior", parent_pid=0, run_id=None,
@@ -195,3 +225,110 @@ def test_process_alive_sees_this_process():
 
     assert train_service.process_alive(os.getpid())
     assert not train_service.process_alive(0)
+
+
+CRASH = 0xC0000409  # What the GPU driver crash looked like on the owner's PC.
+
+
+def scripted_service(tmp_path: Path, monkeypatch, outcomes: list[tuple[int, bool, float]]):
+    """A service whose ML-Agents runs return the scripted (exit code, stopped, seconds)."""
+    config = tmp_path / "warrior.yaml"
+    write_config(config)
+    runs = tmp_path / "runs"
+    make_checkpoint(runs, "warrior-001", 100)
+    fake_exe = tmp_path / "fake.exe"
+    fake_exe.write_bytes(b"")
+    monkeypatch.setattr(train_service, "RETRY_DELAY", 0.0)
+
+    args = train_service.create_parser().parse_args(["--results-dir", str(runs), "--config", str(config)])
+    service = train_service.TrainingService(args)
+    devices: list[str | None] = []
+
+    def fake_command(plan, config_path):
+        devices.append(service.torch_device)
+        return [str(fake_exe), "--env", str(fake_exe)]
+
+    def fake_train(command, tail):
+        outcome = outcomes.pop(0) if outcomes else (CRASH, False, 5.0)
+        if outcome[1]:
+            (runs / train_service.STOP_NAME).write_text("")
+        return outcome
+
+    service.trainer_command = fake_command
+    service._train = fake_train
+    service.export = lambda: None
+    return service, runs, devices
+
+
+def read_status(runs: Path) -> dict:
+    return json.loads((runs / train_service.STATUS_NAME).read_text(encoding="utf-8"))
+
+
+def test_a_crashed_trainer_is_resumed_and_falls_back_to_the_cpu(tmp_path: Path, monkeypatch):
+    service, runs, devices = scripted_service(
+        tmp_path, monkeypatch, [(CRASH, False, 8.0), (CRASH, False, 8.0), (0, True, 30.0)]
+    )
+
+    assert service.run() == 0
+
+    assert devices == [None, None, "cpu"]
+    assert read_status(runs)["state"] == "stopped"
+    log = (runs / "warrior-001.log").read_text(encoding="utf-8")
+    assert "0xC0000409" in log
+    assert "restarting from the last checkpoint (attempt 1 of 5)" in log
+    assert "training on the CPU" in log
+
+
+def test_a_trainer_that_keeps_crashing_ends_in_an_error(tmp_path: Path, monkeypatch):
+    service, runs, devices = scripted_service(tmp_path, monkeypatch, [])
+
+    assert service.run() == 1
+
+    assert len(devices) == train_service.CRASH_RETRY_LIMIT + 1
+    status = read_status(runs)
+    assert status["state"] == "error"
+    assert "keeps crashing" in status["message"]
+
+
+def test_a_long_healthy_run_resets_the_crash_count(tmp_path: Path, monkeypatch):
+    long_run = train_service.STABLE_RUN_SECONDS + 1
+    service, runs, devices = scripted_service(
+        tmp_path, monkeypatch, [(CRASH, False, 8.0), (CRASH, False, long_run), (0, True, 30.0)]
+    )
+
+    assert service.run() == 0
+
+    assert devices == [None, None, None]
+
+
+def test_stop_during_a_restart_wait_saves_and_stops(tmp_path: Path, monkeypatch):
+    service, runs, devices = scripted_service(tmp_path, monkeypatch, [(CRASH, False, 8.0)])
+    monkeypatch.setattr(train_service, "RETRY_DELAY", 5.0)
+    real_train = service._train
+
+    def crash_after_stop_file(command, tail):
+        (runs / train_service.STOP_NAME).write_text("")
+        return real_train(command, tail)
+
+    service._train = crash_after_stop_file
+
+    assert service.run() == 0
+
+    assert len(devices) == 1
+    assert read_status(runs)["state"] == "stopped"
+    assert not (runs / train_service.STOP_NAME).exists()
+
+
+def test_a_service_error_is_written_where_the_viewer_can_show_it(tmp_path: Path, monkeypatch):
+    def broken_plan(*_args, **_kwargs):
+        raise RuntimeError("disk on fire")
+
+    monkeypatch.setattr(train_service, "plan_run", broken_plan)
+    args = train_service.create_parser().parse_args(["--results-dir", str(tmp_path)])
+
+    assert train_service.TrainingService(args).run() == 1
+
+    status = read_status(tmp_path)
+    assert status["state"] == "error"
+    assert "disk on fire" in status["message"]
+    assert "disk on fire" in (tmp_path / train_service.ERROR_LOG_NAME).read_text(encoding="utf-8")

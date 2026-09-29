@@ -11,7 +11,8 @@ checkpoint, and reports progress in ``Trainer/runs/training_service.json``.
 It stops gracefully when ``Trainer/runs/training_service.stop`` appears or the viewer exits:
 it sends the same Ctrl+C a terminal would, so ML-Agents saves a checkpoint before quitting.
 When a run reaches ``max_steps`` it is resumed with a larger budget, so training continues
-until the owner presses Stop.
+until the owner presses Stop. When ML-Agents crashes (for example inside the GPU driver) the
+service resumes it from the last checkpoint; after repeated crashes it trains on the CPU.
 """
 
 from __future__ import annotations
@@ -26,6 +27,7 @@ import signal
 import subprocess
 import sys
 import time
+import traceback
 from typing import Callable, Iterable, TextIO
 
 if __package__ in (None, ""):
@@ -36,12 +38,20 @@ from Trainer import arena_trainer, export_brain  # noqa: E402
 STATUS_NAME = "training_service.json"
 STOP_NAME = "training_service.stop"
 LOCK_NAME = "training_service.lock"
+LOCK_WAIT = 15.0
+ERROR_LOG_NAME = "training_service.err.log"
+DEFAULT_ARENA_AGENTS = 16  # TrainingArenaHost's default warriors per Unity game.
 HISTORY_LIMIT = 400
 STATUS_INTERVAL = 2.0
 EXPORT_INTERVAL = 5.0
 STOP_TIMEOUT = 180.0
 EXTEND_FRACTION = 0.98
 QUICK_EXIT_SECONDS = 60.0
+# ML-Agents crashes are retried from the last checkpoint; a run this long resets the count.
+CRASH_RETRY_LIMIT = 5
+CPU_FALLBACK_AFTER = 2
+STABLE_RUN_SECONDS = 600.0
+RETRY_DELAY = 5.0
 
 SUMMARY_PATTERN = re.compile(
     r"\[INFO\] (?P<behavior>[^.\s]+)\. Step: (?P<step>\d+)\. Time Elapsed: [\d.]+ s\."
@@ -204,7 +214,17 @@ def kill_tree(process: subprocess.Popen) -> None:
         process.kill()
 
 
-def acquire_lock(path: Path):
+def acquire_lock(path: Path, wait_seconds: float = 0.0):
+    """Returns the open lock file, or None if another service still holds it after the wait."""
+    deadline = time.monotonic() + wait_seconds
+    while True:
+        handle = try_lock(path)
+        if handle is not None or time.monotonic() >= deadline:
+            return handle
+        time.sleep(0.25)
+
+
+def try_lock(path: Path):
     handle = path.open("a+")
     try:
         if sys.platform == "win32":
@@ -247,6 +267,7 @@ class TrainingService:
         self.run_id = ""
         self.trainer_pid = 0
         self.max_steps = 0
+        self.torch_device: str | None = getattr(args, "torch_device", None)
         self.log_file: TextIO | None = None
         self.exported: dict[Path, int] = {}
 
@@ -271,6 +292,9 @@ class TrainingService:
             "mean_reward": self.progress.mean_reward if self.progress.mean_reward is not None else 0.0,
             "zombies": self.progress.zombies if self.progress.zombies is not None else 0.0,
             "session_seconds": round(self.clock() - self.started_at, 1),
+            "num_envs": getattr(self.args, "num_envs", 0),
+            "arena_agents": getattr(self.args, "arena_agents", None) or DEFAULT_ARENA_AGENTS,
+            "cpu": self.torch_device == "cpu",
             "updated_unix": self.clock(),
             "steps": self.progress.steps,
             "rewards": self.progress.rewards,
@@ -309,17 +333,53 @@ class TrainingService:
             arguments.append("--resume")
         elif plan.mode == "force":
             arguments.append("--force")
+        if self.torch_device:
+            arguments.extend(("--torch-device", self.torch_device))
+        arguments.extend(("--time-scale", str(self.args.time_scale)))
+        if self.args.arena_agents:
+            arguments.extend(("--arena-agents", str(self.args.arena_agents)))
         parsed = arena_trainer.create_parser().parse_args(arguments)
         return arena_trainer.build_command(parsed, self.root)
 
+    def wait_unless_stopped(self, seconds: float, message: str) -> bool:
+        """Wait before a retry; True when the owner pressed Stop meanwhile."""
+        deadline = self.clock() + seconds
+        while self.clock() < deadline:
+            if self.stop_requested():
+                return True
+            self.publish("starting", message)
+            time.sleep(0.5)
+        return self.stop_requested()
+
+    def fail(self, details: str) -> None:
+        """Record an unexpected service error where the owner (and the viewer) can find it."""
+        last_line = details.strip().splitlines()[-1] if details.strip() else "unknown error"
+        try:
+            (self.runs_dir / ERROR_LOG_NAME).write_text(details, encoding="utf-8")
+        except OSError:
+            pass
+        try:
+            self.log("service error:\n" + details.rstrip())
+        except (OSError, ValueError):
+            pass
+        try:
+            self.publish("error", f"The training service hit an error ({last_line}). "
+                                  f"See Trainer/runs/{ERROR_LOG_NAME}.")
+        except OSError:
+            pass
+
     def run(self) -> int:
         self.runs_dir.mkdir(parents=True, exist_ok=True)
-        lock = acquire_lock(self.runs_dir / LOCK_NAME)
+        # A service that just saved and stopped (e.g. for a power change) may still be exiting.
+        lock = acquire_lock(self.runs_dir / LOCK_NAME, LOCK_WAIT)
         if lock is None:
             print("Another training service is already running.", file=sys.stderr)
             return 3
         try:
             return self._run_locked()
+        except Exception:
+            self.fail(traceback.format_exc())
+            return 1
         finally:
             if self.log_file is not None:
                 self.log_file.close()
@@ -339,6 +399,7 @@ class TrainingService:
         self.publish("starting", "Loading the training arenas...")
 
         restarts = 0
+        crashes = 0
         while True:
             config_path = arena_trainer.resolve_path(self.args.config, self.root)
             config, self.max_steps = effective_config(
@@ -358,20 +419,43 @@ class TrainingService:
             self.export()
             plan = plan_run(self.runs_dir, self.behavior, plan.run_id)
             if stopped:
-                self.log(f"stopped by the viewer at step {self.progress.step:,} (exit {code})")
-                self.publish("stopped", f"Stopped. Progress saved at step {plan.last_step:,}.")
-                self.stop_path.unlink(missing_ok=True)
-                return 0
+                return self._stopped(plan, f"(exit {code})")
 
             finished = code == 0 and plan.last_step >= self.max_steps * EXTEND_FRACTION
-            restarts = restarts + 1 if seconds < QUICK_EXIT_SECONDS else 0
-            if not finished or restarts > 2:
-                message = f"Training stopped unexpectedly (exit code {code}). See Trainer/runs/{plan.run_id}.log."
+            if finished:
+                restarts = restarts + 1 if seconds < QUICK_EXIT_SECONDS else 0
+                if restarts > 2:
+                    message = f"Training keeps finishing right away. See Trainer/runs/{plan.run_id}.log."
+                    self.log(message)
+                    self.publish("error", message)
+                    return 1
+                self.log(f"reached max_steps at {plan.last_step:,}; continuing with a larger budget")
+                self.publish("starting", "Reached the step budget; continuing...")
+                continue
+
+            # ML-Agents crashed or quit early: resume from the last checkpoint.
+            crashes = crashes + 1 if seconds < STABLE_RUN_SECONDS else 1
+            exit_text = f"exit code {code} / 0x{code & 0xFFFFFFFF:08X}"
+            if crashes > CRASH_RETRY_LIMIT:
+                message = (f"Training keeps crashing ({exit_text}) after {CRASH_RETRY_LIMIT} restarts. "
+                           f"See Trainer/runs/{plan.run_id}.log.")
                 self.log(message)
                 self.publish("error", message)
                 return 1
-            self.log(f"reached max_steps at {plan.last_step:,}; continuing with a larger budget")
-            self.publish("starting", "Reached the step budget; continuing...")
+            if crashes >= CPU_FALLBACK_AFTER and self.torch_device != "cpu":
+                self.torch_device = "cpu"
+                self.log("repeated crashes: training on the CPU from now on")
+            self.log(f"ML-Agents stopped unexpectedly after {seconds:.0f} s ({exit_text}); "
+                     f"restarting from the last checkpoint (attempt {crashes} of {CRASH_RETRY_LIMIT})")
+            message = f"The trainer crashed; restarting it (attempt {crashes} of {CRASH_RETRY_LIMIT})..."
+            if self.wait_unless_stopped(RETRY_DELAY, message):
+                return self._stopped(plan, "while restarting")
+
+    def _stopped(self, plan: RunPlan, detail: str) -> int:
+        self.log(f"stopped by the viewer at step {self.progress.step:,} {detail}")
+        self.publish("stopped", f"Stopped. Progress saved at step {plan.last_step:,}.")
+        self.stop_path.unlink(missing_ok=True)
+        return 0
 
     def _train(self, command: list[str], tail: LogTail) -> tuple[int, bool, float]:
         environment = dict(os.environ, PYTHONUNBUFFERED="1")
@@ -381,6 +465,20 @@ class TrainingService:
             command, cwd=self.root, stdout=self.log_file, stderr=subprocess.STDOUT, env=environment
         )
         self.trainer_pid = process.pid
+        try:
+            return self._watch(process, tail, launched, live_summaries)
+        except BaseException:
+            # Never leave ML-Agents training with nobody able to stop it.
+            if process.poll() is None:
+                send_ctrl_c(process)
+                try:
+                    process.wait(STOP_TIMEOUT)
+                except subprocess.TimeoutExpired:
+                    kill_tree(process)
+            raise
+
+    def _watch(self, process: subprocess.Popen, tail: LogTail, launched: float,
+               live_summaries: int) -> tuple[int, bool, float]:
         stopping_since: float | None = None
         next_status = 0.0
         next_export = self.clock() + EXPORT_INTERVAL
@@ -423,9 +521,12 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument("--behavior", default="Warrior")
     parser.add_argument("--config", default=str(arena_trainer.DEFAULT_CONFIG))
     parser.add_argument("--results-dir", default=str(arena_trainer.DEFAULT_RESULTS_DIRECTORY))
-    parser.add_argument("--num-envs", type=int, default=4)
+    parser.add_argument("--num-envs", type=int, default=4, help="Unity games running side by side.")
+    parser.add_argument("--arena-agents", type=int, help="Warriors per game (default: the build's 16).")
+    parser.add_argument("--time-scale", type=float, default=20.0)
     parser.add_argument("--base-port", type=int, default=5005)
     parser.add_argument("--parent-pid", type=int, default=0, help="Stop when this process exits.")
+    parser.add_argument("--torch-device", choices=("cpu", "cuda"), help="Force the PyTorch device.")
     return parser
 
 
@@ -433,7 +534,12 @@ def main(argv: Iterable[str] | None = None) -> int:
     args = create_parser().parse_args(list(argv) if argv is not None else None)
     # Ctrl+C is meant for ML-Agents; the service keeps running to report the result.
     signal.signal(signal.SIGINT, signal.SIG_IGN)
-    return TrainingService(args).run()
+    service = TrainingService(args)
+    try:
+        return service.run()
+    except Exception:  # The viewer hides the console, so leave a trace it can show.
+        service.fail(traceback.format_exc())
+        return 1
 
 
 if __name__ == "__main__":

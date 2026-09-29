@@ -66,3 +66,19 @@ def test_build_command_supports_initialization_and_graphics(tmp_path: Path):
 
     assert "--no-graphics" not in command
     assert command[-2:] == ["--initialize-from", "warrior-base"]
+
+
+def test_build_command_can_force_the_cpu(tmp_path: Path):
+    command = arena_trainer.build_command(parse("--run-id", "warrior-001", "--torch-device", "cpu"), tmp_path)
+
+    assert command[command.index("--torch-device") + 1] == "cpu"
+    assert "--torch-device" not in arena_trainer.build_command(parse("--run-id", "warrior-001"), tmp_path)
+
+
+def test_build_command_passes_the_arena_agent_count_last(tmp_path: Path):
+    command = arena_trainer.build_command(
+        parse("--run-id", "warrior-001", "--resume", "--arena-agents", "32"), tmp_path
+    )
+
+    assert command[-4:] == ["--resume", "--env-args", "--arena-agents", "32"]
+    assert "--env-args" not in arena_trainer.build_command(parse("--run-id", "warrior-001"), tmp_path)
