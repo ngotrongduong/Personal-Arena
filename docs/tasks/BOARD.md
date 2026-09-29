@@ -18,3 +18,7 @@ này (M0 scaffold, Unity project, Core M1) ghi ở `docs/STATUS.md`.
 | [T-011](T-011-m3-core-zombies-projectiles-classes.md) | Core M3: Runner/Brute/Spitter, đạn, skill Mage/Archer, luật v3 (quan sát 883) | Codex | done (review Claude + reviewer, D-024) | M3 | T-012 |
 | [T-012](T-012-m3-trainer-classes-curriculum.md) | Trainer M3: luật v3, train theo class, curriculum trộn zombie | Codex | done (D-024) | M3 | T-011 |
 | [T-013](T-013-m3-unity-integration.md) | Tích hợp Unity M3: ML (class, trộn zombie) + trình xem (look theo loại/class, đạn, phím H/M, icon skill) | Claude (PC) | done (D-024) | M3 | |
+| [T-014](T-014-survivor-core-sim.md) | Core Survivor: bản đồ, lịch quái, EXP/lên cấp, 6 vũ khí, 8 phụ kiện, skill chủ động, đồ nhặt, boss, quan sát v4 (2152), thưởng | Codex | doing | M4 | T-015 |
+| [T-015](T-015-survivor-trainer-brain-upgrade.md) | Trainer Survivor: schema version, `brain_upgrade.py`, config + curriculum `warrior_survivor_ppo.yaml`, run `warrior-sNNN` | Codex | doing | M4 | T-014 |
+| T-016 | Tích hợp Unity Survivor: `HeroAgent` 3 nhánh, trình xem (camera theo, nghĩa địa, HUD, bảng lên cấp, màn kết trận) | Claude (PC) | todo | M4 | |
+| T-017 | Dọn code đấu trường tròn cũ (sàn, vực, config cũ) | Claude (PC) | todo | M4 | |

@@ -243,15 +243,17 @@ Dùng 4 loại zombie của M3, nhưng chỉnh số liệu hợp với kiểu "�
 
 AI quyết định 12 lần/giây như trước. Khi bảng lên cấp mở, sim dừng cho tới khi AI chọn.
 
-### 4.2 Quan sát (schema v4), khoảng 1.936 số, **chừa chỗ** cho nội dung sau này
+### 4.2 Quan sát (schema v4): **2.152 số**, **chừa chỗ** cho nội dung sau này
 
 | Khối | Số lượng | Nội dung |
 |---|---|---|
-| Bản thân | 48 | Máu %, máu tối đa, **16 ô chỉ số build** (13 dùng), cấp, tiến độ EXP, thời gian trận, bậc, năng lượng, **4 ô hồi chiêu skill chủ động** và 4 cờ sẵn sàng, khoảng cách tới 4 bức tường, vận tốc, hướng nhìn, cờ "đang chọn nâng cấp", chỗ trống |
+| Bản thân | 48 | Máu %, máu tối đa, năng lượng, **4 ô hồi chiêu skill chủ động** và 4 cờ sẵn sàng, đang khiên, đang lướt, vận tốc, khoảng cách tới 4 bức tường, thời gian trận, cấp, tiến độ EXP, bậc, cờ "đang chọn nâng cấp", boss (có không, hướng, khoảng cách, máu), **16 ô chỉ số build** (13 dùng), số quái đang sống, vàng trong trận |
 | Túi đồ | 64 | Cấp / 5 của từng món trong **danh mục 64 món** (v1 dùng 14) |
 | Bảng lên cấp | 4 × 66 | Mỗi lựa chọn: one-hot 64 món + cấp kế tiếp + cờ hợp lệ |
-| Tia | 72 × 21 | Loại vật tia chạm (one-hot 17: không có, tường/vật cản, **8 loại quái**, đạn địch, ngọc, vàng, thịt, rương, nam châm, 1 chỗ trống) + khoảng cách + 3 cờ (tinh anh, choáng, đang vung đòn) |
-| Mật độ | 48 | 8 hướng × 3 vòng (0–5, 5–12, 12–25 m) × (số quái, lượng EXP) |
+| Tia | 72 × 24 | Mỗi tia có 2 phần. **Vật cứng** (16): one-hot 12 (không có, tường/vật cản, **8 loại quái**, đạn địch, 1 chỗ trống) + khoảng cách + 3 cờ (tinh anh, đang vung đòn, choáng). **Đồ nhặt** (8, nhìn xuyên quái): one-hot 7 (không có, ngọc, vàng, thịt, rương, nam châm, 1 chỗ trống) + khoảng cách |
+| Mật độ | 48 | 8 hướng × 3 vòng (0–5, 5–12, 12–30 m) × (số quái, lượng EXP) |
+
+Chi tiết từng ô nằm ở `docs/tasks/T-014-survivor-core-sim.md`.
 
 Thêm quái mới (tối đa 8 loại), thêm món mới (tối đa 64) hay thêm chỉ số (tối đa 16) mà **không đổi kích
 thước**, nên não **học tiếp** được ngay.
