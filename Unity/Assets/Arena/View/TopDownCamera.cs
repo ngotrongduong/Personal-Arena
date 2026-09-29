@@ -3,11 +3,17 @@ using UnityEngine;
 
 namespace PersonalArena.View
 {
+    /// <summary>
+    /// Tilted perspective camera. Small arenas are framed whole; large arenas follow the hero.
+    /// </summary>
     [RequireComponent(typeof(Camera))]
     public sealed class TopDownCamera : MonoBehaviour
     {
-        [SerializeField] private float padding = 2.5f;
-        [SerializeField] private float followSize = 12f;
+        [SerializeField] private float fieldOfView = 34f;
+        [SerializeField] private float pitch = 56f;
+        [SerializeField] private float padding = 0.6f;
+        [SerializeField] private float wallHeight = 2f;
+        [SerializeField] private float followDistance = 24f;
         [SerializeField] private float followSmoothTime = 0.18f;
 
         private Camera arenaCamera;
@@ -16,6 +22,7 @@ namespace PersonalArena.View
         private Vector3 targetVelocity;
         private Vector3 cameraOffset;
         private bool followsHero;
+        private float fittedAspect;
 
         public Camera Camera => arenaCamera != null ? arenaCamera : GetComponent<Camera>();
 
@@ -28,21 +35,9 @@ namespace PersonalArena.View
                 return;
             }
 
-            float width = sim.Config.Width;
-            float height = sim.Config.Height;
-            followsHero = Mathf.Max(width, height) > 30f;
-            float aspect = Mathf.Max(0.1f, arenaCamera.aspect);
-            arenaCamera.orthographic = true;
-            arenaCamera.orthographicSize = followsHero
-                ? Mathf.Min(followSize, Mathf.Min(height * 0.5f, width / (2f * aspect)))
-                : Mathf.Max(height * 0.5f + padding, width / (2f * aspect) + padding);
-
-            lookTarget = followsHero
-                ? ArenaSpace.ToWorld(sim.Hero.Position)
-                : new Vector3(width * 0.5f, 0f, height * 0.5f);
-            float distance = Mathf.Max(14f, arenaCamera.orthographicSize * 1.8f);
-            cameraOffset = new Vector3(0f, distance, -distance * 0.72f);
-            ApplyPose(lookTarget);
+            followsHero = Mathf.Max(sim.Config.Width, sim.Config.Height) > 30f;
+            lookTarget = followsHero ? ArenaSpace.ToWorld(sim.Hero.Position) : ArenaCenter();
+            Frame();
         }
 
         private void Awake()
@@ -52,18 +47,86 @@ namespace PersonalArena.View
 
         private void LateUpdate()
         {
-            if (sim == null || !followsHero)
+            if (sim == null)
             {
                 return;
             }
 
+            if (!followsHero)
+            {
+                if (!Mathf.Approximately(fittedAspect, arenaCamera.aspect))
+                {
+                    Frame();
+                }
+                return;
+            }
+
             Vector3 desired = ArenaSpace.ToWorld(sim.Hero.Position);
-            float verticalExtent = arenaCamera.orthographicSize;
-            float horizontalExtent = verticalExtent * arenaCamera.aspect;
-            desired.x = Mathf.Clamp(desired.x, horizontalExtent, Mathf.Max(horizontalExtent, sim.Config.Width - horizontalExtent));
-            desired.z = Mathf.Clamp(desired.z, verticalExtent, Mathf.Max(verticalExtent, sim.Config.Height - verticalExtent));
+            desired.x = Mathf.Clamp(desired.x, 0f, sim.Config.Width);
+            desired.z = Mathf.Clamp(desired.z, 0f, sim.Config.Height);
             lookTarget = Vector3.SmoothDamp(lookTarget, desired, ref targetVelocity, followSmoothTime, Mathf.Infinity, Time.unscaledDeltaTime);
             ApplyPose(lookTarget);
+        }
+
+        private void Frame()
+        {
+            arenaCamera.orthographic = false;
+            arenaCamera.fieldOfView = fieldOfView;
+            fittedAspect = arenaCamera.aspect;
+            Vector3 direction = Quaternion.Euler(pitch, 0f, 0f) * Vector3.back;
+
+            if (followsHero)
+            {
+                cameraOffset = direction * followDistance;
+                ApplyPose(lookTarget);
+                return;
+            }
+
+            // Binary-search the closest distance that keeps the whole arena (and its walls) in view.
+            float near = 5f;
+            float far = 200f;
+            for (int i = 0; i < 24; i++)
+            {
+                float distance = 0.5f * (near + far);
+                cameraOffset = direction * distance;
+                ApplyPose(lookTarget);
+                if (ArenaFits())
+                {
+                    far = distance;
+                }
+                else
+                {
+                    near = distance;
+                }
+            }
+            cameraOffset = direction * far;
+            ApplyPose(lookTarget);
+        }
+
+        private bool ArenaFits()
+        {
+            float minX = -padding;
+            float maxX = sim.Config.Width + padding;
+            float minZ = -padding;
+            float maxZ = sim.Config.Height + padding;
+            for (int corner = 0; corner < 8; corner++)
+            {
+                Vector3 point = new Vector3(
+                    (corner & 1) == 0 ? minX : maxX,
+                    (corner & 4) == 0 ? 0f : wallHeight,
+                    (corner & 2) == 0 ? minZ : maxZ);
+                Vector3 viewport = arenaCamera.WorldToViewportPoint(point);
+                if (viewport.z <= 0f || viewport.x < 0.02f || viewport.x > 0.98f || viewport.y < 0.02f || viewport.y > 0.98f)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        private Vector3 ArenaCenter()
+        {
+            return new Vector3(sim.Config.Width * 0.5f, 0f, sim.Config.Height * 0.5f);
         }
 
         private void EnsureCamera()
@@ -72,9 +135,9 @@ namespace PersonalArena.View
             {
                 arenaCamera = GetComponent<Camera>();
                 arenaCamera.clearFlags = CameraClearFlags.SolidColor;
-                arenaCamera.backgroundColor = new Color(0.055f, 0.065f, 0.08f);
-                arenaCamera.nearClipPlane = 0.1f;
-                arenaCamera.farClipPlane = 250f;
+                arenaCamera.backgroundColor = new Color(0.035f, 0.035f, 0.05f);
+                arenaCamera.nearClipPlane = 0.3f;
+                arenaCamera.farClipPlane = 300f;
             }
         }
 

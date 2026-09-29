@@ -1,0 +1,71 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1d4cd0bd923c9b84784bffd628201d3f, type: 3}
+  m_Name: KayKitArtSet
+  m_EditorClassIdentifier: PersonalArena.View::PersonalArena.View.ArenaArtSet
+  CharacterScale: 0.78
+  DungeonScale: 0.5
+  Hero: {fileID: 919132149155446097, guid: 5e14812951a43274a902111333cf4cdd, type: 3}
+  HeroMainHand: {fileID: 919132149155446097, guid: 6e668fa456137394d9ccf7c42415b84f, type: 3}
+  HeroOffHand: {fileID: 919132149155446097, guid: 8d4a75515ad87a74385534e2de367825, type: 3}
+  Walkers:
+  - Body: {fileID: 919132149155446097, guid: dd8eae1606fa1f64590cbd3da12de98f, type: 3}
+    MainHand: {fileID: 919132149155446097, guid: 9ff1b846072336142a384a2caf8821e2, type: 3}
+    OffHand: {fileID: 0}
+  - Body: {fileID: 919132149155446097, guid: 3c6226aba9a44ee46a2a1c1c564ae368, type: 3}
+    MainHand: {fileID: 919132149155446097, guid: 9833496efa3ba4d4a9d695b050a28d2a, type: 3}
+    OffHand: {fileID: 919132149155446097, guid: 73b7fb6a8c605f54ab0ca462aa9f6d5a, type: 3}
+  - Body: {fileID: 919132149155446097, guid: 684b1e60359160a458ed28ede3f31063, type: 3}
+    MainHand: {fileID: 919132149155446097, guid: 9ff1b846072336142a384a2caf8821e2, type: 3}
+    OffHand: {fileID: 0}
+  HeroIdle: {fileID: -5624545281902316504, guid: ff825bb58076fb641883e44a20552d82, type: 3}
+  HeroRun: {fileID: 3543698089625107784, guid: 15b8ec9bf36813148afb14f08e40762b, type: 3}
+  HeroBlock: {fileID: 6824622970789808875, guid: c8aa3cce409f4954da2e79457aade230, type: 3}
+  HeroStrikeA: {fileID: 5034251128425565466, guid: c8aa3cce409f4954da2e79457aade230, type: 3}
+  HeroStrikeB: {fileID: -8653722278162725603, guid: c8aa3cce409f4954da2e79457aade230, type: 3}
+  HeroKick: {fileID: 4422042881024832256, guid: c8aa3cce409f4954da2e79457aade230, type: 3}
+  HeroDash: {fileID: -3851722262833059593, guid: 4418695ed64d63b488fa5d5d8b68ad4b, type: 3}
+  HeroHit: {fileID: 2825485217256495706, guid: ff825bb58076fb641883e44a20552d82, type: 3}
+  HeroDeath: {fileID: -1923750366902163184, guid: ff825bb58076fb641883e44a20552d82, type: 3}
+  WalkerIdle: {fileID: -8597891682817377953, guid: 51ff76fb8413d5a439d356739da519ee, type: 3}
+  WalkerWalk: {fileID: -3442526711835081435, guid: 51ff76fb8413d5a439d356739da519ee, type: 3}
+  WalkerAttack: {fileID: 4043807988371827432, guid: c8aa3cce409f4954da2e79457aade230, type: 3}
+  WalkerHit: {fileID: 5929533664354034034, guid: ff825bb58076fb641883e44a20552d82, type: 3}
+  WalkerDeath: {fileID: -742123907766471018, guid: 51ff76fb8413d5a439d356739da519ee, type: 3}
+  WalkerSpawn: {fileID: 6802492928670190411, guid: ff825bb58076fb641883e44a20552d82, type: 3}
+  FloorTile: {fileID: 919132149155446097, guid: 9a0f8d9da40213148a6cd555b734edaa, type: 3}
+  OuterFloorTile: {fileID: 919132149155446097, guid: 3218d291519d05548b5f1a08791bfd6c, type: 3}
+  Wall: {fileID: 919132149155446097, guid: 70658d1b06d5b0e45ba2ffbccd0747ae, type: 3}
+  WallVariants:
+  - {fileID: 919132149155446097, guid: 3b1ec4948c5f79548b9b45e5b2692fc7, type: 3}
+  - {fileID: 919132149155446097, guid: cccbd4d622454b24287ae14c18a49df2, type: 3}
+  - {fileID: 919132149155446097, guid: 227f787b5d78a7e439c90a538ff35d76, type: 3}
+  WallDoorway: {fileID: 919132149155446097, guid: 72a69ac199f2df345af8299061c7a5f9, type: 3}
+  LowBarrier: {fileID: 919132149155446097, guid: adf17ff49655b1649afd45e30ae7f905, type: 3}
+  Pillar: {fileID: 919132149155446097, guid: 82079735cf360964f9939fb525577299, type: 3}
+  Torch: {fileID: 919132149155446097, guid: b4d4fce56253651409f729a1367c3616, type: 3}
+  Banners:
+  - {fileID: 919132149155446097, guid: 5c81b50ef4da75e468e470e7029d0e5c, type: 3}
+  - {fileID: 919132149155446097, guid: 709a054eef59f2947a571590ee6299f0, type: 3}
+  - {fileID: 919132149155446097, guid: 0a00e4efaf355224ba6d6e8171734ee7, type: 3}
+  - {fileID: 919132149155446097, guid: 8d99b6fc019473c42b253f845a22e317, type: 3}
+  Props:
+  - {fileID: 919132149155446097, guid: 0c311defc84e3ea47897f99041a35a56, type: 3}
+  - {fileID: 919132149155446097, guid: 551190703ff1c77478b2aa51c8718dce, type: 3}
+  - {fileID: 919132149155446097, guid: eff8b04300e35b848a1ec986c69d294a, type: 3}
+  - {fileID: 919132149155446097, guid: 1c9ad694a3994294cb495d2b695f2677, type: 3}
+  - {fileID: 919132149155446097, guid: 7e231daa58e5b474f8044019ef0b752e, type: 3}
+  - {fileID: 919132149155446097, guid: 9b65bb4fa9988564886eabbf6f8026d2, type: 3}
+  - {fileID: 919132149155446097, guid: f7fdbc415c0da04499c182f6f7218139, type: 3}
+  - {fileID: 919132149155446097, guid: 6ce4f79b509689140b9075327ba8202e, type: 3}
+  - {fileID: 919132149155446097, guid: 9de877d5e0132b2459fbeea0e1bf7955, type: 3}
+  - {fileID: 919132149155446097, guid: f82764b75089e364ab634e120c8e0bb3, type: 3}
