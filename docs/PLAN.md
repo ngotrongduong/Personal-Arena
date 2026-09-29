@@ -19,34 +19,22 @@ Bạn muốn một **game Unity hoàn chỉnh**:
 Ưu điểm lớn: game do mình làm nên AI đọc thẳng trạng thái game. Không cần chụp
 màn hình, không lo anti-cheat, và chạy nhanh hơn thời gian thực nhiều lần.
 
-**Đã chốt với bạn:**
-- 3D nhìn từ trên xuống, low-poly;
-- repo mới **private**;
-- đồng ý tải môi trường AI.
-
-**Máy:**
-- Unity 6000.3.2f1 đã cài (đã có project rỗng "My project");
-- RTX 4070 Ti 12 GB;
-- chỉ có Python 3.14, nên cần Python 3.10.12 riêng.
+Các lựa chọn đã chốt nằm ở `docs/DECISIONS.md`; máy và môi trường ở `docs/SETUP.md`;
+tiến độ hiện tại ở `docs/STATUS.md`.
 
 ## Công nghệ
 
-- **Unity 6.3.**
-- **ML-Agents** (`com.unity.ml-agents` 4.x, Apache 2.0). Có sẵn:
-  - PPO;
-  - `RayPerceptionSensor3D`;
-  - curriculum qua environment parameters;
-  - ghi demo (`DemonstrationRecorder`) để học bắt chước BC/GAIL;
-  - chạy model trong game bằng Unity Inference Engine.
-- **Python trainer:** `mlagents==1.1.0`, `torch~=2.2.1` bản cu121, Python 3.10.12.
-  - Cài bằng `uv` vào `C:\PersonalArena\.venv-ml`, tách khỏi venv PersonalGameAI.
+- **Unity 6.3** + **ML-Agents** (`com.unity.ml-agents` 4.x, Apache 2.0). Có sẵn PPO,
+  `RayPerceptionSensor3D`, curriculum qua environment parameters, ghi demo
+  (`DemonstrationRecorder`) cho BC/GAIL, và chạy model trong game bằng Inference Engine.
+- **Python trainer:** `mlagents==1.1.0`, torch cu121, Python 3.10.12 (xem `docs/SETUP.md`).
 
 ## Kiến trúc
 
 ```
 PersonalArena/ (repo private ngotrongduong/Personal-Arena)
   Unity/                      Unity project
-    Assets/Arena/Core/        logic thuần C# (không MonoBehaviour), test được bằng EditMode
+    Assets/Arena/Core/        logic thuần C# (không MonoBehaviour), test bằng dotnet (CoreTests/)
       Combat (máu, năng lượng, cooldown, stun, backstab, parry), SkillSystem, ArenaRules
     Assets/Arena/Data/        ScriptableObjects: HeroClassDef, SkillDef, ZombieTypeDef, ArenaPreset
     Assets/Arena/Actors/      HeroController, ZombieController (AI thường, không học), Projectile
@@ -68,11 +56,10 @@ Class chỉ khác ở `HeroClassDef` (chỉ số và 4 `SkillDef`):
 - **Pháp sư:** cầu lửa (projectile), vòng băng làm chậm (AoE), dịch chuyển, khiên mana.
 - **Cung thủ:** bắn tên, bắn xuyên, lùi nhảy, bẫy.
 
-**Observation:**
-- `RayPerceptionSensor3D`, khoảng 90 tia 360°, nhận tag từng loại zombie,
-  tường và đạn;
-- vector: máu, năng lượng, cooldown 4 slot, trạng thái stun/block, kích thước
-  arena đã chuẩn hóa.
+**Observation** (tính trong Core, D-013):
+- `RaySensor` 72 tia 360° (video dùng ~92), mỗi tia nhận loại zombie, tường và khoảng cách;
+- 16 số của hero: máu, năng lượng, cooldown 4 slot, trạng thái stun/block, tường gần…;
+- tổng 736 số, `HeroAgent` chỉ chép sang ML-Agents.
 
 Kích thước observation không phụ thuộc số zombie.
 
@@ -136,20 +123,14 @@ và hạ zombie, thưởng backstab/parry, phạt khi mất máu và khi chết.
 
 ## Cách làm việc
 
-- **Codex** (`chatgpt-web/gpt-5.6-sol`, reasoning high) viết C# và Python theo
-  từng task nhỏ, không chạy git.
-- **Claude** tạo repo, commit, mở PR vào `develop`, chạy Unity batchmode
-  (`-runTests` EditMode, build headless), chạy training thật trên GPU, và kiểm
-  tra bằng mắt qua computer-use.
-- Không commit model, run hay log lớn; `results/` và `*.onnx` nằm trong
-  `.gitignore` (có thể dùng Git LFS sau).
-- Mỗi milestone có Issue, nhánh `feature/mN-…` và PR merge commit.
+Phân công Claude / Codex / owner, quy tắc git và lệnh chạy test: xem `AGENTS.md`.
+Bảng việc: `docs/tasks/BOARD.md`.
 
 ## Kiểm tra
 
-- **Test EditMode** cho Core: sát thương, cooldown, stun, backstab, parry, năng
-  lượng khiên, dấu reward, `ArenaConfig` hợp lệ. Chạy bằng
-  `Unity.exe -batchmode -runTests -testPlatform EditMode`.
+- **Test dotnet (`CoreTests`)** cho Core: sát thương, cooldown, stun, backstab, parry,
+  năng lượng khiên, dấu reward, `ArenaConfig` hợp lệ. CI chạy mỗi lần push.
+- **Test EditMode** (từ M1) cho phần Unity: prefab, component, `HeroAgent` quan sát đúng kích thước.
 - **pytest** cho `Trainer/` (sinh YAML, đọc tiến độ).
 - **Training thật:**
   - M2: điểm TB tăng và thời gian sống/kill đạt ngưỡng, curriculum lên đủ cấp.
