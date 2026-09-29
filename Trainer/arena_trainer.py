@@ -1,0 +1,133 @@
+"""Command-line wrapper for reproducible Personal Arena ML-Agents runs."""
+
+from __future__ import annotations
+
+import argparse
+import os
+from pathlib import Path
+import subprocess
+import sys
+from typing import Sequence
+
+
+DEFAULT_CONFIG = Path("Trainer/config/warrior_ppo.yaml")
+DEFAULT_ENVIRONMENT = Path("Build/Training/PersonalArenaTraining.exe")
+DEFAULT_RESULTS_DIRECTORY = Path("Trainer/runs")
+
+
+def repository_root() -> Path:
+    return Path(__file__).resolve().parents[1]
+
+
+def create_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Launch ML-Agents PPO training for Personal Arena."
+    )
+    parser.add_argument("--config", default=str(DEFAULT_CONFIG))
+    parser.add_argument("--run-id", required=True)
+    parser.add_argument("--env", default=str(DEFAULT_ENVIRONMENT))
+    parser.add_argument("--num-envs", type=int, default=4)
+    parser.add_argument("--time-scale", type=float, default=20.0)
+    parser.add_argument("--base-port", type=int, default=5005)
+    parser.add_argument("--results-dir", default=str(DEFAULT_RESULTS_DIRECTORY))
+
+    graphics = parser.add_mutually_exclusive_group()
+    graphics.add_argument(
+        "--no-graphics",
+        dest="no_graphics",
+        action="store_true",
+        default=True,
+        help="Run Unity without graphics (the default).",
+    )
+    graphics.add_argument(
+        "--graphics",
+        dest="no_graphics",
+        action="store_false",
+        help="Enable graphics for diagnostics.",
+    )
+
+    checkpoint = parser.add_mutually_exclusive_group()
+    checkpoint.add_argument("--resume", action="store_true")
+    checkpoint.add_argument("--initialize-from", metavar="RUN_ID")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print the resolved command without starting training.",
+    )
+    return parser
+
+
+def resolve_path(value: str, root: Path) -> Path:
+    path = Path(value).expanduser()
+    return path.resolve() if path.is_absolute() else (root / path).resolve()
+
+
+def build_command(args: argparse.Namespace, root: Path | None = None) -> list[str]:
+    root = repository_root() if root is None else root.resolve()
+    learner = root / ".venv-ml" / "Scripts" / "mlagents-learn.exe"
+    config = resolve_path(args.config, root)
+    environment = resolve_path(args.env, root)
+    results_directory = resolve_path(args.results_dir, root)
+
+    command = [
+        str(learner),
+        str(config),
+        "--run-id",
+        args.run_id,
+        "--env",
+        str(environment),
+        "--num-envs",
+        str(args.num_envs),
+        "--time-scale",
+        str(args.time_scale),
+        "--base-port",
+        str(args.base_port),
+        "--results-dir",
+        str(results_directory),
+    ]
+    if args.no_graphics:
+        command.append("--no-graphics")
+    if args.resume:
+        command.append("--resume")
+    elif args.initialize_from:
+        command.extend(("--initialize-from", args.initialize_from))
+    return command
+
+
+def format_command(command: Sequence[str]) -> str:
+    return subprocess.list2cmdline(list(command))
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = create_parser()
+    args = parser.parse_args(argv)
+    root = repository_root()
+    command = build_command(args, root)
+
+    if args.dry_run:
+        print(format_command(command))
+        return 0
+
+    learner = Path(command[0])
+    config = Path(command[1])
+    environment = Path(command[command.index("--env") + 1])
+    if not learner.is_file():
+        parser.error(f"mlagents-learn was not found: {learner}")
+    if not config.is_file():
+        parser.error(f"trainer config was not found: {config}")
+    if not environment.is_file():
+        parser.error(f"training environment was not found: {environment}")
+    if args.num_envs < 1:
+        parser.error("--num-envs must be at least 1")
+    if args.time_scale <= 0:
+        parser.error("--time-scale must be greater than 0")
+    if not 1 <= args.base_port <= 65535:
+        parser.error("--base-port must be between 1 and 65535")
+
+    os.makedirs(resolve_path(args.results_dir, root), exist_ok=True)
+    completed = subprocess.run(command, cwd=root, check=False)
+    return completed.returncode
+
+
+if __name__ == "__main__":
+    sys.exit(main())
