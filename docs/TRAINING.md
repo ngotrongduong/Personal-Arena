@@ -66,6 +66,23 @@ Từ gốc repo (`C:\PersonalArena`, nơi có `.venv-ml`):
 
 ## 4. Xem AI chơi trực tiếp (trong lúc train)
 
+### Nút "TRAIN THE AI" (cách chính, D-020)
+
+- Mở `Xem-AI.cmd`. Bảng **TRAINING** ở góc phải: bấm **TRAIN THE AI** → AI train ngầm liên tục
+  (tiếp tục run mới nhất trong `Trainer/runs`, chưa có thì tạo `warrior-001`). Bảng hiện bước,
+  mean reward, số zombie đang tập, thời gian phiên và biểu đồ reward từ bước 0.
+- **STOP TRAINING** → lưu checkpoint rồi dừng (có thể mất tới ~1 phút, hiện "SAVING..."). Đóng
+  cửa sổ game cũng dừng và lưu y như vậy.
+- Nhân vật trong trình xem tự đổi sang não mới mỗi lần training lưu (~500k bước).
+- Nhật ký: `Trainer/runs/<run>.log` (dòng `[service]` là của service). Nếu train đang chạy từ
+  terminal, nút bị khóa và ghi "TRAINING (OUTSIDE)".
+- Chạy service không cần game: `.venv-ml\Scripts\python.exe Trainer\train_service.py`
+  (dừng: tạo file `Trainer/runs/training_service.stop`).
+- **Đừng kill cứng** mlagents: checkpoint `.pt` vẫn còn nhưng tiến độ curriculum
+  (`run_logs/training_status.json`) chỉ được lưu khi dừng êm → lần sau quay lại bài 1 zombie.
+
+### Chi tiết
+
 - **Nhấp đúp `Xem-AI.cmd`** ở gốc repo. Nó chạy ngầm `export_brain.py --watch` (mỗi 5 s đổi
   checkpoint `.pt` mới nhất thành `Trainer/runs/<run>/<Behavior>/latest.brain`) và mở trình xem
   `Build/Watch/PersonalArenaWatch.exe`. Trình xem tìm `latest.brain` mới nhất, nạp lại mỗi khi
@@ -91,4 +108,4 @@ Từ gốc repo (`C:\PersonalArena`, nơi có `.venv-ml`):
 | Run id | Ngày | Config | Bước | Kết quả | Ghi chú |
 |---|---|---|---|---|---|
 | smoke | 2026-09-29 | warrior_ppo.yaml, 1 env × 16 arena, time-scale 20, RTX 4070 Ti | 210k (5 phút) | Mean reward −0.01 → 15.4; tự lên bài 2 (TwoZombies) | Chỉ để kiểm tra pipeline; ~700 bước/s |
-| warrior-001 | 2026-09-29 | warrior_ppo.yaml, 4 env × 16 arena, time-scale 20, RTX 4070 Ti | đang chạy (1M lúc 13:41) | Curriculum lên 16 zombie ở ~480k (quá nhanh); mean reward 14.2 ở 720k; ở 1M bước, xem thử 4 zombie: 8 kill, sống 20 s | ~1000 bước/s. Ngưỡng 6 quá dễ → cần nâng |
+| warrior-001 | 2026-09-29 | warrior_ppo.yaml, 4 env × 16 arena, time-scale 20, RTX 4070 Ti | 9.87M (13:27–15:26), tiếp tục bằng nút | Curriculum lên 16 zombie ở ~480k (quá nhanh); mean reward 14.2 ở 720k; ở 1M bước, xem thử 4 zombie: 8 kill, sống 20 s | ~1000 bước/s. Ngưỡng 6 quá dễ → cần nâng |

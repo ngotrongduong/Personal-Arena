@@ -1,5 +1,9 @@
+using System;
+using System.Collections.Generic;
 using PersonalArena.Core;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 
 namespace PersonalArena.View
@@ -25,6 +29,19 @@ namespace PersonalArena.View
         private Text infoText;
         private string resultFooter = "Press R to restart";
         private bool built;
+        private Transform canvasRoot;
+        private GameObject trainingPanel;
+        private Button trainingButton;
+        private Image trainingButtonImage;
+        private Text trainingButtonLabel;
+        private Text trainingText;
+        private Text trainingGraphCaption;
+        private readonly Image[] trainingBars = new Image[TrainingBarCount];
+        private const int TrainingBarCount = 64;
+        private const float TrainingGraphHeight = 64f;
+
+        /// <summary>Raised when the owner clicks the Train the AI / Stop button.</summary>
+        public event Action TrainingButtonClicked;
 
         public void Bind(ArenaSim arenaSim, ArenaStats arenaStats)
         {
@@ -59,6 +76,93 @@ namespace PersonalArena.View
         public void SetResultFooter(string text)
         {
             resultFooter = text ?? string.Empty;
+        }
+
+        /// <summary>Shows the training panel (button, progress, reward graph) under the info panel.</summary>
+        public void ShowTrainingPanel(bool show)
+        {
+            EnsureBuilt();
+            if (show && trainingPanel == null)
+            {
+                BuildTrainingPanel();
+            }
+            if (trainingPanel != null)
+            {
+                trainingPanel.SetActive(show);
+            }
+        }
+
+        public void SetTrainingButton(string label, bool interactable, Color color)
+        {
+            ShowTrainingPanel(true);
+            trainingButtonLabel.text = label ?? string.Empty;
+            trainingButton.interactable = interactable;
+            trainingButtonImage.color = interactable ? color : new Color(0.24f, 0.26f, 0.3f, 1f);
+        }
+
+        public void SetTrainingText(string text)
+        {
+            ShowTrainingPanel(true);
+            trainingText.text = text ?? string.Empty;
+        }
+
+        /// <summary>Draws the mean-reward history as bars (oldest left); empty hides the graph.</summary>
+        public void SetTrainingGraph(IReadOnlyList<float> values, string caption)
+        {
+            ShowTrainingPanel(true);
+            trainingGraphCaption.text = caption ?? string.Empty;
+            float[] buckets = Bucket(values, TrainingBarCount);
+            float minimum = 0f;
+            float maximum = 0f;
+            foreach (float value in buckets)
+            {
+                minimum = Mathf.Min(minimum, value);
+                maximum = Mathf.Max(maximum, value);
+            }
+
+            float range = Mathf.Max(maximum - minimum, 1e-3f);
+            float zero = -minimum / range * TrainingGraphHeight;
+            for (int i = 0; i < TrainingBarCount; i++)
+            {
+                Image bar = trainingBars[i];
+                bool visible = i < buckets.Length;
+                bar.gameObject.SetActive(visible);
+                if (!visible)
+                {
+                    continue;
+                }
+
+                float value = buckets[i];
+                float height = Mathf.Max(Mathf.Abs(value) / range * TrainingGraphHeight, 1.5f);
+                RectTransform rect = bar.rectTransform;
+                rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, value >= 0f ? zero : zero - height);
+                rect.sizeDelta = new Vector2(rect.sizeDelta.x, height);
+                bar.color = value >= 0f ? new Color(0.3f, 0.78f, 0.42f, 1f) : new Color(0.85f, 0.3f, 0.28f, 1f);
+            }
+        }
+
+        /// <summary>Averages <paramref name="values"/> into at most <paramref name="count"/> buckets.</summary>
+        public static float[] Bucket(IReadOnlyList<float> values, int count)
+        {
+            if (values == null || values.Count == 0 || count <= 0)
+            {
+                return new float[0];
+            }
+
+            int buckets = Mathf.Min(count, values.Count);
+            float[] result = new float[buckets];
+            for (int bucket = 0; bucket < buckets; bucket++)
+            {
+                int start = bucket * values.Count / buckets;
+                int end = Mathf.Max(start + 1, (bucket + 1) * values.Count / buckets);
+                float sum = 0f;
+                for (int i = start; i < end; i++)
+                {
+                    sum += values[i];
+                }
+                result[bucket] = sum / (end - start);
+            }
+            return result;
         }
 
         private void Awake()
@@ -136,6 +240,7 @@ namespace PersonalArena.View
             scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
             scaler.matchWidthOrHeight = 0.5f;
             canvasObject.AddComponent<GraphicRaycaster>();
+            canvasRoot = canvasObject.transform;
 
             RectTransform vitals = CreatePanel("Vitals", canvasObject.transform, new Color(0.04f, 0.05f, 0.07f, 0.84f));
             SetRect(vitals, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(28f, -28f), new Vector2(420f, 126f), new Vector2(0f, 1f));
@@ -175,6 +280,54 @@ namespace PersonalArena.View
             resultText = CreateText("Result", result, 30, TextAnchor.MiddleCenter, Color.white);
             SetStretch(resultText.rectTransform, 30f, 30f, 30f, 30f);
             resultPanel.SetActive(false);
+        }
+
+        private void BuildTrainingPanel()
+        {
+            if (FindFirstObjectByType<EventSystem>() == null)
+            {
+                GameObject events = new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
+                events.transform.SetParent(transform, false);
+            }
+
+            RectTransform panel = CreatePanel("Training", canvasRoot, new Color(0.04f, 0.05f, 0.07f, 0.86f));
+            SetRect(panel, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20f, -212f), new Vector2(430f, 306f), new Vector2(1f, 1f));
+            trainingPanel = panel.gameObject;
+
+            Text title = CreateText("Title", panel, 20, TextAnchor.UpperLeft, new Color(1f, 0.86f, 0.45f));
+            title.text = "TRAINING";
+            title.fontStyle = FontStyle.Bold;
+            SetRect(title.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -12f), new Vector2(394f, 26f), new Vector2(0f, 1f));
+
+            RectTransform buttonRect = CreatePanel("Train Button", panel, new Color(0.2f, 0.6f, 0.32f, 1f));
+            SetRect(buttonRect, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -44f), new Vector2(394f, 54f), new Vector2(0f, 1f));
+            trainingButtonImage = buttonRect.GetComponent<Image>();
+            trainingButton = buttonRect.gameObject.AddComponent<Button>();
+            trainingButton.targetGraphic = trainingButtonImage;
+            trainingButton.onClick.AddListener(() => TrainingButtonClicked?.Invoke());
+            trainingButtonLabel = CreateText("Label", buttonRect, 24, TextAnchor.MiddleCenter, Color.white);
+            trainingButtonLabel.fontStyle = FontStyle.Bold;
+            SetStretch(trainingButtonLabel.rectTransform, 0f, 0f, 0f, 0f);
+
+            trainingText = CreateText("Status", panel, 17, TextAnchor.UpperLeft, new Color(0.9f, 0.93f, 0.97f));
+            SetRect(trainingText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -110f), new Vector2(394f, 94f), new Vector2(0f, 1f));
+
+            trainingGraphCaption = CreateText("Graph Caption", panel, 15, TextAnchor.UpperLeft, new Color(0.7f, 0.76f, 0.84f));
+            SetRect(trainingGraphCaption.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -206f), new Vector2(394f, 20f), new Vector2(0f, 1f));
+
+            RectTransform graph = CreatePanel("Reward Graph", panel, new Color(0.1f, 0.11f, 0.14f, 1f));
+            SetRect(graph, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -228f), new Vector2(394f, TrainingGraphHeight), new Vector2(0f, 1f));
+            float slot = 394f / TrainingBarCount;
+            for (int i = 0; i < TrainingBarCount; i++)
+            {
+                RectTransform bar = CreatePanel("Bar " + i, graph, Color.clear);
+                SetRect(bar, Vector2.zero, Vector2.zero, new Vector2(i * slot + 0.5f, 0f), new Vector2(slot - 1f, 0f), Vector2.zero);
+                trainingBars[i] = bar.GetComponent<Image>();
+                trainingBars[i].raycastTarget = false;
+                bar.gameObject.SetActive(false);
+            }
+
+            trainingPanel.SetActive(false);
         }
 
         private void CreateBar(Transform parent, string barName, Vector2 position, Color fillColor, out Image fill, out Text label)

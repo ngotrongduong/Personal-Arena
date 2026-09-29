@@ -19,7 +19,11 @@ namespace PersonalArena.View
         private const float RestartDelaySeconds = 3f;
         private const float SelfTestTolerance = 1e-3f;
         private const int RecentEpisodeCount = 10;
+        private const float TrainingPollSeconds = 1f;
+        private const float StopFeedbackSeconds = 10f;
         private static readonly int[] SpeedSteps = { 1, 2, 4 };
+        private static readonly Color TrainColor = new Color(0.2f, 0.6f, 0.32f, 1f);
+        private static readonly Color StopColor = new Color(0.72f, 0.2f, 0.18f, 1f);
 
         [Header("Arena")]
         [SerializeField, Range(8f, 80f)] private float arenaSize = 20f;
@@ -53,6 +57,12 @@ namespace PersonalArena.View
         private int episode;
         private bool paused;
         private bool resultRecorded;
+        private TrainingServiceClient training;
+        private TrainingSnapshot trainingSnapshot;
+        private float nextTrainingPoll;
+        private float stopRequestedAt = float.NegativeInfinity;
+        private bool startedTraining;
+        private string trainingNotice;
 
         public ArenaSim Sim => sim;
         public BrainPilot Pilot => pilot;
@@ -75,8 +85,33 @@ namespace PersonalArena.View
             arenaHud.SetHelpText(
                 "AI is playing   1-6 zombies: 1/2/4/8/16/32   Space speed   T choice mode   R new round   Esc pause");
             arenaHud.SetResultFooter("Next round starts automatically");
+            if (!string.IsNullOrWhiteSpace(runsDirectory) && string.IsNullOrWhiteSpace(brainFile))
+            {
+                training = new TrainingServiceClient(runsDirectory);
+                arenaHud.TrainingButtonClicked += OnTrainingButton;
+                arenaHud.ShowTrainingPanel(true);
+                PollTraining();
+            }
+
             PollBrain();
             CreateSimulation();
+        }
+
+        private void OnDestroy()
+        {
+            if (arenaHud != null)
+            {
+                arenaHud.TrainingButtonClicked -= OnTrainingButton;
+            }
+        }
+
+        private void OnApplicationQuit()
+        {
+            // The service also stops when this process exits; asking first saves a few seconds.
+            if (training != null && startedTraining && trainingSnapshot.IsActive)
+            {
+                training.RequestStop();
+            }
         }
 
         private void Update()
@@ -85,6 +120,10 @@ namespace PersonalArena.View
             if (Time.unscaledTime >= nextPoll)
             {
                 PollBrain();
+            }
+            if (training != null && Time.unscaledTime >= nextTrainingPoll)
+            {
+                PollTraining();
             }
 
             if (sim == null)
@@ -238,6 +277,111 @@ namespace PersonalArena.View
             }
 
             RefreshInfo();
+        }
+
+        private void OnTrainingButton()
+        {
+            if (training == null)
+            {
+                return;
+            }
+
+            if (trainingSnapshot.IsActive)
+            {
+                training.RequestStop();
+                stopRequestedAt = Time.unscaledTime;
+                trainingNotice = null;
+            }
+            else if (trainingSnapshot.State != TrainingState.External && trainingSnapshot.State != TrainingState.Unavailable)
+            {
+                trainingNotice = training.Start(System.Diagnostics.Process.GetCurrentProcess().Id);
+                startedTraining = trainingNotice == null;
+                stopRequestedAt = float.NegativeInfinity;
+            }
+
+            PollTraining();
+        }
+
+        private void PollTraining()
+        {
+            nextTrainingPoll = Time.unscaledTime + TrainingPollSeconds;
+            trainingSnapshot = training.Read();
+            TrainingStatus status = trainingSnapshot.Status;
+            CultureInfo culture = CultureInfo.InvariantCulture;
+            bool stopAsked = Time.unscaledTime - stopRequestedAt < StopFeedbackSeconds;
+            string lastRun = status != null && status.step > 0
+                ? "\nLast run " + status.run_id + ": " + status.step.ToString("N0", culture) + " steps"
+                : string.Empty;
+            string text;
+            switch (trainingSnapshot.State)
+            {
+                case TrainingState.Unavailable:
+                    arenaHud.SetTrainingButton("TRAIN THE AI", false, TrainColor);
+                    text = "Training is not available on this PC:\n" + training.MissingPiece();
+                    break;
+                case TrainingState.Starting:
+                    arenaHud.SetTrainingButton(stopAsked ? "STOPPING..." : "STOP TRAINING", !stopAsked, StopColor);
+                    text = "Starting... loading the training arenas\n(about a minute). The fighter here keeps\nupdating as the AI learns.";
+                    break;
+                case TrainingState.Training:
+                    arenaHud.SetTrainingButton(stopAsked ? "STOPPING..." : "STOP TRAINING", !stopAsked, StopColor);
+                    text = "Training run " + status.run_id +
+                        "\nStep " + status.step.ToString("N0", culture) +
+                        (status.has_reward ? "    Mean reward " + status.mean_reward.ToString("0.0", culture) : string.Empty) +
+                        (status.zombies > 0f ? "\nTraining arenas: " + status.zombies.ToString("0", culture) + " zombies" : string.Empty) +
+                        "\nThis session " + FormatDuration(status.session_seconds);
+                    break;
+                case TrainingState.Stopping:
+                    arenaHud.SetTrainingButton("SAVING...", false, StopColor);
+                    text = "Saving the AI's progress, please wait...";
+                    break;
+                case TrainingState.External:
+                    arenaHud.SetTrainingButton("TRAINING (OUTSIDE)", false, StopColor);
+                    text = "Training was started outside the game.\nThe fighter here still updates with\neach new brain.";
+                    break;
+                case TrainingState.Stopped:
+                    arenaHud.SetTrainingButton("TRAIN THE AI", true, TrainColor);
+                    text = status.message + "\nPress to continue training.";
+                    break;
+                case TrainingState.Error:
+                    arenaHud.SetTrainingButton("TRAIN THE AI", true, TrainColor);
+                    text = "Problem: " + status.message + "\nPress to try again.";
+                    break;
+                default:
+                    arenaHud.SetTrainingButton("TRAIN THE AI", true, TrainColor);
+                    text = "Press to let the AI keep learning in the\nbackground while you watch it play." + lastRun;
+                    break;
+            }
+
+            if (!string.IsNullOrEmpty(trainingNotice))
+            {
+                text = trainingNotice;
+            }
+
+            arenaHud.SetTrainingText(text);
+            float[] rewards = status != null ? status.rewards : null;
+            string caption = rewards != null && rewards.Length > 0 && status.steps != null && status.steps.Length > 0
+                ? "Mean reward, step 0 - " + FormatSteps(status.steps[status.steps.Length - 1]) + " (higher = smarter)"
+                : "Mean reward graph appears once training reports";
+            arenaHud.SetTrainingGraph(rewards, caption);
+        }
+
+        private static string FormatDuration(float seconds)
+        {
+            int whole = Mathf.Max(0, Mathf.FloorToInt(seconds));
+            return whole >= 3600
+                ? (whole / 3600) + "h " + (whole % 3600 / 60).ToString("00") + "m"
+                : (whole / 60) + "m " + (whole % 60).ToString("00") + "s";
+        }
+
+        private static string FormatSteps(long steps)
+        {
+            CultureInfo culture = CultureInfo.InvariantCulture;
+            if (steps >= 1000000)
+            {
+                return (steps / 1e6).ToString("0.0", culture) + "M";
+            }
+            return steps >= 1000 ? (steps / 1000).ToString(culture) + "k" : steps.ToString(culture);
         }
 
         private void RecordResultOnce()
