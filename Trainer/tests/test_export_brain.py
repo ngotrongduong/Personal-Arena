@@ -135,3 +135,30 @@ def test_newest_behavior_dir_prefers_current_rules_before_checkpoint_time(tmp_pa
 
     assert export_brain.newest_behavior_dir(tmp_path, "Warrior") == current
     assert export_brain.newest_behavior_dir(tmp_path, "Warrior", rules_version=1) == old
+
+
+def test_discover_behaviors_finds_current_rules_and_ignores_old_or_non_behavior_folders(
+    tmp_path: Path,
+):
+    current = tmp_path / "mixed-001"
+    old = tmp_path / "archer-001"
+    for behavior in ("Warrior", "Mage"):
+        behavior_dir = current / behavior
+        behavior_dir.mkdir(parents=True)
+        (behavior_dir / f"{behavior}-100.pt").write_bytes(b"current")
+    arena_trainer.write_rules_version(current)
+
+    old_behavior = old / "Archer"
+    old_behavior.mkdir(parents=True)
+    (old_behavior / "Archer-200.pt").write_bytes(b"old")
+    (old / arena_trainer.RULES_FILE).write_text("2", encoding="utf-8")
+
+    run_logs = current / "run_logs"
+    run_logs.mkdir()
+    (run_logs / "run_logs-300.pt").write_bytes(b"not a behavior")
+    unrelated = current / "notes"
+    unrelated.mkdir()
+    (unrelated / "different-400.pt").write_bytes(b"not a matching behavior")
+
+    assert export_brain.discover_behaviors(tmp_path) == ["Mage", "Warrior"]
+    assert export_brain.export_newest(tmp_path, "Archer", {}) is None

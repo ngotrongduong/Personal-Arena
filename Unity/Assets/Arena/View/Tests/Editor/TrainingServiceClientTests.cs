@@ -35,6 +35,38 @@ namespace PersonalArena.View.Tests
         }
 
         [Test]
+        public void Parse_ReadsZombieMix()
+        {
+            TrainingStatus status = TrainingStatus.Parse(
+                "{\"state\": \"training\", \"behavior\": \"Mage\", " +
+                "\"zombie_mix\": {\"walker\": 1.0, \"runner\": 0.5, \"brute\": 0.0, \"spitter\": 0.25}}");
+
+            Assert.That(status.behavior, Is.EqualTo("Mage"));
+            Assert.That(status.zombie_mix, Is.Not.Null);
+            Assert.That(status.zombie_mix.runner, Is.EqualTo(0.5f));
+            Assert.That(status.zombie_mix.Describe(), Is.EqualTo("walker+runner+spitter"));
+        }
+
+        [Test]
+        public void ZombieMix_DescribesWalkersOnly()
+        {
+            Assert.That(new ZombieMix { walker = 1f }.Describe(), Is.EqualTo("walkers only"));
+            Assert.That(new ZombieMix { walker = 1f, runner = 1f, brute = 1f, spitter = 1f }.Describe(),
+                Is.EqualTo("walker+runner+brute+spitter"));
+        }
+
+        [Test]
+        public void Viewer_MapsClassesToBehaviorsAndMixesToSpawns()
+        {
+            Assert.That(AiArenaController.BehaviorFor("mage"), Is.EqualTo("Mage"));
+            Assert.That(AiArenaController.BehaviorFor("archer"), Is.EqualTo("Archer"));
+            Assert.That(AiArenaController.BehaviorFor(null), Is.EqualTo("Warrior"));
+            Assert.That(AiArenaController.MixSpawns(0), Has.Length.EqualTo(1));
+            Assert.That(AiArenaController.MixSpawns(1), Has.Length.EqualTo(4));
+            Assert.That(AiArenaController.MixSpawns(4)[1].Type.Id, Is.EqualTo("spitter"));
+        }
+
+        [Test]
         public void Parse_RejectsEmptyOrBrokenText()
         {
             Assert.That(TrainingStatus.Parse(null), Is.Null);

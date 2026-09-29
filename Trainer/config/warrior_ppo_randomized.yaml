@@ -25,43 +25,98 @@ behaviors:
     keep_checkpoints: 10
 
 environment_parameters:
-  # Rules v2 (round platform over an abyss). One shared threshold for every lesson;
-  # tune it from real runs.
+  # ML-Agents advances each parameter independently on the same reward. Mix thresholds are
+  # above the last zombie_count threshold, so new types arrive once 16 zombies are handled.
+  # All thresholds are first estimates; tune them from real runs (see docs/TRAINING.md).
   zombie_count:
     curriculum:
       - name: OneZombie
-        completion_criteria: &advance_lesson
+        completion_criteria: &advance_one
           measure: reward
           behavior: Warrior
           signal_smoothing: true
           min_lesson_length: 1000
-          threshold: 10.0
+          threshold: 15.0
         value: 1.0
       - name: TwoZombies
-        completion_criteria: *advance_lesson
+        completion_criteria: &advance_two
+          measure: reward
+          behavior: Warrior
+          signal_smoothing: true
+          min_lesson_length: 1000
+          threshold: 25.0
         value: 2.0
       - name: FourZombies
-        completion_criteria: *advance_lesson
+        completion_criteria: &advance_four
+          measure: reward
+          behavior: Warrior
+          signal_smoothing: true
+          min_lesson_length: 1000
+          threshold: 40.0
         value: 4.0
       - name: EightZombies
-        completion_criteria: *advance_lesson
+        completion_criteria: &advance_eight
+          measure: reward
+          behavior: Warrior
+          signal_smoothing: true
+          min_lesson_length: 1000
+          threshold: 70.0
         value: 8.0
       - name: SixteenZombiesRandomized
         value: 16.0
 
+  runner_weight:
+    curriculum:
+      - name: NoRunners
+        completion_criteria:
+          measure: reward
+          behavior: Warrior
+          signal_smoothing: true
+          min_lesson_length: 1000
+          threshold: 150.0
+        value: 0.0
+      - name: Runners
+        value: 0.5
+
+  brute_weight:
+    curriculum:
+      - name: NoBrutes
+        completion_criteria:
+          measure: reward
+          behavior: Warrior
+          signal_smoothing: true
+          min_lesson_length: 1000
+          threshold: 170.0
+        value: 0.0
+      - name: Brutes
+        value: 0.35
+
+  spitter_weight:
+    curriculum:
+      - name: NoSpitters
+        completion_criteria:
+          measure: reward
+          behavior: Warrior
+          signal_smoothing: true
+          min_lesson_length: 1000
+          threshold: 190.0
+        value: 0.0
+      - name: Spitters
+        value: 0.35
+
   arena_size:
     curriculum:
       - name: ArenaOneZombie
-        completion_criteria: *advance_lesson
+        completion_criteria: *advance_one
         value: 28.0
       - name: ArenaTwoZombies
-        completion_criteria: *advance_lesson
+        completion_criteria: *advance_two
         value: 28.0
       - name: ArenaFourZombies
-        completion_criteria: *advance_lesson
+        completion_criteria: *advance_four
         value: 28.0
       - name: ArenaEightZombies
-        completion_criteria: *advance_lesson
+        completion_criteria: *advance_eight
         value: 28.0
       - name: ArenaRandomized
         value:
@@ -73,16 +128,16 @@ environment_parameters:
   hp_mult:
     curriculum:
       - name: HpOneZombie
-        completion_criteria: *advance_lesson
+        completion_criteria: *advance_one
         value: 1.0
       - name: HpTwoZombies
-        completion_criteria: *advance_lesson
+        completion_criteria: *advance_two
         value: 1.0
       - name: HpFourZombies
-        completion_criteria: *advance_lesson
+        completion_criteria: *advance_four
         value: 1.0
       - name: HpEightZombies
-        completion_criteria: *advance_lesson
+        completion_criteria: *advance_eight
         value: 1.0
       - name: HpRandomized
         value: &random_multiplier
@@ -94,16 +149,16 @@ environment_parameters:
   damage_mult:
     curriculum:
       - name: DamageOneZombie
-        completion_criteria: *advance_lesson
+        completion_criteria: *advance_one
         value: 1.0
       - name: DamageTwoZombies
-        completion_criteria: *advance_lesson
+        completion_criteria: *advance_two
         value: 1.0
       - name: DamageFourZombies
-        completion_criteria: *advance_lesson
+        completion_criteria: *advance_four
         value: 1.0
       - name: DamageEightZombies
-        completion_criteria: *advance_lesson
+        completion_criteria: *advance_eight
         value: 1.0
       - name: DamageRandomized
         value: *random_multiplier
@@ -111,16 +166,16 @@ environment_parameters:
   speed_mult:
     curriculum:
       - name: SpeedOneZombie
-        completion_criteria: *advance_lesson
+        completion_criteria: *advance_one
         value: 1.0
       - name: SpeedTwoZombies
-        completion_criteria: *advance_lesson
+        completion_criteria: *advance_two
         value: 1.0
       - name: SpeedFourZombies
-        completion_criteria: *advance_lesson
+        completion_criteria: *advance_four
         value: 1.0
       - name: SpeedEightZombies
-        completion_criteria: *advance_lesson
+        completion_criteria: *advance_eight
         value: 1.0
       - name: SpeedRandomized
         value: *random_multiplier

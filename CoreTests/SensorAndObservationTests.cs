@@ -11,15 +11,15 @@ namespace PersonalArena.CoreTests
         {
             RaySensor sensor = new RaySensor(new RaySensorConfig { RayCount = 8, ZombieTypeCount = 4 });
 
-            Assert.That(sensor.CategoryCount, Is.EqualTo(7));
-            Assert.That(sensor.SizePerRay, Is.EqualTo(11));
-            Assert.That(sensor.TotalSize, Is.EqualTo(88));
+            Assert.That(sensor.CategoryCount, Is.EqualTo(8));
+            Assert.That(sensor.SizePerRay, Is.EqualTo(12));
+            Assert.That(sensor.TotalSize, Is.EqualTo(96));
         }
 
         [Test]
-        public void DefaultObservationSizeIs811()
+        public void Observation_SizeIs883()
         {
-            Assert.That(new ObservationBuilder().Size, Is.EqualTo(19 + 72 * 11));
+            Assert.That(new ObservationBuilder().Size, Is.EqualTo(883));
         }
 
         [Test]
@@ -44,10 +44,10 @@ namespace PersonalArena.CoreTests
             sensor.Write(sim, buffer, 0);
 
             Assert.That(buffer[2], Is.EqualTo(1f));
-            Assert.That(buffer[7], Is.EqualTo(4.55f / 20f).Within(1e-5f));
-            Assert.That(buffer[8], Is.EqualTo(1f));
+            Assert.That(buffer[8], Is.EqualTo(4.55f / 20f).Within(1e-5f));
             Assert.That(buffer[9], Is.EqualTo(1f));
             Assert.That(buffer[10], Is.EqualTo(1f));
+            Assert.That(buffer[11], Is.EqualTo(1f));
         }
 
         [Test]
@@ -64,7 +64,7 @@ namespace PersonalArena.CoreTests
             float[] nothing = new float[shortSensor.TotalSize];
             shortSensor.Write(empty, nothing, 0);
             Assert.That(nothing[0], Is.EqualTo(1f));
-            Assert.That(nothing[7], Is.EqualTo(1f));
+            Assert.That(nothing[8], Is.EqualTo(1f));
 
             ArenaSim small = TestHelpers.Sim(0);
             small.Hero.Position = new Vec2(16f, 10f);
@@ -72,7 +72,7 @@ namespace PersonalArena.CoreTests
             float[] edge = new float[shortSensor.TotalSize];
             shortSensor.Write(small, edge, 0);
             Assert.That(edge[shortSensor.EdgeCategory], Is.EqualTo(1f));
-            Assert.That(edge[7], Is.EqualTo(0.4f).Within(1e-4f));
+            Assert.That(edge[8], Is.EqualTo(0.4f).Within(1e-4f));
         }
 
         [Test]
@@ -103,7 +103,43 @@ namespace PersonalArena.CoreTests
             sensor.Write(sim, buffer, 0);
 
             Assert.That(buffer[sensor.PotionCategory], Is.EqualTo(1f));
-            Assert.That(buffer[7], Is.EqualTo((3f - ArenaSim.PotionRadius) / 20f).Within(1e-5f));
+            Assert.That(buffer[8], Is.EqualTo((3f - ArenaSim.PotionRadius) / 20f).Within(1e-5f));
+        }
+
+        [Test]
+        public void EnemyProjectileOnRaySetsEnemyProjectileCategory()
+        {
+            ArenaConfig config = new ArenaConfig
+            {
+                Width = 40f,
+                Height = 40f,
+                ZombieCount = 1,
+                RespawnKilledZombies = false,
+                ZombieSpawns = new[] { new ZombieSpawnEntry(DefaultDefs.Spitter()) }
+            };
+            ArenaSim sim = new ArenaSim(DefaultDefs.Warrior(), config);
+            sim.Hero.Position = new Vec2(20f, 20f);
+            sim.Hero.Facing = 0f;
+            sim.Zombies[0].Position = new Vec2(27f, 20f);
+            sim.Zombies[0].Facing = MathF.PI;
+            for (int i = 0; i < 60 && !HasActiveProjectile(sim); i++)
+            {
+                sim.Step(default);
+            }
+
+            RaySensor sensor = new RaySensor(new RaySensorConfig
+            {
+                RayCount = 4,
+                MaxDistance = 20f,
+                ZombieTypeCount = 4
+            });
+            float[] buffer = new float[sensor.TotalSize];
+            sensor.Write(sim, buffer, 0);
+
+            Assert.That(buffer[sensor.EnemyProjectileCategory], Is.EqualTo(1f));
+            Assert.That(buffer[sensor.CategoryCount + 1], Is.Zero);
+            Assert.That(buffer[sensor.CategoryCount + 2], Is.Zero);
+            Assert.That(buffer[sensor.CategoryCount + 3], Is.Zero);
         }
 
         [Test]
@@ -147,7 +183,20 @@ namespace PersonalArena.CoreTests
             builder.Write(sixteen, second);
 
             Assert.That(first.Length, Is.EqualTo(second.Length));
-            Assert.That(builder.Size, Is.EqualTo(ObservationBuilder.HeroObservationSize + 12 * 11));
+            Assert.That(builder.Size, Is.EqualTo(ObservationBuilder.HeroObservationSize + 12 * 12));
+        }
+
+        private static bool HasActiveProjectile(ArenaSim sim)
+        {
+            for (int i = 0; i < sim.Projectiles.Count; i++)
+            {
+                if (sim.Projectiles[i].Active)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

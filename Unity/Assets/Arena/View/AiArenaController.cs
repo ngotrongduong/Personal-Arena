@@ -25,7 +25,12 @@ namespace PersonalArena.View
         private static readonly Color TrainColor = new Color(0.2f, 0.6f, 0.32f, 1f);
         private static readonly Color StopColor = new Color(0.72f, 0.2f, 0.18f, 1f);
         private const string PowerPreference = "TrainingPower";
+        private const string ClassPreference = "HeroClass";
+        private const string MixPreference = "ZombieMix";
         private const int DefaultPowerIndex = 2;
+        private static readonly string[] ClassIds = { "warrior", "mage", "archer" };
+        private static readonly string[] MixNames =
+            { "Walkers only", "All types", "Mostly runners", "Mostly brutes", "Mostly spitters" };
         /// <summary>
         /// Training power presets, measured on the owner's PC (see docs/TRAINING.md): more arenas per
         /// game beat more games, and a faster time scale did not help reliably.
@@ -80,6 +85,8 @@ namespace PersonalArena.View
         private bool restartWithNewPower;
         private TrainingHistoryPanel historyPanel;
         private TopDownCamera.ViewMode shownCameraMode;
+        private int classIndex;
+        private int mixIndex;
 
         public ArenaSim Sim => sim;
         public BrainPilot Pilot => pilot;
@@ -99,6 +106,20 @@ namespace PersonalArena.View
                 runsDirectory = BrainLocator.FindRunsDirectory(Application.dataPath);
             }
 
+            classIndex = Mathf.Clamp(PlayerPrefs.GetInt(ClassPreference, 0), 0, ClassIds.Length - 1);
+            mixIndex = Mathf.Clamp(PlayerPrefs.GetInt(MixPreference, 1), 0, MixNames.Length - 1);
+            string requestedClass = CommandLineValue("-class");
+            if (!string.IsNullOrWhiteSpace(requestedClass))
+            {
+                int requested = Array.IndexOf(ClassIds, requestedClass.Trim().ToLowerInvariant());
+                classIndex = requested >= 0 ? requested : classIndex;
+            }
+            if (int.TryParse(CommandLineValue("-mix"), NumberStyles.Integer, CultureInfo.InvariantCulture, out int requestedMix))
+            {
+                mixIndex = Mathf.Clamp(requestedMix, 0, MixNames.Length - 1);
+            }
+            behaviorName = BehaviorFor(ClassIds[classIndex]);
+
             RefreshHelp();
             arenaHud.SetResultFooter("Next round starts automatically");
             if (!string.IsNullOrWhiteSpace(runsDirectory) && string.IsNullOrWhiteSpace(brainFile))
@@ -113,6 +134,9 @@ namespace PersonalArena.View
                 PollTraining();
             }
 
+            arenaHud.HeroClassClicked += CycleHeroClass;
+            arenaHud.ZombieMixClicked += CycleZombieMix;
+            RefreshMatchChoices();
             PollBrain();
             CreateSimulation();
         }
@@ -123,7 +147,86 @@ namespace PersonalArena.View
             {
                 arenaHud.TrainingButtonClicked -= OnTrainingButton;
                 arenaHud.TrainingPowerClicked -= OnPowerButton;
+                arenaHud.HeroClassClicked -= CycleHeroClass;
+                arenaHud.ZombieMixClicked -= CycleZombieMix;
             }
+        }
+
+        /// <summary>ML-Agents behavior name for a class id, e.g. "mage" -> "Mage".</summary>
+        public static string BehaviorFor(string classId)
+        {
+            return string.IsNullOrEmpty(classId)
+                ? "Warrior"
+                : char.ToUpperInvariant(classId[0]) + classId.Substring(1).ToLowerInvariant();
+        }
+
+        /// <summary>Zombie types for a viewer preset; walkers stay in every mix like in training.</summary>
+        public static ZombieSpawnEntry[] MixSpawns(int index)
+        {
+            switch (index)
+            {
+                case 1:
+                    return new[]
+                    {
+                        new ZombieSpawnEntry(DefaultDefs.Walker()), new ZombieSpawnEntry(DefaultDefs.Runner()),
+                        new ZombieSpawnEntry(DefaultDefs.Brute()), new ZombieSpawnEntry(DefaultDefs.Spitter())
+                    };
+                case 2:
+                    return new[] { new ZombieSpawnEntry(DefaultDefs.Walker()), new ZombieSpawnEntry(DefaultDefs.Runner(), 3f) };
+                case 3:
+                    return new[] { new ZombieSpawnEntry(DefaultDefs.Walker()), new ZombieSpawnEntry(DefaultDefs.Brute(), 3f) };
+                case 4:
+                    return new[] { new ZombieSpawnEntry(DefaultDefs.Walker()), new ZombieSpawnEntry(DefaultDefs.Spitter(), 3f) };
+                default:
+                    return new[] { new ZombieSpawnEntry(DefaultDefs.Walker()) };
+            }
+        }
+
+        private void CycleHeroClass()
+        {
+            classIndex = (classIndex + 1) % ClassIds.Length;
+            PlayerPrefs.SetInt(ClassPreference, classIndex);
+            PlayerPrefs.Save();
+            behaviorName = BehaviorFor(ClassIds[classIndex]);
+            if (string.IsNullOrWhiteSpace(brainFile))
+            {
+                pilot.ClearBrain();
+                loadedPath = null;
+                loadedWriteTime = default;
+            }
+
+            recent.Clear();
+            if (historyPanel != null && (training == null || !trainingSnapshot.IsActive))
+            {
+                historyPanel.SetRunDirectory(BrainLocator.FindNewestRunDirectory(runsDirectory, behaviorName));
+            }
+
+            seed++;
+            CreateSimulation();
+            PollBrain();
+            RefreshMatchChoices();
+            if (training != null)
+            {
+                PollTraining();
+            }
+        }
+
+        private void CycleZombieMix()
+        {
+            mixIndex = (mixIndex + 1) % MixNames.Length;
+            PlayerPrefs.SetInt(MixPreference, mixIndex);
+            PlayerPrefs.Save();
+            recent.Clear();
+            seed++;
+            CreateSimulation();
+            RefreshMatchChoices();
+        }
+
+        private void RefreshMatchChoices()
+        {
+            arenaHud.SetMatchChoices(
+                "Hero: " + ClassIds[classIndex].ToUpperInvariant() + "  (H)      change >",
+                "Zombies: " + MixNames[mixIndex] + "  (M)      change >");
         }
 
         private void OnApplicationQuit()
@@ -247,6 +350,15 @@ namespace PersonalArena.View
             {
                 historyPanel.Toggle();
             }
+
+            if (keyboard.hKey.wasPressedThisFrame)
+            {
+                CycleHeroClass();
+            }
+            else if (keyboard.mKey.wasPressedThisFrame)
+            {
+                CycleZombieMix();
+            }
         }
 
         private void RefreshHelp()
@@ -255,6 +367,7 @@ namespace PersonalArena.View
             arenaHud.SetHelpText(
                 "AI is playing by itself\n" +
                 "1-6 zombies: 1/2/4/8/16/32   R new round\n" +
+                "H hero class   M zombie types\n" +
                 "Space view speed   T choice mode   Esc pause\n" +
                 "G training data (learning graphs)\n\n" +
                 topDownCamera.ModeLabel.ToUpperInvariant() + "\n" +
@@ -278,8 +391,13 @@ namespace PersonalArena.View
                     else if (string.IsNullOrWhiteSpace(brainFile) &&
                         BrainLocator.FindNewestBrain(runsDirectory, behaviorName, false) != null)
                     {
-                        brainStatus = "The arena changed: a round platform over\na deadly abyss. The old brain only knows\n" +
-                            "the square arena, so the warrior waits.\nPress TRAIN THE AI to teach it the new rules.";
+                        brainStatus = "The arena rules changed (new zombie types).\nThe old brain does not know them, so the\n" +
+                            ClassIds[classIndex] + " waits. Press TRAIN THE AI to\nteach it the new rules.";
+                    }
+                    else if (training != null)
+                    {
+                        brainStatus = "The " + ClassIds[classIndex] + " has no brain yet, so it waits.\n" +
+                            "Press TRAIN THE AI to start teaching it.";
                     }
                     else
                     {
@@ -362,7 +480,7 @@ namespace PersonalArena.View
 
         private void StartTraining()
         {
-            trainingNotice = training.Start(System.Diagnostics.Process.GetCurrentProcess().Id, Powers[powerIndex]);
+            trainingNotice = training.Start(System.Diagnostics.Process.GetCurrentProcess().Id, Powers[powerIndex], behaviorName);
             startedTraining = trainingNotice == null;
             stopRequestedAt = float.NegativeInfinity;
         }
@@ -438,9 +556,13 @@ namespace PersonalArena.View
                 case TrainingState.Training:
                     arenaHud.SetTrainingButton(stopAsked ? "STOPPING..." : "STOP TRAINING", !stopAsked, StopColor);
                     text = "Training run " + status.run_id +
+                        (!string.IsNullOrEmpty(status.behavior) && status.behavior != behaviorName
+                            ? "  (" + status.behavior.ToLowerInvariant() + ", not the hero shown)"
+                            : string.Empty) +
                         "\nStep " + status.step.ToString("N0", culture) +
                         (status.has_reward ? "    Mean reward " + status.mean_reward.ToString("0.0", culture) : string.Empty) +
                         (status.zombies > 0f ? "\nTraining arenas: " + status.zombies.ToString("0", culture) + " zombies" : string.Empty) +
+                        (status.zombie_mix != null ? "\nZombie types: " + status.zombie_mix.Describe() : string.Empty) +
                         (status.num_envs > 0
                             ? "\n" + (status.num_envs * status.arena_agents) + " arenas learning at once (" +
                               status.num_envs + " games x " + status.arena_agents + ")" + (status.cpu ? " on the CPU" : string.Empty)
@@ -549,8 +671,8 @@ namespace PersonalArena.View
                 }
             }
 
-            text += "\nRound " + episode + "   Zombies " + zombieCount +
-                "   View speed x" + SpeedSteps[speedIndex] +
+            text += "\nZombies " + zombieCount + " - " + MixNames[mixIndex].ToLowerInvariant() +
+                "\nRound " + episode + "   View speed x" + SpeedSteps[speedIndex] +
                 "   Choice " + (pilot.Deterministic ? "best" : "sampled");
             if (recent.Count > 0)
             {
@@ -581,12 +703,12 @@ namespace PersonalArena.View
                 Width = arenaSize,
                 Height = arenaSize,
                 ZombieCount = zombieCount,
-                ZombieSpawns = new[] { new ZombieSpawnEntry(DefaultDefs.Walker()) },
+                ZombieSpawns = MixSpawns(mixIndex),
                 EpisodeSeconds = episodeSeconds,
                 RespawnKilledZombies = true,
                 Seed = seed
             };
-            sim = new ArenaSim(DefaultDefs.Warrior(), config);
+            sim = new ArenaSim(DefaultDefs.HeroClass(ClassIds[classIndex]), config);
             stats.Reset();
             pilot.ResetEpisode();
             accumulator = 0f;

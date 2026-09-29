@@ -14,7 +14,7 @@ if (-not (Test-Path $viewer)) {
 
 $exporter = $null
 if (Test-Path $python) {
-    $exporter = Start-Process -FilePath $python -ArgumentList @("`"$exporterScript`"", '--watch') `
+    $exporter = Start-Process -FilePath $python -ArgumentList @("`"$exporterScript`"", '--watch', '--behavior', 'all') `
         -WorkingDirectory $root -WindowStyle Hidden -PassThru
 }
 

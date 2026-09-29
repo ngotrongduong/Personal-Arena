@@ -31,6 +31,9 @@ namespace PersonalArena.View
         private const int HeroDash = 6;
         private const int HeroHit = 7;
         private const int HeroDeath = 8;
+        private const int HeroThrow = 9;
+        private const int HeroCast = 10;
+        private const int HeroDodgeBack = 11;
 
         private const int WalkerIdle = 0;
         private const int WalkerWalk = 1;
@@ -38,9 +41,13 @@ namespace PersonalArena.View
         private const int WalkerHit = 3;
         private const int WalkerDeath = 4;
         private const int WalkerSpawn = 5;
+        private const int WalkerRun = 6;
+        private const int WalkerThrow = 7;
 
-        private static readonly bool[] HeroLoops = { true, true, true, false, false, false, false, false, false };
-        private static readonly bool[] WalkerLoops = { true, true, false, false, false, false };
+        private const float ProjectileHeight = 0.95f;
+
+        private static readonly bool[] HeroLoops = { true, true, true, false, false, false, false, false, false, false, false, false };
+        private static readonly bool[] WalkerLoops = { true, true, false, false, false, false, true, false };
 
         private static readonly Color StrikeColor = new Color(0.78f, 0.9f, 1f, 0.95f);
         private static readonly Color ImpactColor = new Color(1f, 0.72f, 0.3f);
@@ -54,12 +61,25 @@ namespace PersonalArena.View
         private static readonly Color DeathSmokeColor = new Color(0.28f, 0.22f, 0.32f, 0.75f);
         private static readonly Color SummonColor = new Color(0.65f, 0.35f, 1f);
         private static readonly Color PotionColor = new Color(1f, 0.25f, 0.32f);
+        private static readonly Color FireColor = new Color(1f, 0.48f, 0.12f);
+        private static readonly Color FrostColor = new Color(0.55f, 0.88f, 1f);
+        private static readonly Color ArcaneColor = new Color(0.72f, 0.45f, 1f);
+        private static readonly Color ArrowColor = new Color(1f, 0.93f, 0.72f);
+        private static readonly Color PierceColor = new Color(0.45f, 0.95f, 1f);
+        private static readonly Color ConcussColor = new Color(1f, 0.82f, 0.25f);
+        private static readonly Color VenomColor = new Color(0.5f, 1f, 0.2f);
 
         [SerializeField] private ArenaArtSet artSet;
 
         private readonly List<ZombieView> zombieViews = new List<ZombieView>();
         private readonly List<PotionView> potionViews = new List<PotionView>();
+        private readonly List<ProjectileView> projectileViews = new List<ProjectileView>();
         private MaterialPropertyBlock propertyBlock;
+        private Transform projectilesRoot;
+        private Material projectileCoreMaterial;
+        private Material manaBubbleMaterial;
+        private MeshRenderer manaBubble;
+        private string heroClassId;
 
         private ArenaSim sim;
         private ArenaEffects effects;
@@ -124,10 +144,15 @@ namespace PersonalArena.View
             EnsureEffects();
             BuildEnvironment();
             EnsureHeroView();
+            if (sim != null && heroClassId != sim.HeroDef.Id)
+            {
+                BuildHeroBody(sim.HeroDef.Id);
+            }
 
             int count = sim != null ? sim.Zombies.Count : 0;
             EnsureZombieViews(count);
             EnsurePotionViews(sim != null ? sim.Potions.Count : 0);
+            HideProjectiles();
             effects.Clear();
             heroFlashRemaining = 0f;
             heroPopRemaining = 0f;
@@ -176,6 +201,7 @@ namespace PersonalArena.View
                 currentZombies[i] = Snapshot(zombie.Position, zombie.Facing, zombie.Alive);
                 previousZombies[i] = currentZombies[i];
                 ZombieView view = zombieViews[i];
+                EnsureZombieBody(view, zombie);
                 view.WasAlive = zombie.Alive;
                 view.WasStunned = false;
                 view.LastPhase = zombie.AttackPhase;
@@ -211,6 +237,8 @@ namespace PersonalArena.View
                 {
                     previousZombies[i] = currentZombies[i];
                     ZombieView view = zombieViews[i];
+                    // Respawns re-roll the zombie type, so the body may need a new look.
+                    EnsureZombieBody(view, zombie);
                     view.Snap = true;
                     view.Falling = false;
                     Vector3 feet = currentZombies[i].Position;
@@ -272,6 +300,7 @@ namespace PersonalArena.View
             }
 
             PresentPotions();
+            PresentProjectiles();
         }
 
         private void PresentHero(float delta)
@@ -314,11 +343,23 @@ namespace PersonalArena.View
             // Rigged heroes stay visible to play their death animation.
             heroRoot.gameObject.SetActive(visible);
 
+            bool blocking = hero.IsBlocking && currentHero.Alive;
+            bool bubble = blocking && HeroBlockCoversAllSides();
             if (shield != null)
             {
-                shield.gameObject.SetActive(hero.IsBlocking && currentHero.Alive);
+                shield.gameObject.SetActive(blocking && !bubble);
             }
-            heroShieldGlow?.SetBlocking(hero.IsBlocking && currentHero.Alive);
+            heroShieldGlow?.SetBlocking(blocking && !bubble);
+            if (manaBubble != null)
+            {
+                manaBubble.enabled = bubble;
+                if (bubble)
+                {
+                    float pulse = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 6f);
+                    manaBubble.transform.localScale = Vector3.one * (2.1f + 0.08f * pulse);
+                    manaBubbleMaterial.color = new Color(ArcaneColor.r, ArcaneColor.g, ArcaneColor.b, 0.16f + 0.1f * pulse);
+                }
+            }
             heroStars?.SetVisible(hero.Alive && hero.StunRemaining > 0f);
             if (heroShadow != null)
             {
@@ -425,6 +466,7 @@ namespace PersonalArena.View
 
             Color tint = rigged ? new Color(2.2f, 2.2f, 2.2f) : Color.white;
             bool overrideTint = true;
+            bool ranged = zombie.Def != null && zombie.Def.Behavior == ZombieBehavior.Ranged;
             if (view.FlashRemaining <= 0f)
             {
                 if (zombie.StunRemaining > 0f)
@@ -433,8 +475,16 @@ namespace PersonalArena.View
                 }
                 else if (zombie.AttackPhase == ZombieAttackPhase.Windup)
                 {
-                    // Textured models keep their detail with a warm wash instead of a flat color.
-                    tint = rigged ? new Color(1.45f, 1.1f, 0.55f) : new Color(1f, 0.82f, 0.22f);
+                    // Textured models keep their detail with a warm wash instead of a flat color;
+                    // spitters glow poison green while they gather a shot.
+                    tint = ranged
+                        ? (rigged ? new Color(0.9f, 1.6f, 0.55f) : VenomColor)
+                        : (rigged ? new Color(1.45f, 1.1f, 0.55f) : new Color(1f, 0.82f, 0.22f));
+                }
+                else if (zombie.SlowRemaining > 0f)
+                {
+                    // Frost-nova slow: an icy wash.
+                    tint = rigged ? new Color(0.85f, 1.25f, 1.9f) : FrostColor;
                 }
                 else
                 {
@@ -493,6 +543,230 @@ namespace PersonalArena.View
                     effects.Sparkle(floor + Vector3.up * 0.25f, new Color(1f, 0.55f, 0.6f), 1, 0.3f, 0.8f, 0.16f);
                 }
             }
+        }
+
+        /// <summary>Draws every in-flight projectile, a step behind like the actors so it lines up with them.</summary>
+        private void PresentProjectiles()
+        {
+            IReadOnlyList<ProjectileState> projectiles = sim.Projectiles;
+            int shown = 0;
+            float lag = (1f - interpolationAlpha) * ArenaSim.FixedDeltaTime;
+            for (int i = 0; i < projectiles.Count; i++)
+            {
+                ProjectileState projectile = projectiles[i];
+                if (!projectile.Active)
+                {
+                    continue;
+                }
+
+                if (shown >= projectileViews.Count)
+                {
+                    projectileViews.Add(CreateProjectileView(projectileViews.Count));
+                }
+
+                ProjectileView view = projectileViews[shown++];
+                Vec2 position = projectile.Position - projectile.Velocity * lag;
+                Vector3 world = ArenaSpace.ToWorld(position) + Vector3.up * ProjectileHeight;
+                Vector3 direction = new Vector3(projectile.Velocity.X, 0f, projectile.Velocity.Y);
+                bool fresh = view.ShownId != projectile.Id;
+                if (fresh)
+                {
+                    view.ShownId = projectile.Id;
+                    ApplyProjectileStyle(view, ProjectileStyleOf(projectile), projectile.Radius);
+                    view.Root.gameObject.SetActive(true);
+                    view.Root.position = world;
+                    view.Trail.Clear();
+                }
+
+                view.Root.position = world;
+                if (direction.sqrMagnitude > 1e-6f)
+                {
+                    view.Root.rotation = Quaternion.LookRotation(direction.normalized, Vector3.up);
+                }
+
+                if (view.Style == ProjectileStyle.Fireball || view.Style == ProjectileStyle.Venom)
+                {
+                    float wobble = 1f + 0.12f * Mathf.Sin(Time.unscaledTime * 24f + view.ShownId);
+                    view.Orb.localScale = Vector3.one * (view.OrbSize * wobble);
+                    view.SparkTimer -= Time.unscaledDeltaTime;
+                    if (view.SparkTimer <= 0f)
+                    {
+                        view.SparkTimer = 0.05f;
+                        effects.Puff(world, view.Color * new Color(1f, 1f, 1f, 0.7f), 1, 0.35f, 0.2f, 0.35f, 0.3f);
+                    }
+                }
+            }
+
+            for (int i = shown; i < projectileViews.Count; i++)
+            {
+                ProjectileView view = projectileViews[i];
+                if (view.Root.gameObject.activeSelf)
+                {
+                    view.Root.gameObject.SetActive(false);
+                }
+                view.ShownId = -1;
+            }
+        }
+
+        private ProjectileStyle ProjectileStyleOf(ProjectileState projectile)
+        {
+            if (!projectile.FromHero)
+            {
+                return ProjectileStyle.Venom;
+            }
+
+            SkillDef[] skills = sim.HeroDef.Skills;
+            SkillDef skill = projectile.SkillSlot >= 0 && projectile.SkillSlot < skills.Length ? skills[projectile.SkillSlot] : null;
+            if (skill == null)
+            {
+                return ProjectileStyle.Arrow;
+            }
+            if (skill.AreaRadius > 0f || skill.Id == "fireball")
+            {
+                return ProjectileStyle.Fireball;
+            }
+            if (skill.Pierce)
+            {
+                return ProjectileStyle.Piercing;
+            }
+            return skill.Id == "concussive-arrow" || skill.StunSeconds > 0f ? ProjectileStyle.Concussive : ProjectileStyle.Arrow;
+        }
+
+        private static Color ProjectileColor(ProjectileStyle style)
+        {
+            switch (style)
+            {
+                case ProjectileStyle.Fireball:
+                    return FireColor;
+                case ProjectileStyle.Piercing:
+                    return PierceColor;
+                case ProjectileStyle.Concussive:
+                    return ConcussColor;
+                case ProjectileStyle.Venom:
+                    return VenomColor;
+                default:
+                    return ArrowColor;
+            }
+        }
+
+        private void ApplyProjectileStyle(ProjectileView view, ProjectileStyle style, float radius)
+        {
+            view.SparkTimer = 0f;
+            if (view.Style == style && view.Styled)
+            {
+                return;
+            }
+
+            view.Styled = true;
+            view.Style = style;
+            Color color = ProjectileColor(style);
+            view.Color = color;
+            bool orb = style == ProjectileStyle.Fireball || style == ProjectileStyle.Venom;
+            view.OrbSize = orb ? Mathf.Max(0.3f, radius * 1.6f) : 0.18f;
+            view.Orb.gameObject.SetActive(orb);
+            view.Shaft.gameObject.SetActive(!orb);
+            view.Orb.localScale = Vector3.one * view.OrbSize;
+            float shaftLength = style == ProjectileStyle.Piercing ? 1.1f : 0.85f;
+            view.Shaft.localScale = new Vector3(0.07f, 0.07f, shaftLength);
+            view.Shaft.localPosition = new Vector3(0f, 0f, -shaftLength * 0.35f);
+
+            propertyBlock.Clear();
+            propertyBlock.SetColor("_Color", color);
+            propertyBlock.SetColor("_EmissionColor", color * (orb ? 2.4f : 1.4f));
+            view.OrbRenderer.SetPropertyBlock(propertyBlock);
+            view.ShaftRenderer.SetPropertyBlock(propertyBlock);
+
+            float glowSize = orb ? 1.6f : style == ProjectileStyle.Arrow ? 0.7f : 1.1f;
+            view.Glow.transform.localScale = new Vector3(glowSize, 1f, glowSize);
+            propertyBlock.Clear();
+            propertyBlock.SetColor("_Color", new Color(color.r, color.g, color.b, orb ? 0.85f : 0.55f));
+            view.Glow.SetPropertyBlock(propertyBlock);
+
+            Gradient gradient = new Gradient();
+            gradient.SetKeys(
+                new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(color, 0.3f), new GradientColorKey(color, 1f) },
+                new[] { new GradientAlphaKey(0.85f, 0f), new GradientAlphaKey(0.5f, 0.4f), new GradientAlphaKey(0f, 1f) });
+            view.Trail.colorGradient = gradient;
+            view.Trail.widthMultiplier = orb ? view.OrbSize * 0.9f : 0.12f;
+            view.Trail.time = orb ? 0.22f : 0.12f;
+        }
+
+        private ProjectileView CreateProjectileView(int index)
+        {
+            if (projectilesRoot == null)
+            {
+                GameObject rootObject = new GameObject("Projectiles");
+                rootObject.transform.SetParent(transform, false);
+                projectilesRoot = rootObject.transform;
+            }
+
+            GameObject root = new GameObject("Projectile " + index);
+            root.transform.SetParent(projectilesRoot, false);
+            ProjectileView view = new ProjectileView { Root = root.transform, ShownId = -1 };
+
+            GameObject orb = CreatePrimitive("Orb", PrimitiveType.Sphere, root.transform, projectileCoreMaterial);
+            view.Orb = orb.transform;
+            view.OrbRenderer = orb.GetComponent<Renderer>();
+            GameObject shaft = CreatePrimitive("Shaft", PrimitiveType.Cube, root.transform, projectileCoreMaterial);
+            view.Shaft = shaft.transform;
+            view.ShaftRenderer = shaft.GetComponent<Renderer>();
+            view.OrbRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            view.ShaftRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+
+            GameObject glow = new GameObject("Glow");
+            glow.transform.SetParent(root.transform, false);
+            glow.AddComponent<MeshFilter>().sharedMesh = FxAssets.FlatQuad;
+            view.Glow = glow.AddComponent<MeshRenderer>();
+            view.Glow.sharedMaterial = FxAssets.GlowMaterial;
+            view.Glow.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            view.Glow.receiveShadows = false;
+
+            view.Trail = effects.CreateTrail(root.transform, 0f, ArrowColor, 0.2f, 0.15f);
+            view.Trail.emitting = true;
+            root.SetActive(false);
+            return view;
+        }
+
+        private void HideProjectiles()
+        {
+            for (int i = 0; i < projectileViews.Count; i++)
+            {
+                projectileViews[i].Root.gameObject.SetActive(false);
+                projectileViews[i].ShownId = -1;
+            }
+        }
+
+        private bool HeroBlockCoversAllSides()
+        {
+            int slot = sim.Hero.BlockSkillSlot;
+            SkillDef[] skills = sim.HeroDef.Skills;
+            return slot >= 0 && slot < skills.Length && skills[slot] != null && skills[slot].BlockAllDirections;
+        }
+
+        private float SplashRadius()
+        {
+            SkillDef[] skills = sim.HeroDef.Skills;
+            for (int i = 0; i < skills.Length; i++)
+            {
+                if (skills[i] != null && skills[i].Kind == SkillKind.Projectile && skills[i].AreaRadius > 0f)
+                {
+                    return skills[i].AreaRadius;
+                }
+            }
+            return 0f;
+        }
+
+        private Color HeroProjectileImpactColor()
+        {
+            SkillDef[] skills = sim.HeroDef.Skills;
+            for (int i = 0; i < skills.Length; i++)
+            {
+                if (skills[i] != null && skills[i].Kind == SkillKind.Projectile)
+                {
+                    return skills[i].AreaRadius > 0f ? FireColor : ArrowColor;
+                }
+            }
+            return ImpactColor;
         }
 
         private static Vector3 FallPosition(Vector3 origin, Vector3 velocity, float time)
@@ -680,6 +954,63 @@ namespace PersonalArena.View
                     case SimEventType.SkillUsed:
                         PlayHeroSkill((int)simEvent.Value - 1, heroPosition, heroForward);
                         break;
+                    case SimEventType.ProjectileFired:
+                    {
+                        // Hero shots already get their cast animation from SkillUsed; spitters get a green spit puff.
+                        if (simEvent.ZombieId >= 0)
+                        {
+                            Vector3 mouth = ZombieWorldPosition(simEvent.ZombieId, heroPosition) + Vector3.up * 1.1f;
+                            effects.Puff(mouth, new Color(VenomColor.r, VenomColor.g, VenomColor.b, 0.7f), 6, 0.45f, 1f, 0.45f, 0.2f);
+                            effects.Flash(mouth, VenomColor, 1f, 0.14f);
+                        }
+                        break;
+                    }
+                    case SimEventType.ProjectileHit:
+                    {
+                        // The damage number comes from the HeroDealtDamage event that the same hit emits.
+                        Vector3 target = ZombieWorldPosition(simEvent.ZombieId, heroPosition + heroForward);
+                        Vector3 impact = target + Vector3.up * ProjectileHeight;
+                        Color color = HeroProjectileImpactColor();
+                        effects.Sparks(impact, target - heroPosition, color, 12, 5f, 0.9f);
+                        effects.Flash(impact, color, 1.5f, 0.16f);
+                        if (color == FireColor)
+                        {
+                            float splash = SplashRadius();
+                            effects.Shockwave(target, FireColor, Mathf.Max(2f, splash * 2f), 0.4f);
+                            effects.Puff(impact, new Color(1f, 0.55f, 0.2f, 0.7f), 10, 0.8f, 1.6f, 0.6f, 0.6f);
+                        }
+                        break;
+                    }
+                    case SimEventType.ProjectileBlocked:
+                    {
+                        bool bubble = HeroBlockCoversAllSides();
+                        Vector3 source = ZombieWorldPosition(simEvent.ZombieId, heroPosition + heroForward);
+                        Vector3 toward = source - heroPosition;
+                        toward.y = 0f;
+                        toward = toward.sqrMagnitude > 1e-4f ? toward.normalized : heroForward;
+                        Vector3 contact = heroPosition + toward * (bubble ? 1f : 0.65f) + Vector3.up * 0.9f;
+                        if (!bubble)
+                        {
+                            heroShieldGlow?.Flash(new Color(0.75f, 1f, 0.6f));
+                        }
+                        effects.Sparks(contact, toward, VenomColor, 14, 5f, 1f);
+                        effects.Flash(contact, bubble ? ArcaneColor : BlockColor, 1.4f, 0.16f);
+                        effects.Text(contact + Vector3.up * 0.8f, "BLOCKED", bubble ? ArcaneColor : BlockColor, 0.9f, 0.8f);
+                        break;
+                    }
+                    case SimEventType.HeroTeleported:
+                    {
+                        Vector3 from = previousHero.Position;
+                        Vector3 to = currentHero.Position;
+                        effects.Afterimage(heroRenderers, ArcaneColor, 0.45f);
+                        effects.Flash(from + Vector3.up * 0.9f, ArcaneColor, 2.2f, 0.25f);
+                        effects.Sparkle(from, ArcaneColor, 16, 0.6f, 1.8f, 0.22f);
+                        effects.Flash(to + Vector3.up * 0.9f, ArcaneColor, 2.6f, 0.3f);
+                        effects.Shockwave(to, ArcaneColor, 2.8f, 0.4f);
+                        effects.Sparkle(to, new Color(0.9f, 0.8f, 1f), 18, 0.6f, 2f, 0.24f);
+                        heroSnap = true;
+                        break;
+                    }
                 }
             }
         }
@@ -705,9 +1036,30 @@ namespace PersonalArena.View
                     effects.Puff(heroPosition + heroForward * 0.4f, DustColor, 4, 0.5f, 1f, 0.5f, 0.25f);
                     break;
                 case SkillKind.Dash:
-                    heroAnimator?.PlayOneShot(HeroDash, 1.2f, false);
+                    heroAnimator?.PlayOneShot(skills[slot].DashBackward ? HeroDodgeBack : HeroDash, 1.2f, false);
                     effects.Shockwave(heroPosition, DashColor, 2f, 0.35f);
                     effects.Puff(heroPosition, DustColor, 8, 0.7f, 1.8f, 0.6f, 0.3f);
+                    break;
+                case SkillKind.Projectile:
+                {
+                    heroAnimator?.PlayOneShot(HeroThrow, 1.8f, false);
+                    Color color = skills[slot].AreaRadius > 0f ? FireColor : ArrowColor;
+                    effects.Flash(heroPosition + heroForward * 0.7f + Vector3.up * ProjectileHeight, color, 1.2f, 0.12f);
+                    break;
+                }
+                case SkillKind.AreaBurst:
+                {
+                    heroAnimator?.PlayOneShot(HeroCast, 1.6f, false);
+                    float size = Mathf.Max(2f, skills[slot].AreaRadius * 2f);
+                    effects.Shockwave(heroPosition, FrostColor, size, 0.5f);
+                    effects.Shockwave(heroPosition, Color.white, size * 0.7f, 0.35f);
+                    effects.Sparkle(heroPosition, FrostColor, 28, skills[slot].AreaRadius * 0.8f, 1.2f, 0.24f);
+                    effects.Puff(heroPosition, new Color(0.8f, 0.95f, 1f, 0.6f), 12, 0.9f, skills[slot].AreaRadius, 0.7f, 0.3f);
+                    effects.Flash(heroPosition + Vector3.up * 0.9f, FrostColor, 2.4f, 0.25f);
+                    break;
+                }
+                case SkillKind.Teleport:
+                    heroAnimator?.PlayOneShot(HeroCast, 2f, false);
                     break;
             }
         }
@@ -781,7 +1133,10 @@ namespace PersonalArena.View
                     }
                     if (zombie.AttackPhase == ZombieAttackPhase.Windup && view.LastPhase != ZombieAttackPhase.Windup)
                     {
-                        view.Animator.PlayOneShot(WalkerAttack, 1.1f, false);
+                        bool ranged = zombie.Def != null && zombie.Def.Behavior == ZombieBehavior.Ranged;
+                        float windup = zombie.Def != null ? Mathf.Max(0.2f, zombie.Def.AttackWindupSeconds) : 0.5f;
+                        // Slow brute swings play slower so the long wind-up is readable.
+                        view.Animator.PlayOneShot(ranged ? WalkerThrow : WalkerAttack, Mathf.Clamp(0.55f / windup, 0.6f, 1.4f), false);
                     }
 
                     bool stunned = zombie.StunRemaining > 0f;
@@ -798,7 +1153,8 @@ namespace PersonalArena.View
                     }
                     else if (view.Walking)
                     {
-                        view.Animator.SetBase(WalkerWalk, Mathf.Clamp(speed / Mathf.Max(0.1f, zombie.Def.MoveSpeed), 0.6f, 1.8f) * 1.2f);
+                        float pace = Mathf.Clamp(speed / Mathf.Max(0.1f, zombie.Def.MoveSpeed), 0.6f, 1.8f);
+                        view.Animator.SetBase(view.Runs ? WalkerRun : WalkerWalk, view.Runs ? pace : pace * 1.2f);
                     }
                     else
                     {
@@ -953,39 +1309,88 @@ namespace PersonalArena.View
             GameObject bodyRootObject = new GameObject("Body Visual");
             bodyRootObject.transform.SetParent(heroRoot, false);
             heroBody = bodyRootObject.transform;
+            BuildHeroBody(sim != null ? sim.HeroDef.Id : "warrior");
 
-            if (UsesCharacterArt)
+            heroShadow = CreateBlobShadow(heroRoot, 1.25f);
+            heroShieldGlow = effects.CreateShield(heroRoot);
+            heroStars = effects.CreateStunStars(heroRoot, 1.85f);
+            heroTrail = effects.CreateTrail(heroRoot, 0.75f, DashColor, 0.95f, 0.22f);
+
+            // Mana shield: a translucent arcane sphere around the whole body (it guards every side).
+            GameObject bubble = CreatePrimitive("Mana Bubble", PrimitiveType.Sphere, heroRoot, manaBubbleMaterial);
+            bubble.transform.localPosition = new Vector3(0f, 0.9f, 0f);
+            manaBubble = bubble.GetComponent<MeshRenderer>();
+            manaBubble.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            manaBubble.receiveShadows = false;
+            manaBubble.enabled = false;
+        }
+
+        /// <summary>(Re)builds the hero body for a class: rigged KayKit look when available, colored primitives otherwise.</summary>
+        private void BuildHeroBody(string classId)
+        {
+            heroAnimator?.Dispose();
+            heroAnimator = null;
+            shield = null;
+            ClearChildren(heroBody);
+            heroClassId = classId;
+
+            ArenaArtSet.HeroLook look = UsesCharacterArt ? artSet.HeroFor(classId) : default;
+            if (look.Body != null)
             {
-                heroBodyScale = artSet.CharacterScale;
-                Animator animator = SpawnCharacter(artSet.Hero, heroBody, artSet.HeroMainHand, artSet.HeroOffHand);
+                heroBodyScale = artSet.CharacterScale * (look.Scale > 0f ? look.Scale : 1f);
+                Animator animator = SpawnCharacter(look.Body, heroBody, look.MainHand, look.OffHand);
                 heroAnimator = new CharacterAnimator(animator, new[]
                 {
                     artSet.HeroIdle, artSet.HeroRun, artSet.HeroBlock, artSet.HeroStrikeA, artSet.HeroStrikeB,
-                    artSet.HeroKick, artSet.HeroDash, artSet.HeroHit, artSet.HeroDeath
-                }, HeroLoops, "Hero");
+                    artSet.HeroKick, artSet.HeroDash, artSet.HeroHit, artSet.HeroDeath,
+                    artSet.HeroThrow, artSet.HeroCast, artSet.HeroDodgeBack
+                }, HeroLoops, "Hero " + classId);
                 heroAnimator.ResetTo(HeroIdle);
             }
             else
             {
-                GameObject body = CreatePrimitive("Warrior Body", PrimitiveType.Capsule, heroBody, heroMaterial);
+                heroBodyScale = 1f;
+                heroMaterial.color = ClassColor(classId);
+                GameObject body = CreatePrimitive("Hero Body", PrimitiveType.Capsule, heroBody, heroMaterial);
                 body.transform.localPosition = new Vector3(0f, HeroHeight, 0f);
                 body.transform.localScale = new Vector3(0.9f, HeroHeight, 0.9f);
 
-                GameObject spear = CreatePrimitive("Spear", PrimitiveType.Cube, heroBody, spearMaterial);
-                spear.transform.localPosition = new Vector3(0.18f, 0.75f, 1.05f);
-                spear.transform.localScale = new Vector3(0.1f, 0.1f, 1.45f);
+                bool warrior = classId == "warrior";
+                GameObject weapon = CreatePrimitive(warrior ? "Spear" : "Weapon", PrimitiveType.Cube, heroBody, spearMaterial);
+                weapon.transform.localPosition = warrior ? new Vector3(0.18f, 0.75f, 1.05f) : new Vector3(0.4f, 0.9f, 0.35f);
+                weapon.transform.localScale = warrior ? new Vector3(0.1f, 0.1f, 1.45f) : new Vector3(0.08f, 1.3f, 0.08f);
 
                 GameObject shieldObject = CreatePrimitive("Shield", PrimitiveType.Cube, heroBody, shieldMaterial);
                 shieldObject.transform.localPosition = new Vector3(-0.45f, 0.72f, 0.55f);
                 shieldObject.transform.localScale = new Vector3(0.65f, 0.9f, 0.12f);
                 shield = shieldObject.transform;
             }
-            heroRenderers = bodyRootObject.GetComponentsInChildren<Renderer>(true);
+            heroRenderers = heroBody.GetComponentsInChildren<Renderer>(true);
+        }
 
-            heroShadow = CreateBlobShadow(heroRoot, 1.25f);
-            heroShieldGlow = effects.CreateShield(heroRoot);
-            heroStars = effects.CreateStunStars(heroRoot, 1.85f);
-            heroTrail = effects.CreateTrail(heroRoot, 0.75f, DashColor, 0.95f, 0.22f);
+        /// <summary>Detaches then destroys every child, so a rebuilt body never picks up the old renderers.</summary>
+        private static void ClearChildren(Transform parent)
+        {
+            for (int i = parent.childCount - 1; i >= 0; i--)
+            {
+                Transform child = parent.GetChild(i);
+                child.gameObject.SetActive(false);
+                child.SetParent(null, false);
+                DestroyUnityObject(child.gameObject);
+            }
+        }
+
+        private static Color ClassColor(string classId)
+        {
+            switch (classId)
+            {
+                case "mage":
+                    return new Color(0.55f, 0.3f, 0.85f);
+                case "archer":
+                    return new Color(0.3f, 0.62f, 0.3f);
+                default:
+                    return new Color(0.22f, 0.48f, 0.85f);
+            }
         }
 
         private void EnsureZombieViews(int count)
@@ -1006,37 +1411,10 @@ namespace PersonalArena.View
                 ZombieView view = new ZombieView
                 {
                     Root = rootObject.transform,
-                    BodyRoot = bodyRootObject.transform
+                    BodyRoot = bodyRootObject.transform,
+                    Index = index
                 };
 
-                if (UsesCharacterArt && artSet.Walkers.Length > 0 && artSet.Walkers[index % artSet.Walkers.Length].Body != null)
-                {
-                    ArenaArtSet.WalkerLook look = artSet.Walkers[index % artSet.Walkers.Length];
-                    Animator animator = SpawnCharacter(look.Body, bodyRootObject.transform, look.MainHand, look.OffHand);
-                    view.BodyScale = artSet.CharacterScale;
-                    view.Animator = new CharacterAnimator(animator, new[]
-                    {
-                        artSet.WalkerIdle, artSet.WalkerWalk, artSet.WalkerAttack, artSet.WalkerHit,
-                        artSet.WalkerDeath, artSet.WalkerSpawn
-                    }, WalkerLoops, "Walker " + index);
-                    view.Animator.ResetTo(WalkerIdle);
-                }
-                else
-                {
-                    GameObject body = CreatePrimitive("Body", PrimitiveType.Capsule, bodyRootObject.transform, zombieMaterial);
-                    body.transform.localPosition = new Vector3(0f, ZombieHeight, 0f);
-                    body.transform.localScale = new Vector3(0.86f, ZombieHeight, 0.86f);
-
-                    GameObject head = CreatePrimitive("Head", PrimitiveType.Sphere, bodyRootObject.transform, zombieHeadMaterial);
-                    head.transform.localPosition = new Vector3(0f, 1.45f, 0f);
-                    head.transform.localScale = new Vector3(0.62f, 0.5f, 0.62f);
-
-                    GameObject facing = CreatePrimitive("Facing", PrimitiveType.Cube, bodyRootObject.transform, facingMaterial);
-                    facing.transform.localPosition = new Vector3(0f, 0.72f, 0.55f);
-                    facing.transform.localScale = new Vector3(0.16f, 0.16f, 0.55f);
-                }
-
-                view.Renderers = bodyRootObject.GetComponentsInChildren<Renderer>(true);
                 view.Shadow = CreateBlobShadow(rootObject.transform, 1.2f);
                 view.Stars = effects.CreateStunStars(rootObject.transform, 1.8f);
                 zombieViews.Add(view);
@@ -1046,6 +1424,55 @@ namespace PersonalArena.View
             {
                 zombieViews[i].Root.gameObject.SetActive(false);
             }
+        }
+
+        /// <summary>Gives a zombie view the body of its current type (walker, runner, brute, spitter...).</summary>
+        private void EnsureZombieBody(ZombieView view, ZombieState zombie)
+        {
+            int typeIndex = zombie.Def != null ? zombie.Def.TypeIndex : 0;
+            if (view.TypeIndex == typeIndex && view.Renderers != null)
+            {
+                return;
+            }
+
+            view.Animator?.Dispose();
+            view.Animator = null;
+            ClearChildren(view.BodyRoot);
+            view.TypeIndex = typeIndex;
+
+            float radiusScale = zombie.Def != null ? Mathf.Clamp(zombie.Def.Radius / 0.45f, 0.6f, 2f) : 1f;
+            ArenaArtSet.WalkerLook look = UsesCharacterArt ? artSet.WalkerFor(typeIndex) : default;
+            if (look.Body != null)
+            {
+                Animator animator = SpawnCharacter(look.Body, view.BodyRoot, look.MainHand, look.OffHand);
+                view.BodyScale = artSet.CharacterScale * (look.Scale > 0f ? look.Scale : 1f);
+                view.Runs = look.Runs;
+                view.Animator = new CharacterAnimator(animator, new[]
+                {
+                    artSet.WalkerIdle, artSet.WalkerWalk, artSet.WalkerAttack, artSet.WalkerHit,
+                    artSet.WalkerDeath, artSet.WalkerSpawn, artSet.WalkerRun, artSet.WalkerThrow
+                }, WalkerLoops, "Zombie " + view.Index);
+                view.Animator.ResetTo(WalkerIdle);
+            }
+            else
+            {
+                view.BodyScale = radiusScale;
+                view.Runs = false;
+                GameObject body = CreatePrimitive("Body", PrimitiveType.Capsule, view.BodyRoot, zombieMaterial);
+                body.transform.localPosition = new Vector3(0f, ZombieHeight, 0f);
+                body.transform.localScale = new Vector3(0.86f, ZombieHeight, 0.86f);
+
+                GameObject head = CreatePrimitive("Head", PrimitiveType.Sphere, view.BodyRoot, zombieHeadMaterial);
+                head.transform.localPosition = new Vector3(0f, 1.45f, 0f);
+                head.transform.localScale = new Vector3(0.62f, 0.5f, 0.62f);
+
+                GameObject facing = CreatePrimitive("Facing", PrimitiveType.Cube, view.BodyRoot, facingMaterial);
+                facing.transform.localPosition = new Vector3(0f, 0.72f, 0.55f);
+                facing.transform.localScale = new Vector3(0.16f, 0.16f, 0.55f);
+            }
+
+            view.Renderers = view.BodyRoot.GetComponentsInChildren<Renderer>(true);
+            view.Shadow.localScale = new Vector3(1.2f * radiusScale, 1f, 1.2f * radiusScale);
         }
 
         private void EnsurePotionViews(int count)
@@ -1191,6 +1618,13 @@ namespace PersonalArena.View
             potionCorkMaterial = CreateMaterial(shader, new Color(0.45f, 0.29f, 0.15f), "Potion Cork");
             potionCorkMaterial.SetFloat("_Glossiness", 0.15f);
 
+            projectileCoreMaterial = CreateMaterial(shader, Color.white, "Projectile Core");
+            projectileCoreMaterial.EnableKeyword("_EMISSION");
+            projectileCoreMaterial.SetColor("_EmissionColor", Color.white);
+            projectileCoreMaterial.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+            manaBubbleMaterial = FxAssets.Create("Mana Bubble", Texture2D.whiteTexture, true);
+            manaBubbleMaterial.color = new Color(ArcaneColor.r, ArcaneColor.g, ArcaneColor.b, 0.2f);
+
             shadowMaterial = FxAssets.Create("Blob Shadow", FxAssets.SoftDot, false);
             shadowMaterial.color = new Color(0f, 0f, 0f, 0.42f);
             shadowMaterial.renderQueue = 2990;
@@ -1281,6 +1715,8 @@ namespace PersonalArena.View
             DestroyUnityObject(potionGlassMaterial);
             DestroyUnityObject(potionNeckMaterial);
             DestroyUnityObject(potionCorkMaterial);
+            DestroyUnityObject(projectileCoreMaterial);
+            DestroyUnityObject(manaBubbleMaterial);
         }
 
         private struct ActorSnapshot
@@ -1298,6 +1734,9 @@ namespace PersonalArena.View
             public ArenaEffects.StunStars Stars;
             public Renderer[] Renderers;
             public CharacterAnimator Animator;
+            public int Index;
+            public int TypeIndex = -1;
+            public bool Runs;
             public float BodyScale = 1f;
             public float FlashRemaining;
             public float PopRemaining;
@@ -1327,6 +1766,32 @@ namespace PersonalArena.View
             public int ShownId;
             public float Age;
             public float SparkleTimer;
+        }
+
+        private enum ProjectileStyle
+        {
+            Arrow,
+            Piercing,
+            Concussive,
+            Fireball,
+            Venom
+        }
+
+        private sealed class ProjectileView
+        {
+            public Transform Root;
+            public Transform Orb;
+            public Transform Shaft;
+            public Renderer OrbRenderer;
+            public Renderer ShaftRenderer;
+            public MeshRenderer Glow;
+            public TrailRenderer Trail;
+            public int ShownId;
+            public bool Styled;
+            public ProjectileStyle Style;
+            public Color Color;
+            public float OrbSize;
+            public float SparkTimer;
         }
     }
 }

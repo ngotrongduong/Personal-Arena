@@ -48,6 +48,9 @@ namespace PersonalArena.Core
                     case SimEventType.HeroFell:
                         reward += config.FallExtra;
                         break;
+                    case SimEventType.ZombieFell:
+                        reward += config.KnockOffBonus;
+                        break;
                     case SimEventType.PotionPicked:
                         reward += item.Value * config.HealPerHp;
                         break;

@@ -95,6 +95,14 @@ namespace PersonalArena.Core
                         throw new ArgumentException("Every ZombieSpawns weight must be greater than zero.", nameof(ZombieSpawns));
                     }
 
+                    if (entry.Type.KnockbackResist < 0f || entry.Type.KnockbackResist > 1f ||
+                        float.IsNaN(entry.Type.KnockbackResist))
+                    {
+                        throw new ArgumentException(
+                            "Every zombie KnockbackResist must be between zero and one.",
+                            nameof(ZombieSpawns));
+                    }
+
                     totalWeight += entry.Weight;
                 }
             }

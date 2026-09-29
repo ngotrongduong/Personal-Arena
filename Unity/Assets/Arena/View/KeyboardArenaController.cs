@@ -181,6 +181,7 @@ namespace PersonalArena.View
             lastMouseMoveTime = float.NegativeInfinity;
             arenaRenderer.Bind(sim);
             arenaHud.Bind(sim, stats);
+            arenaHud.ShowSkillKeys(true);
             arenaHud.SetPaused(false);
             topDownCamera.Bind(sim);
         }

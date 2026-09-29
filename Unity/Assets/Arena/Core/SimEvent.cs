@@ -20,7 +20,11 @@ namespace PersonalArena.Core
         ZombieFell,
         Stagger,
         PotionDropped,
-        PotionPicked
+        PotionPicked,
+        ProjectileFired,
+        ProjectileHit,
+        ProjectileBlocked,
+        HeroTeleported
     }
 
     /// <summary>Allocation-free event payload produced by the simulation.</summary>

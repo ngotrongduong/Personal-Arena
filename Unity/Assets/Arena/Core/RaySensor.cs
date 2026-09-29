@@ -30,9 +30,9 @@ namespace PersonalArena.Core
     }
 
     /// <summary>
-    /// Writes platform-edge, zombie and potion ray hits without per-call allocations.
-    /// Per ray: one-hot category [none, edge, zombie type 0..N-1, potion], normalised distance,
-    /// then three zombie flags (stunned, winding up, back turned to the hero).
+    /// Writes platform-edge, zombie, potion and enemy-projectile ray hits without per-call allocations.
+    /// Per ray: one-hot category [none, edge, zombie type 0..N-1, potion, enemy projectile],
+    /// normalised distance, then three zombie flags (stunned, winding up, back turned to the hero).
     /// </summary>
     public sealed class RaySensor
     {
@@ -44,9 +44,10 @@ namespace PersonalArena.Core
             config.Validate();
         }
 
-        public int CategoryCount => config.ZombieTypeCount + 3;
+        public int CategoryCount => config.ZombieTypeCount + 4;
         public int EdgeCategory => 1;
         public int PotionCategory => config.ZombieTypeCount + 2;
+        public int EnemyProjectileCategory => config.ZombieTypeCount + 3;
         public int SizePerRay => CategoryCount + 4;
         public int TotalSize => config.RayCount * SizePerRay;
 
@@ -117,6 +118,26 @@ namespace PersonalArena.Core
                     {
                         nearest = hitDistance;
                         category = PotionCategory;
+                        target = null;
+                    }
+                }
+
+                IReadOnlyList<ProjectileState> projectiles = sim.Projectiles;
+                for (int projectileIndex = 0; projectileIndex < projectiles.Count; projectileIndex++)
+                {
+                    ProjectileState projectile = projectiles[projectileIndex];
+                    if (!projectile.Active || projectile.FromHero)
+                    {
+                        continue;
+                    }
+
+                    float hitRadius = MathF.Max(projectile.Radius, 0.4f);
+                    float hitDistance = RayCircleDistance(
+                        sim.Hero.Position, direction, projectile.Position, hitRadius);
+                    if (hitDistance >= 0f && hitDistance < nearest && hitDistance <= config.MaxDistance)
+                    {
+                        nearest = hitDistance;
+                        category = EnemyProjectileCategory;
                         target = null;
                     }
                 }

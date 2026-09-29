@@ -11,9 +11,10 @@ from typing import Sequence
 
 
 DEFAULT_CONFIG = Path("Trainer/config/warrior_ppo.yaml")
+CONFIG_DIRECTORY = Path("Trainer/config")
 DEFAULT_ENVIRONMENT = Path("Build/Training/PersonalArenaTraining.exe")
 DEFAULT_RESULTS_DIRECTORY = Path("Trainer/runs")
-RULES_VERSION = 2
+RULES_VERSION = 3
 RULES_FILE = "rules_version.txt"
 
 
@@ -37,7 +38,10 @@ def create_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Launch ML-Agents PPO training for Personal Arena."
     )
-    parser.add_argument("--config", default=str(DEFAULT_CONFIG))
+    parser.add_argument(
+        "--config",
+        help="PPO config (default: Trainer/config/<hero class>_ppo.yaml).",
+    )
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--env", default=str(DEFAULT_ENVIRONMENT))
     parser.add_argument("--num-envs", type=int, default=4)
@@ -47,7 +51,12 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--arena-agents",
         type=int,
-        help="Warriors trained side by side inside each Unity game (default: the build's 16).",
+        help="Heroes trained side by side inside each Unity game (default: the build's 16).",
+    )
+    parser.add_argument(
+        "--hero-class",
+        choices=("warrior", "mage", "archer"),
+        help="Hero class trained by the Unity environment.",
     )
     parser.add_argument(
         "--torch-device",
@@ -91,10 +100,18 @@ def resolve_path(value: str, root: Path) -> Path:
     return path.resolve() if path.is_absolute() else (root / path).resolve()
 
 
+def config_for(args: argparse.Namespace) -> str:
+    """The explicit --config, else the config whose behavior matches the hero class."""
+    if args.config:
+        return args.config
+    hero_class = getattr(args, "hero_class", None) or "warrior"
+    return str(CONFIG_DIRECTORY / f"{hero_class}_ppo.yaml")
+
+
 def build_command(args: argparse.Namespace, root: Path | None = None) -> list[str]:
     root = repository_root() if root is None else root.resolve()
     learner = root / ".venv-ml" / "Scripts" / "mlagents-learn.exe"
-    config = resolve_path(args.config, root)
+    config = resolve_path(config_for(args), root)
     environment = resolve_path(args.env, root)
     results_directory = resolve_path(args.results_dir, root)
 
@@ -124,9 +141,15 @@ def build_command(args: argparse.Namespace, root: Path | None = None) -> list[st
         command.extend(("--initialize-from", args.initialize_from))
     elif args.force:
         command.append("--force")
+    environment_arguments = []
     if getattr(args, "arena_agents", None):
+        environment_arguments.extend(("--arena-agents", str(args.arena_agents)))
+    if getattr(args, "hero_class", None):
+        environment_arguments.extend(("--hero-class", args.hero_class))
+    if environment_arguments:
         # --env-args takes the rest of the command line, so it must come last.
-        command.extend(("--env-args", "--arena-agents", str(args.arena_agents)))
+        command.append("--env-args")
+        command.extend(environment_arguments)
     return command
 
 

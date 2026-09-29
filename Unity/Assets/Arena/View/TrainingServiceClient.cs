@@ -33,6 +33,7 @@ namespace PersonalArena.View
         public bool has_reward;
         public float mean_reward;
         public float zombies;
+        public ZombieMix zombie_mix;
         public float session_seconds;
         public int num_envs;
         public int arena_agents;
@@ -60,7 +61,36 @@ namespace PersonalArena.View
         }
     }
 
-    /// <summary>How hard training runs: hidden Unity games, warriors per game and simulation speed.</summary>
+    /// <summary>Curriculum spawn weights the trainer is currently using (walker is always 1).</summary>
+    [Serializable]
+    public sealed class ZombieMix
+    {
+        public float walker;
+        public float runner;
+        public float brute;
+        public float spitter;
+
+        /// <summary>Short label such as "walkers" or "walker+runner+brute".</summary>
+        public string Describe()
+        {
+            string text = "walker";
+            if (runner > 0f)
+            {
+                text += "+runner";
+            }
+            if (brute > 0f)
+            {
+                text += "+brute";
+            }
+            if (spitter > 0f)
+            {
+                text += "+spitter";
+            }
+            return text == "walker" ? "walkers only" : text;
+        }
+    }
+
+    /// <summary>How hard training runs: hidden Unity games, fighters per game and simulation speed.</summary>
     public readonly struct TrainingPower
     {
         public readonly string Name;
@@ -155,7 +185,7 @@ namespace PersonalArena.View
         }
 
         /// <summary>Launches the service in a hidden console; returns an error message or null.</summary>
-        public string Start(int parentProcessId, TrainingPower power)
+        public string Start(int parentProcessId, TrainingPower power, string behavior = "Warrior")
         {
             string missing = MissingPiece();
             if (missing != null)
@@ -171,7 +201,8 @@ namespace PersonalArena.View
                 }
 
                 System.Diagnostics.ProcessStartInfo info = new System.Diagnostics.ProcessStartInfo(
-                    PythonPath, Quote(ScriptPath) + " --parent-pid " + parentProcessId + power.Arguments())
+                    PythonPath, Quote(ScriptPath) + " --parent-pid " + parentProcessId + power.Arguments() +
+                    " --behavior " + (string.IsNullOrEmpty(behavior) ? "Warrior" : behavior))
                 {
                     UseShellExecute = false,
                     CreateNoWindow = true,

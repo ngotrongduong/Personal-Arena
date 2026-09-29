@@ -19,6 +19,7 @@ namespace PersonalArena.CoreTests
         [TestCase(SimEventType.Backstab, 1f)]
         [TestCase(SimEventType.Parry, 1f)]
         [TestCase(SimEventType.Kick, 1f)]
+        [TestCase(SimEventType.ZombieFell, 1f)]
         [TestCase(SimEventType.PotionPicked, 30f)]
         public void PositiveRewardTermsArePositive(SimEventType type, float value)
         {
@@ -54,6 +55,17 @@ namespace PersonalArena.CoreTests
             };
 
             Assert.That(calculator.Compute(events, 0f), Is.GreaterThanOrEqualTo(0f));
+        }
+
+        [Test]
+        public void Reward_KnockOffBonus_IsPositive()
+        {
+            RewardConfig config = new RewardConfig();
+            float reward = new RewardCalculator(config).Compute(
+                new[] { new SimEvent(SimEventType.ZombieFell, 1f) }, 0f);
+
+            Assert.That(config.KnockOffBonus, Is.EqualTo(0.5f));
+            Assert.That(reward, Is.EqualTo(config.KnockOffBonus));
         }
     }
 }
