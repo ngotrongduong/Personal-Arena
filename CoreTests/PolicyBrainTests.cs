@@ -169,11 +169,26 @@ namespace PersonalArena.CoreTests
 
             foreach (string file in files)
             {
+                if (RunRulesVersion(runs, file) != ArenaSim.RulesVersion)
+                {
+                    continue; // trained under older rules; the viewer ignores these too
+                }
+
                 PolicyBrain brain = PolicyBrain.Load(File.ReadAllBytes(file));
                 Assert.That(brain.HasSelfTest, Is.True, file);
                 Assert.That(brain.SelfTestError(), Is.LessThan(1e-3f), file);
                 Assert.That(BrainPilot.Validate(brain), Is.Null, file);
             }
+        }
+
+        private static int RunRulesVersion(string runs, string brainFile)
+        {
+            string relative = Path.GetRelativePath(runs, brainFile);
+            string runName = relative.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)[0];
+            string marker = Path.Combine(runs, runName, "rules_version.txt");
+            return File.Exists(marker) && int.TryParse(File.ReadAllText(marker).Trim(), out int version)
+                ? version
+                : 1;
         }
 
         private static float Swish(float x) => x / (1f + MathF.Exp(-x));

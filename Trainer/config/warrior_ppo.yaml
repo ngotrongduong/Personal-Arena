@@ -25,7 +25,8 @@ behaviors:
     keep_checkpoints: 10
 
 environment_parameters:
-  # These reward thresholds are first guesses and must be tuned from real runs.
+  # Rules v2 (round platform over an abyss). Thresholds are raised because v1's 6.0 was
+  # passed long before the hero fought well; tune them from real runs.
   zombie_count:
     curriculum:
       - name: OneZombie
@@ -33,36 +34,36 @@ environment_parameters:
           measure: reward
           behavior: Warrior
           signal_smoothing: true
-          min_lesson_length: 300
-          threshold: 6.0
+          min_lesson_length: 1000
+          threshold: 8.0
         value: 1.0
       - name: TwoZombies
         completion_criteria:
           measure: reward
           behavior: Warrior
           signal_smoothing: true
-          min_lesson_length: 300
-          threshold: 6.0
+          min_lesson_length: 1000
+          threshold: 10.0
         value: 2.0
       - name: FourZombies
         completion_criteria:
           measure: reward
           behavior: Warrior
           signal_smoothing: true
-          min_lesson_length: 300
-          threshold: 6.0
+          min_lesson_length: 1000
+          threshold: 12.0
         value: 4.0
       - name: EightZombies
         completion_criteria:
           measure: reward
           behavior: Warrior
           signal_smoothing: true
-          min_lesson_length: 300
-          threshold: 6.0
+          min_lesson_length: 1000
+          threshold: 14.0
         value: 8.0
       - name: SixteenZombies
         value: 16.0
-  arena_size: 20.0
+  arena_size: 28.0
   hp_mult: 1.0
   damage_mult: 1.0
   speed_mult: 1.0

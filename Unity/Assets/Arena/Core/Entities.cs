@@ -22,7 +22,10 @@ namespace PersonalArena.Core
         public float StunRemaining;
         public float SlowFactor = 1f;
         public float SlowRemaining;
+        public float DashRemaining;
+        public Vec2 DashDirection;
         public bool Alive;
+        public bool FellOff;
         public int Id;
     }
 
@@ -32,6 +35,7 @@ namespace PersonalArena.Core
         public Vec2 Position;
         public float Facing;
         public Vec2 Velocity;
+        public Vec2 KnockbackVelocity;
         public float Hp;
         public float Energy;
         public bool IsBlocking;
@@ -42,8 +46,18 @@ namespace PersonalArena.Core
         public ZombieAttackPhase AttackPhase;
         public float AttackTimer;
         public bool Alive;
+        public bool FellOff;
         public int Id;
         public ZombieTypeDef Def;
         public float RespawnRemaining;
+    }
+
+    /// <summary>A health potion dropped by a slain zombie.</summary>
+    public sealed class PotionState
+    {
+        public int Id;
+        public Vec2 Position;
+        public float Remaining;
+        public bool Active;
     }
 }

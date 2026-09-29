@@ -3,16 +3,35 @@ using System.Collections.Generic;
 
 namespace PersonalArena.Core
 {
-    /// <summary>Headless deterministic 60 Hz arena simulation.</summary>
+    /// <summary>
+    /// Headless deterministic 60 Hz arena simulation. The arena is a round platform surrounded by
+    /// an abyss: anything whose centre leaves the platform falls and dies.
+    /// </summary>
     public sealed class ArenaSim
     {
         public const float FixedDeltaTime = 1f / 60f;
+        public const float PotionRadius = 0.35f;
+
+        /// <summary>
+        /// Version of the game rules and observation layout. Brains trained under another version
+        /// cannot play this game; the trainer writes it to each run's rules_version.txt.
+        /// </summary>
+        public const int RulesVersion = 2;
+
+        /// <summary>Exponential decay rate (1/s) of knockback velocity.</summary>
+        public const float KnockbackDamping = 9f;
 
         private const float DegreesToRadians = MathF.PI / 180f;
+        private const float KnockbackStopSpeed = 0.05f;
+        private const float SpawnMinHeroDistance = 4f;
+        private static readonly float KnockbackDecay = MathF.Exp(-KnockbackDamping * FixedDeltaTime);
+
         private readonly List<ZombieState> zombies = new List<ZombieState>();
+        private readonly List<PotionState> potions = new List<PotionState>();
         private readonly List<SimEvent> events = new List<SimEvent>(32);
         private Rng rng;
         private int tick;
+        private int nextPotionId;
 
         public ArenaSim(HeroClassDef hero, ArenaConfig config)
         {
@@ -25,28 +44,49 @@ namespace PersonalArena.Core
 
             Config.Validate();
             Hero = new HeroState();
-            events.Capacity = Math.Max(events.Capacity, Config.ZombieCount * 3 + 8);
+            events.Capacity = Math.Max(events.Capacity, Config.ZombieCount * 4 + 8);
+            for (int i = 0; i < Config.MaxPotions; i++)
+            {
+                potions.Add(new PotionState());
+            }
+
             rng = new Rng(Config.Seed);
             Reset();
         }
 
         public HeroState Hero { get; }
         public IReadOnlyList<ZombieState> Zombies => zombies;
+
+        /// <summary>Potion slots; only entries with <see cref="PotionState.Active"/> are on the floor.</summary>
+        public IReadOnlyList<PotionState> Potions => potions;
+
         public float Time => tick * FixedDeltaTime;
         public bool Done { get; private set; }
         public IReadOnlyList<SimEvent> Events => events;
         public ArenaConfig Config { get; }
         public HeroClassDef HeroDef { get; }
 
+        /// <summary>Knockback start speed that makes a push travel <paramref name="distance"/> metres.</summary>
+        public static float KnockbackSpeedFor(float distance) =>
+            distance * (1f - KnockbackDecay) / FixedDeltaTime;
+
+        /// <summary>True when <paramref name="position"/> is over the abyss.</summary>
+        public bool IsOverAbyss(Vec2 position)
+        {
+            float radius = Config.Radius;
+            return (position - Config.Center).LengthSquared > radius * radius;
+        }
+
         public void Reset(int? seed = null)
         {
             Config.Validate();
             rng = new Rng(seed ?? Config.Seed);
             tick = 0;
+            nextPotionId = 0;
             Done = false;
             events.Clear();
 
-            Hero.Position = new Vec2(Config.Width * 0.5f, Config.Height * 0.5f);
+            Hero.Position = Config.Center;
             Hero.Facing = MathF.PI * 0.5f;
             Hero.Velocity = Vec2.Zero;
             Hero.Hp = HeroDef.MaxHp;
@@ -56,11 +96,19 @@ namespace PersonalArena.Core
             Hero.StunRemaining = 0f;
             Hero.SlowFactor = 1f;
             Hero.SlowRemaining = 0f;
+            Hero.DashRemaining = 0f;
+            Hero.DashDirection = Vec2.Zero;
             Hero.Alive = true;
+            Hero.FellOff = false;
             Hero.Id = 0;
             for (int i = 0; i < Hero.CooldownRemaining.Length; i++)
             {
                 Hero.CooldownRemaining[i] = 0f;
+            }
+
+            for (int i = 0; i < potions.Count; i++)
+            {
+                potions[i].Active = false;
             }
 
             zombies.Clear();
@@ -91,6 +139,8 @@ namespace PersonalArena.Core
             }
 
             ResolveAllOverlaps();
+            CheckFalls();
+            UpdatePotions();
             tick++;
 
             if (!Hero.Alive)
@@ -158,6 +208,7 @@ namespace PersonalArena.Core
             if (Hero.StunRemaining > 0f)
             {
                 Hero.Velocity = Vec2.Zero;
+                Hero.DashRemaining = 0f;
                 return;
             }
 
@@ -165,31 +216,42 @@ namespace PersonalArena.Core
                 input.Turn * HeroDef.TurnSpeedDegPerSec * DegreesToRadians * FixedDeltaTime);
 
             Vec2 moveDirection = DirectionFromInput(input.Move);
-            float moveMultiplier = Hero.SlowRemaining > 0f ? Hero.SlowFactor : 1f;
-            if (Hero.IsBlocking)
+            if (Hero.DashRemaining > 0f)
             {
-                moveMultiplier *= heldSkill.BlockMoveMultiplier;
+                MoveDashing();
             }
-
-            Hero.Velocity = moveDirection * (HeroDef.MoveSpeed * moveMultiplier);
-            if (moveDirection.LengthSquared > 0f)
+            else
             {
-                Vec2 before = Hero.Position;
+                float moveMultiplier = Hero.SlowRemaining > 0f ? Hero.SlowFactor : 1f;
+                if (Hero.IsBlocking)
+                {
+                    moveMultiplier *= heldSkill.BlockMoveMultiplier;
+                }
+
+                Vec2 target = moveDirection * (HeroDef.MoveSpeed * moveMultiplier);
+                float maxChange = HeroDef.Acceleration > 0f
+                    ? HeroDef.Acceleration * FixedDeltaTime
+                    : float.PositiveInfinity;
+                Hero.Velocity = MoveTowards(Hero.Velocity, target, maxChange);
                 Hero.Position += Hero.Velocity * FixedDeltaTime;
-                if (ClampHero() && Hero.Position.Equals(before))
-                {
-                    events.Add(new SimEvent(SimEventType.HitWall));
-                }
-                else if (WasMovementClamped(before, Hero.Velocity))
-                {
-                    events.Add(new SimEvent(SimEventType.HitWall));
-                }
             }
 
             if (input.Skill > 0 && !holdingBlock)
             {
                 UseSkill(input.Skill - 1, heldSkill, moveDirection);
             }
+        }
+
+        private void MoveDashing()
+        {
+            SkillDef dash = ActiveSkill(SkillKind.Dash);
+            float speed = dash != null && dash.DashSpeed > 0f ? dash.DashSpeed : HeroDef.MoveSpeed;
+            float seconds = MathF.Min(Hero.DashRemaining, FixedDeltaTime);
+            Hero.Position += Hero.DashDirection * (speed * seconds);
+            Hero.DashRemaining = MathF.Max(0f, Hero.DashRemaining - FixedDeltaTime);
+            Hero.Velocity = Hero.DashRemaining > 0f
+                ? Hero.DashDirection * speed
+                : Hero.DashDirection * HeroDef.MoveSpeed;
         }
 
         private bool UpdateBlocking(bool holdingBlock, SkillDef block)
@@ -307,14 +369,7 @@ namespace PersonalArena.Core
                     continue;
                 }
 
-                Vec2 away = (zombie.Position - Hero.Position).Normalized();
-                if (away.LengthSquared <= 0f)
-                {
-                    away = Vec2.FromAngle(Hero.Facing);
-                }
-
-                zombie.Position += away * skill.Knockback;
-                ClampZombie(zombie);
+                PushZombie(zombie, skill.Knockback);
                 zombie.StunRemaining = MathF.Max(zombie.StunRemaining, skill.StunSeconds);
                 zombie.AttackPhase = ZombieAttackPhase.Idle;
                 zombie.AttackTimer = 0f;
@@ -322,18 +377,31 @@ namespace PersonalArena.Core
             }
         }
 
-        private void PerformDash(SkillDef skill, Vec2 moveDirection)
+        private void PushZombie(ZombieState zombie, float distance)
         {
-            Vec2 direction = moveDirection.LengthSquared > 0f
-                ? moveDirection
-                : Vec2.FromAngle(Hero.Facing);
-            Hero.Position += direction * skill.DashDistance;
-            if (ClampHero())
+            Vec2 away = (zombie.Position - Hero.Position).Normalized();
+            if (away.LengthSquared <= 0f)
             {
-                events.Add(new SimEvent(SimEventType.HitWall));
+                away = Vec2.FromAngle(Hero.Facing);
             }
 
-            ResolveHeroZombieOverlaps();
+            zombie.KnockbackVelocity = away * KnockbackSpeedFor(distance);
+        }
+
+        private void PerformDash(SkillDef skill, Vec2 moveDirection)
+        {
+            Hero.DashDirection = moveDirection.LengthSquared > 0f
+                ? moveDirection
+                : Vec2.FromAngle(Hero.Facing);
+            if (skill.DashSpeed > 0f)
+            {
+                Hero.DashRemaining = skill.DashDistance / skill.DashSpeed;
+                Hero.Velocity = Hero.DashDirection * skill.DashSpeed;
+            }
+            else
+            {
+                Hero.Position += Hero.DashDirection * skill.DashDistance;
+            }
         }
 
         private bool IsHeroSkillTarget(ZombieState zombie, SkillDef skill)
@@ -361,13 +429,21 @@ namespace PersonalArena.Core
             if (zombie.Hp <= 0f)
             {
                 zombie.Hp = 0f;
-                zombie.Alive = false;
-                zombie.Velocity = Vec2.Zero;
-                zombie.AttackPhase = ZombieAttackPhase.Idle;
-                zombie.AttackTimer = 0f;
-                zombie.RespawnRemaining = Config.RespawnKilledZombies ? 1.5f : 0f;
-                events.Add(new SimEvent(SimEventType.ZombieKilled, 1f, zombie.Id));
+                KillZombie(zombie);
+                TryDropPotion(zombie.Position);
             }
+        }
+
+        private void KillZombie(ZombieState zombie)
+        {
+            zombie.Alive = false;
+            zombie.Velocity = Vec2.Zero;
+            zombie.KnockbackVelocity = Vec2.Zero;
+            zombie.StunRemaining = 0f;
+            zombie.AttackPhase = ZombieAttackPhase.Idle;
+            zombie.AttackTimer = 0f;
+            zombie.RespawnRemaining = Config.RespawnKilledZombies ? 1.5f : 0f;
+            events.Add(new SimEvent(SimEventType.ZombieKilled, 1f, zombie.Id));
         }
 
         private void UpdateZombie(ZombieState zombie)
@@ -384,6 +460,16 @@ namespace PersonalArena.Core
                 }
 
                 return;
+            }
+
+            if (zombie.KnockbackVelocity.LengthSquared > 0f)
+            {
+                zombie.Position += zombie.KnockbackVelocity * FixedDeltaTime;
+                zombie.KnockbackVelocity *= KnockbackDecay;
+                if (zombie.KnockbackVelocity.LengthSquared < KnockbackStopSpeed * KnockbackStopSpeed)
+                {
+                    zombie.KnockbackVelocity = Vec2.Zero;
+                }
             }
 
             if (zombie.StunRemaining > 0f)
@@ -411,8 +497,11 @@ namespace PersonalArena.Core
                 if (zombie.AttackTimer <= 0f)
                 {
                     ResolveZombieAttack(zombie);
-                    zombie.AttackPhase = ZombieAttackPhase.Recover;
-                    zombie.AttackTimer = zombie.Def.AttackCooldown;
+                    if (zombie.AttackPhase == ZombieAttackPhase.Windup)
+                    {
+                        zombie.AttackPhase = ZombieAttackPhase.Recover;
+                        zombie.AttackTimer = zombie.Def.AttackCooldown;
+                    }
                 }
 
                 return;
@@ -441,7 +530,6 @@ namespace PersonalArena.Core
                 zombie.Velocity = toHero.Normalized() *
                     (zombie.Def.MoveSpeed * Config.SpeedMultiplier * slow);
                 zombie.Position += zombie.Velocity * FixedDeltaTime;
-                ClampZombie(zombie);
             }
             else
             {
@@ -476,10 +564,13 @@ namespace PersonalArena.Core
 
             if (frontalBlock)
             {
-                SkillDef block = ActiveBlockSkill();
+                SkillDef block = ActiveSkill(SkillKind.Block);
                 if (block != null && Time - Hero.BlockStartTime <= block.ParryWindowSeconds + 1e-6f)
                 {
                     zombie.StunRemaining = MathF.Max(zombie.StunRemaining, block.StunSeconds);
+                    zombie.AttackPhase = ZombieAttackPhase.Idle;
+                    zombie.AttackTimer = 0f;
+                    PushZombie(zombie, block.BlockPushback * 1.5f);
                     events.Add(new SimEvent(SimEventType.Parry, 1f, zombie.Id));
                     return;
                 }
@@ -487,6 +578,14 @@ namespace PersonalArena.Core
                 if (block != null)
                 {
                     damage *= block.BlockDamageMultiplier;
+                    if (block.BlockStaggerSeconds > 0f)
+                    {
+                        zombie.StunRemaining = MathF.Max(zombie.StunRemaining, block.BlockStaggerSeconds);
+                        zombie.AttackPhase = ZombieAttackPhase.Idle;
+                        zombie.AttackTimer = 0f;
+                        PushZombie(zombie, block.BlockPushback);
+                        events.Add(new SimEvent(SimEventType.Stagger, block.BlockStaggerSeconds, zombie.Id));
+                    }
                 }
 
                 events.Add(new SimEvent(SimEventType.BlockedHit, damage, zombie.Id));
@@ -507,19 +606,25 @@ namespace PersonalArena.Core
             if (Hero.Hp <= 0f)
             {
                 Hero.Hp = 0f;
-                Hero.Alive = false;
-                Hero.IsBlocking = false;
-                Hero.Velocity = Vec2.Zero;
-                events.Add(new SimEvent(SimEventType.HeroDied, 1f, zombie.Id));
+                KillHero(zombie.Id);
             }
         }
 
-        private SkillDef ActiveBlockSkill()
+        private void KillHero(int zombieId)
+        {
+            Hero.Alive = false;
+            Hero.IsBlocking = false;
+            Hero.DashRemaining = 0f;
+            Hero.Velocity = Vec2.Zero;
+            events.Add(new SimEvent(SimEventType.HeroDied, 1f, zombieId));
+        }
+
+        private SkillDef ActiveSkill(SkillKind kind)
         {
             for (int i = 0; i < HeroDef.Skills.Length; i++)
             {
                 SkillDef skill = HeroDef.Skills[i];
-                if (skill != null && skill.Kind == SkillKind.Block)
+                if (skill != null && skill.Kind == kind)
                 {
                     return skill;
                 }
@@ -551,12 +656,13 @@ namespace PersonalArena.Core
                 }
             }
 
-            ClampHero();
+            // Zombies brace themselves at the rim; only a knockback can throw them into the abyss.
             for (int i = 0; i < zombies.Count; i++)
             {
-                if (zombies[i].Alive)
+                ZombieState zombie = zombies[i];
+                if (zombie.Alive && zombie.KnockbackVelocity.LengthSquared <= 0f)
                 {
-                    ClampZombie(zombies[i]);
+                    KeepOnPlatform(zombie);
                 }
             }
         }
@@ -608,29 +714,99 @@ namespace PersonalArena.Core
             second.Position += correction;
         }
 
-        private bool ClampHero()
+        private void KeepOnPlatform(ZombieState zombie)
         {
-            Vec2 before = Hero.Position;
-            Hero.Position = ClampPosition(Hero.Position, HeroDef.Radius);
-            return !Hero.Position.Equals(before);
+            float limit = MathF.Max(0f, Config.Radius - zombie.Def.Radius);
+            Vec2 offset = zombie.Position - Config.Center;
+            if (offset.LengthSquared > limit * limit)
+            {
+                zombie.Position = Config.Center + offset.Normalized() * limit;
+            }
         }
 
-        private bool WasMovementClamped(Vec2 before, Vec2 velocity)
+        private void CheckFalls()
         {
-            Vec2 intended = before + velocity * FixedDeltaTime;
-            return !Hero.Position.Equals(intended);
+            if (Hero.Alive && IsOverAbyss(Hero.Position))
+            {
+                Hero.FellOff = true;
+                events.Add(new SimEvent(SimEventType.HeroFell, 1f));
+                KillHero(-1);
+            }
+
+            for (int i = 0; i < zombies.Count; i++)
+            {
+                ZombieState zombie = zombies[i];
+                if (zombie.Alive && IsOverAbyss(zombie.Position))
+                {
+                    zombie.FellOff = true;
+                    events.Add(new SimEvent(SimEventType.ZombieFell, 1f, zombie.Id));
+                    KillZombie(zombie);
+                }
+            }
         }
 
-        private void ClampZombie(ZombieState zombie)
+        private void TryDropPotion(Vec2 position)
         {
-            zombie.Position = ClampPosition(zombie.Position, zombie.Def.Radius);
+            if (Config.MaxPotions <= 0 || Config.PotionDropChance <= 0f)
+            {
+                return;
+            }
+
+            if (rng.NextFloat() >= Config.PotionDropChance)
+            {
+                return;
+            }
+
+            float limit = Config.Radius - 0.6f;
+            if ((position - Config.Center).LengthSquared > limit * limit)
+            {
+                return;
+            }
+
+            for (int i = 0; i < potions.Count; i++)
+            {
+                PotionState potion = potions[i];
+                if (potion.Active)
+                {
+                    continue;
+                }
+
+                potion.Active = true;
+                potion.Id = nextPotionId++;
+                potion.Position = position;
+                potion.Remaining = Config.PotionLifetime;
+                events.Add(new SimEvent(SimEventType.PotionDropped, 0f, potion.Id));
+                return;
+            }
         }
 
-        private Vec2 ClampPosition(Vec2 position, float radius)
+        private void UpdatePotions()
         {
-            return new Vec2(
-                Math.Clamp(position.X, radius, Config.Width - radius),
-                Math.Clamp(position.Y, radius, Config.Height - radius));
+            float reach = HeroDef.Radius + PotionRadius;
+            for (int i = 0; i < potions.Count; i++)
+            {
+                PotionState potion = potions[i];
+                if (!potion.Active)
+                {
+                    continue;
+                }
+
+                if (Hero.Alive && Hero.Hp < HeroDef.MaxHp &&
+                    (potion.Position - Hero.Position).LengthSquared <= reach * reach)
+                {
+                    float healed = MathF.Min(Config.PotionHeal, HeroDef.MaxHp - Hero.Hp);
+                    Hero.Hp += healed;
+                    potion.Active = false;
+                    events.Add(new SimEvent(SimEventType.PotionPicked, healed, potion.Id));
+                    continue;
+                }
+
+                potion.Remaining -= FixedDeltaTime;
+                if (potion.Remaining <= 0f)
+                {
+                    potion.Active = false;
+                }
+            }
         }
 
         private ZombieTypeDef ChooseZombieType()
@@ -654,11 +830,12 @@ namespace PersonalArena.Core
             return Config.ZombieSpawns[Config.ZombieSpawns.Length - 1].Type;
         }
 
-        private void ResetZombie(ZombieState zombie, bool wallSide)
+        private void ResetZombie(ZombieState zombie, bool atRim)
         {
-            zombie.Position = FindSpawnPosition(zombie.Def.Radius, wallSide);
-            zombie.Facing = rng.Range(-MathF.PI, MathF.PI);
+            zombie.Position = FindSpawnPosition(zombie.Def.Radius, atRim);
+            zombie.Facing = (Hero.Position - zombie.Position).Angle();
             zombie.Velocity = Vec2.Zero;
+            zombie.KnockbackVelocity = Vec2.Zero;
             zombie.Hp = zombie.Def.MaxHp * Config.HpMultiplier;
             zombie.Energy = 0f;
             zombie.IsBlocking = false;
@@ -669,67 +846,41 @@ namespace PersonalArena.Core
             zombie.AttackPhase = ZombieAttackPhase.Idle;
             zombie.AttackTimer = 0f;
             zombie.Alive = true;
+            zombie.FellOff = false;
             zombie.RespawnRemaining = 0f;
         }
 
-        private Vec2 FindSpawnPosition(float radius, bool wallSide)
+        private Vec2 FindSpawnPosition(float radius, bool atRim)
         {
+            Vec2 centre = Config.Center;
+            float rim = MathF.Max(0f, Config.Radius - radius - 0.2f);
             for (int attempt = 0; attempt < 128; attempt++)
             {
                 Vec2 candidate;
-                if (wallSide)
+                if (atRim)
                 {
-                    int side = rng.NextInt(4);
-                    if (side == 0)
-                    {
-                        candidate = new Vec2(radius, rng.Range(radius, Config.Height - radius));
-                    }
-                    else if (side == 1)
-                    {
-                        candidate = new Vec2(Config.Width - radius, rng.Range(radius, Config.Height - radius));
-                    }
-                    else if (side == 2)
-                    {
-                        candidate = new Vec2(rng.Range(radius, Config.Width - radius), radius);
-                    }
-                    else
-                    {
-                        candidate = new Vec2(rng.Range(radius, Config.Width - radius), Config.Height - radius);
-                    }
+                    candidate = centre + Vec2.FromAngle(rng.Range(-MathF.PI, MathF.PI)) * rim;
                 }
                 else
                 {
-                    candidate = new Vec2(
-                        rng.Range(radius, Config.Width - radius),
-                        rng.Range(radius, Config.Height - radius));
+                    // Uniform over the disc (sqrt keeps the density even).
+                    float distance = MathF.Sqrt(rng.NextFloat()) * MathF.Max(0f, Config.Radius - 1.5f);
+                    candidate = centre + Vec2.FromAngle(rng.Range(-MathF.PI, MathF.PI)) * distance;
                 }
 
-                if (Vec2.Distance(candidate, Hero.Position) >= 4f)
+                if (Vec2.Distance(candidate, Hero.Position) >= SpawnMinHeroDistance)
                 {
                     return candidate;
                 }
             }
 
-            Vec2[] corners =
+            Vec2 away = (centre - Hero.Position).Normalized();
+            if (away.LengthSquared <= 0f)
             {
-                new Vec2(radius, radius),
-                new Vec2(Config.Width - radius, radius),
-                new Vec2(radius, Config.Height - radius),
-                new Vec2(Config.Width - radius, Config.Height - radius)
-            };
-            Vec2 farthest = corners[0];
-            float farthestDistance = Vec2.Distance(farthest, Hero.Position);
-            for (int i = 1; i < corners.Length; i++)
-            {
-                float distance = Vec2.Distance(corners[i], Hero.Position);
-                if (distance > farthestDistance)
-                {
-                    farthest = corners[i];
-                    farthestDistance = distance;
-                }
+                away = new Vec2(1f, 0f);
             }
 
-            return farthest;
+            return centre + away * rim;
         }
 
         private bool AllZombiesDead()
@@ -748,6 +899,18 @@ namespace PersonalArena.Core
         private static Vec2 DirectionFromInput(int move)
         {
             return move == 0 ? Vec2.Zero : Vec2.FromAngle((move - 1) * MathF.PI * 0.25f);
+        }
+
+        private static Vec2 MoveTowards(Vec2 current, Vec2 target, float maximumDelta)
+        {
+            Vec2 delta = target - current;
+            float length = delta.Length;
+            if (length <= maximumDelta || length <= 1e-6f)
+            {
+                return target;
+            }
+
+            return current + delta * (maximumDelta / length);
         }
 
         private static bool IsWithinArc(float facing, Vec2 offset, float arcDegrees)

@@ -10,6 +10,9 @@ namespace PersonalArena.ML
         public readonly bool Died;
         public readonly float DamageTaken;
         public readonly int ZombieCount;
+        public readonly bool Fell;
+        public readonly int RingOuts;
+        public readonly int PotionsPicked;
 
         public EpisodeStats(
             int kills,
@@ -18,7 +21,10 @@ namespace PersonalArena.ML
             float survivedSeconds,
             bool died,
             float damageTaken,
-            int zombieCount)
+            int zombieCount,
+            bool fell = false,
+            int ringOuts = 0,
+            int potionsPicked = 0)
         {
             Kills = kills;
             Backstabs = backstabs;
@@ -27,6 +33,9 @@ namespace PersonalArena.ML
             Died = died;
             DamageTaken = damageTaken;
             ZombieCount = zombieCount;
+            Fell = fell;
+            RingOuts = ringOuts;
+            PotionsPicked = potionsPicked;
         }
     }
 }

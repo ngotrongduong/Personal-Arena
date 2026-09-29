@@ -11,8 +11,9 @@ Context to read: `docs/PLAN.md` (design), `docs/TRAINING.md` (commands, metrics,
 `Trainer/config/*.yaml`, `AGENTS.md` §6.
 
 Fixed design (D-005, D-013): one `HeroAgent`, 3 discrete branches — move 9, turn 3,
-skill 5 (`HeroInput`); observations are built in Core by `ObservationBuilder` (16 hero values
-+ `RaySensor` 72 rays × 10 = 736 floats), not by Unity sensors; rewards from
+skill 5 (`HeroInput`); observations are built in Core by `ObservationBuilder` (19 hero values
++ `RaySensor` 72 rays × 11 = 811 floats, rules v2 / D-022: round platform over an abyss),
+not by Unity sensors; rewards from
 `RewardCalculator` with weights in `RewardConfig`; 12 Hz decisions; each class is its own
 behavior name; owned heroes fine-tune with `--initialize-from`.
 

@@ -45,8 +45,11 @@ namespace PersonalArena.Core
                     case SimEventType.HeroDied:
                         reward += config.Death;
                         break;
-                    case SimEventType.HitWall:
-                        reward += config.WallBumpPenalty;
+                    case SimEventType.HeroFell:
+                        reward += config.FallExtra;
+                        break;
+                    case SimEventType.PotionPicked:
+                        reward += item.Value * config.HealPerHp;
                         break;
                     case SimEventType.SkillFailedCooldown:
                     case SimEventType.SkillFailedEnergy:

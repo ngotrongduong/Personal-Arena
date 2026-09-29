@@ -12,8 +12,8 @@ namespace PersonalArena.View
         private const float TurnDeadZoneRadians = 0.06981317f;
 
         [Header("Arena")]
-        [SerializeField, Range(8f, 80f)] private float arenaWidth = 20f;
-        [SerializeField, Range(8f, 80f)] private float arenaHeight = 20f;
+        [SerializeField, Range(8f, 80f)] private float arenaWidth = ArenaConfig.DefaultSize;
+        [SerializeField, Range(8f, 80f)] private float arenaHeight = ArenaConfig.DefaultSize;
         [SerializeField, Range(0, 64)] private int zombieCount = 4;
         [SerializeField, Range(0.25f, 4f)] private float hpMultiplier = 1f;
         [SerializeField, Range(0.25f, 4f)] private float damageMultiplier = 1f;

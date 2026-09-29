@@ -68,8 +68,11 @@ set it to `review`. Claude reviews, commits and sets `done`.
 - Fixed step: `ArenaSim.Step` advances exactly one tick (`ArenaSim.FixedDeltaTime` = 1/60 s);
   the agent decides every 5 ticks (12 Hz). Unity code must not assume Unity's fixed timestep
   equals the sim tick.
-- Observations come from Core (`ObservationBuilder` = 16 hero values + `RaySensor` 72 rays ×
-  10 = 736). Size depends only on hero class and sensor config, never on zombie count.
+- Observations come from Core (`ObservationBuilder` = 19 hero values + `RaySensor` 72 rays ×
+  11 = 811, rules v2 / D-022). Size depends only on hero class and sensor config, never on zombie count.
+- Rules v2 (D-022): round platform of radius `min(Width, Height) / 2` over an abyss; leaving it
+  kills (hero or zombie). Changing rules that invalidate trained brains means bumping
+  `ArenaSim.RulesVersion` (runs record it in `rules_version.txt`; the viewer loads only matching brains).
 - Rewards come only from `SimEvent`s via `RewardCalculator` (weights in `RewardConfig`). Every
   reward term has a **sign test** (the video's agent never used its spear because of a sign bug).
 - Units: metres, seconds, radians; +x right, +y "up" on the arena floor (= Unity +z); facing

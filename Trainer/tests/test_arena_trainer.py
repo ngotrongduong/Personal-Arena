@@ -82,3 +82,21 @@ def test_build_command_passes_the_arena_agent_count_last(tmp_path: Path):
 
     assert command[-4:] == ["--resume", "--env-args", "--arena-agents", "32"]
     assert "--env-args" not in arena_trainer.build_command(parse("--run-id", "warrior-001"), tmp_path)
+
+
+def test_rules_version_defaults_to_one_and_round_trips_current_version(tmp_path: Path):
+    run_dir = tmp_path / "warrior-001"
+
+    assert arena_trainer.run_rules_version(run_dir) == 1
+
+    arena_trainer.write_rules_version(run_dir)
+
+    assert arena_trainer.run_rules_version(run_dir) == arena_trainer.RULES_VERSION
+    assert (run_dir / arena_trainer.RULES_FILE).read_text(encoding="utf-8") == "2"
+
+
+def test_rules_version_treats_an_unreadable_marker_as_version_one(tmp_path: Path):
+    marker = tmp_path / "warrior-001" / arena_trainer.RULES_FILE
+    marker.mkdir(parents=True)
+
+    assert arena_trainer.run_rules_version(marker.parent) == 1

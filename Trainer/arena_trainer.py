@@ -13,6 +13,20 @@ from typing import Sequence
 DEFAULT_CONFIG = Path("Trainer/config/warrior_ppo.yaml")
 DEFAULT_ENVIRONMENT = Path("Build/Training/PersonalArenaTraining.exe")
 DEFAULT_RESULTS_DIRECTORY = Path("Trainer/runs")
+RULES_VERSION = 2
+RULES_FILE = "rules_version.txt"
+
+
+def run_rules_version(run_dir: Path) -> int:
+    try:
+        return int((run_dir / RULES_FILE).read_text(encoding="utf-8").strip())
+    except (OSError, ValueError):
+        return 1
+
+
+def write_rules_version(run_dir: Path) -> None:
+    run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir / RULES_FILE).write_text(str(RULES_VERSION), encoding="utf-8")
 
 
 def repository_root() -> Path:

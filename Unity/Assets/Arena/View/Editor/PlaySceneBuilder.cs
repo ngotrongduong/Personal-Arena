@@ -66,12 +66,13 @@ namespace PersonalArena.View.Editor
             // Load after NewScene: opening a scene unloads unused assets, which would drop an earlier reference.
             ArenaArtSet artSet = AssetDatabase.LoadAssetAtPath<ArenaArtSet>(KayKitArtSetBuilder.AssetPath);
 
-            // Moody dungeon light: a cool moon-like key plus flat ambient; torches add warm pools at runtime.
+            // Moody floating-arena light: a cool moon-like key plus flat ambient; braziers add warm pools at runtime.
+            // ArenaStage retunes the fog every frame from the camera distance so the abyss always fades to violet.
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.26f, 0.28f, 0.38f);
+            RenderSettings.ambientLight = new Color(0.28f, 0.28f, 0.4f);
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
-            RenderSettings.fogColor = new Color(0.035f, 0.035f, 0.05f);
+            RenderSettings.fogColor = new Color(0.05f, 0.035f, 0.08f);
             RenderSettings.fogStartDistance = 40f;
             RenderSettings.fogEndDistance = 75f;
             GameObject lightObject = new GameObject("Directional Light");
@@ -108,6 +109,7 @@ namespace PersonalArena.View.Editor
 
             EditorSceneManager.SaveScene(scene, scenePath);
             EnsureAlwaysIncludedShader("Standard");
+            EnsureAlwaysIncludedShader(FxAssets.ShaderName);
             Selection.activeGameObject = arenaObject;
             AssetDatabase.SaveAssets();
         }

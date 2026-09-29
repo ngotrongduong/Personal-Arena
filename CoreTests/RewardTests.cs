@@ -19,6 +19,7 @@ namespace PersonalArena.CoreTests
         [TestCase(SimEventType.Backstab, 1f)]
         [TestCase(SimEventType.Parry, 1f)]
         [TestCase(SimEventType.Kick, 1f)]
+        [TestCase(SimEventType.PotionPicked, 30f)]
         public void PositiveRewardTermsArePositive(SimEventType type, float value)
         {
             float reward = calculator.Compute(new[] { new SimEvent(type, value) }, 0f);
@@ -28,7 +29,7 @@ namespace PersonalArena.CoreTests
         [TestCase(SimEventType.HeroDamaged, 10f)]
         [TestCase(SimEventType.HeroDamagedFromBehind, 10f)]
         [TestCase(SimEventType.HeroDied, 1f)]
-        [TestCase(SimEventType.HitWall, 1f)]
+        [TestCase(SimEventType.HeroFell, 1f)]
         [TestCase(SimEventType.SkillFailedCooldown, 1f)]
         [TestCase(SimEventType.SkillFailedEnergy, 1f)]
         public void PenaltyRewardTermsAreNegative(SimEventType type, float value)

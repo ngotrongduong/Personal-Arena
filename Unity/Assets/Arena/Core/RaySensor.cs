@@ -29,7 +29,11 @@ namespace PersonalArena.Core
         }
     }
 
-    /// <summary>Writes wall and zombie ray hits without per-call allocations.</summary>
+    /// <summary>
+    /// Writes platform-edge, zombie and potion ray hits without per-call allocations.
+    /// Per ray: one-hot category [none, edge, zombie type 0..N-1, potion], normalised distance,
+    /// then three zombie flags (stunned, winding up, back turned to the hero).
+    /// </summary>
     public sealed class RaySensor
     {
         private readonly RaySensorConfig config;
@@ -40,7 +44,10 @@ namespace PersonalArena.Core
             config.Validate();
         }
 
-        public int SizePerRay => config.ZombieTypeCount + 6;
+        public int CategoryCount => config.ZombieTypeCount + 3;
+        public int EdgeCategory => 1;
+        public int PotionCategory => config.ZombieTypeCount + 2;
+        public int SizePerRay => CategoryCount + 4;
         public int TotalSize => config.RayCount * SizePerRay;
 
         public void Write(ArenaSim sim, float[] buffer, int offset)
@@ -60,7 +67,7 @@ namespace PersonalArena.Core
                 throw new ArgumentException("Buffer is too small for the ray observations.", nameof(buffer));
             }
 
-            int categoryCount = config.ZombieTypeCount + 2;
+            int categoryCount = CategoryCount;
             for (int rayIndex = 0; rayIndex < config.RayCount; rayIndex++)
             {
                 int start = offset + rayIndex * SizePerRay;
@@ -71,8 +78,8 @@ namespace PersonalArena.Core
 
                 float angle = sim.Hero.Facing + rayIndex * MathF.PI * 2f / config.RayCount;
                 Vec2 direction = Vec2.FromAngle(angle);
-                float nearest = RayWallDistance(sim.Hero.Position, direction, sim.Config.Width, sim.Config.Height);
-                int category = nearest <= config.MaxDistance ? 1 : 0;
+                float nearest = EdgeDistance(sim.Hero.Position, direction, sim.Config.Center, sim.Config.Radius);
+                int category = nearest <= config.MaxDistance ? EdgeCategory : 0;
                 ZombieState target = null;
 
                 IReadOnlyList<ZombieState> zombies = sim.Zombies;
@@ -95,6 +102,25 @@ namespace PersonalArena.Core
                     }
                 }
 
+                IReadOnlyList<PotionState> potions = sim.Potions;
+                for (int potionIndex = 0; potionIndex < potions.Count; potionIndex++)
+                {
+                    PotionState potion = potions[potionIndex];
+                    if (!potion.Active)
+                    {
+                        continue;
+                    }
+
+                    float hitDistance = RayCircleDistance(
+                        sim.Hero.Position, direction, potion.Position, ArenaSim.PotionRadius);
+                    if (hitDistance >= 0f && hitDistance < nearest && hitDistance <= config.MaxDistance)
+                    {
+                        nearest = hitDistance;
+                        category = PotionCategory;
+                        target = null;
+                    }
+                }
+
                 if (nearest > config.MaxDistance)
                 {
                     nearest = config.MaxDistance;
@@ -112,6 +138,23 @@ namespace PersonalArena.Core
                     buffer[start + categoryCount + 3] = IsBackFacingHero(target, sim.Hero.Position) ? 1f : 0f;
                 }
             }
+        }
+
+        /// <summary>
+        /// Distance along <paramref name="direction"/> (unit) from <paramref name="origin"/> to the rim
+        /// of the platform; 0 when the origin is already over the abyss.
+        /// </summary>
+        public static float EdgeDistance(Vec2 origin, Vec2 direction, Vec2 centre, float radius)
+        {
+            Vec2 offset = origin - centre;
+            float b = Vec2.Dot(offset, direction);
+            float c = offset.LengthSquared - radius * radius;
+            if (c >= 0f)
+            {
+                return 0f;
+            }
+
+            return -b + MathF.Sqrt(b * b - c);
         }
 
         private static float RayCircleDistance(Vec2 origin, Vec2 direction, Vec2 centre, float radius)
@@ -134,30 +177,6 @@ namespace PersonalArena.Core
 
             float far = projection + halfChord;
             return far >= 0f ? far : -1f;
-        }
-
-        private static float RayWallDistance(Vec2 origin, Vec2 direction, float width, float height)
-        {
-            float nearest = float.PositiveInfinity;
-            if (direction.X > 1e-6f)
-            {
-                nearest = MathF.Min(nearest, (width - origin.X) / direction.X);
-            }
-            else if (direction.X < -1e-6f)
-            {
-                nearest = MathF.Min(nearest, -origin.X / direction.X);
-            }
-
-            if (direction.Y > 1e-6f)
-            {
-                nearest = MathF.Min(nearest, (height - origin.Y) / direction.Y);
-            }
-            else if (direction.Y < -1e-6f)
-            {
-                nearest = MathF.Min(nearest, -origin.Y / direction.Y);
-            }
-
-            return nearest;
         }
 
         private static bool IsBackFacingHero(ZombieState zombie, Vec2 heroPosition)

@@ -3,7 +3,9 @@ import json
 import threading
 from pathlib import Path
 
-from Trainer import train_service
+import pytest
+
+from Trainer import arena_trainer, train_service
 
 
 def summary(step: int, reward: float | None) -> str:
@@ -68,12 +70,16 @@ def test_log_tail_returns_complete_lines_only(tmp_path: Path):
     assert tail.read_lines() == ["second", "third"]
 
 
-def make_checkpoint(runs: Path, run_id: str, step: int, resumable: bool = True) -> None:
+def make_checkpoint(
+    runs: Path, run_id: str, step: int, resumable: bool = True, rules_version: int | None = 2
+) -> None:
     behavior = runs / run_id / "Warrior"
     behavior.mkdir(parents=True, exist_ok=True)
     (behavior / f"Warrior-{step}.pt").write_bytes(b"x")
     if resumable:
         (behavior / "checkpoint.pt").write_bytes(b"x")
+    if rules_version is not None:
+        (behavior.parent / arena_trainer.RULES_FILE).write_text(str(rules_version), encoding="utf-8")
 
 
 def test_plan_run_starts_warrior_001_when_nothing_exists(tmp_path: Path):
@@ -90,6 +96,30 @@ def test_plan_run_resumes_the_newest_run(tmp_path: Path):
     assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-001", "resume", 7499948)
 
 
+def test_plan_run_starts_after_the_highest_number_when_only_old_rules_exist(tmp_path: Path):
+    make_checkpoint(tmp_path, "warrior-001", 100, rules_version=None)
+    (tmp_path / "warrior-009").mkdir()
+    (tmp_path / "warrior-1000").mkdir()
+    (tmp_path / "warrior-other").mkdir()
+
+    plan = train_service.plan_run(tmp_path, "Warrior")
+
+    assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-010", "new", 0)
+
+
+def test_plan_run_uses_the_newest_current_rules_run(tmp_path: Path):
+    make_checkpoint(tmp_path, "warrior-001", 200, rules_version=1)
+    make_checkpoint(tmp_path, "warrior-002", 100)
+    import os
+
+    os.utime(tmp_path / "warrior-002" / "Warrior" / "Warrior-100.pt", (1, 1))
+    os.utime(tmp_path / "warrior-001" / "Warrior" / "Warrior-200.pt", (2, 2))
+
+    plan = train_service.plan_run(tmp_path, "Warrior")
+
+    assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-002", "resume", 100)
+
+
 def test_plan_run_forces_a_folder_without_checkpoint(tmp_path: Path):
     (tmp_path / "broken").mkdir()
 
@@ -104,6 +134,48 @@ def write_config(path: Path) -> None:
         "environment_parameters:\n  arena_size: 20.0\n",
         encoding="utf-8",
     )
+
+
+@pytest.mark.parametrize(
+    ("mode", "initial_marker", "expected_marker"),
+    [("new", None, "2"), ("force", "1", "2"), ("resume", "7", "7")],
+)
+def test_service_marks_new_and_forced_runs_without_overwriting_resumed_runs(
+    tmp_path: Path, mode: str, initial_marker: str | None, expected_marker: str
+):
+    config = tmp_path / "warrior.yaml"
+    write_config(config)
+    runs = tmp_path / "runs"
+    run_id = f"warrior-{mode}"
+    run_dir = runs / run_id
+    if mode == "force":
+        run_dir.mkdir(parents=True)
+    elif mode == "resume":
+        make_checkpoint(runs, run_id, 100)
+    if initial_marker is not None:
+        run_dir.mkdir(parents=True, exist_ok=True)
+        (run_dir / arena_trainer.RULES_FILE).write_text(initial_marker, encoding="utf-8")
+
+    fake_exe = tmp_path / "fake.exe"
+    fake_exe.write_bytes(b"")
+    args = train_service.create_parser().parse_args([
+        "--run-id", run_id, "--results-dir", str(runs), "--config", str(config)
+    ])
+    service = train_service.TrainingService(args)
+    seen_markers: list[str] = []
+    service.trainer_command = lambda plan, path: [str(fake_exe), "--env", str(fake_exe)]
+    service._train = lambda command, tail: (
+        seen_markers.append((run_dir / arena_trainer.RULES_FILE).read_text(encoding="utf-8")) or 0,
+        True,
+        1.0,
+    )
+    service.export = lambda: None
+    service.write_history = lambda: None
+
+    assert service.run() == 0
+
+    assert seen_markers == [expected_marker]
+    assert (run_dir / arena_trainer.RULES_FILE).read_text(encoding="utf-8") == expected_marker
 
 
 def test_effective_config_keeps_the_original_budget(tmp_path: Path):
@@ -299,6 +371,16 @@ def test_a_long_healthy_run_resets_the_crash_count(tmp_path: Path, monkeypatch):
     assert service.run() == 0
 
     assert devices == [None, None, None]
+
+
+def test_service_writes_history_once_when_the_session_ends(tmp_path: Path, monkeypatch):
+    service, runs, _ = scripted_service(tmp_path, monkeypatch, [(0, True, 30.0)])
+    written: list[Path] = []
+    service.write_history = lambda: written.append(runs / service.run_id)
+
+    assert service.run() == 0
+
+    assert written == [runs / "warrior-001"]
 
 
 def test_stop_during_a_restart_wait_saves_and_stops(tmp_path: Path, monkeypatch):

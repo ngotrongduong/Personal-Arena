@@ -6,7 +6,7 @@ namespace PersonalArena.ML
     /// <summary>Builds validated episode configs from float-valued trainer parameters.</summary>
     public static class EnvConfigFactory
     {
-        public const float DefaultArenaSize = 20f;
+        public const float DefaultArenaSize = ArenaConfig.DefaultSize;
         public const int DefaultZombieCount = 1;
         public const float DefaultMultiplier = 1f;
 
@@ -57,6 +57,10 @@ namespace PersonalArena.ML
                 SpeedMultiplier = Clamp(FiniteOrDefault(speedMultiplier, DefaultMultiplier), 0.25f, 4f),
                 EpisodeSeconds = baseConfig.EpisodeSeconds,
                 RespawnKilledZombies = baseConfig.RespawnKilledZombies,
+                PotionDropChance = baseConfig.PotionDropChance,
+                PotionHeal = baseConfig.PotionHeal,
+                PotionLifetime = baseConfig.PotionLifetime,
+                MaxPotions = baseConfig.MaxPotions,
                 Seed = seed
             };
             config.Validate();
