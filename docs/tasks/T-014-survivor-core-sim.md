@@ -1,7 +1,7 @@
 # T-014: M4A Core — Survivor vertical slice (Warrior), observation v4, rewards, evaluator
 
 - **Owner:** Codex
-- **Status:** doing
+- **Status:** review
 - **Milestone:** M4A
 - **Parallel OK with:** T-015 (Python only, no shared files)
 - **Depends on:** none
@@ -592,6 +592,36 @@ the same seed + config + inputs (all randomness from the sim's own `Rng`), no al
 ## Report (filled by the implementer)
 
 - Changed files:
+  - Added the complete pure-C# Survivor simulation under
+    `Unity/Assets/Arena/Core/Survivor/` (15 source files, matching `.meta` files, and the folder
+    `.meta`): stable definitions/catalog, build randomizer, fixed-capacity entities and spatial
+    hash, simulation/combat/progression/loot, observation v4, masks, rewards, pilot, and evaluator.
+  - Added `CoreTests/Survivor/*.cs` with the T-014 gameplay, schema, determinism, evaluator, and
+    late-game performance coverage.
+  - Added `Tools/SurvivorEval/SurvivorEval.csproj` and `Program.cs`, including parallel evaluation,
+    JSON output, argument validation, and an in-memory `--self-test` brain.
+  - Updated this task file only under `docs/`.
 - Test result:
+  - `dotnet test C:\PersonalArena-wt\t014\CoreTests
+    -p:RestoreSources=C:\Users\ngotr\.nuget\packages`: **135 passed, 0 failed, 1 skipped** (the
+    pre-existing exported-brain fixture test); no warnings. The local package source was required
+    because outbound NuGet access is blocked on this machine.
+  - `dotnet build C:\PersonalArena-wt\t014\Tools\SurvivorEval -c Release`: succeeded with
+    **0 warnings, 0 errors**.
+  - `dotnet run --project C:\PersonalArena-wt\t014\Tools\SurvivorEval -c Release -- --self-test`:
+    completed 3 runs and printed the summary (the zero-weight fake brain correctly does not pass
+    the trained-agent M4A acceptance thresholds).
 - Measured performance:
+  - Late-game fixture with 250 enemies and 400 gems, 1,000-sample steady-state average:
+    **Debug Step 0.188 ms, Write 0.319 ms**; **Release Step 0.119 ms, Write 0.086 ms**.
+  - The required Debug assertions (`Step < 0.2 ms`, `Write < 1.0 ms`) pass. Release observation
+    writing beats its 0.2 ms target; Release Step remains above the aspirational 0.05 ms target.
 - Notes / open questions:
+  - All pools are preallocated and use high-water limits; `Step`, observation writing, and mask
+    writing allocate no managed objects after construction. Ray candidates are angularly binned
+    but still use exact ray-circle intersection.
+  - Enemy velocity is finalized after knockback and body separation, so motion observations use
+    actual per-tick displacement. Relocation deliberately reports zero velocity for that tick.
+  - Deterministic fallback choices: obstacle placement stops after 64 attempts per requested
+    obstacle; a failed elite/boss ring placement is clamped and pushed out at the facing-side ring
+    point; full pools skip the spawn, except a full gem quota merges into the nearest gem.
