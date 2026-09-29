@@ -2,6 +2,17 @@
 
 This file is the single source of rules. `CLAUDE.md` imports it; Codex reads it directly.
 
+## Authority (standing rule from the user, 2026-09-29)
+
+- The user is not a programmer and only decides the game's direction (features, classes,
+  priorities, milestones). Claude (the orchestrator) has full authority over every technical
+  decision and commands Codex and subagents. Agents never ask the user to approve or choose
+  anything technical. They work until the task is done and report to Claude.
+- Avoid commands that trigger permission prompts: one simple command per call, with no
+  `cd &&`, pipes, heredocs or chained `$VAR`s. Put multi-step logic in a script file.
+- Hard limits remain: no credentials or sign-ins, no real money, no permanent deletion of
+  user data, and no touching other apps or games.
+
 ## 1. Start and end of every session
 
 1. **Start:** read `docs/STATUS.md` (where we are, what is next), then `docs/tasks/BOARD.md`

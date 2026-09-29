@@ -50,3 +50,6 @@ saves/
 # Logs
 *.log
 create.log
+
+# Local player builds
+/Build/
