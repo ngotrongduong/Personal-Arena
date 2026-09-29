@@ -11,7 +11,8 @@ description: Implement the next Codex task for Personal Arena from docs/tasks/BO
 3. In the task file set `Status: doing`; update the board row.
 4. Implement exactly the spec: only the listed files, exact names and signatures. If the spec
    is wrong or unclear, implement the most reasonable reading and write the question in Report.
-5. Add every listed test. Run `dotnet test CoreTests` (and `.venv-ml\Scripts\python -m pytest
+5. Work on whatever branch the owner has checked out (normally `develop`). Add every listed
+   test. Run `dotnet test CoreTests` (and `.venv-ml\Scripts\python -m pytest
    Trainer` for Python tasks). Fix until green with no warnings.
 6. Fill the Report: changed files, test summary line (passed/failed counts), notes.
 7. Set `Status: review` in the file and on the board. Stop. Claude reviews and commits.

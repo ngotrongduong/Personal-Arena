@@ -56,11 +56,10 @@ Class chỉ khác ở `HeroClassDef` (chỉ số và 4 `SkillDef`):
 - **Pháp sư:** cầu lửa (projectile), vòng băng làm chậm (AoE), dịch chuyển, khiên mana.
 - **Cung thủ:** bắn tên, bắn xuyên, lùi nhảy, bẫy.
 
-**Observation:**
-- `RayPerceptionSensor3D`, khoảng 90 tia 360°, nhận tag từng loại zombie,
-  tường và đạn;
-- vector: máu, năng lượng, cooldown 4 slot, trạng thái stun/block, kích thước
-  arena đã chuẩn hóa.
+**Observation** (tính trong Core, D-013):
+- `RaySensor` 72 tia 360° (video dùng ~92), mỗi tia nhận loại zombie, tường và khoảng cách;
+- 16 số của hero: máu, năng lượng, cooldown 4 slot, trạng thái stun/block, tường gần…;
+- tổng 736 số, `HeroAgent` chỉ chép sang ML-Agents.
 
 Kích thước observation không phụ thuộc số zombie.
 

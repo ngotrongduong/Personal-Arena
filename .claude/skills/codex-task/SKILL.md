@@ -27,5 +27,5 @@ reviews, commits.
    task's Report.
 2. Spawn the `reviewer` subagent on the diff + task file.
 3. Fix small issues yourself; for large ones set the task back to `todo` with notes under Report.
-4. Branch `feature/mN-<slug>` (if not already), commit `feat(core): <task title> (T-xxx)`,
-   merge `--no-ff` into `main`, push. Set the task and board to `done`; update STATUS.
+4. Branch `feature/mN-<slug>` off `develop`, commit `feat(<area>): <task title> (T-xxx)`,
+   merge `--no-ff` into `develop`, push. Set the task and board to `done`; update STATUS.

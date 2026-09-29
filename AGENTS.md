@@ -31,8 +31,11 @@ set it to `review`. Claude reviews, commits and sets `done`.
 
 ## 4. Git
 
-- Branches: `feature/mN-<topic>`, `fix/<topic>`, `chore/<topic>`, merged into `main` with a
-  merge commit (`--no-ff`). No `develop` branch.
+- Branches: `feature/mN-<topic>`, `fix/<topic>`, `chore/<topic>` off `develop`, merged back
+  into `develop` (PR or `--no-ff`). `main` is fast-forwarded to `develop` when a chunk of work
+  is stable. Keep `docs/STATUS.md` correct on `main` too: cloud sessions open `main` by default.
+- Cloud clones are shallow and may only contain `main`: run `git fetch origin develop` and
+  work from `develop`.
 - Commit message: `type(scope): summary` (feat, fix, chore, docs, test, refactor), then the
   `Co-Authored-By` trailer the harness gives you.
 - Never commit trained models (`*.onnx`, `*.sentis`), demos (`*.demo`), `results/`, saves,
@@ -49,14 +52,16 @@ set it to `review`. Claude reviews, commits and sets `done`.
 - Pure C# 9, no `UnityEngine`, no `System.Numerics` (use `Vec2`), no LINQ in hot paths, no
   static mutable state. Assembly `PersonalArena.Core` has `noEngineReferences: true`.
 - Deterministic: all randomness comes from the seeded `Rng`. Same seed + same inputs = same result.
-- Fixed step: `ArenaSim.Step` advances exactly one tick (`1/60 s`); the agent decides every
-  5 ticks (12 Hz).
-- Observation size depends only on hero class and sensor config, never on zombie count.
-- Rewards come only from `SimEvent`s via `RewardCalculator`. Every reward term has a **sign
-  test** (the video's agent never used its spear because of a sign bug).
-- Units: metres, seconds, radians; +x right, +y "up" on the arena floor (= Unity +z).
-- Names that do not exist yet (`Rng`, `ArenaSim`, `SimEvent`, `RewardCalculator`) are the
-  planned names; create them with exactly these names.
+- Fixed step: `ArenaSim.Step` advances exactly one tick (`ArenaSim.FixedDeltaTime` = 1/60 s);
+  the agent decides every 5 ticks (12 Hz). Unity code must not assume Unity's fixed timestep
+  equals the sim tick.
+- Observations come from Core (`ObservationBuilder` = 16 hero values + `RaySensor` 72 rays ×
+  10 = 736). Size depends only on hero class and sensor config, never on zombie count.
+- Rewards come only from `SimEvent`s via `RewardCalculator` (weights in `RewardConfig`). Every
+  reward term has a **sign test** (the video's agent never used its spear because of a sign bug).
+- Units: metres, seconds, radians; +x right, +y "up" on the arena floor (= Unity +z); facing
+  0 = +x, counter-clockwise positive.
+- Game rules live only in Core. Unity MonoBehaviours read Core state and feed `HeroInput`.
 
 ## 7. Code style
 
@@ -71,7 +76,7 @@ set it to `review`. Claude reviews, commits and sets `done`.
 |---|---|
 | Core unit tests | `dotnet test CoreTests` (must pass before any merge; CI runs it on every push) |
 | Trainer tests | `.venv-ml\Scripts\python -m pytest Trainer` |
-| Unity EditMode tests | `Unity.exe -batchmode -projectPath Unity -runTests -testPlatform EditMode -testResults results/editmode.xml` |
+| Unity EditMode tests | `"C:\Program Files\Unity\Hub\Editor\6000.3.2f1\Editor\Unity.exe" -batchmode -projectPath Unity -runTests -testPlatform EditMode -testResults results/editmode.xml` (default Hub path; adjust if Unity is elsewhere) |
 | Training | see `docs/TRAINING.md` |
 
 ## 9. Language

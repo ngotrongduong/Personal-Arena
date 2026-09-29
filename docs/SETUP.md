@@ -25,9 +25,11 @@ uv pip install --python .venv-ml -r Trainer/requirements-ml.lock.txt `
 
 - Thư mục project là `Unity/`. Phải có trong git: `Assets/`, `Packages/manifest.json`,
   `Packages/packages-lock.json`, `ProjectSettings/`, và mọi file `.meta`.
-- Package cần có: `com.unity.ml-agents` 4.x (Package Manager → Unity Registry). Inference
-  Engine (`com.unity.ai.inference`) đi kèm theo dependency.
+- Package đã cài (PR #3): `com.unity.ml-agents` 4.1.0, `com.unity.ai.inference` 2.6.1,
+  `com.unity.inputsystem`, `com.unity.ugui`, `com.unity.test-framework`. Active Input Handling = Both.
+- Mở project: Unity Hub → Add → `C:\PersonalArena\Unity`.
 - Editor settings: Version Control = *Visible Meta Files*, Asset Serialization = *Force Text*.
+- Fixed Timestep hiện là 0.02 s (mặc định); sim Core tự chạy 1/60 s (xem AGENTS.md §6).
 
 ## .NET (test Core)
 

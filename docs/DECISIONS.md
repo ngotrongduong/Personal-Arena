@@ -12,7 +12,9 @@ Mỗi quyết định có mã `D-xxx`. Muốn đổi thì thêm quyết định 
 | D-006 | 2026-09 | Mỗi nhân vật đã mua có "não" riêng, fine-tune từ model nền của class bằng `--initialize-from` | Ý "mua và tự huấn luyện riêng" |
 | D-007 | 2026-09 | Chỉ vàng trong game. Không tiền thật, quảng cáo, analytics hay gọi mạng | Owner chọn |
 | D-008 | 2026-09-29 | Đề xuất Unity MCP: **CoplayDev/unity-mcp** (MIT, miễn phí) để Claude/Codex điều khiển Unity Editor. *Chờ owner xác nhận.* | MCP chính thức của Unity cần gói AI trả phí |
-| D-009 | 2026-09-29 | Git: nhánh `feature/…`, `fix/…`, `chore/…` merge `--no-ff` vào `main`; bỏ `develop` | Dự án 1 người, đỡ rối |
+| D-009 | 2026-09-29 | Git: nhánh `feature/…`, `fix/…`, `chore/…` → PR / merge `--no-ff` vào `develop`; `main` fast-forward theo `develop` khi một phần việc ổn định (và luôn giữ STATUS đúng, vì phiên cloud mở `main` mặc định) | Giữ quy trình owner đã dùng (PR #2–#4) |
+| D-013 | 2026-09 | Quan sát lấy từ Core (`RaySensor` 72 tia + 16 số của hero = 736), không dùng `RayPerceptionSensor3D` | Core headless, deterministic, test được; train không cần physics Unity |
+| D-014 | 2026-09 | ML-Agents 4.1.0 + Inference Engine 2.6.1 (thay "4.x" ở D-003) | Bản cài thực tế ở PR #3 |
 | D-010 | 2026-09-29 | Chia việc: Codex làm task nhỏ theo file trong `docs/tasks/`, không chạy git; Claude review, git, tích hợp | Hai AI làm song song, không đụng nhau |
 | D-011 | 2026-09-29 | Asset chỉ dùng CC0/MIT: Quaternius, Kenney | Không lo bản quyền |
 | D-012 | 2026-09-29 | Tài liệu cho owner viết tiếng Việt; code, commit, prompt agent viết tiếng Anh | Owner đọc dễ, agent làm việc chuẩn |

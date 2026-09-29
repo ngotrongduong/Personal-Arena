@@ -10,10 +10,11 @@ against rule-based zombies, following Pezzza's "AI Gladiator learns to fight Zom
 Context to read: `docs/PLAN.md` (design), `docs/TRAINING.md` (commands, metrics, run log),
 `Trainer/config/*.yaml`, `AGENTS.md` §6.
 
-Fixed design (D-005): one `HeroAgent`, 3 discrete branches — move 9, turn 3, skill 5; ~90
-rays 360° via `RayPerceptionSensor3D`; vector obs = health, energy, 4 cooldowns, stun/block,
-normalised arena size; 12 Hz decisions; each class is its own behavior name; owned heroes
-fine-tune with `--initialize-from`.
+Fixed design (D-005, D-013): one `HeroAgent`, 3 discrete branches — move 9, turn 3,
+skill 5 (`HeroInput`); observations are built in Core by `ObservationBuilder` (16 hero values
++ `RaySensor` 72 rays × 10 = 736 floats), not by Unity sensors; rewards from
+`RewardCalculator` with weights in `RewardConfig`; 12 Hz decisions; each class is its own
+behavior name; owned heroes fine-tune with `--initialize-from`.
 
 Rules:
 - Every reward term must have a sign and a unit test (see T-004). When a policy ignores an

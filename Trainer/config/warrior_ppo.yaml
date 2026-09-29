@@ -32,34 +32,38 @@ behaviors:
 
 environment_parameters:
   # Curriculum 1 -> 2 -> 4 -> 8 -> 16 zombies, as in the Pezzza video.
-  # Thresholds are mean episode reward (TUNE once RewardCalculator weights are final, T-004).
-  zombie_count:
+  # Thresholds are mean episode reward with RewardConfig defaults (Kill = +1, zombies respawn,
+  # 120 s episodes). TUNE after the first run.
+  zombie_count:         # -> ArenaConfig.ZombieCount
     curriculum:
       - name: Z1
-        completion_criteria: { measure: reward, behavior: Warrior, signal_smoothing: true, min_lesson_length: 200, threshold: 1.0 }
+        completion_criteria: { measure: reward, behavior: Warrior, signal_smoothing: true, min_lesson_length: 200, threshold: 3.0 }
         value: 1
       - name: Z2
-        completion_criteria: { measure: reward, behavior: Warrior, signal_smoothing: true, min_lesson_length: 200, threshold: 1.6 }
+        completion_criteria: { measure: reward, behavior: Warrior, signal_smoothing: true, min_lesson_length: 200, threshold: 4.0 }
         value: 2
       - name: Z4
-        completion_criteria: { measure: reward, behavior: Warrior, signal_smoothing: true, min_lesson_length: 200, threshold: 2.5 }
+        completion_criteria: { measure: reward, behavior: Warrior, signal_smoothing: true, min_lesson_length: 200, threshold: 5.0 }
         value: 4
       - name: Z8
-        completion_criteria: { measure: reward, behavior: Warrior, signal_smoothing: true, min_lesson_length: 300, threshold: 4.0 }
+        completion_criteria: { measure: reward, behavior: Warrior, signal_smoothing: true, min_lesson_length: 300, threshold: 6.0 }
         value: 8
       - name: Z16
         value: 16
 
   # Domain randomisation so any arena the player picks is familiar (docs/PLAN.md).
-  arena_size:                # metres, square side
+  arena_size:           # metres, square side -> ArenaConfig.Width/Height
     sampler_type: uniform
     sampler_parameters: { min_value: 15.0, max_value: 35.0 }
-  health_mult:
+  hp_mult:              # -> ArenaConfig.HpMultiplier
     sampler_type: uniform
     sampler_parameters: { min_value: 0.75, max_value: 1.25 }
-  damage_mult:
+  damage_mult:          # -> ArenaConfig.DamageMultiplier
     sampler_type: uniform
     sampler_parameters: { min_value: 0.75, max_value: 1.25 }
+  speed_mult:           # -> ArenaConfig.SpeedMultiplier
+    sampler_type: uniform
+    sampler_parameters: { min_value: 0.9, max_value: 1.1 }
   # Kind mix: Walker-only until M3 adds Runner/Brute/Spitter; then turn these into samplers.
   kind_mix_runner: 0.0
   kind_mix_brute: 0.0
