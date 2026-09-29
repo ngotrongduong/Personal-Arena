@@ -21,6 +21,7 @@ namespace PersonalArena.View
         private static Material alpha;
         private static Material sparkMaterial;
         private static Material starMaterial;
+        private static Material stunStarMaterial;
         private static Material ringMaterial;
         private static Material smokeMaterial;
         private static Material glowMaterial;
@@ -61,6 +62,9 @@ namespace PersonalArena.View
 
         public static Material SparkMaterial => sparkMaterial != null ? sparkMaterial : sparkMaterial = Create("Fx Spark", Spark, true);
         public static Material StarMaterial => starMaterial != null ? starMaterial : starMaterial = Create("Fx Star", Star, true);
+
+        /// <summary>Alpha-blended cartoon five-point star (gold with a dark rim, colours baked in): the "dizzy" stun marker.</summary>
+        public static Material StunStarMaterial => stunStarMaterial != null ? stunStarMaterial : stunStarMaterial = Create("Fx Stun Star", BuildStunStar(), false);
         public static Material RingMaterial => ringMaterial != null ? ringMaterial : ringMaterial = Create("Fx Ring", Ring, true);
         public static Material SmokeMaterial => smokeMaterial != null ? smokeMaterial : smokeMaterial = Create("Fx Smoke", Smoke, false);
         public static Material GlowMaterial => glowMaterial != null ? glowMaterial : glowMaterial = Create("Fx Glow", RadialGlow, true);
@@ -237,6 +241,46 @@ namespace PersonalArena.View
             return texture;
         }
 
+        private static Texture2D BuildStunStar()
+        {
+            // Solid five-point star: bright gold core, warm gold body, dark orange outline so it reads on any floor.
+            const int size = 128;
+            Texture2D texture = NewTexture("Fx Stun Star", size);
+            Color32[] pixels = new Color32[size * size];
+            float half = (size - 1) * 0.5f;
+            const float outer = 0.95f;
+            const float inner = 0.42f;
+            const float rim = 0.13f;
+            Color gold = new Color(1f, 0.82f, 0.18f);
+            Color core = new Color(1f, 0.97f, 0.62f);
+            Color edge = new Color(0.55f, 0.22f, 0.02f);
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float px = (x - half) / half;
+                    float py = (y - half) / half;
+                    float r = Mathf.Sqrt(px * px + py * py);
+                    float angle = Mathf.Atan2(px, py);
+                    // Distance from centre to the star boundary along this direction (linear between tip and notch).
+                    float sector = Mathf.PI * 2f / 5f;
+                    float local = Mathf.Abs(Mathf.Repeat(angle + sector * 0.5f, sector) - sector * 0.5f) / (sector * 0.5f);
+                    float boundary = Mathf.Lerp(outer, inner, local);
+                    float inside = boundary - r;
+                    float alpha = Mathf.Clamp01(inside * half * 0.5f + 0.5f);
+                    Color color = inside < rim ? edge : Color.Lerp(gold, core, Mathf.Clamp01(1f - r / (boundary * 0.75f)));
+                    pixels[y * size + x] = new Color32(
+                        (byte)Mathf.RoundToInt(color.r * 255f),
+                        (byte)Mathf.RoundToInt(color.g * 255f),
+                        (byte)Mathf.RoundToInt(color.b * 255f),
+                        (byte)Mathf.RoundToInt(alpha * 255f));
+                }
+            }
+            texture.SetPixels32(pixels);
+            texture.Apply(true, true);
+            return texture;
+        }
+
         private static Texture2D BuildSmoke()
         {
             // Lumpy puff: soft radial falloff modulated by value noise.
@@ -346,7 +390,8 @@ namespace PersonalArena.View
                     float bulge = radius + 0.12f * Mathf.Sin(v * Mathf.PI);
                     int index = row * (columns + 1) + column;
                     vertices[index] = new Vector3(Mathf.Sin(angle) * bulge, v * height, Mathf.Cos(angle) * bulge);
-                    float fade = Mathf.Sin(u * Mathf.PI) * Mathf.Sin(v * Mathf.PI);
+                    // Clamp: Sin(PI) is about -8.7e-8 in float, and Pow(negative, 0.8) is NaN, which drew black edges.
+                    float fade = Mathf.Max(0f, Mathf.Sin(u * Mathf.PI) * Mathf.Sin(v * Mathf.PI));
                     colors[index] = new Color(1f, 1f, 1f, Mathf.Pow(fade, 0.8f));
                     uvs[index] = new Vector2(u, v);
                 }

@@ -348,13 +348,16 @@ namespace PersonalArena.View
                 star.transform.SetParent(stars.Root, false);
                 star.AddComponent<MeshFilter>().sharedMesh = FxAssets.FlatQuad;
                 MeshRenderer renderer = star.AddComponent<MeshRenderer>();
-                renderer.sharedMaterial = FxAssets.StarMaterial;
+                renderer.sharedMaterial = FxAssets.StunStarMaterial;
                 renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 renderer.receiveShadows = false;
                 stars.Stars[i] = renderer;
             }
             stars.Phase = Random.Range(0f, 10f);
-            stars.SetVisible(false);
+            // Start hidden. (SetVisible(false) alone is a no-op here because Visible already defaults to false,
+            // which used to leave the unpositioned stars lying flat on every head as a white glint.)
+            stars.Visible = false;
+            stars.Root.gameObject.SetActive(false);
             stunStars.Add(stars);
             return stars;
         }
@@ -507,17 +510,19 @@ namespace PersonalArena.View
                 }
                 for (int s = 0; s < stars.Stars.Length; s++)
                 {
-                    float angle = (time * 4.2f + stars.Phase) + s * Mathf.PI * 2f / stars.Stars.Length;
+                    // Cartoon "dizzy" halo: gold stars circling the head, bobbing and wobbling as they go.
+                    float angle = (time * 3.6f + stars.Phase) + s * Mathf.PI * 2f / stars.Stars.Length;
                     Transform star = stars.Stars[s].transform;
-                    star.position = stars.Root.position + new Vector3(Mathf.Cos(angle) * 0.42f, Mathf.Sin(angle * 2f) * 0.06f, Mathf.Sin(angle) * 0.42f);
+                    star.position = stars.Root.position + new Vector3(Mathf.Cos(angle) * 0.5f, 0.12f + Mathf.Sin(angle * 2f) * 0.08f, Mathf.Sin(angle) * 0.5f);
                     if (camera != null)
                     {
-                        star.rotation = Quaternion.LookRotation(-camera.transform.forward, camera.transform.up) * Quaternion.Euler(90f, 0f, 0f);
+                        float wobble = Mathf.Sin(time * 5f + s * 2.1f) * 25f;
+                        star.rotation = Quaternion.LookRotation(-camera.transform.forward, camera.transform.up) * Quaternion.Euler(0f, 0f, wobble) * Quaternion.Euler(90f, 0f, 0f);
                     }
-                    float twinkle = 0.75f + 0.25f * Mathf.Sin(time * 11f + s * 2f);
-                    star.localScale = Vector3.one * (0.28f * twinkle);
+                    float pulse = 0.9f + 0.1f * Mathf.Sin(time * 9f + s * 2f);
+                    star.localScale = Vector3.one * (0.4f * pulse);
                     block.Clear();
-                    block.SetColor("_Color", new Color(1f, 0.92f, 0.35f, 1f));
+                    block.SetColor("_Color", Color.white);
                     stars.Stars[s].SetPropertyBlock(block);
                 }
             }
@@ -545,7 +550,7 @@ namespace PersonalArena.View
             float grow = slash.Reach * Mathf.Lerp(0.8f, 1.08f, eased);
             slash.Transform.localScale = new Vector3(slash.Mirror ? -grow : grow, grow, grow);
             Color color = slash.Color;
-            color.a *= t < 0.25f ? 1f : Mathf.Pow(1f - (t - 0.25f) / 0.75f, 1.5f);
+            color.a *= t < 0.25f ? 1f : Mathf.Pow(Mathf.Clamp01(1f - (t - 0.25f) / 0.75f), 1.5f);
             if (slashBlock == null)
             {
                 slashBlock = new MaterialPropertyBlock();

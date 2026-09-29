@@ -397,7 +397,20 @@ namespace PersonalArena.View
             float pop = view.PopRemaining > 0f ? 1f + (rigged ? 0.12f : 0.28f) * (view.PopRemaining / 0.2f) : 1f;
             view.BodyRoot.localScale = Vector3.one * (pop * view.BodyScale);
             view.Shadow.gameObject.SetActive(zombie.Alive && !view.Falling);
-            view.Stars.SetVisible(zombie.Alive && zombie.StunRemaining > 0f);
+            bool dizzy = zombie.Alive && zombie.StunRemaining > 0f;
+            view.Stars.SetVisible(dizzy);
+
+            // Stunned walkers sway in a slow drunken circle so the stun reads even without the stars.
+            if (dizzy)
+            {
+                float sway = Time.time * 6f + view.DizzyPhase;
+                float lean = 10f * Mathf.Clamp01(zombie.StunRemaining / 0.25f);
+                view.BodyRoot.localRotation = Quaternion.Euler(Mathf.Sin(sway) * lean, 0f, Mathf.Cos(sway) * lean);
+            }
+            else
+            {
+                view.BodyRoot.localRotation = Quaternion.identity;
+            }
 
             // Knocked-back walkers skid and kick up dust.
             if (zombie.Alive && zombie.KnockbackVelocity.Length > 1.5f)
@@ -1303,6 +1316,7 @@ namespace PersonalArena.View
             public Vector3 FallOrigin;
             public Vector3 FallVelocity;
             public float DustTimer;
+            public float DizzyPhase = Random.Range(0f, 10f);
         }
 
         private sealed class PotionView
