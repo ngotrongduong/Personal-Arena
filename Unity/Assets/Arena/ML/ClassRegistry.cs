@@ -1,5 +1,5 @@
 using System;
-using PersonalArena.Core;
+using PersonalArena.Core.Survivor;
 
 namespace PersonalArena.ML
 {
@@ -13,9 +13,16 @@ namespace PersonalArena.ML
         /// <summary>Every playable class ID in HUD/selection order.</summary>
         public static readonly string[] ClassIds = { WarriorId, MageId, ArcherId };
 
-        public static HeroClassDef Create(string classId)
+        /// <summary>Survivor kit for a class; only the warrior has one until M7.</summary>
+        public static SurvivorClassDef Create(string classId)
         {
-            return DefaultDefs.HeroClass(Normalize(classId));
+            return SurvivorEnvFactory.CreateClass(Normalize(classId));
+        }
+
+        /// <summary>True when the class can already be trained in Survivor mode.</summary>
+        public static bool HasSurvivorKit(string classId)
+        {
+            return string.Equals(classId, WarriorId, StringComparison.OrdinalIgnoreCase);
         }
 
         public static string BehaviorName(string classId)
