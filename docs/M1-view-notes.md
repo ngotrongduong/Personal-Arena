@@ -43,8 +43,9 @@ Open `ArenaPlay` and enter Play mode. Arena settings are serialized on the `Aren
 
 ## Known limits
 
-- All visuals are runtime primitives and intentionally low-poly; there are no imported assets,
-  audio effects, or world-space zombie HP bars in M1.
+- M1 visuals were runtime primitives. Since D-018 the renderer uses the KayKit `ArenaArtSet`
+  (rigged knight/skeletons with Playables animation, dungeon dressing, torch lights) and falls
+  back to primitives when no art set is assigned. No audio or world-space zombie HP bars yet.
 - Mouse aiming yields to Q/E after 1.25 seconds without mouse movement. Moving the mouse restores
   cursor aiming.
 - Large arenas use a smooth hero-follow camera; smaller arenas are fully framed.

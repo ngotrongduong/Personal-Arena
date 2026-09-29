@@ -61,15 +61,27 @@ namespace PersonalArena.View.Editor
         internal static void BuildScene(string scenePath, Type controllerType)
         {
             EnsureSceneFolder();
+            KayKitArtSetBuilder.EnsureArtSet();
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            // Load after NewScene: opening a scene unloads unused assets, which would drop an earlier reference.
+            ArenaArtSet artSet = AssetDatabase.LoadAssetAtPath<ArenaArtSet>(KayKitArtSetBuilder.AssetPath);
 
+            // Moody dungeon light: a cool moon-like key plus flat ambient; torches add warm pools at runtime.
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+            RenderSettings.ambientLight = new Color(0.26f, 0.28f, 0.38f);
+            RenderSettings.fog = true;
+            RenderSettings.fogMode = FogMode.Linear;
+            RenderSettings.fogColor = new Color(0.035f, 0.035f, 0.05f);
+            RenderSettings.fogStartDistance = 40f;
+            RenderSettings.fogEndDistance = 75f;
             GameObject lightObject = new GameObject("Directional Light");
             Light light = lightObject.AddComponent<Light>();
             light.type = LightType.Directional;
-            light.color = new Color(1f, 0.96f, 0.88f);
-            light.intensity = 1.15f;
+            light.color = new Color(0.8f, 0.84f, 1f);
+            light.intensity = 0.75f;
             light.shadows = LightShadows.Soft;
-            lightObject.transform.rotation = Quaternion.Euler(48f, -32f, 0f);
+            light.shadowStrength = 0.75f;
+            lightObject.transform.rotation = Quaternion.Euler(52f, -28f, 0f);
 
             GameObject cameraObject = new GameObject("Main Camera");
             cameraObject.tag = "MainCamera";
@@ -83,7 +95,14 @@ namespace PersonalArena.View.Editor
             eventSystemObject.AddComponent<InputSystemUIInputModule>();
 
             GameObject arenaObject = new GameObject("Arena");
-            arenaObject.AddComponent<ArenaRenderer>();
+            ArenaRenderer arenaRenderer = arenaObject.AddComponent<ArenaRenderer>();
+            SerializedObject rendererObject = new SerializedObject(arenaRenderer);
+            rendererObject.FindProperty("artSet").objectReferenceValue = artSet;
+            rendererObject.ApplyModifiedPropertiesWithoutUndo();
+            if (artSet == null || new SerializedObject(arenaRenderer).FindProperty("artSet").objectReferenceValue == null)
+            {
+                throw new InvalidOperationException("Arena art set was not assigned to the renderer.");
+            }
             arenaObject.AddComponent<ArenaHud>();
             arenaObject.AddComponent(controllerType);
 

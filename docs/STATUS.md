@@ -1,7 +1,7 @@
 # Trạng thái dự án
 
 > File này là "bộ nhớ" giữa các phiên. Đọc đầu tiên, cập nhật cuối cùng.
-> Cập nhật lần cuối: 2026-09-29 13:50 (phiên Claude, PC — training warrior-001 + trình xem AI).
+> Cập nhật lần cuối: 2026-09-29 15:00 (phiên Claude, PC — đồ họa KayKit cho trình xem AI).
 
 ## Hướng đi
 
@@ -32,6 +32,13 @@
     `Build/Watch/PersonalArenaWatch.exe` (scene `ArenaWatch`, `AiArenaController`), tự nạp não
     mới khi training lưu. Não chạy bằng `Core/PolicyBrain.cs` + `BrainPilot.cs` (D-017, không
     ONNX). Hướng dẫn: `docs/TRAINING.md` mục 4.
+  - **Đồ họa KayKit (feature/kaykit-art, D-018):** hiệp sĩ kiếm + khiên, bộ xương làm zombie
+    (3 kiểu), hoạt ảnh chạy/chém/đá/đỡ/lướt/trúng đòn/chết/trồi lên (`CharacterAnimator`,
+    Playables theo đồng hồ sim), hầm ngục + đuốc lập lòe (`DungeonDressing`), camera phối cảnh
+    nghiêng. Asset ở `Unity/Assets/ThirdParty/KayKit` (CC0, `CREDITS.md`); map bằng
+    `Assets/Arena/View/Art/KayKitArtSet.asset` (dựng lại: menu *Personal Arena/Rebuild KayKit Art
+    Set*). Scene training không dùng renderer nên huấn luyện không bị ảnh hưởng.
+  - Owner **chỉ xem AI tự học, không chơi tay** (D-019) → mọi việc hiển thị nhắm vào `Xem-AI.cmd`.
   - Test: Unity EditMode 20/20, CoreTests 58/58, pytest trainer 11/11.
   - **Smoke training 5 phút trên GPU:** mean reward −0.01 → 15.4, curriculum tự lên 2 zombie.
     AI học được thật; pipeline chạy đầu-cuối.
@@ -45,7 +52,8 @@
 | M1: Core + view + input + HUD + scene chơi tay | xong (PR #5) |
 | M2: HeroAgent + env train + trainer wrapper | xong (PR M2) |
 | M2: trình xem AI chơi (T-010) | xong (`Xem-AI.cmd`) |
-| M2: training thật, curriculum lên 16 zombie | **đang chạy** — `warrior-001` |
+| Đồ họa KayKit + hoạt ảnh cho trình xem AI | xong (D-018) |
+| M2: training thật, curriculum lên 16 zombie | **đang chạy** — `warrior-001` (5.7M bước, reward ~95 lúc 15:00) |
 | M2: ghi demo chơi tay → BC/GAIL | **chưa** |
 
 ## Việc tiếp theo (theo thứ tự)
@@ -80,6 +88,14 @@
   trước khi phát hành để đảm bảo game không gọi mạng.
 
 ## Nhật ký phiên (mới nhất trên cùng)
+
+### 2026-09-29 14:00–15:00 — Claude (PC): đồ họa KayKit
+- Owner muốn game đẹp hơn, chọn bộ KayKit (CC0). Tải 4 pack free vào `ThirdParty/KayKit`.
+- Thêm `ArenaArtSet`, `CharacterAnimator`, `DungeonDressing`, `KayKitArtSetBuilder`; viết lại
+  `ArenaRenderer` (giữ đường hình khối cũ làm dự phòng); `TopDownCamera` thành phối cảnh nghiêng,
+  tự tìm khoảng cách vừa khung arena; ánh sáng tối + sương mù + đuốc.
+- Lỗi đã sửa: gán art set trước `NewScene` làm scene lưu `artSet: {fileID: 0}` → nạp lại sau.
+- Kiểm: build watch OK, ảnh chụp đúng, Player.log không lỗi, EditMode 20/20.
 
 ### 2026-09-29 13:20–13:50 — Claude (PC): training warrior-001, trình xem AI
 - Bắt đầu `warrior-001` (4 env × 16 arena). 1M bước sau ~15 phút; curriculum đã lên 16 zombie.

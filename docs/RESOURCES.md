@@ -26,6 +26,7 @@
 
 | Pack | Dùng cho |
 |---|---|
+| **Đang dùng:** [KayKit](https://kaylousberg.itch.io/) — Adventurers, Skeletons, Character Animations, Dungeon Pack (D-018) | Hiệp sĩ Warrior, bộ xương làm zombie, hoạt ảnh, đấu trường hầm ngục |
 | [Quaternius — Animated Zombie Pack](https://quaternius.com/packs/animatedzombie.html) | Walker, Runner, Brute, Spitter |
 | [Quaternius — tất cả pack](https://quaternius.com/) (Ultimate Animated Character, Medieval Weapons…) | Warrior/Mage/Archer, vũ khí |
 | [Kenney](https://kenney.nl/assets) (Prototype Kit, Particle Pack, UI Pack) | Sàn/tường arena, hiệu ứng, UI |
