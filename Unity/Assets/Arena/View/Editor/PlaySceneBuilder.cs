@@ -69,6 +69,7 @@ namespace PersonalArena.View.Editor
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             SetFirstBuildScene(ScenePath);
+            EnsureAlwaysIncludedShader("Standard");
             Selection.activeGameObject = arenaObject;
             AssetDatabase.SaveAssets();
         }
@@ -79,6 +80,33 @@ namespace PersonalArena.View.Editor
             {
                 AssetDatabase.CreateFolder("Assets", "Scenes");
             }
+        }
+
+        // Materials are created at runtime with Shader.Find, so the shader must be forced into player builds.
+        private static void EnsureAlwaysIncludedShader(string shaderName)
+        {
+            Shader shader = Shader.Find(shaderName);
+            UnityEngine.Object[] assets = AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/GraphicsSettings.asset");
+            if (shader == null || assets == null || assets.Length == 0)
+            {
+                Debug.LogError($"Could not add '{shaderName}' to Always Included Shaders.");
+                return;
+            }
+
+            SerializedObject graphicsSettings = new SerializedObject(assets[0]);
+            SerializedProperty shaders = graphicsSettings.FindProperty("m_AlwaysIncludedShaders");
+            for (int i = 0; i < shaders.arraySize; i++)
+            {
+                if (shaders.GetArrayElementAtIndex(i).objectReferenceValue == shader)
+                {
+                    return;
+                }
+            }
+
+            int index = shaders.arraySize;
+            shaders.InsertArrayElementAtIndex(index);
+            shaders.GetArrayElementAtIndex(index).objectReferenceValue = shader;
+            graphicsSettings.ApplyModifiedProperties();
         }
 
         private static void SetFirstBuildScene(string path)
