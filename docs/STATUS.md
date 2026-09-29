@@ -1,7 +1,7 @@
 # Trạng thái dự án
 
 > File này là "bộ nhớ" giữa các phiên. Đọc đầu tiên, cập nhật cuối cùng.
-> Cập nhật lần cuối: 2026-09-30 00:30 (phiên Claude, PC — M3: 4 loại zombie, đạn, Mage + Archer, icon skill).
+> Cập nhật lần cuối: 2026-09-30 (phiên Claude, PC — hướng mới: chế độ Survivor, GDD, bắt đầu M4).
 
 ## Hướng đi
 
@@ -84,16 +84,23 @@
 | M2: ghi demo chơi tay → BC/GAIL | bỏ (D-023) |
 | M3: 4 loại zombie + đạn + Mage/Archer + icon skill | code xong (D-024); smoke train 3 class OK; chờ train dài |
 
+| **Hướng mới: chế độ Survivor (kiểu Vampire Survivors)** | thiết kế xong (`docs/GDD.md`, D-026..D-029); M4 đang làm |
+
 ## Việc tiếp theo (theo thứ tự)
 
-1. **Train dài 3 class (luật v3):** owner chọn class bằng `H` rồi bấm TRAIN (mỗi lần một class,
-   service chỉ chạy một run). Theo dõi curriculum có lên 16 zombie rồi thêm Runner → Brute →
-   Spitter không (ngưỡng 150/170/190 là ước lượng); chỉnh ngưỡng nếu kẹt. Ghi "Nhật ký run".
-2. **Cân bằng class:** so reward/kill của Warrior, Mage, Archer sau train dài; chỉnh số liệu skill
-   trong `Core/Defs.cs` nếu một class quá yếu (đổi luật → tăng `RulesVersion`).
-3. **Hoạt ảnh bắn cung / niệm phép:** hiện dùng clip có sẵn; gói `Rig_Medium_CombatRanged`
-   (KayKit, CC0) cần hỏi owner trước khi tải.
-4. **M4:** menu, Roster/Shop (vàng trong game), Training Center, lưu/tải; random hóa arena.
+Owner đổi hướng ngày 2026-09-30: game thành kiểu **Vampire Survivors**, AI tự học farm vàng, chọn
+nâng cấp, thích nghi theo build; não học tiếp khi game cập nhật. Thiết kế đầy đủ: **`docs/GDD.md`**.
+Lộ trình mới M4–M7 ở `docs/PLAN.md`. Đấu trường tròn luật v3 sẽ bị thay; `warrior-003` không cần train tiếp.
+
+1. **M4 – Survivor lõi (nhánh `feature/survivor-core`, task T-014..):**
+   - Core `Core/Survivor`: bản đồ, lịch quái, EXP/lên cấp, vũ khí tự bắn, phụ kiện, đồ nhặt, tinh anh,
+     boss, quan sát v4, thưởng, lưới không gian;
+   - Trainer: `survivor_warrior_ppo.yaml`, curriculum độ dài trận, build ngẫu nhiên, `brain_upgrade.py`,
+     `schema_version` thay `rules_version`;
+   - Unity: `HeroAgent` 3 nhánh mới, host training, trình xem Survivor (camera theo nhân vật, nghĩa địa,
+     HUD, bảng lên cấp, màn kết trận).
+2. Train `warrior-s001` tới khi sống ≥ 10 phút ở bậc 1.
+3. **M5 – Kinh tế và build**, rồi M6, M7.
 
 ## Cách làm trên PC (Claude)
 
@@ -118,6 +125,14 @@
   trước khi phát hành để đảm bảo game không gọi mạng.
 
 ## Nhật ký phiên (mới nhất trên cùng)
+
+### 2026-09-30 — Claude (PC): hướng mới Survivor
+- Owner muốn game thành kiểu Vampire Survivors: bắt đầu với 1 Warrior, AI tự học đánh, nhặt EXP, chọn
+  nâng cấp, farm vàng; vàng mua cấp/điểm chỉ số, class, độ khó cao rớt nhiều vàng; AI thích nghi theo
+  build và học tiếp khi game cập nhật. Owner chọn: vũ khí tự bắn + AI điều khiển, bản đồ rộng có giới
+  hạn, trận 15 phút, thay hẳn đấu trường cũ.
+- Nghiên cứu VS (wiki): PowerUps, đường EXP, lên cấp 3–4 lựa chọn, 6+6 món, rương tinh anh, Greed/Curse.
+- Viết `docs/GDD.md`, D-026..D-029, lộ trình M4–M7.
 
 ### 2026-09-30 01:00 — Claude (PC): icon skill từ game-icons.net
 - Owner duyệt dùng icon miễn phí và đặt hướng mới: **ưu tiên asset có sẵn / free** (D-025, thay D-011;

@@ -118,8 +118,13 @@ và hạ zombie, thưởng backstab/parry, phạt khi mất máu và khi chết.
 | M1 | **Arena chơi tay**: Warrior + Walker, combat giống video (đâm, đá choáng, khiên/parry, backstab), camera top-down, HUD máu/năng lượng; logic Core có test EditMode | Bạn chơi được 1 đấu N zombie |
 | M2 | **Warrior tự học**: `HeroAgent`, reward, nhiều arena song song, curriculum 1→2→4→8→16, xem model trong Editor; demo bạn chơi → BC | Agent hạ ổn định 1 zombie rồi lên 16; dashboard TensorBoard |
 | M3 | **Nội dung data-driven**: Mage, Archer, 4 loại zombie, `ArenaConfig` (kích thước, độ khó, trộn loại) + random hóa khi train; model nền cho 3 class | 3 class tự học; cấu hình arena bất kỳ trong khoảng cho phép vẫn đánh được |
-| M4 | **Game hoàn chỉnh v1**: menu, chọn class, Roster/Shop (vàng trong game, **không tiền thật**), Training Center (subprocess trainer + dashboard + nạp model), Battle (xem AI đánh), lưu/tải | Mua nhân vật → huấn luyện riêng → xem nó đánh arena tùy chỉnh, tất cả trong game |
-| M5 | **Đánh bóng và build**: âm thanh/hiệu ứng nhẹ, cân bằng, build Windows | File exe chạy được |
+| M4 | **Survivor lõi (Warrior)** — thay M4/M5 cũ (D-026): bản đồ 100×100 m, lịch quái 15 phút, EXP và lên cấp, 6 vũ khí tự bắn, 8 phụ kiện, 3 skill chủ động, đồ nhặt, tinh anh, rương, boss; quan sát v4 chừa chỗ, nhánh chọn nâng cấp, build ngẫu nhiên khi train, `brain_upgrade.py` (D-027); trình xem: camera theo nhân vật, nghĩa địa, HUD, bảng lên cấp tô sáng lựa chọn của AI, màn kết trận | Test xanh; `warrior-s001` sống ≥ 10 phút ở bậc 1; owner xem được |
+| M5 | **Kinh tế và build** (D-028, D-029): `profile.json`, vàng về ví, mua cấp, cộng/tẩy điểm, bậc độ khó, Farm tự động, não riêng theo build, màn so sánh build | Đổi build → TRAIN → AI đổi lối đánh, điểm hồi phục nhanh |
+| M6 | **Class mua được và nội dung**: Mage, Archer, tiến hóa vũ khí, thêm quái vào chỗ trống | Thêm nội dung mà não học tiếp, không học lại từ đầu |
+| M7 | **Đánh bóng**: âm thanh miễn phí, cân bằng, bản build hoàn chỉnh | File exe chạy trọn vòng chơi |
+
+> Từ 2026-09-30, thiết kế game chi tiết (số liệu, danh mục vũ khí, phụ kiện, chỉ số, quan sát v4) nằm ở
+> **`docs/GDD.md`**. Các mục kiến trúc phía trên mô tả đấu trường M1–M3; phần nào khác GDD thì GDD thắng.
 
 ## Cách làm việc
 
