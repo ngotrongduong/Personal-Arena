@@ -4,7 +4,7 @@ The viewer (``Build/Watch/PersonalArenaWatch.exe``) starts this script in a hidd
 
     .venv-ml/Scripts/python.exe Trainer/train_service.py --parent-pid <viewer pid>
 
-The service resumes the newest run (or starts ``warrior-001``), appends ML-Agents output to
+The service resumes the newest run (or starts ``warrior-s001``), appends ML-Agents output to
 ``Trainer/runs/<run>.log``, keeps exporting ``latest.brain`` so the viewer hot-loads every new
 checkpoint, and reports progress in ``Trainer/runs/training_service.json``.
 
@@ -73,7 +73,7 @@ def normalize_behavior(value: str) -> str:
 
 
 def default_config(behavior: str) -> str:
-    return str(Path("Trainer/config") / f"{behavior.lower()}_ppo.yaml")
+    return str(Path("Trainer/config") / f"{behavior.lower()}_survivor_ppo.yaml")
 
 
 @dataclass
@@ -157,9 +157,33 @@ class RunPlan:
 def plan_run(runs_dir: Path, behavior: str, requested: str | None = None) -> RunPlan:
     if requested:
         run_id = requested
+        requested_dir = runs_dir / run_id
+        requested_behavior = requested_dir / behavior
+        if (
+            (requested_behavior / "checkpoint.pt").is_file()
+            and arena_trainer.run_schema_version(requested_dir) != arena_trainer.SCHEMA_VERSION
+        ):
+            run_id = next_run_id(runs_dir, behavior)
     else:
-        newest = export_brain.newest_behavior_dir(
-            runs_dir, behavior, rules_version=arena_trainer.RULES_VERSION
+        resumable = [
+            path
+            for path in runs_dir.glob(f"*/{behavior}")
+            if path.is_dir()
+            and (path / "checkpoint.pt").is_file()
+            and export_brain.checkpoints(path)
+            and arena_trainer.run_schema_version(path.parent)
+            == arena_trainer.SCHEMA_VERSION
+        ]
+        newest = (
+            max(
+                resumable,
+                key=lambda path: max(
+                    checkpoint.stat().st_mtime
+                    for _, checkpoint in export_brain.checkpoints(path)
+                ),
+            )
+            if resumable
+            else None
         )
         run_id = newest.parent.name if newest is not None else next_run_id(runs_dir, behavior)
 
@@ -167,7 +191,10 @@ def plan_run(runs_dir: Path, behavior: str, requested: str | None = None) -> Run
     behavior_dir = run_dir / behavior
     found = export_brain.checkpoints(behavior_dir) if behavior_dir.is_dir() else []
     last_step = found[-1][0] if found else 0
-    if (behavior_dir / "checkpoint.pt").is_file():
+    if (
+        (behavior_dir / "checkpoint.pt").is_file()
+        and arena_trainer.run_schema_version(run_dir) == arena_trainer.SCHEMA_VERSION
+    ):
         mode = "resume"
     elif run_dir.exists():
         mode = "force"
@@ -178,14 +205,14 @@ def plan_run(runs_dir: Path, behavior: str, requested: str | None = None) -> Run
 
 def next_run_id(runs_dir: Path, behavior: str) -> str:
     prefix = behavior.lower()
-    pattern = re.compile(rf"^{re.escape(prefix)}-(\d{{3}})$")
+    pattern = re.compile(rf"^{re.escape(prefix)}-s(\d{{3}})$")
     numbers = []
     if runs_dir.is_dir():
         for path in runs_dir.iterdir():
             match = pattern.match(path.name)
             if path.is_dir() and match:
                 numbers.append(int(match.group(1)))
-    return f"{prefix}-{max(numbers, default=0) + 1:03d}"
+    return f"{prefix}-s{max(numbers, default=0) + 1:03d}"
 
 
 def configured_max_steps(config: dict, behavior: str) -> int:
@@ -442,7 +469,7 @@ class TrainingService:
         plan = plan_run(self.runs_dir, self.behavior, self.args.run_id)
         self.run_id = plan.run_id
         if plan.mode in ("new", "force"):
-            arena_trainer.write_rules_version(self.runs_dir / plan.run_id)
+            arena_trainer.write_schema_version(self.runs_dir / plan.run_id)
         log_path = self.runs_dir / f"{plan.run_id}.log"
         tail = LogTail(log_path)
         for line in tail.read_lines():

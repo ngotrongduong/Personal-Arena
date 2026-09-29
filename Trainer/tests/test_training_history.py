@@ -24,10 +24,10 @@ def by_tag(history: dict) -> dict[str, dict]:
 
 
 def test_build_history_merges_filters_deduplicates_and_downsamples(tmp_path: Path):
-    run_dir = tmp_path / "warrior-002"
+    run_dir = tmp_path / "warrior-s002"
     behavior_dir = run_dir / "Warrior"
     behavior_dir.mkdir(parents=True)
-    arena_trainer.write_rules_version(run_dir)
+    arena_trainer.write_schema_version(run_dir)
     first = write_events(behavior_dir, ".first", [
         *(('Environment/Cumulative Reward', float(step), step) for step in (0, 5, 10, 15, 20)),
         ("Arena/Damage", float("nan"), 2),
@@ -41,6 +41,10 @@ def test_build_history_merges_filters_deduplicates_and_downsamples(tmp_path: Pat
         ("Environment/Cumulative Reward", 100.0, 10),
         ("Environment/Cumulative Reward", 25.0, 25),
         ("Arena/Kills", 4.0, 25),
+        ("Arena/SurvivedSeconds", 180.0, 25),
+        ("Arena/Level", 12.0, 25),
+        ("Arena/Gold", 350.0, 25),
+        ("Arena/DeathCause/Surrounded", 1.0, 25),
     ])
     os.utime(first, ns=(1_000_000_000, 1_000_000_000))
     os.utime(second, ns=(2_000_000_000, 2_000_000_000))
@@ -49,15 +53,18 @@ def test_build_history_merges_filters_deduplicates_and_downsamples(tmp_path: Pat
 
     assert history is not None
     assert set(history) == {
-        "run_id", "behavior", "rules_version", "updated_unix", "last_step", "series"
+        "run_id", "behavior", "rules_version", "schema_version", "updated_unix",
+        "last_step", "series"
     }
-    assert history["run_id"] == "warrior-002"
+    assert history["run_id"] == "warrior-s002"
     assert history["behavior"] == "Warrior"
-    assert history["rules_version"] == 3
+    assert history["rules_version"] == 4
+    assert history["schema_version"] == 4
     assert history["last_step"] == 25
     series = by_tag(history)
     assert set(series) == {
-        "Arena/Damage", "Arena/Kills", "Environment/Cumulative Reward",
+        "Arena/Damage", "Arena/DeathCause/Surrounded", "Arena/Gold", "Arena/Kills",
+        "Arena/Level", "Arena/SurvivedSeconds", "Environment/Cumulative Reward",
         "Losses/Policy Loss", "Losses/Value Loss", "Policy/Entropy",
     }
     reward = series["Environment/Cumulative Reward"]
@@ -78,7 +85,7 @@ def test_build_history_merges_filters_deduplicates_and_downsamples(tmp_path: Pat
 
 
 def test_write_history_is_atomic_json_and_skips_unchanged_events(tmp_path: Path):
-    run_dir = tmp_path / "warrior-002"
+    run_dir = tmp_path / "warrior-s002"
     behavior_dir = run_dir / "Warrior"
     behavior_dir.mkdir(parents=True)
     write_events(behavior_dir, ".first", [("Environment/Episode Length", 10.0, 1)])
@@ -98,24 +105,24 @@ def test_write_history_is_atomic_json_and_skips_unchanged_events(tmp_path: Path)
 
 
 def test_history_returns_nothing_without_event_files(tmp_path: Path):
-    run_dir = tmp_path / "warrior-001"
+    run_dir = tmp_path / "warrior-s001"
 
     assert training_history.build_history(run_dir, "Warrior") is None
     assert not training_history.write_history(run_dir, "Warrior")
 
 
-def test_cli_prefers_current_rules_events_without_requiring_a_checkpoint(
+def test_cli_prefers_current_schema_events_without_requiring_a_checkpoint(
     tmp_path: Path, capsys
 ):
     old_dir = tmp_path / "warrior-001"
-    current_dir = tmp_path / "warrior-002"
+    current_dir = tmp_path / "warrior-s001"
     old_event = write_events(
         old_dir / "Warrior", ".old", [("Environment/Cumulative Reward", 1.0, 1)]
     )
     current_event = write_events(
         current_dir / "Warrior", ".current", [("Environment/Cumulative Reward", 2.0, 2)]
     )
-    arena_trainer.write_rules_version(current_dir)
+    arena_trainer.write_schema_version(current_dir)
     os.utime(current_event, ns=(1_000_000_000, 1_000_000_000))
     os.utime(old_event, ns=(2_000_000_000, 2_000_000_000))
 

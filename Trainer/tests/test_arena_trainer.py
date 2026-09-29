@@ -17,7 +17,9 @@ def test_build_command_resolves_defaults_and_enables_headless_mode(tmp_path: Pat
     assert command[0] == str(
         tmp_path / ".venv-ml" / "Scripts" / "mlagents-learn.exe"
     )
-    assert command[1] == str(tmp_path / "Trainer" / "config" / "warrior_ppo.yaml")
+    assert command[1] == str(
+        tmp_path / "Trainer" / "config" / "warrior_survivor_ppo.yaml"
+    )
     assert command[command.index("--env") + 1] == str(
         tmp_path / "Build" / "Training" / "PersonalArenaTraining.exe"
     )
@@ -29,10 +31,22 @@ def test_build_command_resolves_defaults_and_enables_headless_mode(tmp_path: Pat
     assert "--no-graphics" in command
 
 
-def test_hero_class_picks_its_own_config_by_default(tmp_path: Path):
+def test_hero_class_picks_its_survivor_config_by_default(tmp_path: Path):
     command = arena_trainer.build_command(parse("--run-id", "mage-1", "--hero-class", "mage"), tmp_path)
 
-    assert command[1] == str(tmp_path / "Trainer" / "config" / "mage_ppo.yaml")
+    assert command[1] == str(tmp_path / "Trainer" / "config" / "mage_survivor_ppo.yaml")
+
+
+@pytest.mark.parametrize("hero_class", ["mage", "archer"])
+def test_missing_future_survivor_config_has_a_clear_message(
+    tmp_path: Path, monkeypatch, capsys, hero_class: str
+):
+    monkeypatch.setattr(arena_trainer, "repository_root", lambda: tmp_path)
+
+    with pytest.raises(SystemExit):
+        arena_trainer.main(["--run-id", "future", "--hero-class", hero_class])
+
+    assert "Mage/Archer Survivor brains arrive in M7" in capsys.readouterr().err
 
 
 def test_build_command_adds_resume_and_custom_values(tmp_path: Path):
@@ -110,19 +124,36 @@ def test_build_command_puts_all_environment_arguments_after_one_final_marker(
         assert "--env-args" not in command
 
 
-def test_rules_version_defaults_to_one_and_round_trips_current_version(tmp_path: Path):
-    run_dir = tmp_path / "warrior-001"
+def test_schema_version_defaults_to_one_and_round_trips_current_version(tmp_path: Path):
+    run_dir = tmp_path / "warrior-s001"
 
-    assert arena_trainer.run_rules_version(run_dir) == 1
+    assert arena_trainer.run_schema_version(run_dir) == 1
 
-    arena_trainer.write_rules_version(run_dir)
+    arena_trainer.write_schema_version(run_dir)
 
-    assert arena_trainer.run_rules_version(run_dir) == arena_trainer.RULES_VERSION
-    assert (run_dir / arena_trainer.RULES_FILE).read_text(encoding="utf-8") == "3"
+    assert arena_trainer.run_schema_version(run_dir) == arena_trainer.SCHEMA_VERSION
+    assert (run_dir / arena_trainer.SCHEMA_FILE).read_text(encoding="utf-8") == "4"
 
 
-def test_rules_version_treats_an_unreadable_marker_as_version_one(tmp_path: Path):
-    marker = tmp_path / "warrior-001" / arena_trainer.RULES_FILE
+def test_schema_version_falls_back_to_legacy_rules_marker(tmp_path: Path):
+    run_dir = tmp_path / "warrior-011"
+    run_dir.mkdir()
+    (run_dir / "rules_version.txt").write_text("3", encoding="utf-8")
+
+    assert arena_trainer.run_schema_version(run_dir) == 3
+
+
+def test_schema_version_takes_precedence_over_legacy_rules_marker(tmp_path: Path):
+    run_dir = tmp_path / "warrior-s001"
+    run_dir.mkdir()
+    (run_dir / "rules_version.txt").write_text("3", encoding="utf-8")
+    (run_dir / arena_trainer.SCHEMA_FILE).write_text("4", encoding="utf-8")
+
+    assert arena_trainer.run_schema_version(run_dir) == 4
+
+
+def test_schema_version_treats_an_unreadable_marker_as_version_one(tmp_path: Path):
+    marker = tmp_path / "warrior-s001" / arena_trainer.SCHEMA_FILE
     marker.mkdir(parents=True)
 
-    assert arena_trainer.run_rules_version(marker.parent) == 1
+    assert arena_trainer.run_schema_version(marker.parent) == 1
