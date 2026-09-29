@@ -1,7 +1,7 @@
 # Trạng thái dự án
 
 > File này là "bộ nhớ" giữa các phiên. Đọc đầu tiên, cập nhật cuối cùng.
-> Cập nhật lần cuối: 2026-09-29 chiều (phiên Claude, PC).
+> Cập nhật lần cuối: 2026-09-29 tối (phiên Claude, PC — rà soát & thống nhất).
 
 ## Đang ở đâu
 
@@ -48,8 +48,8 @@
 
 ## Cách làm trên PC (Claude)
 
-- Worktree: `C:\PersonalArena` (develop), `C:\PersonalArena-m1view` (feature/m1-view, đã merge),
-  `C:\PersonalArena-m2agent` (feature/m2-agent, đã merge). Venv ML chỉ ở `C:\PersonalArena\.venv-ml`
+- Chỉ còn một thư mục làm việc: `C:\PersonalArena` (develop). Các worktree cũ và nhánh tính năng
+  đã merge đều đã xóa; `main` = `develop`. Venv ML ở `C:\PersonalArena\.venv-ml`
   (Python 3.10.12, mlagents 1.1.0, torch 2.2.2+cu121, có pytest).
 - Unity headless: `Unity.exe -batchmode -nographics -quit -projectPath <Unity> -executeMethod X
   -logFile L`. **Luôn có `-quit`**, nếu không Unity treo mãi.
@@ -69,6 +69,14 @@
   trước khi phát hành để đảm bảo game không gọi mạng.
 
 ## Nhật ký phiên (mới nhất trên cùng)
+
+### 2026-09-29 tối — Claude (PC): rà soát, thống nhất bản chính thức
+- Kiểm tra GitHub: không còn PR/nhánh nào của phiên cloud chưa merge.
+- Sửa lỗi: `TrainingBuild` để lại cài đặt player 640x360/windowed cho cả game → nay lưu và trả lại
+  trong `finally`. Đã kiểm: build env OK, `ProjectSettings.asset` không đổi, EditMode 18/18, pytest 3/3.
+- `main` fast-forward = `develop`; xóa worktree `-m1view`, `-m2agent` và các nhánh tính năng đã merge.
+- Lưu ý: chạy test EditMode làm package Inference bỏ define `SENTIS_ANALYTICS_ENABLED` trong
+  `ProjectSettings.asset` — đừng commit thay đổi đó cho tới khi quyết định chuyện analytics.
 
 ### 2026-09-29 chiều — Claude (PC): đóng M1, code M2
 - Sửa bản build đen (shader Standard), chụp màn hình xác nhận; merge PR #5 (M1 view).
