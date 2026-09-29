@@ -16,6 +16,11 @@ namespace PersonalArena.View.Tests
                 for (int i = 0; i < hero.Skills.Length; i++)
                 {
                     SkillDef skill = hero.Skills[i];
+                    // Every skill ships a readable game-icons.net glyph (see SkillIconImporter).
+                    Texture2D glyph = Resources.Load<Texture2D>(SkillIconFactory.GlyphFolder + skill.Id);
+                    Assert.That(glyph, Is.Not.Null, skill.Id + " glyph image");
+                    Assert.That(glyph.isReadable, Is.True, skill.Id + " glyph must be readable");
+
                     Sprite icon = SkillIconFactory.IconFor(skill, i);
                     Assert.That(icon, Is.Not.Null, skill.Id);
                     Assert.That(icon.texture.width, Is.EqualTo(SkillIconFactory.Size));

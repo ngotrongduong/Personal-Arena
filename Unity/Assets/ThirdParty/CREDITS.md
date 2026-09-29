@@ -1,6 +1,6 @@
 # Third-party assets
 
-Only CC0 or MIT assets are allowed here (see docs/DECISIONS.md, D-011).
+Allowed licenses: CC0, MIT and CC BY with credit given here (see docs/DECISIONS.md, D-025, which replaces D-011).
 
 | Folder | Pack | Author | Source | License |
 |---|---|---|---|---|
@@ -8,5 +8,6 @@ Only CC0 or MIT assets are allowed here (see docs/DECISIONS.md, D-011).
 | `KayKit/Skeletons` | KayKit Skeletons 1.1 (free) — skeleton walkers and weapons | Kay Lousberg | https://kaylousberg.itch.io/kaykit-skeletons | CC0 1.0 |
 | `KayKit/Animations` | KayKit Character Animations 1.1 — Rig_Medium clips | Kay Lousberg | https://kaylousberg.itch.io/kaykit-character-animations | CC0 1.0 |
 | `KayKit/Dungeon` | KayKit Dungeon Pack 1.1 (free) — floor, walls, torches, props | Kay Lousberg | https://kaylousberg.itch.io/kaykit-dungeon-pack | CC0 1.0 |
+| `GameIcons` | 12 skill icons (per-icon list in `GameIcons/License.txt`) | Lorc, Delapouite | https://game-icons.net | CC BY 3.0 |
 
-Each pack keeps its original `License.txt`. Attribution is not required by CC0 but is given here anyway.
+Each pack keeps its original license text. CC0 needs no attribution but it is given anyway; CC BY icons must stay credited here.
