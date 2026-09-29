@@ -84,23 +84,25 @@
 | M2: ghi demo chơi tay → BC/GAIL | bỏ (D-023) |
 | M3: 4 loại zombie + đạn + Mage/Archer + icon skill | code xong (D-024); smoke train 3 class OK; chờ train dài |
 
-| **Hướng mới: chế độ Survivor (kiểu Vampire Survivors)** | thiết kế xong (`docs/GDD.md`, D-026..D-029); M4 đang làm |
+| **Hướng mới: chế độ Survivor (kiểu Vampire Survivors)** | thiết kế xong (`docs/GDD.md`, D-026..D-030); M4A đang làm |
 
 ## Việc tiếp theo (theo thứ tự)
 
 Owner đổi hướng ngày 2026-09-30: game thành kiểu **Vampire Survivors**, AI tự học farm vàng, chọn
 nâng cấp, thích nghi theo build; não học tiếp khi game cập nhật. Thiết kế đầy đủ: **`docs/GDD.md`**.
-Lộ trình mới M4–M7 ở `docs/PLAN.md`. Đấu trường tròn luật v3 sẽ bị thay; `warrior-003` không cần train tiếp.
+Lộ trình mới M4A–M8 ở `docs/PLAN.md` (owner góp ý thiết kế → D-030: chia M4 thành M4A/M4B/M4C,
+thưởng theo thứ bậc, nghiệm thu bằng đánh giá 100 seed). Đấu trường tròn luật v3 sẽ bị thay;
+`warrior-003` không cần train tiếp.
 
-1. **M4 – Survivor lõi (nhánh `feature/survivor-core`, task T-014..):**
-   - Core `Core/Survivor`: bản đồ, lịch quái, EXP/lên cấp, vũ khí tự bắn, phụ kiện, đồ nhặt, tinh anh,
-     boss, quan sát v4, thưởng, lưới không gian;
-   - Trainer: `survivor_warrior_ppo.yaml`, curriculum độ dài trận, build ngẫu nhiên, `brain_upgrade.py`,
-     `schema_version` thay `rules_version`;
-   - Unity: `HeroAgent` 3 nhánh mới, host training, trình xem Survivor (camera theo nhân vật, nghĩa địa,
-     HUD, bảng lên cấp, màn kết trận).
-2. Train `warrior-s001` tới khi sống ≥ 10 phút ở bậc 1.
-3. **M5 – Kinh tế và build**, rồi M6, M7.
+1. **M4A – Lát cắt dọc Survivor (nhánh `feature/survivor-core`, T-014..T-017):**
+   - Core `Core/Survivor` (T-014, Codex): bản đồ, lịch quái 3 loại, EXP/lên cấp, 2 vũ khí, 4 phụ kiện,
+     boss, quan sát v4 (2264), thưởng thứ bậc, `SurvivorEvaluator` + `Tools/SurvivorEval`;
+   - Trainer (T-015, Codex): `warrior_survivor_ppo.yaml`, curriculum đo bằng reward, `schema_version`
+     thay `rules_version`, run `warrior-sNNN`;
+   - Unity (T-016, Claude): `HeroAgent` 3 nhánh, trình xem Survivor. Asset Halloween đã tải vào
+     scratchpad, chưa chép vào project.
+2. Train `warrior-s001` tới khi qua đánh giá 100 seed: trung vị ≥ 10:00, P10 ≥ 7:00, không chết trước 3:00.
+3. **M4B** (champion/challenger, Behavior Profile, nâng cấp não), **M4C** (đủ nội dung), rồi M5–M8.
 
 ## Cách làm trên PC (Claude)
 
@@ -133,6 +135,11 @@ Lộ trình mới M4–M7 ở `docs/PLAN.md`. Đấu trường tròn luật v3 s
   hạn, trận 15 phút, thay hẳn đấu trường cũ.
 - Nghiên cứu VS (wiki): PowerUps, đường EXP, lên cấp 3–4 lựa chọn, 6+6 món, rương tinh anh, Greed/Curse.
 - Viết `docs/GDD.md`, D-026..D-029, lộ trình M4–M7.
+- Owner gửi bản góp ý thiết kế dài → nhận hết (D-030): học phải "cảm nhận được" (Behavior Profile),
+  thưởng thứ bậc (kết quả > sống > máu > tiến độ > vàng, bỏ thưởng hạ quái), quan sát chuẩn hóa +
+  đặc trưng chuyển động (2264), bỏ Thần chết (hết giờ 17:00), champion/challenger, curriculum ôn tập,
+  đánh giá 100 seed; chia M4A/M4B/M4C; M5 thêm loadout, Training Focus, modifier độ khó, lớp phủ
+  khán giả, báo cáo sau trận; M6 Brain Lineage. Viết lại GDD, PLAN, T-014, T-015; Codex chạy lại.
 
 ### 2026-09-30 01:00 — Claude (PC): icon skill từ game-icons.net
 - Owner duyệt dùng icon miễn phí và đặt hướng mới: **ưu tiên asset có sẵn / free** (D-025, thay D-011;
