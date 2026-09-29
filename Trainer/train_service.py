@@ -407,7 +407,9 @@ class TrainingService:
         ]
         if plan.mode == "resume":
             arguments.append("--resume")
-        elif plan.mode == "force":
+        else:
+            # A new run's folder already exists (the schema marker is written first), so
+            # ML-Agents would refuse it without --force.
             arguments.append("--force")
         if self.torch_device:
             arguments.extend(("--torch-device", self.torch_device))

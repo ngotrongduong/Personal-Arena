@@ -271,6 +271,16 @@ def test_trainer_command_resumes_with_service_settings(tmp_path: Path):
     assert command[-3:] == ["--env-args", "--hero-class", "warrior"]
 
 
+def test_trainer_command_forces_new_runs_because_the_schema_marker_made_the_folder(tmp_path: Path):
+    args = train_service.create_parser().parse_args(["--results-dir", str(tmp_path)])
+    service = train_service.TrainingService(args)
+
+    command = service.trainer_command(train_service.RunPlan("warrior-s001", "new", 0), tmp_path / "c.yaml")
+
+    assert "--force" in command
+    assert "--resume" not in command
+
+
 def test_trainer_command_uses_the_viewer_power_setting(tmp_path: Path):
     args = train_service.create_parser().parse_args(
         ["--results-dir", str(tmp_path), "--num-envs", "8", "--arena-agents", "32", "--time-scale", "30"]
