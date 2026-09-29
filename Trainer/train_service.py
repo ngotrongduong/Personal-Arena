@@ -585,7 +585,7 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument("--config")
     parser.add_argument("--results-dir", default=str(arena_trainer.DEFAULT_RESULTS_DIRECTORY))
     parser.add_argument("--num-envs", type=int, default=4, help="Unity games running side by side.")
-    parser.add_argument("--arena-agents", type=int, help="Warriors per game (default: the build's 16).")
+    parser.add_argument("--arena-agents", type=int, help="Heroes per game (default: the build's 16).")
     parser.add_argument("--time-scale", type=float, default=20.0)
     parser.add_argument("--base-port", type=int, default=5005)
     parser.add_argument("--parent-pid", type=int, default=0, help="Stop when this process exits.")

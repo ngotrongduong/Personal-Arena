@@ -343,7 +343,7 @@ namespace PersonalArena.View
                 Color frame = skillColors[i];
                 frame.a = cooldown > 0.05f ? 0.25f : 0.75f;
                 skillFrames[i].color = frame;
-                skillIcons[i].color = cooldown > 0.05f ? new Color(0.55f, 0.55f, 0.6f, 1f) : Color.white;
+                skillIcons[i].color = cooldown > 0.05f ? new Color(0.72f, 0.72f, 0.76f, 1f) : Color.white;
             }
 
             int alive = 0;
@@ -629,12 +629,16 @@ namespace PersonalArena.View
 
             GameObject shadeObject = CreateUiObject("Cooldown", slot);
             Image shade = shadeObject.AddComponent<Image>();
-            shade.color = new Color(0.02f, 0.02f, 0.04f, 0.72f);
+            // A clock sweep over the icon only, so the icon and its name stay readable on cooldown.
+            // A Filled Image needs a sprite: without one Unity ignores fillAmount and covers the rect.
+            shade.sprite = UiSprites.RoundedSprite();
+            shade.color = new Color(0.02f, 0.02f, 0.05f, 0.62f);
             shade.type = Image.Type.Filled;
-            shade.fillMethod = Image.FillMethod.Vertical;
-            shade.fillOrigin = 0;
+            shade.fillMethod = Image.FillMethod.Radial360;
+            shade.fillOrigin = (int)Image.Origin360.Top;
+            shade.fillClockwise = false;
             shade.raycastTarget = false;
-            SetStretch(shade.rectTransform, 3f, 3f, 3f, 3f);
+            SetRect(shade.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -14f), new Vector2(76f, 76f), new Vector2(0.5f, 1f));
             cooldownFills[index] = shade;
 
             Text cooldown = CreateText("Cooldown Time", slot, 30, TextAnchor.MiddleCenter, new Color(1f, 0.9f, 0.35f));
