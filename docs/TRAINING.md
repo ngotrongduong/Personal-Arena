@@ -64,14 +64,31 @@ Từ gốc repo (`C:\PersonalArena`, nơi có `.venv-ml`):
 | `Losses/Value Loss` | giảm rồi ổn định | tăng mãi: `normalize: true`, giảm `learning_rate` |
 | `Arena/*` (kill, sống sót, backstab, parry…) | tăng | ghi bởi `EpisodeStats` trong `HeroAgent` |
 
-## 4. Bài học từ video Pezzza
+## 4. Xem AI chơi trực tiếp (trong lúc train)
+
+- **Nhấp đúp `Xem-AI.cmd`** ở gốc repo. Nó chạy ngầm `export_brain.py --watch` (mỗi 5 s đổi
+  checkpoint `.pt` mới nhất thành `Trainer/runs/<run>/<Behavior>/latest.brain`) và mở trình xem
+  `Build/Watch/PersonalArenaWatch.exe`. Trình xem tìm `latest.brain` mới nhất, nạp lại mỗi khi
+  training lưu não mới (~500k bước, ~8 phút). Đóng cửa sổ thì exporter cũng tắt.
+- Phím: `1`–`6` số zombie 1/2/4/8/16/32, `Space` tốc độ x1/x2/x4, `T` chọn hành động
+  deterministic/sampled, `R` ván mới, `Esc` tạm dừng. Hết ván tự chơi lại sau 3 s.
+- Build trình xem: **Personal Arena > Build Watch AI Viewer (Windows)**, hoặc headless
+  `-batchmode -quit -executeMethod PersonalArena.View.Editor.WatchBuild.BuildWindows`.
+- Xuất tay: `python Trainer/export_brain.py --checkpoint <file.pt> --output <file.brain>`.
+  Tham số exe: `-brain <file>` (một não cố định) hoặc `-runs <thư mục runs>`.
+- Định dạng `.brain` và lý do không dùng ONNX: D-017. Chỉ hỗ trợ actor MLP không normalize,
+  không LSTM (config hiện tại). Đổi config mạng thì phải sửa exporter.
+- TensorBoard (biểu đồ): `tensorboard --logdir Trainer/runs` → http://localhost:6006.
+
+## 5. Bài học từ video Pezzza
 
 - Kiểm tra **dấu** mọi reward term (agent không bao giờ dùng giáo vì phạt nhầm).
 - Curriculum số zombie 1→2→4→8→16; chỉ lên cấp khi reward ổn định.
 - Quyết định 12 Hz; video dùng ~92 tia 360°, mình dùng 72 (D-013).
 
-## 5. Nhật ký run
+## 6. Nhật ký run
 
 | Run id | Ngày | Config | Bước | Kết quả | Ghi chú |
 |---|---|---|---|---|---|
 | smoke | 2026-09-29 | warrior_ppo.yaml, 1 env × 16 arena, time-scale 20, RTX 4070 Ti | 210k (5 phút) | Mean reward −0.01 → 15.4; tự lên bài 2 (TwoZombies) | Chỉ để kiểm tra pipeline; ~700 bước/s |
+| warrior-001 | 2026-09-29 | warrior_ppo.yaml, 4 env × 16 arena, time-scale 20, RTX 4070 Ti | đang chạy (1M lúc 13:41) | Curriculum lên 16 zombie ở ~480k (quá nhanh); mean reward 14.2 ở 720k; ở 1M bước, xem thử 4 zombie: 8 kill, sống 20 s | ~1000 bước/s. Ngưỡng 6 quá dễ → cần nâng |

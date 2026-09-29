@@ -1,7 +1,8 @@
 # T-002: Spike — load an ONNX model at runtime in a player build
 
 - **Owner:** Claude (on the linked PC) + Owner
-- **Status:** todo
+- **Status:** done (2026-09-29) — runtime ONNX import is Editor-only; replaced by the `.brain`
+  format + `Core/PolicyBrain.cs` (see D-017 in `docs/DECISIONS.md`)
 - **Milestone:** M0
 - **Parallel OK with:** T-003..T-005
 - **Depends on:** T-001 (GPU/venv confirmed). Packages already installed: ml-agents 4.1.0, ai.inference 2.6.1
