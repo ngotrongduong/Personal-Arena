@@ -1,0 +1,20 @@
+{
+    "name": "PersonalArena.View.Editor",
+    "rootNamespace": "PersonalArena.View.Editor",
+    "references": [
+        "PersonalArena.View",
+        "Unity.InputSystem",
+        "Unity.ugui"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

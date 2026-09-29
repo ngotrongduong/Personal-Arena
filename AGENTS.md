@@ -1,5 +1,18 @@
 # Rules for coding agents (Codex, Claude)
 
+## Authority (standing rule from the user, 2026-09-29)
+
+- The user is not a programmer and only decides the game's direction (features, classes,
+  priorities, milestones). Claude (the orchestrator) has full authority over every technical
+  decision and commands Codex and subagents. Agents never ask the user to approve or choose
+  anything technical. They work until the task is done and report to Claude.
+- Avoid commands that trigger permission prompts: one simple command per call, with no
+  `cd &&`, pipes, heredocs or chained `$VAR`s. Put multi-step logic in a script file.
+- Hard limits remain: no credentials or sign-ins, no real money, no permanent deletion of
+  user data, and no touching other apps or games.
+
+## General
+
 - **Codex never runs git** (no commit, branch, push, checkout). Claude handles git and PRs.
 - Commits end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - Never commit trained models (`*.onnx`, `*.sentis`), demos (`*.demo`), `results/`,
