@@ -21,7 +21,9 @@
     12 Hz, action 9/3/5, mask skill, thống kê `Arena/*`), `TrainingArenaHost` (16 arena/process),
     `TrainingSceneBuilder`, `TrainingBuild` → `Build/Training/PersonalArenaTraining.exe`.
     `Trainer/arena_trainer.py` + 2 config PPO (curriculum 1→2→4→8→16). Hướng dẫn: `docs/TRAINING.md`.
-  - Test: Unity EditMode ML 9/9 pass, pytest trainer 3/3 pass.
+  - Test: Unity EditMode 18/18 pass (ML + view), pytest trainer 3/3 pass.
+  - **Smoke training 5 phút trên GPU:** mean reward −0.01 → 15.4, curriculum tự lên 2 zombie.
+    AI học được thật; pipeline chạy đầu-cuối.
 
 ## Checklist
 

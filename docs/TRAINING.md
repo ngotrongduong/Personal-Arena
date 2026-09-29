@@ -74,4 +74,4 @@ Từ gốc repo (`C:\PersonalArena`, nơi có `.venv-ml`):
 
 | Run id | Ngày | Config | Bước | Kết quả | Ghi chú |
 |---|---|---|---|---|---|
-| — | | | | | |
+| smoke | 2026-09-29 | warrior_ppo.yaml, 1 env × 16 arena, time-scale 20, RTX 4070 Ti | 210k (5 phút) | Mean reward −0.01 → 15.4; tự lên bài 2 (TwoZombies) | Chỉ để kiểm tra pipeline; ~700 bước/s |
