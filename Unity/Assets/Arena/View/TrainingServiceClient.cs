@@ -34,6 +34,9 @@ namespace PersonalArena.View
         public float mean_reward;
         public float zombies;
         public float session_seconds;
+        public int num_envs;
+        public int arena_agents;
+        public bool cpu;
         public double updated_unix;
         public long[] steps;
         public float[] rewards;
@@ -54,6 +57,31 @@ namespace PersonalArena.View
             {
                 return null;
             }
+        }
+    }
+
+    /// <summary>How hard training runs: hidden Unity games, warriors per game and simulation speed.</summary>
+    public readonly struct TrainingPower
+    {
+        public readonly string Name;
+        public readonly int Games;
+        public readonly int FightersPerGame;
+        public readonly float TimeScale;
+
+        public TrainingPower(string name, int games, int fightersPerGame, float timeScale)
+        {
+            Name = name;
+            Games = games;
+            FightersPerGame = fightersPerGame;
+            TimeScale = timeScale;
+        }
+
+        public int Fighters => Games * FightersPerGame;
+
+        public string Arguments()
+        {
+            return " --num-envs " + Games + " --arena-agents " + FightersPerGame + " --time-scale " +
+                TimeScale.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
         }
     }
 
@@ -80,6 +108,7 @@ namespace PersonalArena.View
     {
         public const string StatusFileName = "training_service.json";
         public const string StopFileName = "training_service.stop";
+        public const string ErrorLogFileName = "training_service.err.log";
         public const double FreshSeconds = 15.0;
         public const double LaunchGraceSeconds = 30.0;
         public const double ExternalLogSeconds = 120.0;
@@ -88,6 +117,7 @@ namespace PersonalArena.View
         private System.Diagnostics.Process process;
         private DateTime launchedUtc = DateTime.MinValue;
         private string launchError;
+        private double launchErrorUnix;
 
         public TrainingServiceClient(string runsDirectory)
         {
@@ -125,7 +155,7 @@ namespace PersonalArena.View
         }
 
         /// <summary>Launches the service in a hidden console; returns an error message or null.</summary>
-        public string Start(int parentProcessId)
+        public string Start(int parentProcessId, TrainingPower power)
         {
             string missing = MissingPiece();
             if (missing != null)
@@ -141,7 +171,7 @@ namespace PersonalArena.View
                 }
 
                 System.Diagnostics.ProcessStartInfo info = new System.Diagnostics.ProcessStartInfo(
-                    PythonPath, Quote(ScriptPath) + " --parent-pid " + parentProcessId)
+                    PythonPath, Quote(ScriptPath) + " --parent-pid " + parentProcessId + power.Arguments())
                 {
                     UseShellExecute = false,
                     CreateNoWindow = true,
@@ -180,19 +210,27 @@ namespace PersonalArena.View
             DateTime utcNow = DateTime.UtcNow;
             TrainingStatus status = TrainingStatus.Parse(ReadShared(StatusPath));
             bool launching = (utcNow - launchedUtc).TotalSeconds < LaunchGraceSeconds;
-            if (process != null && launching && HasExited(process, out int exitCode) &&
-                (status == null || status.updated_unix < ToUnix(launchedUtc)))
+            if (process != null && HasExited(process, out int exitCode))
             {
-                launchError = exitCode == 3
-                    ? "Training is already running in another window."
-                    : "The training service closed right away (code " + exitCode + ").";
+                string failure = LaunchFailure(exitCode, status, launchedUtc);
+                if (failure != null)
+                {
+                    launchError = failure;
+                    launchErrorUnix = ToUnix(utcNow);
+                }
+                process = null;
                 launchedUtc = DateTime.MinValue;
                 launching = false;
+            }
+            if (launchError != null && status != null && status.updated_unix > launchErrorUnix)
+            {
+                launchError = null; // A newer status (e.g. from another start) replaces it.
             }
 
             TrainingState state = Classify(status, ToUnix(utcNow), NewestLogWriteUtc(), utcNow,
                 launching ? launchedUtc : (DateTime?)null);
-            if (state == TrainingState.Idle && launchError != null)
+            if (launchError != null && (state == TrainingState.Idle || state == TrainingState.Stopped ||
+                state == TrainingState.Error))
             {
                 status = new TrainingStatus { state = "error", message = launchError };
                 state = TrainingState.Error;
@@ -203,6 +241,22 @@ namespace PersonalArena.View
             }
 
             return new TrainingSnapshot(state, status);
+        }
+
+        /// <summary>
+        /// Why a launched service exited, or null when it wrote its own status for this launch (a newer
+        /// "stopped" or "error" already explains itself). An older status must not hide the failure.
+        /// </summary>
+        public static string LaunchFailure(int exitCode, TrainingStatus status, DateTime launchedUtc)
+        {
+            if (status != null && status.updated_unix >= ToUnix(launchedUtc))
+            {
+                return null;
+            }
+            return exitCode == 3
+                ? "Training is already running in another window."
+                : "The training service closed right away (code " + exitCode + "). See Trainer/runs/" +
+                  ErrorLogFileName + ".";
         }
 
         /// <summary>Decides what the button shows from the status file and the run logs.</summary>

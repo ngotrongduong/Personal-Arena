@@ -24,6 +24,19 @@ namespace PersonalArena.View
         private static readonly int[] SpeedSteps = { 1, 2, 4 };
         private static readonly Color TrainColor = new Color(0.2f, 0.6f, 0.32f, 1f);
         private static readonly Color StopColor = new Color(0.72f, 0.2f, 0.18f, 1f);
+        private const string PowerPreference = "TrainingPower";
+        private const int DefaultPowerIndex = 2;
+        /// <summary>
+        /// Training power presets, measured on the owner's PC (see docs/TRAINING.md): more arenas per
+        /// game beat more games, and a faster time scale did not help reliably.
+        /// </summary>
+        private static readonly TrainingPower[] Powers =
+        {
+            new TrainingPower("LIGHT", 2, 16, 20f),
+            new TrainingPower("NORMAL", 4, 16, 20f),
+            new TrainingPower("FAST", 4, 32, 20f),
+            new TrainingPower("MAX", 4, 64, 20f)
+        };
 
         [Header("Arena")]
         [SerializeField, Range(8f, 80f)] private float arenaSize = 20f;
@@ -63,6 +76,8 @@ namespace PersonalArena.View
         private float stopRequestedAt = float.NegativeInfinity;
         private bool startedTraining;
         private string trainingNotice;
+        private int powerIndex = DefaultPowerIndex;
+        private bool restartWithNewPower;
 
         public ArenaSim Sim => sim;
         public BrainPilot Pilot => pilot;
@@ -83,12 +98,14 @@ namespace PersonalArena.View
             }
 
             arenaHud.SetHelpText(
-                "AI is playing   1-6 zombies: 1/2/4/8/16/32   Space speed   T choice mode   R new round   Esc pause");
+                "AI is playing   1-6 zombies: 1/2/4/8/16/32   Space view speed   T choice mode   R new round   Esc pause");
             arenaHud.SetResultFooter("Next round starts automatically");
             if (!string.IsNullOrWhiteSpace(runsDirectory) && string.IsNullOrWhiteSpace(brainFile))
             {
                 training = new TrainingServiceClient(runsDirectory);
+                powerIndex = Mathf.Clamp(PlayerPrefs.GetInt(PowerPreference, DefaultPowerIndex), 0, Powers.Length - 1);
                 arenaHud.TrainingButtonClicked += OnTrainingButton;
+                arenaHud.TrainingPowerClicked += OnPowerButton;
                 arenaHud.ShowTrainingPanel(true);
                 PollTraining();
             }
@@ -102,6 +119,7 @@ namespace PersonalArena.View
             if (arenaHud != null)
             {
                 arenaHud.TrainingButtonClicked -= OnTrainingButton;
+                arenaHud.TrainingPowerClicked -= OnPowerButton;
             }
         }
 
@@ -286,6 +304,7 @@ namespace PersonalArena.View
                 return;
             }
 
+            restartWithNewPower = false;
             if (trainingSnapshot.IsActive)
             {
                 training.RequestStop();
@@ -294,18 +313,59 @@ namespace PersonalArena.View
             }
             else if (trainingSnapshot.State != TrainingState.External && trainingSnapshot.State != TrainingState.Unavailable)
             {
-                trainingNotice = training.Start(System.Diagnostics.Process.GetCurrentProcess().Id);
-                startedTraining = trainingNotice == null;
-                stopRequestedAt = float.NegativeInfinity;
+                StartTraining();
             }
 
             PollTraining();
+        }
+
+        private void StartTraining()
+        {
+            trainingNotice = training.Start(System.Diagnostics.Process.GetCurrentProcess().Id, Powers[powerIndex]);
+            startedTraining = trainingNotice == null;
+            stopRequestedAt = float.NegativeInfinity;
+        }
+
+        private void OnPowerButton()
+        {
+            if (training == null)
+            {
+                return;
+            }
+
+            powerIndex = (powerIndex + 1) % Powers.Length;
+            PlayerPrefs.SetInt(PowerPreference, powerIndex);
+            PlayerPrefs.Save();
+            // Running training picks up the new power after a save-and-restart.
+            if (trainingSnapshot.IsActive && trainingSnapshot.State != TrainingState.Stopping)
+            {
+                restartWithNewPower = true;
+                training.RequestStop();
+                stopRequestedAt = Time.unscaledTime;
+            }
+
+            PollTraining();
+        }
+
+        private static string PowerLabel(TrainingPower power)
+        {
+            return "Power: " + power.Name + " - " + power.Fighters + " arenas at once     change >";
         }
 
         private void PollTraining()
         {
             nextTrainingPoll = Time.unscaledTime + TrainingPollSeconds;
             trainingSnapshot = training.Read();
+            if (restartWithNewPower && !trainingSnapshot.IsActive)
+            {
+                restartWithNewPower = false;
+                if (trainingSnapshot.State == TrainingState.Stopped || trainingSnapshot.State == TrainingState.Idle)
+                {
+                    StartTraining();
+                    trainingSnapshot = training.Read();
+                }
+            }
+
             TrainingStatus status = trainingSnapshot.Status;
             CultureInfo culture = CultureInfo.InvariantCulture;
             bool stopAsked = Time.unscaledTime - stopRequestedAt < StopFeedbackSeconds;
@@ -321,7 +381,9 @@ namespace PersonalArena.View
                     break;
                 case TrainingState.Starting:
                     arenaHud.SetTrainingButton(stopAsked ? "STOPPING..." : "STOP TRAINING", !stopAsked, StopColor);
-                    text = "Starting... loading the training arenas\n(about a minute). The fighter here keeps\nupdating as the AI learns.";
+                    text = status != null && status.message != null && status.message.StartsWith("The trainer crashed", StringComparison.Ordinal)
+                        ? status.message + "\nProgress is kept; it resumes by itself."
+                        : "Starting... loading the training arenas\n(about a minute). The fighter here keeps\nupdating as the AI learns.";
                     break;
                 case TrainingState.Training:
                     arenaHud.SetTrainingButton(stopAsked ? "STOPPING..." : "STOP TRAINING", !stopAsked, StopColor);
@@ -329,6 +391,10 @@ namespace PersonalArena.View
                         "\nStep " + status.step.ToString("N0", culture) +
                         (status.has_reward ? "    Mean reward " + status.mean_reward.ToString("0.0", culture) : string.Empty) +
                         (status.zombies > 0f ? "\nTraining arenas: " + status.zombies.ToString("0", culture) + " zombies" : string.Empty) +
+                        (status.num_envs > 0
+                            ? "\n" + (status.num_envs * status.arena_agents) + " arenas learning at once (" +
+                              status.num_envs + " games x " + status.arena_agents + ")" + (status.cpu ? " on the CPU" : string.Empty)
+                            : string.Empty) +
                         "\nThis session " + FormatDuration(status.session_seconds);
                     break;
                 case TrainingState.Stopping:
@@ -353,11 +419,17 @@ namespace PersonalArena.View
                     break;
             }
 
+            if (restartWithNewPower)
+            {
+                text = "Changing power to " + Powers[powerIndex].Name + ":\nsaving progress, then restarting...";
+            }
             if (!string.IsNullOrEmpty(trainingNotice))
             {
                 text = trainingNotice;
             }
 
+            arenaHud.SetTrainingPower(PowerLabel(Powers[powerIndex]), trainingSnapshot.State != TrainingState.External &&
+                trainingSnapshot.State != TrainingState.Unavailable && trainingSnapshot.State != TrainingState.Stopping);
             arenaHud.SetTrainingText(text);
             float[] rewards = status != null ? status.rewards : null;
             string caption = rewards != null && rewards.Length > 0 && status.steps != null && status.steps.Length > 0
@@ -428,7 +500,7 @@ namespace PersonalArena.View
             }
 
             text += "\nRound " + episode + "   Zombies " + zombieCount +
-                "   Speed x" + SpeedSteps[speedIndex] +
+                "   View speed x" + SpeedSteps[speedIndex] +
                 "   Choice " + (pilot.Deterministic ? "best" : "sampled");
             if (recent.Count > 0)
             {

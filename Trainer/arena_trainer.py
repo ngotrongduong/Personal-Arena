@@ -30,6 +30,16 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument("--time-scale", type=float, default=20.0)
     parser.add_argument("--base-port", type=int, default=5005)
     parser.add_argument("--results-dir", default=str(DEFAULT_RESULTS_DIRECTORY))
+    parser.add_argument(
+        "--arena-agents",
+        type=int,
+        help="Warriors trained side by side inside each Unity game (default: the build's 16).",
+    )
+    parser.add_argument(
+        "--torch-device",
+        choices=("cpu", "cuda"),
+        help="Force the PyTorch device (default: ML-Agents picks the GPU when it can).",
+    )
 
     graphics = parser.add_mutually_exclusive_group()
     graphics.add_argument(
@@ -92,12 +102,17 @@ def build_command(args: argparse.Namespace, root: Path | None = None) -> list[st
     ]
     if args.no_graphics:
         command.append("--no-graphics")
+    if getattr(args, "torch_device", None):
+        command.extend(("--torch-device", args.torch_device))
     if args.resume:
         command.append("--resume")
     elif args.initialize_from:
         command.extend(("--initialize-from", args.initialize_from))
     elif args.force:
         command.append("--force")
+    if getattr(args, "arena_agents", None):
+        # --env-args takes the rest of the command line, so it must come last.
+        command.extend(("--env-args", "--arena-agents", str(args.arena_agents)))
     return command
 
 

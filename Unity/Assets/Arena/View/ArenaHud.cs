@@ -34,6 +34,8 @@ namespace PersonalArena.View
         private Button trainingButton;
         private Image trainingButtonImage;
         private Text trainingButtonLabel;
+        private Button powerButton;
+        private Text powerLabel;
         private Text trainingText;
         private Text trainingGraphCaption;
         private readonly Image[] trainingBars = new Image[TrainingBarCount];
@@ -42,6 +44,9 @@ namespace PersonalArena.View
 
         /// <summary>Raised when the owner clicks the Train the AI / Stop button.</summary>
         public event Action TrainingButtonClicked;
+
+        /// <summary>Raised when the owner clicks the training power (speed) selector.</summary>
+        public event Action TrainingPowerClicked;
 
         public void Bind(ArenaSim arenaSim, ArenaStats arenaStats)
         {
@@ -98,6 +103,13 @@ namespace PersonalArena.View
             trainingButtonLabel.text = label ?? string.Empty;
             trainingButton.interactable = interactable;
             trainingButtonImage.color = interactable ? color : new Color(0.24f, 0.26f, 0.3f, 1f);
+        }
+
+        public void SetTrainingPower(string label, bool interactable)
+        {
+            ShowTrainingPanel(true);
+            powerLabel.text = label ?? string.Empty;
+            powerButton.interactable = interactable;
         }
 
         public void SetTrainingText(string text)
@@ -291,7 +303,7 @@ namespace PersonalArena.View
             }
 
             RectTransform panel = CreatePanel("Training", canvasRoot, new Color(0.04f, 0.05f, 0.07f, 0.86f));
-            SetRect(panel, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20f, -212f), new Vector2(430f, 306f), new Vector2(1f, 1f));
+            SetRect(panel, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20f, -212f), new Vector2(430f, 370f), new Vector2(1f, 1f));
             trainingPanel = panel.gameObject;
 
             Text title = CreateText("Title", panel, 20, TextAnchor.UpperLeft, new Color(1f, 0.86f, 0.45f));
@@ -309,14 +321,22 @@ namespace PersonalArena.View
             trainingButtonLabel.fontStyle = FontStyle.Bold;
             SetStretch(trainingButtonLabel.rectTransform, 0f, 0f, 0f, 0f);
 
+            RectTransform powerRect = CreatePanel("Power Button", panel, new Color(0.16f, 0.2f, 0.28f, 1f));
+            SetRect(powerRect, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -106f), new Vector2(394f, 34f), new Vector2(0f, 1f));
+            powerButton = powerRect.gameObject.AddComponent<Button>();
+            powerButton.targetGraphic = powerRect.GetComponent<Image>();
+            powerButton.onClick.AddListener(() => TrainingPowerClicked?.Invoke());
+            powerLabel = CreateText("Label", powerRect, 16, TextAnchor.MiddleCenter, new Color(0.92f, 0.95f, 1f));
+            SetStretch(powerLabel.rectTransform, 6f, 6f, 0f, 0f);
+
             trainingText = CreateText("Status", panel, 17, TextAnchor.UpperLeft, new Color(0.9f, 0.93f, 0.97f));
-            SetRect(trainingText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -110f), new Vector2(394f, 94f), new Vector2(0f, 1f));
+            SetRect(trainingText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -150f), new Vector2(394f, 116f), new Vector2(0f, 1f));
 
             trainingGraphCaption = CreateText("Graph Caption", panel, 15, TextAnchor.UpperLeft, new Color(0.7f, 0.76f, 0.84f));
-            SetRect(trainingGraphCaption.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -206f), new Vector2(394f, 20f), new Vector2(0f, 1f));
+            SetRect(trainingGraphCaption.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -270f), new Vector2(394f, 20f), new Vector2(0f, 1f));
 
             RectTransform graph = CreatePanel("Reward Graph", panel, new Color(0.1f, 0.11f, 0.14f, 1f));
-            SetRect(graph, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -228f), new Vector2(394f, TrainingGraphHeight), new Vector2(0f, 1f));
+            SetRect(graph, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -292f), new Vector2(394f, TrainingGraphHeight), new Vector2(0f, 1f));
             float slot = 394f / TrainingBarCount;
             for (int i = 0; i < TrainingBarCount; i++)
             {
