@@ -50,24 +50,41 @@ namespace PersonalArena.ML.Editor
             string outputDirectory = ResolveBuildDirectory();
             Directory.CreateDirectory(outputDirectory);
 
-            PlayerSettings.runInBackground = true;
-            PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
-            PlayerSettings.defaultScreenWidth = 640;
-            PlayerSettings.defaultScreenHeight = 360;
-
-            BuildPlayerOptions options = new BuildPlayerOptions
+            // The training player needs a small background window, but these are project-wide
+            // settings: restore them afterwards so the game build keeps its own defaults.
+            bool previousRunInBackground = PlayerSettings.runInBackground;
+            FullScreenMode previousFullScreenMode = PlayerSettings.fullScreenMode;
+            int previousWidth = PlayerSettings.defaultScreenWidth;
+            int previousHeight = PlayerSettings.defaultScreenHeight;
+            try
             {
-                scenes = new[] { TrainingSceneBuilder.TrainingScenePath },
-                locationPathName = Path.Combine(outputDirectory, ExecutableName),
-                target = BuildTarget.StandaloneWindows64,
-                options = BuildOptions.None
-            };
+                PlayerSettings.runInBackground = true;
+                PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
+                PlayerSettings.defaultScreenWidth = 640;
+                PlayerSettings.defaultScreenHeight = 360;
 
-            BuildReport report = BuildPipeline.BuildPlayer(options);
-            Debug.Log(
-                $"Training build {report.summary.result}: {report.summary.outputPath} " +
-                $"({report.summary.totalSize} bytes)." );
-            return report.summary.result;
+                BuildPlayerOptions options = new BuildPlayerOptions
+                {
+                    scenes = new[] { TrainingSceneBuilder.TrainingScenePath },
+                    locationPathName = Path.Combine(outputDirectory, ExecutableName),
+                    target = BuildTarget.StandaloneWindows64,
+                    options = BuildOptions.None
+                };
+
+                BuildReport report = BuildPipeline.BuildPlayer(options);
+                Debug.Log(
+                    $"Training build {report.summary.result}: {report.summary.outputPath} " +
+                    $"({report.summary.totalSize} bytes)." );
+                return report.summary.result;
+            }
+            finally
+            {
+                PlayerSettings.runInBackground = previousRunInBackground;
+                PlayerSettings.fullScreenMode = previousFullScreenMode;
+                PlayerSettings.defaultScreenWidth = previousWidth;
+                PlayerSettings.defaultScreenHeight = previousHeight;
+                AssetDatabase.SaveAssets();
+            }
         }
 
         private static string ResolveBuildDirectory()
