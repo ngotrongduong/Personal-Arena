@@ -38,11 +38,20 @@ namespace PersonalArena.View.Editor
             art.Hero = Model(Adventurers + "Characters/Knight.fbx");
             art.HeroMainHand = Model(Adventurers + "Weapons/sword_1handed.fbx");
             art.HeroOffHand = Model(Adventurers + "Weapons/shield_round.fbx");
+            art.Heroes = new[]
+            {
+                Hero("warrior", "Knight", "sword_1handed", "shield_round", 1f),
+                Hero("mage", "Mage", "staff", null, 1f),
+                // KayKit rangers hold the bow in the left hand.
+                Hero("archer", "Ranger", null, "bow", 1f)
+            };
+            // Indexed by ZombieTypeDef.TypeIndex: walker, runner, brute, spitter.
             art.Walkers = new[]
             {
-                Walker("Skeleton_Minion", "Skeleton_Blade", null),
-                Walker("Skeleton_Warrior", "Skeleton_Axe", "Skeleton_Shield_Small_A"),
-                Walker("Skeleton_Rogue", "Skeleton_Blade", null)
+                Walker("Skeleton_Minion", "Skeleton_Blade", null, 1f, false),
+                Walker("Skeleton_Rogue", "Skeleton_Blade", null, 0.9f, true),
+                Walker("Skeleton_Warrior", "Skeleton_Axe", "Skeleton_Shield_Small_A", 1.4f, false),
+                Walker("Skeleton_Mage", "Skeleton_Staff", null, 1f, false)
             };
 
             art.HeroIdle = Clip("General", "Idle_A");
@@ -54,6 +63,9 @@ namespace PersonalArena.View.Editor
             art.HeroDash = Clip("MovementAdvanced", "Dodge_Forward");
             art.HeroHit = Clip("General", "Hit_A");
             art.HeroDeath = Clip("General", "Death_A");
+            art.HeroThrow = Clip("General", "Throw");
+            art.HeroCast = Clip("General", "Use_Item");
+            art.HeroDodgeBack = Clip("MovementAdvanced", "Dodge_Backward");
 
             art.WalkerIdle = Clip("Special", "Skeletons_Idle");
             art.WalkerWalk = Clip("Special", "Skeletons_Walking");
@@ -61,6 +73,8 @@ namespace PersonalArena.View.Editor
             art.WalkerHit = Clip("General", "Hit_B");
             art.WalkerDeath = Clip("Special", "Skeletons_Death");
             art.WalkerSpawn = Clip("General", "Spawn_Ground");
+            art.WalkerRun = Clip("MovementBasic", "Running_B");
+            art.WalkerThrow = Clip("General", "Throw");
 
             art.FloorTile = Model(Dungeon + "floor_tile_large.fbx");
             art.OuterFloorTile = Model(Dungeon + "floor_dirt_large.fbx");
@@ -79,13 +93,27 @@ namespace PersonalArena.View.Editor
             return art;
         }
 
-        private static ArenaArtSet.WalkerLook Walker(string body, string mainHand, string offHand)
+        private static ArenaArtSet.HeroLook Hero(string classId, string body, string mainHand, string offHand, float scale)
+        {
+            return new ArenaArtSet.HeroLook
+            {
+                ClassId = classId,
+                Body = Model(Adventurers + "Characters/" + body + ".fbx"),
+                MainHand = mainHand != null ? Model(Adventurers + "Weapons/" + mainHand + ".fbx") : null,
+                OffHand = offHand != null ? Model(Adventurers + "Weapons/" + offHand + ".fbx") : null,
+                Scale = scale
+            };
+        }
+
+        private static ArenaArtSet.WalkerLook Walker(string body, string mainHand, string offHand, float scale, bool runs)
         {
             return new ArenaArtSet.WalkerLook
             {
                 Body = Model(Skeletons + "Characters/" + body + ".fbx"),
                 MainHand = mainHand != null ? Model(Skeletons + "Weapons/" + mainHand + ".fbx") : null,
-                OffHand = offHand != null ? Model(Skeletons + "Weapons/" + offHand + ".fbx") : null
+                OffHand = offHand != null ? Model(Skeletons + "Weapons/" + offHand + ".fbx") : null,
+                Scale = scale,
+                Runs = runs
             };
         }
 

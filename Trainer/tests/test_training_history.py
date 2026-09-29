@@ -45,7 +45,7 @@ def test_build_history_merges_filters_deduplicates_and_downsamples(tmp_path: Pat
     os.utime(first, ns=(1_000_000_000, 1_000_000_000))
     os.utime(second, ns=(2_000_000_000, 2_000_000_000))
 
-    history = training_history.build_history(run_dir)
+    history = training_history.build_history(run_dir, "Warrior")
 
     assert history is not None
     assert set(history) == {
@@ -53,7 +53,7 @@ def test_build_history_merges_filters_deduplicates_and_downsamples(tmp_path: Pat
     }
     assert history["run_id"] == "warrior-002"
     assert history["behavior"] == "Warrior"
-    assert history["rules_version"] == 2
+    assert history["rules_version"] == 3
     assert history["last_step"] == 25
     series = by_tag(history)
     assert set(series) == {
@@ -68,7 +68,7 @@ def test_build_history_merges_filters_deduplicates_and_downsamples(tmp_path: Pat
     assert all(isinstance(value, float) for item in history["series"] for value in item["values"])
     assert all(set(item) == {"tag", "steps", "values"} for item in history["series"])
 
-    downsampled = training_history.build_history(run_dir, max_points=4)
+    downsampled = training_history.build_history(run_dir, "Warrior", max_points=4)
 
     assert downsampled is not None
     reward = by_tag(downsampled)["Environment/Cumulative Reward"]
@@ -83,25 +83,25 @@ def test_write_history_is_atomic_json_and_skips_unchanged_events(tmp_path: Path)
     behavior_dir.mkdir(parents=True)
     write_events(behavior_dir, ".first", [("Environment/Episode Length", 10.0, 1)])
 
-    assert training_history.write_history(run_dir)
+    assert training_history.write_history(run_dir, "Warrior")
     output = run_dir / training_history.HISTORY_NAME
     first_mtime = output.stat().st_mtime_ns
-    assert not training_history.write_history(run_dir)
+    assert not training_history.write_history(run_dir, "Warrior")
     assert output.stat().st_mtime_ns == first_mtime
     assert not output.with_name(output.name + ".tmp").exists()
     assert json.loads(output.read_text(encoding="utf-8"))["last_step"] == 1
 
     write_events(behavior_dir, ".second", [("Arena/Kills", 2.0, 2)])
 
-    assert training_history.write_history(run_dir)
+    assert training_history.write_history(run_dir, "Warrior")
     assert json.loads(output.read_text(encoding="utf-8"))["last_step"] == 2
 
 
 def test_history_returns_nothing_without_event_files(tmp_path: Path):
     run_dir = tmp_path / "warrior-001"
 
-    assert training_history.build_history(run_dir) is None
-    assert not training_history.write_history(run_dir)
+    assert training_history.build_history(run_dir, "Warrior") is None
+    assert not training_history.write_history(run_dir, "Warrior")
 
 
 def test_cli_prefers_current_rules_events_without_requiring_a_checkpoint(

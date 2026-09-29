@@ -188,6 +188,35 @@ def checkpoints(behavior_dir: Path) -> list[tuple[int, Path]]:
     return sorted(found)
 
 
+def discover_behaviors(
+    runs_dir: Path, rules_version: int = arena_trainer.RULES_VERSION
+) -> list[str]:
+    """Find checkpoint-bearing behavior folders from runs using the requested rules."""
+    found = set()
+    if not runs_dir.is_dir():
+        return []
+    for run_dir in runs_dir.iterdir():
+        if (
+            not run_dir.is_dir()
+            or run_dir.name == "run_logs"
+            or arena_trainer.run_rules_version(run_dir) != rules_version
+        ):
+            continue
+        for behavior_dir in run_dir.iterdir():
+            if not behavior_dir.is_dir() or behavior_dir.name == "run_logs":
+                continue
+            if any(
+                CHECKPOINT_PATTERN.match(path.name)["behavior"] == behavior_dir.name
+                for _, path in checkpoints(behavior_dir)
+            ):
+                found.add(behavior_dir.name)
+    return sorted(found)
+
+
+def selected_behaviors(runs_dir: Path, behavior: str) -> list[str]:
+    return discover_behaviors(runs_dir) if behavior.lower() == "all" else [behavior]
+
+
 def newest_behavior_dir(
     runs_dir: Path, behavior: str, rules_version: int | None = None
 ) -> Path | None:
@@ -210,7 +239,9 @@ def newest_behavior_dir(
 
 
 def export_newest(runs_dir: Path, behavior: str, exported: dict[Path, int], log=print) -> Path | None:
-    behavior_dir = newest_behavior_dir(runs_dir, behavior)
+    behavior_dir = newest_behavior_dir(
+        runs_dir, behavior, rules_version=arena_trainer.RULES_VERSION
+    )
     if behavior_dir is None:
         return None
     step, checkpoint = checkpoints(behavior_dir)[-1]
@@ -231,7 +262,9 @@ def export_newest(runs_dir: Path, behavior: str, exported: dict[Path, int], log=
 
 def write_newest_history(runs_dir: Path, behavior: str, log=print) -> Path | None:
     try:
-        behavior_dir = newest_behavior_dir(runs_dir, behavior)
+        behavior_dir = newest_behavior_dir(
+            runs_dir, behavior, rules_version=arena_trainer.RULES_VERSION
+        )
         if behavior_dir is None:
             return None
         from Trainer import training_history
@@ -251,7 +284,7 @@ def main(argv: Iterable[str] | None = None) -> int:
     parser.add_argument("--checkpoint", type=Path, help="Export one checkpoint and exit.")
     parser.add_argument("--output", type=Path, help="Output path for --checkpoint.")
     parser.add_argument("--runs-dir", type=Path, default=repository_root() / "Trainer" / "runs")
-    parser.add_argument("--behavior", default="Warrior")
+    parser.add_argument("--behavior", default="all", help="Behavior name, or 'all'.")
     parser.add_argument("--watch", action="store_true", help="Keep exporting the newest checkpoint.")
     parser.add_argument("--interval", type=float, default=5.0)
     args = parser.parse_args(list(argv) if argv is not None else None)
@@ -264,9 +297,14 @@ def main(argv: Iterable[str] | None = None) -> int:
 
     exported: dict[Path, int] = {}
     if not args.watch:
-        result = export_newest(args.runs_dir, args.behavior, exported)
-        if result is None:
-            print(f"[export_brain] no {args.behavior} checkpoints under {args.runs_dir}", file=sys.stderr)
+        behaviors = selected_behaviors(args.runs_dir, args.behavior)
+        results = []
+        for behavior in behaviors:
+            results.append(export_newest(args.runs_dir, behavior, exported))
+            write_newest_history(args.runs_dir, behavior)
+        if not any(result is not None for result in results):
+            which = "" if args.behavior.lower() == "all" else f"{args.behavior} "
+            print(f"[export_brain] no {which}checkpoints under {args.runs_dir}", file=sys.stderr)
             return 1
         return 0
 
@@ -275,10 +313,12 @@ def main(argv: Iterable[str] | None = None) -> int:
     while True:
         now = time.monotonic()
         if now >= next_export:
-            export_newest(args.runs_dir, args.behavior, exported)
+            for behavior in selected_behaviors(args.runs_dir, args.behavior):
+                export_newest(args.runs_dir, behavior, exported)
             next_export = now + args.interval
         if now >= next_history:
-            write_newest_history(args.runs_dir, args.behavior)
+            for behavior in selected_behaviors(args.runs_dir, args.behavior):
+                write_newest_history(args.runs_dir, behavior)
             next_history = now + HISTORY_INTERVAL
         delay = max(0.0, min(next_export, next_history) - time.monotonic())
         time.sleep(delay)

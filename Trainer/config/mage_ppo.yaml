@@ -1,5 +1,5 @@
 behaviors:
-  Warrior:
+  Mage:
     trainer_type: ppo
     hyperparameters:
       batch_size: 2048
@@ -33,34 +33,34 @@ environment_parameters:
       - name: OneZombie
         completion_criteria:
           measure: reward
-          behavior: Warrior
+          behavior: Mage
           signal_smoothing: true
           min_lesson_length: 1000
-          threshold: 15.0
+          threshold: 12.0
         value: 1.0
       - name: TwoZombies
         completion_criteria:
           measure: reward
-          behavior: Warrior
+          behavior: Mage
           signal_smoothing: true
           min_lesson_length: 1000
-          threshold: 25.0
+          threshold: 20.0
         value: 2.0
       - name: FourZombies
         completion_criteria:
           measure: reward
-          behavior: Warrior
+          behavior: Mage
           signal_smoothing: true
           min_lesson_length: 1000
-          threshold: 40.0
+          threshold: 32.0
         value: 4.0
       - name: EightZombies
         completion_criteria:
           measure: reward
-          behavior: Warrior
+          behavior: Mage
           signal_smoothing: true
           min_lesson_length: 1000
-          threshold: 70.0
+          threshold: 56.0
         value: 8.0
       - name: SixteenZombies
         value: 16.0
@@ -69,10 +69,10 @@ environment_parameters:
       - name: NoRunners
         completion_criteria:
           measure: reward
-          behavior: Warrior
+          behavior: Mage
           signal_smoothing: true
           min_lesson_length: 1000
-          threshold: 150.0
+          threshold: 120.0
         value: 0.0
       - name: Runners
         value: 0.5
@@ -81,10 +81,10 @@ environment_parameters:
       - name: NoBrutes
         completion_criteria:
           measure: reward
-          behavior: Warrior
+          behavior: Mage
           signal_smoothing: true
           min_lesson_length: 1000
-          threshold: 170.0
+          threshold: 136.0
         value: 0.0
       - name: Brutes
         value: 0.35
@@ -93,10 +93,10 @@ environment_parameters:
       - name: NoSpitters
         completion_criteria:
           measure: reward
-          behavior: Warrior
+          behavior: Mage
           signal_smoothing: true
           min_lesson_length: 1000
-          threshold: 190.0
+          threshold: 152.0
         value: 0.0
       - name: Spitters
         value: 0.35

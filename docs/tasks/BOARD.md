@@ -13,5 +13,8 @@ này (M0 scaffold, Unity project, Core M1) ghi ở `docs/STATUS.md`.
 | [T-006](T-006-manual-arena-scene.md) | Scene chơi tay (`ArenaPlay`) → đóng M1 | Claude (PC) | done (PR #5) | M1 | |
 | [T-007](T-007-hero-agent-spec.md) | `HeroAgent` + env train + trainer (mở M2) | Claude + Codex | done (PR M2, xem `docs/M2-agent-notes.md`) | M2 | |
 | T-008 | Training thật Warrior, chỉnh curriculum, ghi Nhật ký run | Claude (PC) | doing — run `warrior-001` đang chạy | M2 | |
-| T-009 | Ghi demo chơi tay → BC/GAIL khởi động | Claude + Codex | todo | M2 | T-008 |
+| T-009 | Ghi demo chơi tay → BC/GAIL khởi động | Claude + Codex | bỏ — owner không chơi tay (D-023) | M2 | |
 | T-010 | Chế độ "AI chơi": trình xem `Xem-AI.cmd` (scene `ArenaWatch`, tự nạp não mới) | Claude (PC) | done (`feature/watch-ai`) | M2 | |
+| [T-011](T-011-m3-core-zombies-projectiles-classes.md) | Core M3: Runner/Brute/Spitter, đạn, skill Mage/Archer, luật v3 (quan sát 883) | Codex | done (review Claude + reviewer, D-024) | M3 | T-012 |
+| [T-012](T-012-m3-trainer-classes-curriculum.md) | Trainer M3: luật v3, train theo class, curriculum trộn zombie | Codex | done (D-024) | M3 | T-011 |
+| [T-013](T-013-m3-unity-integration.md) | Tích hợp Unity M3: ML (class, trộn zombie) + trình xem (look theo loại/class, đạn, phím H/M, icon skill) | Claude (PC) | done (D-024) | M3 | |

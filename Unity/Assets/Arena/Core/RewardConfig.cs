@@ -13,6 +13,7 @@ namespace PersonalArena.Core
         public float FromBehindExtraPerHp = -0.005f;
         public float Death = -1f;
         public float FallExtra = -0.5f;
+        public float KnockOffBonus = 0.5f;
         public float HealPerHp = 0.01f;
         public float SkillFailedPenalty = -0.0005f;
     }

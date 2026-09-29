@@ -40,13 +40,11 @@ def _newest_run_dir(runs_dir: Path, behavior: str) -> Path | None:
         if path.is_file()
     ]
     candidates = list(dict.fromkeys(candidates))
-    current = [
+    candidates = [
         path
         for path in candidates
         if arena_trainer.run_rules_version(path) == arena_trainer.RULES_VERSION
     ]
-    if current:
-        candidates = current
     if not candidates:
         return None
     return max(
@@ -88,7 +86,24 @@ def _downsample(points: list[tuple[int, float]], max_points: int) -> list[tuple[
     return sampled
 
 
-def build_history(run_dir: Path, behavior: str = "Warrior", max_points: int = 240) -> dict | None:
+def discover_behaviors(runs_dir: Path, run_id: str | None = None) -> list[str]:
+    run_dirs = [runs_dir / run_id] if run_id else list(runs_dir.iterdir()) if runs_dir.is_dir() else []
+    found = set()
+    for run_dir in run_dirs:
+        if (
+            not run_dir.is_dir()
+            or run_dir.name == "run_logs"
+            or arena_trainer.run_rules_version(run_dir) != arena_trainer.RULES_VERSION
+        ):
+            continue
+        for behavior_dir in run_dir.iterdir():
+            if behavior_dir.is_dir() and behavior_dir.name != "run_logs":
+                if any(behavior_dir.glob(EVENT_PATTERN)):
+                    found.add(behavior_dir.name)
+    return sorted(found)
+
+
+def build_history(run_dir: Path, behavior: str, max_points: int = 240) -> dict | None:
     if max_points < 2:
         raise ValueError("max_points must be at least 2")
     event_files = _event_files(run_dir, behavior)
@@ -131,7 +146,7 @@ def build_history(run_dir: Path, behavior: str = "Warrior", max_points: int = 24
     }
 
 
-def write_history(run_dir: Path, behavior: str = "Warrior") -> bool:
+def write_history(run_dir: Path, behavior: str) -> bool:
     event_files = _event_files(run_dir, behavior)
     if not event_files:
         return False
@@ -162,23 +177,28 @@ def main(argv: Iterable[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run-id")
     parser.add_argument("--results-dir", type=Path, default=arena_trainer.DEFAULT_RESULTS_DIRECTORY)
-    parser.add_argument("--behavior", default="Warrior")
+    parser.add_argument("--behavior", default="all", help="Behavior name, or 'all'.")
     args = parser.parse_args(list(argv) if argv is not None else None)
 
     runs_dir = arena_trainer.resolve_path(str(args.results_dir), arena_trainer.repository_root())
-    if args.run_id:
-        run_dir = runs_dir / args.run_id
-    else:
-        run_dir = _newest_run_dir(runs_dir, args.behavior)
+    behaviors = (
+        discover_behaviors(runs_dir, args.run_id)
+        if args.behavior.lower() == "all"
+        else [args.behavior]
+    )
+    outputs = []
+    for behavior in behaviors:
+        run_dir = runs_dir / args.run_id if args.run_id else _newest_run_dir(runs_dir, behavior)
         if run_dir is None:
-            print(f"No {args.behavior} runs under {runs_dir}", file=sys.stderr)
-            return 1
-
-    output = run_dir / HISTORY_NAME
-    if not write_history(run_dir, args.behavior) and not output.is_file():
-        print(f"No TensorBoard events under {run_dir / args.behavior}", file=sys.stderr)
+            continue
+        output = run_dir / HISTORY_NAME
+        if write_history(run_dir, behavior) or output.is_file():
+            outputs.append(output)
+            print(output)
+    if not outputs:
+        which = "" if args.behavior.lower() == "all" else f"{args.behavior} "
+        print(f"No {which}TensorBoard events under {runs_dir}", file=sys.stderr)
         return 1
-    print(output)
     return 0
 
 

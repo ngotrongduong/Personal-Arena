@@ -24,6 +24,8 @@ namespace PersonalArena.Core
         public float SlowRemaining;
         public float DashRemaining;
         public Vec2 DashDirection;
+        public float DashSpeed;
+        public int BlockSkillSlot = -1;
         public bool Alive;
         public bool FellOff;
         public int Id;

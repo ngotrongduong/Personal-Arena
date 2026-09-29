@@ -22,13 +22,6 @@ namespace PersonalArena.View
         private static readonly Color HpLowColor = new Color(1f, 0.35f, 0.2f);
         private static readonly Color EnergyColor = new Color(0.2f, 0.58f, 1f);
         private static readonly Color GoldText = new Color(1f, 0.86f, 0.45f);
-        private static readonly Color[] SkillColors =
-        {
-            new Color(0.85f, 0.9f, 1f),
-            new Color(1f, 0.6f, 0.25f),
-            new Color(0.4f, 0.75f, 1f),
-            new Color(0.35f, 0.9f, 1f)
-        };
 
         private ArenaSim sim;
         private ArenaStats stats;
@@ -51,7 +44,7 @@ namespace PersonalArena.View
         private readonly Image[] skillFrames = new Image[4];
         private readonly float[] skillFlash = new float[4];
         private readonly float[] lastCooldown = new float[4];
-        private bool showSkillKeys = true;
+        private bool showSkillKeys;
         private Text timerText;
         private Text countersText;
         private Text pauseText;
@@ -73,12 +66,26 @@ namespace PersonalArena.View
         private Text trainingGraphCaption;
         private readonly Image[] trainingBars = new Image[TrainingBarCount];
         private TrainingHistoryPanel historyPanel;
+        private readonly Text[] skillTitles = new Text[4];
+        private readonly Image[] skillIcons = new Image[4];
+        private readonly Color[] skillColors = new Color[4];
+        private Text heroNameText;
+        private string boundClassId;
+        private GameObject matchPanel;
+        private Text heroChoiceLabel;
+        private Text mixChoiceLabel;
 
         /// <summary>Raised when the owner clicks the Train the AI / Stop button.</summary>
         public event Action TrainingButtonClicked;
 
         /// <summary>Raised when the owner clicks the training power (speed) selector.</summary>
         public event Action TrainingPowerClicked;
+
+        /// <summary>Raised when the owner clicks the hero class selector.</summary>
+        public event Action HeroClassClicked;
+
+        /// <summary>Raised when the owner clicks the zombie mix selector.</summary>
+        public event Action ZombieMixClicked;
 
         /// <summary>The full-screen training data panel (created with the training panel).</summary>
         public TrainingHistoryPanel HistoryPanel => historyPanel;
@@ -90,6 +97,11 @@ namespace PersonalArena.View
             stats = arenaStats;
             if (sim != null)
             {
+                if (sim.HeroDef.Id != boundClassId)
+                {
+                    boundClassId = sim.HeroDef.Id;
+                    RefreshSkillLabels();
+                }
                 hpShown = hpTrailShown = HpRatio();
                 energyShown = energyTrailShown = EnergyRatio();
                 for (int i = 0; i < 4; i++)
@@ -119,10 +131,43 @@ namespace PersonalArena.View
         {
             EnsureBuilt();
             showSkillKeys = show;
+            RefreshSkillLabels();
+        }
+
+        /// <summary>Shows the hero class and zombie mix selectors (watch-AI viewer).</summary>
+        public void SetMatchChoices(string heroLabel, string mixLabel)
+        {
+            EnsureBuilt();
+            if (matchPanel == null)
+            {
+                BuildMatchPanel();
+            }
+            heroChoiceLabel.text = heroLabel ?? string.Empty;
+            mixChoiceLabel.text = mixLabel ?? string.Empty;
+        }
+
+        private void RefreshSkillLabels()
+        {
+            SkillDef[] skills = sim != null ? sim.HeroDef.Skills : null;
             for (int i = 0; i < 4; i++)
             {
-                skillHints[i].text = show ? SkillKey(i) : SkillEffect(i);
+                SkillDef skill = skills != null && i < skills.Length ? skills[i] : null;
+                ApplySkill(i, skill);
             }
+            heroNameText.text = HeroName();
+        }
+
+        private void ApplySkill(int index, SkillDef skill)
+        {
+            skillTitles[index].text = SkillName(skill, index).ToUpperInvariant();
+            skillHints[index].text = showSkillKeys ? SkillKey(index) : SkillEffect(skill, index);
+            skillIcons[index].sprite = SkillIconFactory.IconFor(skill, index);
+            skillColors[index] = SkillIconFactory.ColorFor(skill, index);
+        }
+
+        private string HeroName()
+        {
+            return sim != null && !string.IsNullOrEmpty(sim.HeroDef.Id) ? sim.HeroDef.Id.ToUpperInvariant() : "WARRIOR";
         }
 
         /// <summary>Shows a multi-line panel in the top-right corner (hidden when empty).</summary>
@@ -288,16 +333,17 @@ namespace PersonalArena.View
                     skillFlash[i] = 1f;
                 }
                 lastCooldown[i] = cooldown;
-                bool active = i == 2 && sim.Hero.IsBlocking;
+                bool active = skill != null && skill.Kind == SkillKind.Block && sim.Hero.IsBlocking;
                 skillFlash[i] = Mathf.Max(active ? 0.6f : 0f, skillFlash[i] - delta * 3.5f);
                 cooldownFills[i].fillAmount = maximum > 0f ? Mathf.Clamp01(cooldown / maximum) : 0f;
                 cooldownTexts[i].text = cooldown > 0.05f ? cooldown.ToString("0.0") : string.Empty;
-                Color glow = SkillColors[i];
+                Color glow = skillColors[i];
                 glow.a = skillFlash[i] * 0.55f;
                 skillGlows[i].color = glow;
-                Color frame = SkillColors[i];
+                Color frame = skillColors[i];
                 frame.a = cooldown > 0.05f ? 0.25f : 0.75f;
                 skillFrames[i].color = frame;
+                skillIcons[i].color = cooldown > 0.05f ? new Color(0.72f, 0.72f, 0.76f, 1f) : Color.white;
             }
 
             int alive = 0;
@@ -315,7 +361,7 @@ namespace PersonalArena.View
             if (sim.Done && stats != null)
             {
                 bool fell = !sim.Hero.Alive && sim.Hero.FellOff;
-                resultTitle.text = sim.Hero.Alive ? "ROUND COMPLETE" : fell ? "FELL INTO THE ABYSS" : "WARRIOR FALLEN";
+                resultTitle.text = sim.Hero.Alive ? "ROUND COMPLETE" : fell ? "FELL INTO THE ABYSS" : HeroName() + " FALLEN";
                 resultTitle.color = sim.Hero.Alive ? GoldText : new Color(1f, 0.4f, 0.35f);
                 resultText.text = "Survived  " + FormatTime(stats.TimeSurvived) +
                     "\nKills  " + stats.Kills +
@@ -357,6 +403,7 @@ namespace PersonalArena.View
             Text heroName = CreateText("Name", vitals, 17, TextAnchor.UpperLeft, GoldText);
             heroName.text = "WARRIOR";
             heroName.fontStyle = FontStyle.Bold;
+            heroNameText = heroName;
             SetRect(heroName.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -10f), new Vector2(300f, 22f), new Vector2(0f, 1f));
             CreateBar(vitals, "HP Bar", new Vector2(18f, -36f), 40f, HpColor, out hpFill, out hpTrail, out hpText);
             hpFillImage = hpFill.GetComponent<Image>();
@@ -372,7 +419,7 @@ namespace PersonalArena.View
             SetRect(countersText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -50f), new Vector2(340f, 26f), new Vector2(0.5f, 1f));
 
             RectTransform skills = CreatePanel("Skills", canvasRoot, PanelColor);
-            SetRect(skills, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 20f), new Vector2(720f, 128f), new Vector2(0.5f, 0f));
+            SetRect(skills, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 20f), new Vector2(720f, 184f), new Vector2(0.5f, 0f));
             for (int i = 0; i < 4; i++)
             {
                 CreateSkillSlot(skills, i, -261f + i * 174f);
@@ -548,13 +595,14 @@ namespace PersonalArena.View
         private void CreateSkillSlot(Transform parent, int index, float x)
         {
             RectTransform slot = CreatePanel("Skill " + (index + 1), parent, new Color(0.1f, 0.11f, 0.16f, 1f));
-            SetRect(slot, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(x, 0f), new Vector2(160f, 104f), new Vector2(0.5f, 0.5f));
+            SetRect(slot, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(x, 0f), new Vector2(160f, 160f), new Vector2(0.5f, 0.5f));
 
             RectTransform glow = CreateSliced("Glow", slot, Color.clear);
             SetStretch(glow, 0f, 0f, 0f, 0f);
             skillGlows[index] = glow.GetComponent<Image>();
 
-            RectTransform frame = CreateSliced("Accent", slot, SkillColors[index]);
+            skillColors[index] = SkillIconFactory.ColorFor(null, index);
+            RectTransform frame = CreateSliced("Accent", slot, skillColors[index]);
             frame.anchorMin = new Vector2(0f, 1f);
             frame.anchorMax = new Vector2(1f, 1f);
             frame.pivot = new Vector2(0.5f, 1f);
@@ -562,28 +610,43 @@ namespace PersonalArena.View
             frame.sizeDelta = new Vector2(-24f, 4f);
             skillFrames[index] = frame.GetComponent<Image>();
 
-            Text title = CreateText("Title", slot, 22, TextAnchor.UpperCenter, Color.white);
-            title.text = SkillName(index).ToUpperInvariant();
+            GameObject iconObject = CreateUiObject("Icon", slot);
+            Image icon = iconObject.AddComponent<Image>();
+            icon.preserveAspect = true;
+            icon.raycastTarget = false;
+            SetRect(icon.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -14f), new Vector2(76f, 76f), new Vector2(0.5f, 1f));
+            skillIcons[index] = icon;
+
+            Text title = CreateText("Title", slot, 18, TextAnchor.UpperCenter, Color.white);
             title.fontStyle = FontStyle.Bold;
-            SetRect(title.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, -16f), new Vector2(0f, 30f), new Vector2(0.5f, 1f));
-            Text hint = CreateText("Key Hint", slot, 14, TextAnchor.LowerCenter, new Color(0.68f, 0.74f, 0.84f));
-            hint.text = showSkillKeys ? SkillKey(index) : SkillEffect(index);
-            SetRect(hint.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 9f), new Vector2(0f, 24f), new Vector2(0.5f, 0f));
+            title.horizontalOverflow = HorizontalWrapMode.Overflow;
+            SetRect(title.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, -94f), new Vector2(0f, 24f), new Vector2(0.5f, 1f));
+            skillTitles[index] = title;
+            Text hint = CreateText("Key Hint", slot, 13, TextAnchor.LowerCenter, new Color(0.68f, 0.74f, 0.84f));
+            SetRect(hint.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 10f), new Vector2(-8f, 34f), new Vector2(0.5f, 0f));
             skillHints[index] = hint;
+            ApplySkill(index, null);
 
             GameObject shadeObject = CreateUiObject("Cooldown", slot);
             Image shade = shadeObject.AddComponent<Image>();
-            shade.color = new Color(0.02f, 0.02f, 0.04f, 0.72f);
+            // A clock sweep over the icon only, so the icon and its name stay readable on cooldown.
+            // A Filled Image needs a sprite: without one Unity ignores fillAmount and covers the rect.
+            shade.sprite = UiSprites.RoundedSprite();
+            shade.color = new Color(0.02f, 0.02f, 0.05f, 0.62f);
             shade.type = Image.Type.Filled;
-            shade.fillMethod = Image.FillMethod.Vertical;
-            shade.fillOrigin = 0;
+            shade.fillMethod = Image.FillMethod.Radial360;
+            shade.fillOrigin = (int)Image.Origin360.Top;
+            shade.fillClockwise = false;
             shade.raycastTarget = false;
-            SetStretch(shade.rectTransform, 3f, 3f, 3f, 3f);
+            SetRect(shade.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -14f), new Vector2(76f, 76f), new Vector2(0.5f, 1f));
             cooldownFills[index] = shade;
 
             Text cooldown = CreateText("Cooldown Time", slot, 30, TextAnchor.MiddleCenter, new Color(1f, 0.9f, 0.35f));
             cooldown.fontStyle = FontStyle.Bold;
-            SetStretch(cooldown.rectTransform, 0f, 0f, 0f, 0f);
+            Outline cooldownOutline = cooldown.gameObject.AddComponent<Outline>();
+            cooldownOutline.effectColor = new Color(0f, 0f, 0f, 0.85f);
+            cooldownOutline.effectDistance = new Vector2(2f, -2f);
+            SetRect(cooldown.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -14f), new Vector2(150f, 76f), new Vector2(0.5f, 1f));
             cooldownTexts[index] = cooldown;
         }
 
@@ -655,8 +718,30 @@ namespace PersonalArena.View
             return (whole / 60).ToString("00") + ":" + (whole % 60).ToString("00");
         }
 
-        private static string SkillName(int index)
+        /// <summary>Short display name for a skill; slot defaults are the warrior's.</summary>
+        public static string SkillName(SkillDef skill, int index)
         {
+            switch (skill != null ? skill.Id : null)
+            {
+                case "spear-strike": return "Strike";
+                case "kick": return "Kick";
+                case "shield-block": return "Block";
+                case "dash": return "Dash";
+                case "fireball": return "Fireball";
+                case "frost-nova": return "Frost Nova";
+                case "mana-shield": return "Mana Shield";
+                case "blink": return "Blink";
+                case "arrow": return "Arrow";
+                case "piercing-arrow": return "Pierce";
+                case "leap-back": return "Leap Back";
+                case "concussive-arrow": return "Concuss";
+            }
+
+            if (skill != null && !string.IsNullOrEmpty(skill.Id))
+            {
+                return skill.Id.Replace('-', ' ');
+            }
+
             switch (index)
             {
                 case 0: return "Strike";
@@ -677,15 +762,48 @@ namespace PersonalArena.View
             }
         }
 
-        private static string SkillEffect(int index)
+        /// <summary>What a skill does, shown while watching the AI.</summary>
+        public static string SkillEffect(SkillDef skill, int index)
         {
-            switch (index)
+            switch (skill != null ? skill.Kind : (SkillKind)(index + 1))
             {
-                case 0: return "spear hit";
-                case 1: return "knockback + stun";
-                case 2: return "stagger / parry";
-                default: return "burst of speed";
+                case SkillKind.MeleeStrike: return "spear hit";
+                case SkillKind.Kick: return "knockback + stun";
+                case SkillKind.Block:
+                    return skill != null && skill.BlockAllDirections ? "blocks all sides" : "stagger / parry";
+                case SkillKind.Dash: return skill != null && skill.DashBackward ? "jump away" : "burst of speed";
+                case SkillKind.Projectile:
+                    if (skill.AreaRadius > 0f) return "explodes on hit";
+                    if (skill.Pierce) return "goes through all";
+                    if (skill.Knockback > 0f) return "knocks back + stun";
+                    return "fast shot";
+                case SkillKind.AreaBurst: return "slows all nearby";
+                case SkillKind.Teleport: return "teleport forward";
+                default: return string.Empty;
             }
+        }
+
+        private void BuildMatchPanel()
+        {
+            if (FindFirstObjectByType<EventSystem>() == null)
+            {
+                GameObject events = new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
+                events.transform.SetParent(transform, false);
+            }
+
+            // Sits under the training panel when there is one, otherwise under the info panel.
+            float top = trainingPanel != null ? -644f : -212f;
+            RectTransform panel = CreatePanel("Match", canvasRoot, PanelColor);
+            SetRect(panel, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20f, top), new Vector2(430f, 112f), new Vector2(1f, 1f));
+            matchPanel = panel.gameObject;
+
+            Button heroButton = CreateButton("Hero Button", panel, new Color(0.3f, 0.22f, 0.12f, 1f), new Vector2(18f, -14f), new Vector2(394f, 38f),
+                17, out _, out heroChoiceLabel);
+            heroButton.onClick.AddListener(() => HeroClassClicked?.Invoke());
+
+            Button mixButton = CreateButton("Zombie Mix Button", panel, new Color(0.16f, 0.28f, 0.18f, 1f), new Vector2(18f, -60f), new Vector2(394f, 38f),
+                17, out _, out mixChoiceLabel);
+            mixButton.onClick.AddListener(() => ZombieMixClicked?.Invoke());
         }
     }
 }

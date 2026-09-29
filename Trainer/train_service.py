@@ -52,6 +52,7 @@ CRASH_RETRY_LIMIT = 5
 CPU_FALLBACK_AFTER = 2
 STABLE_RUN_SECONDS = 600.0
 RETRY_DELAY = 5.0
+BEHAVIORS = {name.lower(): name for name in ("Warrior", "Mage", "Archer")}
 
 SUMMARY_PATTERN = re.compile(
     r"\[INFO\] (?P<behavior>[^.\s]+)\. Step: (?P<step>\d+)\. Time Elapsed: [\d.]+ s\."
@@ -62,6 +63,19 @@ LESSON_PATTERN = re.compile(
 )
 
 
+def normalize_behavior(value: str) -> str:
+    try:
+        return BEHAVIORS[value.lower()]
+    except KeyError as error:
+        raise argparse.ArgumentTypeError(
+            "behavior must be Warrior, Mage, or Archer"
+        ) from error
+
+
+def default_config(behavior: str) -> str:
+    return str(Path("Trainer/config") / f"{behavior.lower()}_ppo.yaml")
+
+
 @dataclass
 class Progress:
     """Training progress parsed from ML-Agents console output."""
@@ -70,6 +84,9 @@ class Progress:
     step: int = 0
     mean_reward: float | None = None
     zombies: float | None = None
+    runner_weight: float = 0.0
+    brute_weight: float = 0.0
+    spitter_weight: float = 0.0
     steps: list[int] = field(default_factory=list)
     rewards: list[float] = field(default_factory=list)
     summaries: int = 0
@@ -95,8 +112,12 @@ class Progress:
             return
 
         lesson = LESSON_PATTERN.search(line)
-        if lesson and lesson["name"] == "zombie_count":
-            self.zombies = float(lesson["value"])
+        if lesson:
+            value = float(lesson["value"])
+            if lesson["name"] == "zombie_count":
+                self.zombies = value
+            elif lesson["name"] in ("runner_weight", "brute_weight", "spitter_weight"):
+                setattr(self, lesson["name"], value)
 
 
 class LogTail:
@@ -305,6 +326,12 @@ class TrainingService:
             "has_reward": self.progress.mean_reward is not None,
             "mean_reward": self.progress.mean_reward if self.progress.mean_reward is not None else 0.0,
             "zombies": self.progress.zombies if self.progress.zombies is not None else 0.0,
+            "zombie_mix": {
+                "walker": 1.0,
+                "runner": self.progress.runner_weight,
+                "brute": self.progress.brute_weight,
+                "spitter": self.progress.spitter_weight,
+            },
             "session_seconds": round(self.clock() - self.started_at, 1),
             "num_envs": getattr(self.args, "num_envs", 0),
             "arena_agents": getattr(self.args, "arena_agents", None) or DEFAULT_ARENA_AGENTS,
@@ -360,6 +387,7 @@ class TrainingService:
         arguments.extend(("--time-scale", str(self.args.time_scale)))
         if self.args.arena_agents:
             arguments.extend(("--arena-agents", str(self.args.arena_agents)))
+        arguments.extend(("--hero-class", self.behavior.lower()))
         parsed = arena_trainer.create_parser().parse_args(arguments)
         return arena_trainer.build_command(parsed, self.root)
 
@@ -542,14 +570,22 @@ class TrainingService:
             time.sleep(1.0)
 
 
+class TrainingArgumentParser(argparse.ArgumentParser):
+    def parse_args(self, args=None, namespace=None):
+        parsed = super().parse_args(args, namespace)
+        if parsed.config is None:
+            parsed.config = default_config(parsed.behavior)
+        return parsed
+
+
 def create_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Run training for the viewer's Train the AI button.")
+    parser = TrainingArgumentParser(description="Run training for the viewer's Train the AI button.")
     parser.add_argument("--run-id", help="Run to train (default: resume the newest run).")
-    parser.add_argument("--behavior", default="Warrior")
-    parser.add_argument("--config", default=str(arena_trainer.DEFAULT_CONFIG))
+    parser.add_argument("--behavior", type=normalize_behavior, default="Warrior")
+    parser.add_argument("--config")
     parser.add_argument("--results-dir", default=str(arena_trainer.DEFAULT_RESULTS_DIRECTORY))
     parser.add_argument("--num-envs", type=int, default=4, help="Unity games running side by side.")
-    parser.add_argument("--arena-agents", type=int, help="Warriors per game (default: the build's 16).")
+    parser.add_argument("--arena-agents", type=int, help="Heroes per game (default: the build's 16).")
     parser.add_argument("--time-scale", type=float, default=20.0)
     parser.add_argument("--base-port", type=int, default=5005)
     parser.add_argument("--parent-pid", type=int, default=0, help="Stop when this process exits.")

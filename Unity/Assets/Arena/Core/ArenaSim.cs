@@ -11,12 +11,14 @@ namespace PersonalArena.Core
     {
         public const float FixedDeltaTime = 1f / 60f;
         public const float PotionRadius = 0.35f;
+        public const int ProjectilePoolSize = 128;
 
         /// <summary>
-        /// Version of the game rules and observation layout. Brains trained under another version
+        /// Version of the game rules and observation layout. V3 adds zombie types, projectiles,
+        /// hero classes, and the 883-value observation. Brains trained under another version
         /// cannot play this game; the trainer writes it to each run's rules_version.txt.
         /// </summary>
-        public const int RulesVersion = 2;
+        public const int RulesVersion = 3;
 
         /// <summary>Exponential decay rate (1/s) of knockback velocity.</summary>
         public const float KnockbackDamping = 9f;
@@ -28,10 +30,12 @@ namespace PersonalArena.Core
 
         private readonly List<ZombieState> zombies = new List<ZombieState>();
         private readonly List<PotionState> potions = new List<PotionState>();
-        private readonly List<SimEvent> events = new List<SimEvent>(32);
+        private readonly List<SimEvent> events = new List<SimEvent>(ProjectilePoolSize * 2 + 32);
+        private readonly ProjectileState[] projectiles = new ProjectileState[ProjectilePoolSize];
         private Rng rng;
         private int tick;
         private int nextPotionId;
+        private int nextProjectileId;
 
         public ArenaSim(HeroClassDef hero, ArenaConfig config)
         {
@@ -44,10 +48,15 @@ namespace PersonalArena.Core
 
             Config.Validate();
             Hero = new HeroState();
-            events.Capacity = Math.Max(events.Capacity, Config.ZombieCount * 4 + 8);
+            events.Capacity = Math.Max(events.Capacity, Config.ZombieCount * 4 + ProjectilePoolSize * 2 + 16);
             for (int i = 0; i < Config.MaxPotions; i++)
             {
                 potions.Add(new PotionState());
+            }
+
+            for (int i = 0; i < projectiles.Length; i++)
+            {
+                projectiles[i] = new ProjectileState();
             }
 
             rng = new Rng(Config.Seed);
@@ -56,6 +65,9 @@ namespace PersonalArena.Core
 
         public HeroState Hero { get; }
         public IReadOnlyList<ZombieState> Zombies => zombies;
+
+        /// <summary>Projectile pool slots; only entries with <see cref="ProjectileState.Active"/> are in flight.</summary>
+        public IReadOnlyList<ProjectileState> Projectiles => projectiles;
 
         /// <summary>Potion slots; only entries with <see cref="PotionState.Active"/> are on the floor.</summary>
         public IReadOnlyList<PotionState> Potions => potions;
@@ -83,6 +95,7 @@ namespace PersonalArena.Core
             rng = new Rng(seed ?? Config.Seed);
             tick = 0;
             nextPotionId = 0;
+            nextProjectileId = 0;
             Done = false;
             events.Clear();
 
@@ -98,6 +111,8 @@ namespace PersonalArena.Core
             Hero.SlowRemaining = 0f;
             Hero.DashRemaining = 0f;
             Hero.DashDirection = Vec2.Zero;
+            Hero.DashSpeed = 0f;
+            Hero.BlockSkillSlot = -1;
             Hero.Alive = true;
             Hero.FellOff = false;
             Hero.Id = 0;
@@ -109,6 +124,11 @@ namespace PersonalArena.Core
             for (int i = 0; i < potions.Count; i++)
             {
                 potions[i].Active = false;
+            }
+
+            for (int i = 0; i < projectiles.Length; i++)
+            {
+                projectiles[i].Active = false;
             }
 
             zombies.Clear();
@@ -138,6 +158,7 @@ namespace PersonalArena.Core
                 UpdateZombie(zombies[i]);
             }
 
+            UpdateProjectiles();
             ResolveAllOverlaps();
             CheckFalls();
             UpdatePotions();
@@ -198,7 +219,7 @@ namespace PersonalArena.Core
         {
             SkillDef heldSkill = input.Skill > 0 ? HeroDef.Skills[input.Skill - 1] : null;
             bool holdingBlock = heldSkill != null && heldSkill.Kind == SkillKind.Block;
-            bool blockDepleted = UpdateBlocking(holdingBlock, heldSkill);
+            bool blockDepleted = UpdateBlocking(holdingBlock, heldSkill, input.Skill - 1);
 
             if (!Hero.IsBlocking && !blockDepleted)
             {
@@ -244,8 +265,7 @@ namespace PersonalArena.Core
 
         private void MoveDashing()
         {
-            SkillDef dash = ActiveSkill(SkillKind.Dash);
-            float speed = dash != null && dash.DashSpeed > 0f ? dash.DashSpeed : HeroDef.MoveSpeed;
+            float speed = Hero.DashSpeed > 0f ? Hero.DashSpeed : HeroDef.MoveSpeed;
             float seconds = MathF.Min(Hero.DashRemaining, FixedDeltaTime);
             Hero.Position += Hero.DashDirection * (speed * seconds);
             Hero.DashRemaining = MathF.Max(0f, Hero.DashRemaining - FixedDeltaTime);
@@ -254,11 +274,12 @@ namespace PersonalArena.Core
                 : Hero.DashDirection * HeroDef.MoveSpeed;
         }
 
-        private bool UpdateBlocking(bool holdingBlock, SkillDef block)
+        private bool UpdateBlocking(bool holdingBlock, SkillDef block, int slot)
         {
             if (!holdingBlock)
             {
                 Hero.IsBlocking = false;
+                Hero.BlockSkillSlot = -1;
                 return false;
             }
 
@@ -273,13 +294,19 @@ namespace PersonalArena.Core
                 Hero.Energy -= block.EnergyCost;
                 Hero.IsBlocking = true;
                 Hero.BlockStartTime = Time;
+                Hero.BlockSkillSlot = slot;
                 events.Add(new SimEvent(SimEventType.SkillUsed, 0f, -1));
+            }
+            else
+            {
+                Hero.BlockSkillSlot = slot;
             }
 
             Hero.Energy = MathF.Max(0f, Hero.Energy - block.EnergyPerSecond * FixedDeltaTime);
             if (Hero.Energy <= 0f)
             {
                 Hero.IsBlocking = false;
+                Hero.BlockSkillSlot = -1;
                 return true;
             }
 
@@ -320,9 +347,14 @@ namespace PersonalArena.Core
                     PerformDash(skill, moveDirection);
                     break;
                 case SkillKind.Projectile:
+                    SpawnHeroProjectile(skill, slot);
+                    break;
                 case SkillKind.AreaBurst:
+                    PerformAreaBurst(skill);
+                    break;
                 case SkillKind.Teleport:
-                    throw new NotSupportedException($"Skill kind {skill.Kind} is not implemented in M1.");
+                    PerformTeleport(skill, moveDirection);
+                    break;
                 case SkillKind.Block:
                 case SkillKind.None:
                     break;
@@ -385,16 +417,25 @@ namespace PersonalArena.Core
                 away = Vec2.FromAngle(Hero.Facing);
             }
 
-            zombie.KnockbackVelocity = away * KnockbackSpeedFor(distance);
+            PushZombie(zombie, distance, away);
+        }
+
+        private static void PushZombie(ZombieState zombie, float distance, Vec2 direction)
+        {
+            float resistedDistance = distance * (1f - zombie.Def.KnockbackResist);
+            zombie.KnockbackVelocity = direction.Normalized() * KnockbackSpeedFor(resistedDistance);
         }
 
         private void PerformDash(SkillDef skill, Vec2 moveDirection)
         {
-            Hero.DashDirection = moveDirection.LengthSquared > 0f
-                ? moveDirection
-                : Vec2.FromAngle(Hero.Facing);
+            Hero.DashDirection = skill.DashBackward
+                ? -Vec2.FromAngle(Hero.Facing)
+                : moveDirection.LengthSquared > 0f
+                    ? moveDirection
+                    : Vec2.FromAngle(Hero.Facing);
             if (skill.DashSpeed > 0f)
             {
+                Hero.DashSpeed = skill.DashSpeed;
                 Hero.DashRemaining = skill.DashDistance / skill.DashSpeed;
                 Hero.Velocity = Hero.DashDirection * skill.DashSpeed;
             }
@@ -402,6 +443,388 @@ namespace PersonalArena.Core
             {
                 Hero.Position += Hero.DashDirection * skill.DashDistance;
             }
+        }
+
+        private void PerformAreaBurst(SkillDef skill)
+        {
+            for (int i = 0; i < zombies.Count; i++)
+            {
+                ZombieState zombie = zombies[i];
+                if (!zombie.Alive)
+                {
+                    continue;
+                }
+
+                Vec2 offset = zombie.Position - Hero.Position;
+                float range = skill.AreaRadius + zombie.Def.Radius;
+                if (offset.LengthSquared > range * range)
+                {
+                    continue;
+                }
+
+                DamageZombie(zombie, skill.Damage);
+                if (!zombie.Alive)
+                {
+                    continue;
+                }
+
+                ApplySlow(zombie, skill.SlowFactor, skill.SlowSeconds);
+                if (skill.Knockback > 0f)
+                {
+                    Vec2 direction = offset.Normalized();
+                    if (direction.LengthSquared <= 0f)
+                    {
+                        direction = Vec2.FromAngle(Hero.Facing);
+                    }
+
+                    PushZombie(zombie, skill.Knockback, direction);
+                }
+
+                ApplyStun(zombie, skill.StunSeconds);
+            }
+        }
+
+        private void PerformTeleport(SkillDef skill, Vec2 moveDirection)
+        {
+            Vec2 direction = moveDirection.LengthSquared > 0f
+                ? moveDirection
+                : Vec2.FromAngle(Hero.Facing);
+            float safeRadius = MathF.Max(0f, Config.Radius - HeroDef.Radius - 0.3f);
+            float edgeDistance = RaySensor.EdgeDistance(Hero.Position, direction, Config.Center, safeRadius);
+            float distance = MathF.Min(skill.DashDistance, edgeDistance);
+            Hero.Position += direction * distance;
+            Hero.DashRemaining = 0f;
+            Hero.DashSpeed = 0f;
+            Hero.Velocity = Vec2.Zero;
+            events.Add(new SimEvent(SimEventType.HeroTeleported, distance));
+        }
+
+        private void SpawnHeroProjectile(SkillDef skill, int slot)
+        {
+            Vec2 direction = Vec2.FromAngle(Hero.Facing);
+            SpawnProjectile(
+                true,
+                -1,
+                Hero.Position + direction * (HeroDef.Radius + skill.ProjectileRadius),
+                direction,
+                skill.ProjectileSpeed,
+                skill.ProjectileRadius,
+                skill.Damage,
+                skill.Range,
+                skill.Pierce,
+                skill.Knockback,
+                skill.StunSeconds,
+                skill.SlowFactor,
+                skill.SlowSeconds,
+                skill.AreaRadius,
+                slot);
+        }
+
+        private void SpawnZombieProjectile(ZombieState zombie)
+        {
+            Vec2 direction = (Hero.Position - zombie.Position).Normalized();
+            if (direction.LengthSquared <= 0f)
+            {
+                direction = Vec2.FromAngle(zombie.Facing);
+            }
+
+            float speed = zombie.Def.ProjectileSpeed * Config.SpeedMultiplier;
+            SpawnProjectile(
+                false,
+                zombie.Id,
+                zombie.Position + direction * (zombie.Def.Radius + zombie.Def.ProjectileRadius),
+                direction,
+                speed,
+                zombie.Def.ProjectileRadius,
+                zombie.Def.AttackDamage * Config.DamageMultiplier,
+                zombie.Def.ProjectileRange,
+                false,
+                0f,
+                0f,
+                0f,
+                0f,
+                0f,
+                -1);
+        }
+
+        private void SpawnProjectile(
+            bool fromHero,
+            int sourceZombieId,
+            Vec2 position,
+            Vec2 direction,
+            float speed,
+            float radius,
+            float damage,
+            float range,
+            bool pierce,
+            float knockback,
+            float stunSeconds,
+            float slowFactor,
+            float slowSeconds,
+            float areaRadius,
+            int skillSlot)
+        {
+            if (speed <= 0f || range <= 0f)
+            {
+                return;
+            }
+
+            for (int i = 0; i < projectiles.Length; i++)
+            {
+                ProjectileState projectile = projectiles[i];
+                if (projectile.Active)
+                {
+                    continue;
+                }
+
+                projectile.Active = true;
+                projectile.Id = nextProjectileId++;
+                projectile.FromHero = fromHero;
+                projectile.SourceZombieId = sourceZombieId;
+                projectile.Position = position;
+                projectile.Velocity = direction.Normalized() * speed;
+                projectile.Radius = radius;
+                projectile.Damage = damage;
+                projectile.RemainingSeconds = range / speed;
+                projectile.Pierce = pierce;
+                projectile.HitMask = 0UL;
+                projectile.Knockback = knockback;
+                projectile.StunSeconds = stunSeconds;
+                projectile.SlowFactor = slowFactor;
+                projectile.SlowSeconds = slowSeconds;
+                projectile.AreaRadius = areaRadius;
+                projectile.SkillSlot = skillSlot;
+                events.Add(new SimEvent(SimEventType.ProjectileFired, projectile.Id, sourceZombieId));
+                return;
+            }
+        }
+
+        private void UpdateProjectiles()
+        {
+            for (int i = 0; i < projectiles.Length; i++)
+            {
+                ProjectileState projectile = projectiles[i];
+                if (!projectile.Active)
+                {
+                    continue;
+                }
+
+                Vec2 oldPosition = projectile.Position;
+                // The last tick only covers what is left of the range.
+                Vec2 newPosition = oldPosition + projectile.Velocity * MathF.Min(FixedDeltaTime, projectile.RemainingSeconds);
+                projectile.Position = newPosition;
+                if (projectile.FromHero)
+                {
+                    ResolveHeroProjectile(projectile, oldPosition, newPosition);
+                }
+                else
+                {
+                    ResolveZombieProjectile(projectile, oldPosition, newPosition);
+                }
+
+                projectile.RemainingSeconds -= FixedDeltaTime;
+                if (projectile.RemainingSeconds <= 0f)
+                {
+                    projectile.Active = false;
+                }
+            }
+        }
+
+        private void ResolveHeroProjectile(ProjectileState projectile, Vec2 start, Vec2 end)
+        {
+            while (projectile.Active)
+            {
+                ZombieState target = null;
+                float earliest = float.PositiveInfinity;
+                for (int i = 0; i < zombies.Count; i++)
+                {
+                    ZombieState zombie = zombies[i];
+                    ulong bit = 1UL << zombie.Id;
+                    if (!zombie.Alive || (projectile.HitMask & bit) != 0UL)
+                    {
+                        continue;
+                    }
+
+                    float hitFraction;
+                    if (!SegmentCircleHitFraction(
+                        start, end, zombie.Position, projectile.Radius + zombie.Def.Radius, out hitFraction))
+                    {
+                        continue;
+                    }
+
+                    if (hitFraction < earliest - 1e-6f ||
+                        (MathF.Abs(hitFraction - earliest) <= 1e-6f &&
+                         (target == null || zombie.Id < target.Id)))
+                    {
+                        earliest = hitFraction;
+                        target = zombie;
+                    }
+                }
+
+                if (target == null)
+                {
+                    return;
+                }
+
+                projectile.HitMask |= 1UL << target.Id;
+                Vec2 impact = start + (end - start) * earliest;
+                float before = target.Hp;
+                DamageZombie(target, projectile.Damage);
+                events.Add(new SimEvent(SimEventType.ProjectileHit, before - target.Hp, target.Id));
+                if (target.Alive)
+                {
+                    if (projectile.Knockback > 0f)
+                    {
+                        PushZombie(target, projectile.Knockback, projectile.Velocity);
+                    }
+
+                    ApplyStun(target, projectile.StunSeconds);
+                    ApplySlow(target, projectile.SlowFactor, projectile.SlowSeconds);
+                }
+
+                ApplyProjectileSplash(projectile, target.Id, impact);
+                if (!projectile.Pierce)
+                {
+                    projectile.Active = false;
+                    return;
+                }
+            }
+        }
+
+        private void ApplyProjectileSplash(ProjectileState projectile, int directTargetId, Vec2 impact)
+        {
+            if (projectile.AreaRadius <= 0f)
+            {
+                return;
+            }
+
+            for (int i = 0; i < zombies.Count; i++)
+            {
+                ZombieState zombie = zombies[i];
+                if (!zombie.Alive || zombie.Id == directTargetId)
+                {
+                    continue;
+                }
+
+                float range = projectile.AreaRadius + zombie.Def.Radius;
+                if ((zombie.Position - impact).LengthSquared <= range * range)
+                {
+                    DamageZombie(zombie, projectile.Damage * 0.5f);
+                }
+            }
+        }
+
+        private void ResolveZombieProjectile(ProjectileState projectile, Vec2 start, Vec2 end)
+        {
+            if (!Hero.Alive)
+            {
+                return;
+            }
+
+            float hitFraction;
+            if (!SegmentCircleHitFraction(
+                start, end, Hero.Position, projectile.Radius + HeroDef.Radius, out hitFraction))
+            {
+                return;
+            }
+
+            projectile.Active = false;
+            SkillDef block = ActiveBlockSkill();
+            Vec2 towardSource = -projectile.Velocity;
+            bool covered = Hero.IsBlocking && block != null &&
+                (block.BlockAllDirections || AngleBetween(Hero.Facing, towardSource) <= MathF.PI * 0.5f);
+            if (covered)
+            {
+                events.Add(new SimEvent(SimEventType.ProjectileBlocked, 0f, projectile.SourceZombieId));
+                return;
+            }
+
+            float removed = MathF.Min(Hero.Hp, projectile.Damage);
+            Hero.Hp -= removed;
+            events.Add(new SimEvent(SimEventType.HeroDamaged, removed, projectile.SourceZombieId));
+            if (Hero.Hp <= 0f)
+            {
+                Hero.Hp = 0f;
+                KillHero(projectile.SourceZombieId);
+            }
+        }
+
+        private static void ApplyStun(ZombieState zombie, float seconds)
+        {
+            if (seconds <= 0f)
+            {
+                return;
+            }
+
+            zombie.StunRemaining = MathF.Max(zombie.StunRemaining, seconds);
+            zombie.AttackPhase = ZombieAttackPhase.Idle;
+            zombie.AttackTimer = 0f;
+            zombie.Velocity = Vec2.Zero;
+        }
+
+        private static void ApplySlow(ZombieState zombie, float factor, float seconds)
+        {
+            if (seconds <= 0f || factor <= 0f || factor >= 1f)
+            {
+                return;
+            }
+
+            if (zombie.SlowRemaining <= 0f || factor < zombie.SlowFactor)
+            {
+                zombie.SlowFactor = factor;
+                zombie.SlowRemaining = seconds;
+            }
+            else if (factor == zombie.SlowFactor)
+            {
+                zombie.SlowRemaining = MathF.Max(zombie.SlowRemaining, seconds);
+            }
+        }
+
+        private static bool SegmentCircleHitFraction(
+            Vec2 start, Vec2 end, Vec2 centre, float radius, out float fraction)
+        {
+            Vec2 offset = start - centre;
+            float radiusSquared = radius * radius;
+            if (offset.LengthSquared <= radiusSquared)
+            {
+                fraction = 0f;
+                return true;
+            }
+
+            Vec2 delta = end - start;
+            float a = delta.LengthSquared;
+            if (a <= 1e-12f)
+            {
+                fraction = 0f;
+                return false;
+            }
+
+            float b = 2f * Vec2.Dot(offset, delta);
+            float c = offset.LengthSquared - radiusSquared;
+            float discriminant = b * b - 4f * a * c;
+            if (discriminant < 0f)
+            {
+                fraction = 0f;
+                return false;
+            }
+
+            float root = MathF.Sqrt(discriminant);
+            float first = (-b - root) / (2f * a);
+            if (first >= 0f && first <= 1f)
+            {
+                fraction = first;
+                return true;
+            }
+
+            float second = (-b + root) / (2f * a);
+            if (second >= 0f && second <= 1f)
+            {
+                fraction = second;
+                return true;
+            }
+
+            fraction = 0f;
+            return false;
         }
 
         private bool IsHeroSkillTarget(ZombieState zombie, SkillDef skill)
@@ -455,6 +878,7 @@ namespace PersonalArena.Core
                     zombie.RespawnRemaining -= FixedDeltaTime;
                     if (zombie.RespawnRemaining <= 1e-6f)
                     {
+                        zombie.Def = ChooseZombieType();
                         ResetZombie(zombie, true);
                     }
                 }
@@ -496,7 +920,15 @@ namespace PersonalArena.Core
                 zombie.AttackTimer -= FixedDeltaTime;
                 if (zombie.AttackTimer <= 0f)
                 {
-                    ResolveZombieAttack(zombie);
+                    if (zombie.Def.Behavior == ZombieBehavior.Ranged)
+                    {
+                        SpawnZombieProjectile(zombie);
+                    }
+                    else
+                    {
+                        ResolveZombieAttack(zombie);
+                    }
+
                     if (zombie.AttackPhase == ZombieAttackPhase.Windup)
                     {
                         zombie.AttackPhase = ZombieAttackPhase.Recover;
@@ -523,21 +955,55 @@ namespace PersonalArena.Core
                 }
             }
 
-            float stopDistance = zombie.Def.AttackRange * 0.9f;
-            if (toHero.LengthSquared > stopDistance * stopDistance)
+            if (zombie.Def.Behavior == ZombieBehavior.Ranged)
             {
+                float distance = toHero.Length;
                 float slow = zombie.SlowRemaining > 0f ? zombie.SlowFactor : 1f;
-                zombie.Velocity = toHero.Normalized() *
+                Vec2 moveDirection = Vec2.Zero;
+                // While knocked back it only drifts: walking itself off the rim must not count as a push.
+                if (zombie.KnockbackVelocity.LengthSquared > 0f)
+                {
+                }
+                else if (distance > zombie.Def.PreferredDistance + 1f)
+                {
+                    moveDirection = toHero.Normalized();
+                }
+                else if (distance < zombie.Def.PreferredDistance - 1.5f)
+                {
+                    moveDirection = -toHero.Normalized();
+                }
+
+                zombie.Velocity = moveDirection *
                     (zombie.Def.MoveSpeed * Config.SpeedMultiplier * slow);
                 zombie.Position += zombie.Velocity * FixedDeltaTime;
-            }
-            else
-            {
-                zombie.Velocity = Vec2.Zero;
-                if (zombie.AttackPhase == ZombieAttackPhase.Idle)
+
+                if (zombie.AttackPhase == ZombieAttackPhase.Idle &&
+                    distance <= zombie.Def.AttackRange &&
+                    IsWithinArc(zombie.Facing, toHero, zombie.Def.AttackArcDegrees))
                 {
                     zombie.AttackPhase = ZombieAttackPhase.Windup;
                     zombie.AttackTimer = zombie.Def.AttackWindupSeconds;
+                    zombie.Velocity = Vec2.Zero;
+                }
+            }
+            else
+            {
+                float stopDistance = zombie.Def.AttackRange * 0.9f;
+                if (toHero.LengthSquared > stopDistance * stopDistance)
+                {
+                    float slow = zombie.SlowRemaining > 0f ? zombie.SlowFactor : 1f;
+                    zombie.Velocity = toHero.Normalized() *
+                        (zombie.Def.MoveSpeed * Config.SpeedMultiplier * slow);
+                    zombie.Position += zombie.Velocity * FixedDeltaTime;
+                }
+                else
+                {
+                    zombie.Velocity = Vec2.Zero;
+                    if (zombie.AttackPhase == ZombieAttackPhase.Idle)
+                    {
+                        zombie.AttackPhase = ZombieAttackPhase.Windup;
+                        zombie.AttackTimer = zombie.Def.AttackWindupSeconds;
+                    }
                 }
             }
         }
@@ -559,13 +1025,15 @@ namespace PersonalArena.Core
 
             Vec2 heroToZombie = zombie.Position - Hero.Position;
             bool fromBehind = AngleBetween(Hero.Facing, heroToZombie) > 120f * DegreesToRadians;
-            bool frontalBlock = Hero.IsBlocking && AngleBetween(Hero.Facing, heroToZombie) <= MathF.PI * 0.5f;
+            SkillDef block = ActiveBlockSkill();
+            bool covered = Hero.IsBlocking && block != null &&
+                (block.BlockAllDirections || AngleBetween(Hero.Facing, heroToZombie) <= MathF.PI * 0.5f);
             float damage = zombie.Def.AttackDamage * Config.DamageMultiplier;
 
-            if (frontalBlock)
+            if (covered)
             {
-                SkillDef block = ActiveSkill(SkillKind.Block);
-                if (block != null && Time - Hero.BlockStartTime <= block.ParryWindowSeconds + 1e-6f)
+                if (block.ParryWindowSeconds > 0f &&
+                    Time - Hero.BlockStartTime <= block.ParryWindowSeconds + 1e-6f)
                 {
                     zombie.StunRemaining = MathF.Max(zombie.StunRemaining, block.StunSeconds);
                     zombie.AttackPhase = ZombieAttackPhase.Idle;
@@ -575,17 +1043,14 @@ namespace PersonalArena.Core
                     return;
                 }
 
-                if (block != null)
+                damage *= block.BlockDamageMultiplier;
+                if (block.BlockStaggerSeconds > 0f)
                 {
-                    damage *= block.BlockDamageMultiplier;
-                    if (block.BlockStaggerSeconds > 0f)
-                    {
-                        zombie.StunRemaining = MathF.Max(zombie.StunRemaining, block.BlockStaggerSeconds);
-                        zombie.AttackPhase = ZombieAttackPhase.Idle;
-                        zombie.AttackTimer = 0f;
-                        PushZombie(zombie, block.BlockPushback);
-                        events.Add(new SimEvent(SimEventType.Stagger, block.BlockStaggerSeconds, zombie.Id));
-                    }
+                    zombie.StunRemaining = MathF.Max(zombie.StunRemaining, block.BlockStaggerSeconds);
+                    zombie.AttackPhase = ZombieAttackPhase.Idle;
+                    zombie.AttackTimer = 0f;
+                    PushZombie(zombie, block.BlockPushback);
+                    events.Add(new SimEvent(SimEventType.Stagger, block.BlockStaggerSeconds, zombie.Id));
                 }
 
                 events.Add(new SimEvent(SimEventType.BlockedHit, damage, zombie.Id));
@@ -598,7 +1063,7 @@ namespace PersonalArena.Core
             float removed = MathF.Min(Hero.Hp, damage);
             Hero.Hp -= removed;
             events.Add(new SimEvent(SimEventType.HeroDamaged, removed, zombie.Id));
-            if (fromBehind)
+            if (fromBehind && !covered)
             {
                 events.Add(new SimEvent(SimEventType.HeroDamagedFromBehind, removed, zombie.Id));
             }
@@ -614,23 +1079,23 @@ namespace PersonalArena.Core
         {
             Hero.Alive = false;
             Hero.IsBlocking = false;
+            Hero.BlockSkillSlot = -1;
             Hero.DashRemaining = 0f;
+            Hero.DashSpeed = 0f;
             Hero.Velocity = Vec2.Zero;
             events.Add(new SimEvent(SimEventType.HeroDied, 1f, zombieId));
         }
 
-        private SkillDef ActiveSkill(SkillKind kind)
+        private SkillDef ActiveBlockSkill()
         {
-            for (int i = 0; i < HeroDef.Skills.Length; i++)
+            int slot = Hero.BlockSkillSlot;
+            if (slot < 0 || slot >= HeroDef.Skills.Length)
             {
-                SkillDef skill = HeroDef.Skills[i];
-                if (skill != null && skill.Kind == kind)
-                {
-                    return skill;
-                }
+                return null;
             }
 
-            return null;
+            SkillDef skill = HeroDef.Skills[slot];
+            return skill != null && skill.Kind == SkillKind.Block ? skill : null;
         }
 
         private void ResolveAllOverlaps()

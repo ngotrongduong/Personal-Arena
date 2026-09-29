@@ -72,5 +72,14 @@ namespace PersonalArena.CoreTests
 
             Assert.That(second.Skills[0].Damage, Is.EqualTo(34f));
         }
+
+        [Test]
+        public void DefaultDefs_HeroClass_ById()
+        {
+            Assert.That(DefaultDefs.HeroClass("warrior").Id, Is.EqualTo("warrior"));
+            Assert.That(DefaultDefs.HeroClass("MAGE").Id, Is.EqualTo("mage"));
+            Assert.That(DefaultDefs.HeroClass("ArChEr").Id, Is.EqualTo("archer"));
+            Assert.Throws<ArgumentException>(() => DefaultDefs.HeroClass("rogue"));
+        }
     }
 }

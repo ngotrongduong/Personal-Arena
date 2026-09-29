@@ -2,8 +2,11 @@
 
 Nguồn chung cho skill `/mlagents-training` (Claude) và `train-and-report` (Codex).
 
-Môi trường M2: mỗi process Unity chạy **16 arena độc lập** (headless). Mỗi agent chạy sim Core
-60 Hz của riêng nó và ra quyết định mỗi 5 tick (12 Hz). Behavior `Warrior`, action 9/3/5.
+Môi trường: mỗi process Unity chạy **16 arena độc lập** (headless, đổi bằng `--arena-agents`).
+Mỗi agent chạy sim Core 60 Hz của riêng nó và ra quyết định mỗi 5 tick (12 Hz), action 9/3/5,
+quan sát 883 (luật v3, D-024). Một bản build training dùng cho cả 3 class: tham số env
+`--hero-class warrior|mage|archer` → behavior `Warrior` / `Mage` / `Archer`, mỗi class một não
+và một config (`Trainer/config/<class>_ppo.yaml`).
 
 ## 1. Build môi trường
 
@@ -42,16 +45,20 @@ Từ gốc repo (`C:\PersonalArena`, nơi có `.venv-ml`):
 & .venv-ml\Scripts\tensorboard.exe --logdir Trainer/runs
 ```
 
-- Kết quả ở `Trainer/runs/<run-id>/` (không commit). Model: `Trainer/runs/<run-id>/Warrior.onnx`.
+- Class khác: `arena_trainer.py --hero-class mage --run-id mage-001` (tự dùng `mage_ppo.yaml`);
+  service: `train_service.py --behavior Mage`.
+- Kết quả ở `Trainer/runs/<run-id>/` (không commit). Model: `Trainer/runs/<run-id>/<Behavior>.onnx`.
 - Đặt tên run: `<class>-<3 số>` và ghi 1 dòng vào bảng "Nhật ký run" bên dưới.
 - Config:
-  - `warrior_ppo.yaml`: curriculum `zombie_count` 1→2→4→8→16, arena cố định 28 m (sàn tròn bán kính 14, D-022).
+  - `warrior_ppo.yaml` / `mage_ppo.yaml` / `archer_ppo.yaml` (cùng curriculum, khác tên behavior):
+    `zombie_count` 1→2→4→8→16 (ngưỡng reward 15/25/40/70), rồi thêm dần loại zombie:
+    `runner_weight` 0→0.5 (ngưỡng 150), `brute_weight` 0→0.35 (170), `spitter_weight` 0→0.35 (190).
+    Walker luôn có trọng số 1. Arena cố định 28 m (sàn tròn bán kính 14, D-022).
   - `warrior_ppo_randomized.yaml`: giữ 4 bài đầu, bài cuối random `arena_size` 14–32 và
     `hp_mult` / `damage_mult` / `speed_mult` 0.8–1.25.
-- Ngưỡng curriculum (reward 6, tối thiểu 300 episode mỗi bài) là **ước lượng đầu**: chỉnh
-  sau run thật.
+- Ngưỡng curriculum (tối thiểu 1000 episode mỗi bài) là **ước lượng**: chỉnh sau run thật.
 - Environment parameters mà `HeroAgent` đọc: `zombie_count`, `arena_size`, `hp_mult`,
-  `damage_mult`, `speed_mult`.
+  `damage_mult`, `speed_mult`, `runner_weight`, `brute_weight`, `spitter_weight`.
 
 ## 3. Đọc kết quả (TensorBoard)
 
@@ -114,6 +121,10 @@ kinh nghiệm mỗi giây. Luật chơi chạy theo tick cố định nên time-
   training lưu não mới (~500k bước, ~8 phút). Đóng cửa sổ thì exporter cũng tắt.
 - Phím: `1`–`6` số zombie 1/2/4/8/16/32, `Space` tốc độ x1/x2/x4, `T` chọn hành động
   deterministic/sampled, `R` ván mới, `Esc` tạm dừng. Hết ván tự chơi lại sau 3 s.
+- Class và loại zombie (D-024): phím `H` hoặc nút góc phải trên đổi class (Warrior / Mage /
+  Archer, nạp não mới nhất của class đó; nút TRAIN train đúng class đang xem). Phím `M` hoặc nút
+  đổi kiểu trộn zombie (Chỉ Walker / Tất cả / Nhiều Runner / Nhiều Brute / Nhiều Spitter). Tham số
+  exe để chụp ảnh: `-class mage -mix 1` (`-mix` 0–4 theo thứ tự trên).
 - Camera (D-022): kéo chuột trái/phải = xoay, lăn chuột hoặc `+`/`-` = zoom, `Q`/`E` = xoay
   ngang, chuột giữa hoặc `Shift`+kéo = dời, `C` = đổi chế độ (toàn sân / theo warrior / tự do),
   `Home` = về góc mặc định.
@@ -143,4 +154,7 @@ kinh nghiệm mỗi giây. Luật chơi chạy theo tick cố định nên time-
 |---|---|---|---|---|---|
 | smoke | 2026-09-29 | warrior_ppo.yaml, 1 env × 16 arena, time-scale 20, RTX 4070 Ti | 210k (5 phút) | Mean reward −0.01 → 15.4; tự lên bài 2 (TwoZombies) | Chỉ để kiểm tra pipeline; ~700 bước/s |
 | warrior-001 | 2026-09-29 | warrior_ppo.yaml, 4 env × 16 arena, time-scale 20, RTX 4070 Ti | 9.87M (13:27–15:26), tiếp tục bằng nút | Curriculum lên 16 zombie ở ~480k (quá nhanh); mean reward 14.2 ở 720k; ở 1M bước, xem thử 4 zombie: 8 kill, sống 20 s | ~1000 bước/s. Ngưỡng 6 quá dễ → cần nâng |
-| warrior-002 | 2026-09-29 | **luật v2 (D-022)**, warrior_ppo.yaml, 4 env × 64 arena (MAX), time-scale 20, RTX 4070 Ti | 24M (16:49–19:16), vẫn train | Lên 16 zombie ở ~3M; ở 24M: reward ~290, ~143 zombie giết/ván, sống ~98 s, rơi vực 4.8% (đầu run ~97%); gần như không hất zombie xuống vực | ~2 700 bước/s. Não luật cũ (`warrior-001`) không dùng được |
+| warrior-002 | 2026-09-29 | **luật v2 (D-022)**, warrior_ppo.yaml, 4 env × 64 arena (MAX), time-scale 20, RTX 4070 Ti | 48.9M (16:49–23:40), dừng êm khi lên luật v3 — không train tiếp | Lên 16 zombie ở ~3M; ở 24M: reward ~290, ~143 zombie giết/ván, sống ~98 s, rơi vực 4.8% (đầu run ~97%); gần như không hất zombie xuống vực | ~2 700 bước/s. Não luật cũ (`warrior-001`) không dùng được |
+| mage-001 | 2026-09-30 | **luật v3 (D-024)**, mage_ppo.yaml, 4 env × 64 (MAX), time-scale 20 | 657k (smoke) | Reward ~0 → 10.9 ở 600k, còn 1 zombie | Chỉ kiểm tra class chạy được; train tiếp bằng nút |
+| archer-001 | 2026-09-30 | luật v3, archer_ppo.yaml, 4 env × 64 (MAX), time-scale 20 | 1.14M (smoke) | Reward 32.9 ở 1.08M, lên 2 zombie | Như trên |
+| warrior-003 | 2026-09-30 | luật v3, warrior_ppo.yaml, 4 env × 64 (MAX), time-scale 20 | đang chạy (1.41M lúc 00:40) | Reward 19.5 ở 1.4M, 2 zombie Walker | Run mới do đổi `rules_version.txt`; owner dừng bằng nút STOP |

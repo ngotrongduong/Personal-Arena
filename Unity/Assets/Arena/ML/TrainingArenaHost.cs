@@ -21,23 +21,24 @@ namespace PersonalArena.ML
             Application.targetFrameRate = -1;
 
             int count = CommandLineAgentCount(agentCount);
+            string classId = CommandLineHeroClass(ClassRegistry.WarriorId);
             for (int i = 0; i < count; i++)
             {
-                SpawnAgent(i);
+                SpawnAgent(i, classId);
             }
         }
 
-        private void SpawnAgent(int index)
+        private void SpawnAgent(int index, string classId)
         {
             GameObject agentObject = new GameObject($"HeroAgent_{index:D2}");
             agentObject.SetActive(false);
             agentObject.transform.SetParent(transform, false);
 
             BehaviorParameters behavior = agentObject.AddComponent<BehaviorParameters>();
-            BehaviorSetup.Configure(behavior, ClassRegistry.WarriorId);
+            BehaviorSetup.Configure(behavior, classId);
 
             HeroAgent agent = agentObject.AddComponent<HeroAgent>();
-            agent.Configure(index, ClassRegistry.WarriorId);
+            agent.Configure(index, classId);
 
             DecisionRequester requester = agentObject.AddComponent<DecisionRequester>();
             requester.DecisionPeriod = 5;
@@ -60,6 +61,26 @@ namespace PersonalArena.ML
             }
 
             return Mathf.Clamp(fallback, 1, MaximumAgentCount);
+        }
+
+        private static string CommandLineHeroClass(string fallback)
+        {
+            string[] args = Environment.GetCommandLineArgs();
+            for (int i = 0; i < args.Length - 1; i++)
+            {
+                if (string.Equals(args[i], "--hero-class", StringComparison.OrdinalIgnoreCase))
+                {
+                    string value = args[i + 1].Trim().ToLowerInvariant();
+                    if (ClassRegistry.IsKnown(value))
+                    {
+                        return value;
+                    }
+
+                    Debug.LogWarning($"Unknown --hero-class '{value}', training {fallback}.");
+                }
+            }
+
+            return fallback;
         }
     }
 }

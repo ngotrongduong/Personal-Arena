@@ -22,6 +22,9 @@ def test_progress_reads_summaries_and_curriculum():
     for line in [
         "[INFO] Parameter 'zombie_count' is in lesson 'OneZombie' and has value 'Float: value=1.0'.",
         "[INFO] Parameter 'arena_size' is in lesson 'arena_size' and has value 'Float: value=20.0'.",
+        "[INFO] Parameter 'runner_weight' is in lesson 'Runners' and has value 'Float: value=0.5'.",
+        "[INFO] Parameter 'brute_weight' is in lesson 'Brutes' and has value 'Float: value=0.35'.",
+        "[INFO] Parameter 'spitter_weight' is in lesson 'Spitters' and has value 'Float: value=0.25'.",
         summary(30000, None),
         summary(60000, -0.5),
         "[INFO] Parameter 'zombie_count' is in lesson 'SixteenZombies' and has value 'Float: value=16.0'.",
@@ -33,6 +36,7 @@ def test_progress_reads_summaries_and_curriculum():
     assert progress.step == 90000
     assert progress.mean_reward == 12.25
     assert progress.zombies == 16.0
+    assert (progress.runner_weight, progress.brute_weight, progress.spitter_weight) == (0.5, 0.35, 0.25)
     assert progress.steps == [60000, 90000]
     assert progress.rewards == [-0.5, 12.25]
     assert progress.summaries == 3
@@ -71,21 +75,32 @@ def test_log_tail_returns_complete_lines_only(tmp_path: Path):
 
 
 def make_checkpoint(
-    runs: Path, run_id: str, step: int, resumable: bool = True, rules_version: int | None = 2
+    runs: Path,
+    run_id: str,
+    step: int,
+    resumable: bool = True,
+    rules_version: int | None = arena_trainer.RULES_VERSION,
+    behavior: str = "Warrior",
 ) -> None:
-    behavior = runs / run_id / "Warrior"
-    behavior.mkdir(parents=True, exist_ok=True)
-    (behavior / f"Warrior-{step}.pt").write_bytes(b"x")
+    behavior_dir = runs / run_id / behavior
+    behavior_dir.mkdir(parents=True, exist_ok=True)
+    (behavior_dir / f"{behavior}-{step}.pt").write_bytes(b"x")
     if resumable:
-        (behavior / "checkpoint.pt").write_bytes(b"x")
+        (behavior_dir / "checkpoint.pt").write_bytes(b"x")
     if rules_version is not None:
-        (behavior.parent / arena_trainer.RULES_FILE).write_text(str(rules_version), encoding="utf-8")
+        (behavior_dir.parent / arena_trainer.RULES_FILE).write_text(str(rules_version), encoding="utf-8")
 
 
 def test_plan_run_starts_warrior_001_when_nothing_exists(tmp_path: Path):
     plan = train_service.plan_run(tmp_path, "Warrior")
 
     assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-001", "new", 0)
+
+
+def test_plan_run_starts_mage_001_when_nothing_exists(tmp_path: Path):
+    plan = train_service.plan_run(tmp_path, "Mage")
+
+    assert (plan.run_id, plan.mode, plan.last_step) == ("mage-001", "new", 0)
 
 
 def test_plan_run_resumes_the_newest_run(tmp_path: Path):
@@ -105,6 +120,15 @@ def test_plan_run_starts_after_the_highest_number_when_only_old_rules_exist(tmp_
     plan = train_service.plan_run(tmp_path, "Warrior")
 
     assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-010", "new", 0)
+
+
+def test_plan_run_does_not_resume_a_v2_warrior_run_under_rules_v3(tmp_path: Path):
+    make_checkpoint(tmp_path, "warrior-002", 100, rules_version=2)
+
+    plan = train_service.plan_run(tmp_path, "Warrior")
+
+    assert arena_trainer.RULES_VERSION == 3
+    assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-003", "new", 0)
 
 
 def test_plan_run_uses_the_newest_current_rules_run(tmp_path: Path):
@@ -138,7 +162,7 @@ def write_config(path: Path) -> None:
 
 @pytest.mark.parametrize(
     ("mode", "initial_marker", "expected_marker"),
-    [("new", None, "2"), ("force", "1", "2"), ("resume", "7", "7")],
+    [("new", None, "3"), ("force", "1", "3"), ("resume", "7", "7")],
 )
 def test_service_marks_new_and_forced_runs_without_overwriting_resumed_runs(
     tmp_path: Path, mode: str, initial_marker: str | None, expected_marker: str
@@ -215,7 +239,8 @@ def test_trainer_command_resumes_with_service_settings(tmp_path: Path):
     assert command[command.index("--base-port") + 1] == "5105"
     assert command[command.index("--results-dir") + 1] == str(tmp_path.resolve())
     assert command[command.index("--time-scale") + 1] == "20.0"
-    assert command[-1] == "--resume"
+    assert "--resume" in command
+    assert command[-3:] == ["--env-args", "--hero-class", "warrior"]
 
 
 def test_trainer_command_uses_the_viewer_power_setting(tmp_path: Path):
@@ -228,7 +253,9 @@ def test_trainer_command_uses_the_viewer_power_setting(tmp_path: Path):
 
     assert command[command.index("--num-envs") + 1] == "8"
     assert command[command.index("--time-scale") + 1] == "30.0"
-    assert command[-3:] == ["--env-args", "--arena-agents", "32"]
+    assert command[-5:] == [
+        "--env-args", "--arena-agents", "32", "--hero-class", "warrior"
+    ]
     status = service.status("training")
     assert (status["num_envs"], status["arena_agents"]) == (8, 32)
 
@@ -247,8 +274,29 @@ def test_status_payload_matches_the_viewer_fields(tmp_path: Path):
     assert status["step"] == 60000
     assert status["has_reward"] is True
     assert status["mean_reward"] == 4.5
+    assert status["behavior"] == "Warrior"
+    assert status["zombie_mix"] == {
+        "walker": 1.0, "runner": 0.0, "brute": 0.0, "spitter": 0.0
+    }
     assert status["steps"] == [60000]
     assert status["updated_unix"] == 100.0
+
+
+@pytest.mark.parametrize(
+    ("behavior", "expected", "config"),
+    [
+        ("warrior", "Warrior", "warrior_ppo.yaml"),
+        ("MAGE", "Mage", "mage_ppo.yaml"),
+        ("Archer", "Archer", "archer_ppo.yaml"),
+    ],
+)
+def test_parser_normalizes_behavior_and_chooses_its_default_config(
+    behavior: str, expected: str, config: str
+):
+    args = train_service.create_parser().parse_args(["--behavior", behavior])
+
+    assert args.behavior == expected
+    assert Path(args.config) == Path("Trainer/config") / config
 
 
 def test_a_second_service_cannot_take_the_lock(tmp_path: Path):

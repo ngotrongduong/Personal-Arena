@@ -69,7 +69,8 @@ set it to `review`. Claude reviews, commits and sets `done`.
   the agent decides every 5 ticks (12 Hz). Unity code must not assume Unity's fixed timestep
   equals the sim tick.
 - Observations come from Core (`ObservationBuilder` = 19 hero values + `RaySensor` 72 rays ×
-  11 = 811, rules v2 / D-022). Size depends only on hero class and sensor config, never on zombie count.
+  12 = 883, rules v3 / D-024). Size is the same for every hero class and never depends on zombie
+  count or zombie types (`BrainPilot.Validate` relies on it).
 - Rules v2 (D-022): round platform of radius `min(Width, Height) / 2` over an abyss; leaving it
   kills (hero or zombie). Changing rules that invalidate trained brains means bumping
   `ArenaSim.RulesVersion` (runs record it in `rules_version.txt`; the viewer loads only matching brains).

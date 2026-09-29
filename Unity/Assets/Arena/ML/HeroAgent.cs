@@ -64,7 +64,12 @@ namespace PersonalArena.ML
                 parameters.GetWithDefault("hp_mult", EnvConfigFactory.DefaultMultiplier),
                 parameters.GetWithDefault("damage_mult", EnvConfigFactory.DefaultMultiplier),
                 parameters.GetWithDefault("speed_mult", EnvConfigFactory.DefaultMultiplier),
-                seed);
+                seed,
+                EnvConfigFactory.CreateSpawns(
+                    1f,
+                    parameters.GetWithDefault("runner_weight", 0f),
+                    parameters.GetWithDefault("brute_weight", 0f),
+                    parameters.GetWithDefault("spitter_weight", 0f)));
 
             if (NeedsNewSimulation(episodeConfig))
             {
@@ -155,7 +160,8 @@ namespace PersonalArena.ML
             return Sim == null ||
                 Sim.Config.Width != episodeConfig.Width ||
                 Sim.Config.Height != episodeConfig.Height ||
-                Sim.Config.ZombieCount != episodeConfig.ZombieCount;
+                Sim.Config.ZombieCount != episodeConfig.ZombieCount ||
+                !EnvConfigFactory.SameSpawns(Sim.Config.ZombieSpawns, episodeConfig.ZombieSpawns);
         }
 
         private static void CopyEpisodeSettings(ArenaConfig source, ArenaConfig destination)

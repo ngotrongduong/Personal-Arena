@@ -2,6 +2,7 @@
     "name": "PersonalArena.View.Editor",
     "rootNamespace": "PersonalArena.View.Editor",
     "references": [
+        "PersonalArena.Core",
         "PersonalArena.View",
         "Unity.InputSystem",
         "Unity.ugui"

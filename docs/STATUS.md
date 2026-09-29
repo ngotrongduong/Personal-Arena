@@ -1,7 +1,7 @@
 # Trạng thái dự án
 
 > File này là "bộ nhớ" giữa các phiên. Đọc đầu tiên, cập nhật cuối cùng.
-> Cập nhật lần cuối: 2026-09-29 22:45 (phiên Claude, PC — sửa 2 lỗi hình: chấm trắng trên đầu, vệt đen quanh khiên).
+> Cập nhật lần cuối: 2026-09-30 00:30 (phiên Claude, PC — M3: 4 loại zombie, đạn, Mage + Archer, icon skill).
 
 ## Hướng đi
 
@@ -11,10 +11,10 @@
 
 ## Đang ở đâu
 
-- **Milestone:** M0 xong, **M1 xong** (chơi tay được), **M2 phần code xong** (agent + môi trường
-  train + trainer + **trình xem AI chơi**). **Luật v2 (D-022)**: sàn tròn trên vực sâu, kick
-  hất lùi, block làm choáng, dash lướt thật, bình máu. Đang: training thật `warrior-002` (luật v2;
-  não `warrior-001` là luật cũ, không nạp được nữa). Còn: BC từ demo.
+- **Milestone:** M0, M1, M2 xong; **M3 phần code xong** (D-024, luật v3): 4 loại zombie
+  (Walker / Runner / Brute / Spitter), đạn, 3 class (Warrior / Mage / Archer), icon skill tự vẽ.
+  Mỗi class một não riêng; các não luật v2 (`warrior-002`) không nạp được nữa → bấm TRAIN để bắt
+  đầu `warrior-003`. BC từ demo đã bỏ (D-023: owner không chơi tay).
   Chi tiết milestone ở `docs/PLAN.md`.
 - **Nhánh:** làm việc trên `develop` (nhánh tính năng → PR merge commit vào `develop`); `main`
   fast-forward theo `develop` khi ổn định.
@@ -56,9 +56,16 @@
     khiên block + sao choáng, bóng mờ dash, bình máu, hạt bụi), di chuyển nội suy mượt, HUD bo góc
     có hiệu ứng, `TopDownCamera` xoay/zoom/dời + 3 chế độ, màn hình **TRAINING DATA** (nút hoặc
     phím `G`, 6 đồ thị từ `training_history.json` do `Trainer/training_history.py` ghi).
-  - Test: Unity EditMode 38/38, CoreTests 73/73, pytest trainer 47/47.
-  - **Smoke training 5 phút trên GPU:** mean reward −0.01 → 15.4, curriculum tự lên 2 zombie.
-    AI học được thật; pipeline chạy đầu-cuối.
+  - **M3 (feature/m3-zombies, D-024, T-011..T-013):** Core luật v3: Runner (nhanh, yếu), Brute
+    (to, chậm, kháng hất lùi), Spitter (giữ khoảng cách, nhổ đạn độc, khiên chặn được); đạn chung
+    cho hero và zombie; zombie hồi sinh bốc loại mới; quan sát **883** (thêm kênh "đạn địch");
+    thưởng hất zombie xuống vực. Mage (cầu lửa, vòng băng, khiên mana, dịch chuyển) và Archer (bắn
+    tên, tên xuyên, nhảy lùi, tên chấn động). Trainer: `--hero-class`, config
+    `<class>_ppo.yaml`, curriculum thêm dần loại zombie sau 16 zombie. Trình xem: phím/nút `H` đổi
+    class, `M` đổi kiểu trộn zombie; model KayKit theo class và loại zombie; hiệu ứng đạn;
+    **thanh skill có icon tự vẽ** (`SkillIconFactory`, 12 icon, bảng ở `docs/images/skill-icons.png`),
+    bỏ chữ phím tắt, cooldown quét vòng trên icon.
+  - Test: CoreTests 97/97, pytest 62/62, Unity EditMode 47/47.
 
 ## Checklist
 
@@ -73,18 +80,20 @@
 | Nút train trong trình xem AI | xong (D-020) — đã thử bật, dừng, đóng game: đều lưu êm |
 | Train tự hồi phục khi crash + nút Power | xong (D-021) — đã thử đổi FAST→MAX lúc đang train: lưu + chạy lại trong 1 s |
 | Luật v2: sàn tròn + vực, kick/block/dash thật, bình máu, hiệu ứng, camera, TRAINING DATA | xong (D-022) — đã chụp bản build: sàn tròn, HUD, 6 đồ thị đúng |
-| M2: training thật, curriculum lên 16 zombie | `warrior-002` (luật v2) đang train ở MAX: 24M bước lúc 19:16, đã lên 16 zombie từ ~3M, reward ~290, rơi vực 4.8% (từ ~97%) |
-| M2: ghi demo chơi tay → BC/GAIL | **chưa** |
+| M2: training thật, curriculum lên 16 zombie | xong — `warrior-002` (luật v2) dừng êm ở 48.9M bước, reward ~300; không train tiếp (luật v3) |
+| M2: ghi demo chơi tay → BC/GAIL | bỏ (D-023) |
+| M3: 4 loại zombie + đạn + Mage/Archer + icon skill | code xong (D-024); smoke train 3 class OK; chờ train dài |
 
 ## Việc tiếp theo (theo thứ tự)
 
-1. **Training Warrior:** owner bật/tắt bằng nút trong `Xem-AI.cmd`; `warrior-002` (luật v2) đang
-   train. Curriculum vẫn lên 16 zombie rất sớm (~3M) — ngưỡng dễ. AI gần như không hất zombie
-   xuống vực (đồ thị tím ~0): cân nhắc thưởng thêm cho `ZombieFell` do kick. Ghi kết quả vào
-   "Nhật ký run" trong `docs/TRAINING.md`.
-2. **Cân bằng:** với 4 zombie mặc định, hero đứng yên chết sau ~4 s — có thể quá khó cho người chơi.
-4. **M3:** Mage, Archer, 4 loại zombie (Walker/Runner/Brute/Spitter), random hóa arena.
-5. **M4:** menu, Roster/Shop (vàng trong game), Training Center (gọi trainer, dashboard), lưu/tải.
+1. **Train dài 3 class (luật v3):** owner chọn class bằng `H` rồi bấm TRAIN (mỗi lần một class,
+   service chỉ chạy một run). Theo dõi curriculum có lên 16 zombie rồi thêm Runner → Brute →
+   Spitter không (ngưỡng 150/170/190 là ước lượng); chỉnh ngưỡng nếu kẹt. Ghi "Nhật ký run".
+2. **Cân bằng class:** so reward/kill của Warrior, Mage, Archer sau train dài; chỉnh số liệu skill
+   trong `Core/Defs.cs` nếu một class quá yếu (đổi luật → tăng `RulesVersion`).
+3. **Hoạt ảnh bắn cung / niệm phép:** hiện dùng clip có sẵn; gói `Rig_Medium_CombatRanged`
+   (KayKit, CC0) cần hỏi owner trước khi tải.
+4. **M4:** menu, Roster/Shop (vàng trong game), Training Center, lưu/tải; random hóa arena.
 
 ## Cách làm trên PC (Claude)
 
@@ -109,6 +118,18 @@
   trước khi phát hành để đảm bảo game không gọi mạng.
 
 ## Nhật ký phiên (mới nhất trên cùng)
+
+### 2026-09-29 23:00 – 2026-09-30 00:45 — Claude (PC): M3 vào game, icon skill
+- M3 tích hợp đủ: 4 loại zombie (Walker/Runner/Brute/Spitter), 3 class (Warrior/Mage/Archer), luật v3,
+  883 quan sát. Trình xem: phím H đổi class, M đổi kiểu zombie, nút TRAIN train class đang chọn.
+- warrior-002 dừng êm ở 48.9M (luật v2). Smoke train luật v3 (4 env × 64, MAX): mage-001 reward 0 → 10.9
+  ở 600k; archer-001 32.9 ở 1.08M (lên 2 zombie); warrior-003 là run mới, **vẫn đang train** (1.4M, 19.5).
+- Owner yêu cầu: bỏ gợi ý phím tắt ở thanh skill (owner không điều khiển) + artwork cho skill. Vẽ 12 icon
+  bằng code (4/class, `docs/images/skill-icons.png`), không tải gói ngoài. Hồi chiêu = quét kim đồng hồ
+  chỉ trên icon.
+- Lỗi: icon luôn tối dù skill sẵn sàng. Nguyên nhân: Image `Filled` không có sprite → Unity bỏ qua
+  `fillAmount`, phủ cả khung. Gán sprite + test `ArenaHudSkillBarTests`.
+- Test: CoreTests 97, pytest 62, EditMode 48 — tất cả xanh. Build lại `Build/Watch`, ảnh chụp đúng.
 
 ### 2026-09-29 22:45 — Claude (PC): sửa lỗi hình (chấm trắng, vệt đen)
 - Chấm trắng trên đầu mọi nhân vật: `CreateStunStars` gọi `SetVisible(false)` nhưng `Visible` mặc định đã

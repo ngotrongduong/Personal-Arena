@@ -72,6 +72,13 @@ namespace PersonalArena.Core
             ticksUntilDecision = 0;
         }
 
+        /// <summary>Drops the current brain (e.g. when the viewer switches to another hero class).</summary>
+        public void ClearBrain()
+        {
+            brain = null;
+            ResetEpisode();
+        }
+
         /// <summary>Call when a new episode starts so the first tick makes a fresh decision.</summary>
         public void ResetEpisode()
         {
