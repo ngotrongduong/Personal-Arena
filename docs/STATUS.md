@@ -6,7 +6,8 @@
 ## Đang ở đâu
 
 - **Milestone:** M0 (thiết lập và spike). Chi tiết milestone ở `docs/PLAN.md`.
-- **Nhánh chính:** `main`. CI chạy `dotnet test CoreTests` mỗi lần push.
+- **Nhánh chính:** `main`. CI (`dotnet test CoreTests` + guardrails) đã cấu hình nhưng đang bị
+  GitHub chặn vì billing — xem "Vướng mắc".
 - **Có trong repo:** khung thư mục, quy tắc agent, `Vec2` + 2 test, lock file môi trường ML,
   hệ thống tài liệu/agents/skills, template cấu hình PPO cho Warrior.
 - **Chưa có trong repo:** phần Unity project thật (`Unity/Packages/`, `Unity/ProjectSettings/`).
@@ -34,7 +35,11 @@
 
 ## Vướng mắc / câu hỏi mở
 
-- Phiên cloud không cài được .NET SDK (proxy chặn), nên test Core chỉ chạy trên CI hoặc PC.
+- **CI chưa chạy được:** GitHub báo "recent account payments have failed or your spending
+  limit needs to be increased". Owner cần vào GitHub → Settings → Billing & plans sửa thanh
+  toán / spending limit cho Actions. Workflow đã sẵn sàng (`.github/workflows/ci.yml`).
+- Phiên cloud không cài được .NET SDK (proxy chặn), nên cho tới khi CI chạy, test Core chỉ
+  chạy được trên PC (`dotnet test CoreTests`).
 - Unity MCP: chọn CoplayDev `unity-mcp` (miễn phí, MIT) hay MCP chính thức của Unity (cần
   gói AI trả phí)? Đề xuất: CoplayDev. Xem `docs/DECISIONS.md` D-008.
 
