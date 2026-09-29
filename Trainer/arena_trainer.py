@@ -49,6 +49,11 @@ def create_parser() -> argparse.ArgumentParser:
     checkpoint = parser.add_mutually_exclusive_group()
     checkpoint.add_argument("--resume", action="store_true")
     checkpoint.add_argument("--initialize-from", metavar="RUN_ID")
+    checkpoint.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite a run folder that exists but has no checkpoint to resume.",
+    )
     parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -91,6 +96,8 @@ def build_command(args: argparse.Namespace, root: Path | None = None) -> list[st
         command.append("--resume")
     elif args.initialize_from:
         command.extend(("--initialize-from", args.initialize_from))
+    elif args.force:
+        command.append("--force")
     return command
 
 

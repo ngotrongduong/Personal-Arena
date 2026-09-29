@@ -1,0 +1,114 @@
+using System;
+using System.IO;
+using NUnit.Framework;
+
+namespace PersonalArena.View.Tests
+{
+    public sealed class TrainingServiceClientTests
+    {
+        private static readonly DateTime Now = new DateTime(2026, 9, 29, 16, 0, 0, DateTimeKind.Utc);
+        private static readonly double NowUnix = TrainingServiceClient.ToUnix(Now);
+
+        private static TrainingStatus Status(string state, double ageSeconds)
+        {
+            return new TrainingStatus { state = state, updated_unix = NowUnix - ageSeconds };
+        }
+
+        [Test]
+        public void Parse_ReadsTheServiceStatusFile()
+        {
+            TrainingStatus status = TrainingStatus.Parse(
+                "{\"state\": \"training\", \"message\": \"The AI is training.\", \"run_id\": \"warrior-001\", " +
+                "\"pid\": 12, \"trainer_pid\": 34, \"step\": 7512000, \"max_steps\": 30000000, " +
+                "\"has_reward\": true, \"mean_reward\": 95.25, \"zombies\": 16.0, \"session_seconds\": 750.5, " +
+                "\"updated_unix\": 1790000000.25, \"steps\": [30000, 60000], \"rewards\": [-0.5, 12.25]}");
+
+            Assert.That(status.state, Is.EqualTo("training"));
+            Assert.That(status.run_id, Is.EqualTo("warrior-001"));
+            Assert.That(status.step, Is.EqualTo(7512000L));
+            Assert.That(status.has_reward, Is.True);
+            Assert.That(status.mean_reward, Is.EqualTo(95.25f));
+            Assert.That(status.zombies, Is.EqualTo(16f));
+            Assert.That(status.updated_unix, Is.EqualTo(1790000000.25).Within(1e-6));
+            Assert.That(status.steps, Is.EqualTo(new long[] { 30000, 60000 }));
+            Assert.That(status.rewards, Is.EqualTo(new[] { -0.5f, 12.25f }));
+        }
+
+        [Test]
+        public void Parse_RejectsEmptyOrBrokenText()
+        {
+            Assert.That(TrainingStatus.Parse(null), Is.Null);
+            Assert.That(TrainingStatus.Parse("{}"), Is.Null);
+            Assert.That(TrainingStatus.Parse("{not json"), Is.Null);
+        }
+
+        [Test]
+        public void Classify_UsesFreshActiveStates()
+        {
+            Assert.That(Classify(Status("training", 3)), Is.EqualTo(TrainingState.Training));
+            Assert.That(Classify(Status("starting", 3)), Is.EqualTo(TrainingState.Starting));
+            Assert.That(Classify(Status("stopping", 3)), Is.EqualTo(TrainingState.Stopping));
+        }
+
+        [Test]
+        public void Classify_TreatsAStaleActiveStateAsIdle()
+        {
+            Assert.That(Classify(Status("training", 600)), Is.EqualTo(TrainingState.Idle));
+        }
+
+        [Test]
+        public void Classify_KeepsFinalStatesUntilSomethingNewer()
+        {
+            Assert.That(Classify(Status("stopped", 600)), Is.EqualTo(TrainingState.Stopped));
+            Assert.That(Classify(Status("error", 600)), Is.EqualTo(TrainingState.Error));
+            Assert.That(Classify(null), Is.EqualTo(TrainingState.Idle));
+        }
+
+        [Test]
+        public void Classify_DetectsTrainingStartedOutsideTheGame()
+        {
+            Assert.That(Classify(null, Now.AddSeconds(-20)), Is.EqualTo(TrainingState.External));
+            Assert.That(Classify(Status("stopped", 3600), Now.AddSeconds(-20)), Is.EqualTo(TrainingState.External));
+            // The service's own final write and log line happen together: not external.
+            Assert.That(Classify(Status("stopped", 20), Now.AddSeconds(-20)), Is.EqualTo(TrainingState.Stopped));
+            // Old logs do not count.
+            Assert.That(Classify(null, Now.AddMinutes(-10)), Is.EqualTo(TrainingState.Idle));
+        }
+
+        [Test]
+        public void Classify_ShowsStartingRightAfterLaunch()
+        {
+            DateTime launched = Now.AddSeconds(-2);
+
+            Assert.That(Classify(Status("stopped", 600), null, launched), Is.EqualTo(TrainingState.Starting));
+            Assert.That(Classify(Status("error", 1), null, launched), Is.EqualTo(TrainingState.Error));
+        }
+
+        [Test]
+        public void Paths_AreResolvedFromTheRunsFolder()
+        {
+            string runs = Path.Combine(Path.GetTempPath(), "PA-Root", "Trainer", "runs");
+            TrainingServiceClient client = new TrainingServiceClient(runs);
+            string root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "PA-Root"));
+
+            Assert.That(client.RepositoryRoot, Is.EqualTo(root));
+            Assert.That(client.PythonPath, Is.EqualTo(Path.Combine(root, ".venv-ml", "Scripts", "python.exe")));
+            Assert.That(client.ScriptPath, Is.EqualTo(Path.Combine(root, "Trainer", "train_service.py")));
+            Assert.That(client.StopPath, Is.EqualTo(Path.Combine(Path.GetFullPath(runs), "training_service.stop")));
+            Assert.That(client.MissingPiece(), Is.Not.Null);
+        }
+
+        [Test]
+        public void Bucket_AveragesLongHistoriesAndKeepsShortOnes()
+        {
+            Assert.That(ArenaHud.Bucket(null, 4), Is.Empty);
+            Assert.That(ArenaHud.Bucket(new[] { 1f, 2f }, 4), Is.EqualTo(new[] { 1f, 2f }));
+            Assert.That(ArenaHud.Bucket(new[] { 1f, 3f, 5f, 7f, 9f, 11f }, 3), Is.EqualTo(new[] { 2f, 6f, 10f }));
+        }
+
+        private static TrainingState Classify(TrainingStatus status, DateTime? newestLog = null, DateTime? launched = null)
+        {
+            return TrainingServiceClient.Classify(status, NowUnix, newestLog, Now, launched);
+        }
+    }
+}

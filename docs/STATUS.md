@@ -1,7 +1,7 @@
 # Trạng thái dự án
 
 > File này là "bộ nhớ" giữa các phiên. Đọc đầu tiên, cập nhật cuối cùng.
-> Cập nhật lần cuối: 2026-09-29 15:00 (phiên Claude, PC — đồ họa KayKit cho trình xem AI).
+> Cập nhật lần cuối: 2026-09-29 15:30 (phiên Claude, PC — nút "TRAIN THE AI" trong trình xem).
 
 ## Hướng đi
 
@@ -39,7 +39,12 @@
     `Assets/Arena/View/Art/KayKitArtSet.asset` (dựng lại: menu *Personal Arena/Rebuild KayKit Art
     Set*). Scene training không dùng renderer nên huấn luyện không bị ảnh hưởng.
   - Owner **chỉ xem AI tự học, không chơi tay** (D-019) → mọi việc hiển thị nhắm vào `Xem-AI.cmd`.
-  - Test: Unity EditMode 20/20, CoreTests 58/58, pytest trainer 11/11.
+  - **Nút "TRAIN THE AI" (feature/train-button, D-020):** bảng TRAINING trong trình xem bật/tắt
+    `Trainer/train_service.py` (chạy mlagents ẩn, resume run mới nhất, train liên tục, dừng bằng
+    Ctrl+C để lưu). Hiện bước, reward, số zombie, biểu đồ reward. Đóng game = dừng + lưu.
+    Code: `TrainingServiceClient.cs`, `ArenaHud` (panel), `AiArenaController`. Hướng dẫn:
+    `docs/TRAINING.md` mục 4.
+  - Test: Unity EditMode 29/29, CoreTests 58/58, pytest trainer 25/25.
   - **Smoke training 5 phút trên GPU:** mean reward −0.01 → 15.4, curriculum tự lên 2 zombie.
     AI học được thật; pipeline chạy đầu-cuối.
 
@@ -53,14 +58,16 @@
 | M2: HeroAgent + env train + trainer wrapper | xong (PR M2) |
 | M2: trình xem AI chơi (T-010) | xong (`Xem-AI.cmd`) |
 | Đồ họa KayKit + hoạt ảnh cho trình xem AI | xong (D-018) |
-| M2: training thật, curriculum lên 16 zombie | **đang chạy** — `warrior-001` (5.7M bước, reward ~95 lúc 15:00) |
+| Nút train trong trình xem AI | xong (D-020) — đã thử bật, dừng, đóng game: đều lưu êm |
+| M2: training thật, curriculum lên 16 zombie | `warrior-001` dừng ở 9.87M bước (reward ~130 ở 16 zombie trước khi đổi sang nút). Owner tự train tiếp bằng nút |
 | M2: ghi demo chơi tay → BC/GAIL | **chưa** |
 
 ## Việc tiếp theo (theo thứ tự)
 
-1. **Training Warrior:** `warrior-001` đang chạy (bắt đầu 13:27, ~1000 bước/s, max_steps theo
-   config). Curriculum lên 16 zombie ở ~480k bước — ngưỡng 6 quá dễ. Khi xong/đủ lâu: đọc
-   TensorBoard, nâng `threshold`, chạy `warrior-002`, ghi "Nhật ký run" trong `docs/TRAINING.md`.
+1. **Training Warrior:** owner bật/tắt bằng nút trong `Xem-AI.cmd`. `warrior-001` từng bị kill
+   cứng nên curriculum về lại bài 1 zombie ở 9.5M (sẽ tự leo lại; từ nay dừng êm nên giữ được).
+   Curriculum lên 16 zombie ở ~480k bước — ngưỡng 6 quá dễ. Khi đủ lâu: đọc TensorBoard, nâng
+   `threshold`, chạy `warrior-002`, ghi "Nhật ký run" trong `docs/TRAINING.md`.
 2. **Cân bằng:** với 4 zombie mặc định, hero đứng yên chết sau ~4 s — có thể quá khó cho người chơi.
 4. **M3:** Mage, Archer, 4 loại zombie (Walker/Runner/Brute/Spitter), random hóa arena.
 5. **M4:** menu, Roster/Shop (vàng trong game), Training Center (gọi trainer, dashboard), lưu/tải.
@@ -88,6 +95,16 @@
   trước khi phát hành để đảm bảo game không gọi mạng.
 
 ## Nhật ký phiên (mới nhất trên cùng)
+
+### 2026-09-29 15:00–15:30 — Claude (PC): nút "TRAIN THE AI"
+- Owner không muốn phải nhờ Claude mỗi lần train → thêm service train chạy ngầm + bảng TRAINING
+  trong trình xem (D-020). Giao tiếp qua file trong `Trainer/runs/`; dừng bằng Ctrl+C (đã thử
+  riêng: console ẩn của .NET nhận được `GenerateConsoleCtrlEvent`).
+- Chuyển `warrior-001` từ terminal sang nút ngay sau checkpoint 9.5M (kill cứng → mất tiến độ
+  curriculum, xem mục 1 "Việc tiếp theo").
+- Kiểm đầu-cuối trên bản build: bấm TRAIN → STOP TRAINING, bước + biểu đồ hiện đúng; bấm STOP →
+  "Progress saved at step 9,727,471", có `training_status.json`; đóng cửa sổ khi đang train →
+  dừng êm, lưu 9,867,350, không sót process. pytest 25/25, EditMode 29/29.
 
 ### 2026-09-29 14:00–15:00 — Claude (PC): đồ họa KayKit
 - Owner muốn game đẹp hơn, chọn bộ KayKit (CC0). Tải 4 pack free vào `ThirdParty/KayKit`.
