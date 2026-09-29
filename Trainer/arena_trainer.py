@@ -10,24 +10,28 @@ import sys
 from typing import Sequence
 
 
-DEFAULT_CONFIG = Path("Trainer/config/warrior_ppo.yaml")
+DEFAULT_CONFIG = Path("Trainer/config/warrior_survivor_ppo.yaml")
 CONFIG_DIRECTORY = Path("Trainer/config")
 DEFAULT_ENVIRONMENT = Path("Build/Training/PersonalArenaTraining.exe")
 DEFAULT_RESULTS_DIRECTORY = Path("Trainer/runs")
-RULES_VERSION = 3
-RULES_FILE = "rules_version.txt"
+SCHEMA_VERSION = 4
+SCHEMA_FILE = "schema_version.txt"
+LEGACY_RULES_FILE = "rules_version.txt"
 
 
-def run_rules_version(run_dir: Path) -> int:
+def run_schema_version(run_dir: Path) -> int:
+    marker = run_dir / SCHEMA_FILE
+    if not marker.exists():
+        marker = run_dir / LEGACY_RULES_FILE
     try:
-        return int((run_dir / RULES_FILE).read_text(encoding="utf-8").strip())
+        return int(marker.read_text(encoding="utf-8").strip())
     except (OSError, ValueError):
         return 1
 
 
-def write_rules_version(run_dir: Path) -> None:
+def write_schema_version(run_dir: Path) -> None:
     run_dir.mkdir(parents=True, exist_ok=True)
-    (run_dir / RULES_FILE).write_text(str(RULES_VERSION), encoding="utf-8")
+    (run_dir / SCHEMA_FILE).write_text(str(SCHEMA_VERSION), encoding="utf-8")
 
 
 def repository_root() -> Path:
@@ -40,7 +44,7 @@ def create_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--config",
-        help="PPO config (default: Trainer/config/<hero class>_ppo.yaml).",
+        help="PPO config (default: Trainer/config/<hero class>_survivor_ppo.yaml).",
     )
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--env", default=str(DEFAULT_ENVIRONMENT))
@@ -105,7 +109,7 @@ def config_for(args: argparse.Namespace) -> str:
     if args.config:
         return args.config
     hero_class = getattr(args, "hero_class", None) or "warrior"
-    return str(CONFIG_DIRECTORY / f"{hero_class}_ppo.yaml")
+    return str(CONFIG_DIRECTORY / f"{hero_class}_survivor_ppo.yaml")
 
 
 def build_command(args: argparse.Namespace, root: Path | None = None) -> list[str]:
@@ -170,10 +174,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     learner = Path(command[0])
     config = Path(command[1])
     environment = Path(command[command.index("--env") + 1])
+    if not config.is_file():
+        if args.config is None and args.hero_class in ("mage", "archer"):
+            parser.error("Mage/Archer Survivor brains arrive in M7")
+        parser.error(f"trainer config was not found: {config}")
     if not learner.is_file():
         parser.error(f"mlagents-learn was not found: {learner}")
-    if not config.is_file():
-        parser.error(f"trainer config was not found: {config}")
     if not environment.is_file():
         parser.error(f"training environment was not found: {environment}")
     if args.num_envs < 1:

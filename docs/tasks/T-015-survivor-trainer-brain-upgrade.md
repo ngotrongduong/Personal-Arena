@@ -170,6 +170,13 @@ sections.
 
 ## Report (filled by the implementer)
 
-- Changed files:
-- Test result:
-- Notes / open questions:
+- Changed files: `Trainer/arena_trainer.py`, `Trainer/train_service.py`,
+  `Trainer/export_brain.py`, `Trainer/training_history.py`, `Trainer/README.md`, tạo
+  `Trainer/config/warrior_survivor_ppo.yaml`, và cập nhật các test
+  `test_arena_trainer.py`, `test_curricula.py`, `test_export_brain.py`,
+  `test_train_service.py`, `test_training_history.py`.
+- Test result: **69 passed** —
+  `C:\PersonalArena\.venv-ml\Scripts\python.exe -m pytest C:\PersonalArena-wt\t015\Trainer --basetemp C:\PersonalArena-wt\t015\.pytest-tmp`.
+- Notes / open questions: Không có câu hỏi mở. Test config nạp qua parser `RunOptions` thật của
+  ML-Agents 1.1.0; 7 warning đều là deprecation warning từ dependency ML-Agents cũ. Lần chạy
+  trong sandbox cần `--basetemp` bên trong worktree vì thư mục Temp của user bị chặn quyền.
