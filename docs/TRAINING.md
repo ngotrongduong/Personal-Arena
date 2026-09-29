@@ -1,75 +1,77 @@
-# Training the Warrior
+# Huấn luyện AI
 
-The M2 environment runs 16 independent headless arenas per Unity process by default. Each agent
-advances its deterministic simulation at 60 Hz and requests a new policy decision every five ticks
-(12 Hz).
+Nguồn chung cho skill `/mlagents-training` (Claude) và `train-and-report` (Codex).
 
-## Build the environment
+Môi trường M2: mỗi process Unity chạy **16 arena độc lập** (headless). Mỗi agent chạy sim Core
+60 Hz của riêng nó và ra quyết định mỗi 5 tick (12 Hz). Behavior `Warrior`, action 9/3/5.
 
-From the Unity project, run **Personal Arena > Build Training Scene**, then **Personal Arena > Build
-Training Env (Windows)**. The output is:
+## 1. Build môi trường
 
-```text
-Build/Training/PersonalArenaTraining.exe
-```
-
-The same operations can be run without opening the Editor UI:
+Trong Editor: **Personal Arena > Build Training Scene**, rồi **Personal Arena > Build Training
+Env (Windows)**. Hoặc headless (không mở Editor):
 
 ```powershell
 & "C:\Program Files\Unity\Hub\Editor\6000.3.2f1\Editor\Unity.exe" `
-  -batchmode -quit -projectPath Unity `
+  -batchmode -nographics -quit -projectPath Unity `
   -executeMethod PersonalArena.ML.Editor.TrainingSceneBuilder.Build
-
 & "C:\Program Files\Unity\Hub\Editor\6000.3.2f1\Editor\Unity.exe" `
-  -batchmode -projectPath Unity `
+  -batchmode -nographics -quit -projectPath Unity `
   -executeMethod PersonalArena.ML.Editor.TrainingBuild.BuildWindows
 ```
 
-Pass `-buildPath <directory>` to the second command to change the output directory. The build has
-only `Assets/Scenes/Training.unity`; the tool does not alter `EditorBuildSettings`. At runtime,
-`--arena-agents N` overrides the default 16 agents per process.
+- Kết quả: `Build/Training/PersonalArenaTraining.exe` (không commit). `-buildPath <thư mục>`
+  để đổi chỗ ra.
+- Bản build chỉ chứa `Assets/Scenes/Training.unity`; tool không đổi `EditorBuildSettings`.
+- Lúc chạy, `--arena-agents N` đổi số agent mỗi process (mặc định 16).
+- **Luôn có `-quit`** với `-executeMethod` đồng bộ, nếu không Unity treo mãi sau khi xong.
 
-## Start training
+## 2. Chạy
 
-Run from the repository root:
-
-```powershell
-& .venv-ml\Scripts\python.exe Trainer\arena_trainer.py --run-id warrior-v1
-```
-
-The wrapper defaults to four Unity processes, time scale 20, no graphics, the built environment
-above, and `Trainer/config/warrior_ppo.yaml`. Inspect the exact command without launching anything:
+Từ gốc repo (`C:\PersonalArena`, nơi có `.venv-ml`):
 
 ```powershell
-& .venv-ml\Scripts\python.exe Trainer\arena_trainer.py --run-id warrior-v1 --dry-run
-```
-
-The curriculum uses 1, 2, 4, 8, then 16 zombies. Its smoothed-reward threshold of 6 and minimum 300
-episodes per lesson are initial estimates; tune them after inspecting real learning curves. The
-`warrior_ppo_randomized.yaml` variant keeps the first four lessons fixed and randomizes arena size
-from 14 to 32 and zombie HP, damage, and speed multipliers from 0.8 to 1.25 in the final lesson.
-
-## Monitor, resume, and fine-tune
-
-Start TensorBoard in another terminal:
-
-```powershell
+# Wrapper: 4 process, time-scale 20, no-graphics, config warrior_ppo.yaml, ra Trainer/runs/
+& .venv-ml\Scripts\python.exe Trainer\arena_trainer.py --run-id warrior-001
+& .venv-ml\Scripts\python.exe Trainer\arena_trainer.py --run-id warrior-001 --dry-run   # chỉ in lệnh
+& .venv-ml\Scripts\python.exe Trainer\arena_trainer.py --run-id warrior-001 --resume
+& .venv-ml\Scripts\python.exe Trainer\arena_trainer.py --run-id warrior-ft --initialize-from warrior-001
+# Gọi thẳng mlagents-learn (vd. smoke test 1 process):
+& .venv-ml\Scripts\mlagents-learn.exe Trainer/config/warrior_ppo.yaml --run-id smoke `
+  --env Build/Training/PersonalArenaTraining.exe --num-envs 1 --time-scale 20 --no-graphics `
+  --results-dir Trainer/runs
 & .venv-ml\Scripts\tensorboard.exe --logdir Trainer/runs
 ```
 
-Resume an interrupted run using the same run ID:
+- Kết quả ở `Trainer/runs/<run-id>/` (không commit). Model: `Trainer/runs/<run-id>/Warrior.onnx`.
+- Đặt tên run: `<class>-<3 số>` và ghi 1 dòng vào bảng "Nhật ký run" bên dưới.
+- Config:
+  - `warrior_ppo.yaml`: curriculum `zombie_count` 1→2→4→8→16, arena cố định 20 m.
+  - `warrior_ppo_randomized.yaml`: giữ 4 bài đầu, bài cuối random `arena_size` 14–32 và
+    `hp_mult` / `damage_mult` / `speed_mult` 0.8–1.25.
+- Ngưỡng curriculum (reward 6, tối thiểu 300 episode mỗi bài) là **ước lượng đầu**: chỉnh
+  sau run thật.
+- Environment parameters mà `HeroAgent` đọc: `zombie_count`, `arena_size`, `hp_mult`,
+  `damage_mult`, `speed_mult`.
 
-```powershell
-& .venv-ml\Scripts\python.exe Trainer\arena_trainer.py --run-id warrior-v1 --resume
-```
+## 3. Đọc kết quả (TensorBoard)
 
-Initialize a new run from an earlier run:
+| Chỉ số | Mong đợi | Nếu sai |
+|---|---|---|
+| `Environment/Cumulative Reward` | tăng dần | phẳng: reward quá thưa hoặc sai dấu → chạy test dấu reward |
+| `Policy/Entropy` | giảm chậm | sụp nhanh về 0: tăng `beta`; không giảm: reward nhiễu |
+| `Environment/Episode Length` | tăng (sống lâu hơn) | |
+| `Environment/Lesson` (curriculum) | lên dần 0→4 | kẹt: hạ `threshold` hoặc tăng `min_lesson_length` |
+| `Losses/Value Loss` | giảm rồi ổn định | tăng mãi: `normalize: true`, giảm `learning_rate` |
+| `Arena/*` (kill, sống sót, backstab, parry…) | tăng | ghi bởi `EpisodeStats` trong `HeroAgent` |
 
-```powershell
-& .venv-ml\Scripts\python.exe Trainer\arena_trainer.py `
-  --run-id warrior-finetune --initialize-from warrior-v1
-```
+## 4. Bài học từ video Pezzza
 
-ML-Agents writes checkpoints and the exported model beneath `Trainer/runs/<run-id>/`. The final
-Warrior model is normally `Trainer/runs/<run-id>/Warrior.onnx`; checkpoint exports can also appear
-under the same run directory. Runs and ONNX files are intentionally ignored by source control.
+- Kiểm tra **dấu** mọi reward term (agent không bao giờ dùng giáo vì phạt nhầm).
+- Curriculum số zombie 1→2→4→8→16; chỉ lên cấp khi reward ổn định.
+- Quyết định 12 Hz; video dùng ~92 tia 360°, mình dùng 72 (D-013).
+
+## 5. Nhật ký run
+
+| Run id | Ngày | Config | Bước | Kết quả | Ghi chú |
+|---|---|---|---|---|---|
+| — | | | | | |

@@ -1,0 +1,17 @@
+# Bảng việc
+
+Cập nhật mỗi khi đổi trạng thái. Chi tiết ở từng file task. Việc đã xong trước khi có bảng
+này (M0 scaffold, Unity project, Core M1) ghi ở `docs/STATUS.md`.
+
+| Task | Tiêu đề | Owner | Trạng thái | Milestone | Song song được với |
+|---|---|---|---|---|---|
+| [T-001](T-001-verify-gpu-training.md) | Xác nhận venv ML + GPU (smoke test) | Claude (PC) | done (xem STATUS) | M0 | tất cả |
+| [T-002](T-002-onnx-runtime-spike.md) | Spike nạp ONNX lúc runtime trong bản build | Claude | todo | M0 | tất cả |
+| [T-003](T-003-arena-view-runner.md) | `ArenaRunner`, `HeroView`, `ZombieView` | Codex | done (PR #5) | M1 | |
+| [T-004](T-004-keyboard-mouse-input.md) | Điều khiển bàn phím + chuột | Codex | done (PR #5) | M1 | |
+| [T-005](T-005-arena-hud.md) | HUD máu / năng lượng / cooldown | Codex | done (PR #5) | M1 | |
+| [T-006](T-006-manual-arena-scene.md) | Scene chơi tay (`ArenaPlay`) → đóng M1 | Claude (PC) | done (PR #5) | M1 | |
+| [T-007](T-007-hero-agent-spec.md) | `HeroAgent` + env train + trainer (mở M2) | Claude + Codex | done (PR M2, xem `docs/M2-agent-notes.md`) | M2 | |
+| T-008 | Training thật Warrior, chỉnh curriculum, ghi Nhật ký run | Claude (PC) | todo | M2 | T-002 |
+| T-009 | Ghi demo chơi tay → BC/GAIL khởi động | Claude + Codex | todo | M2 | T-008 |
+| T-010 | Chế độ "AI chơi" trong `ArenaPlay` (nạp `Warrior.onnx`) | Codex | todo (sau T-002) | M2 | T-008 |
