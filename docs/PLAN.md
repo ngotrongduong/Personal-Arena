@@ -32,7 +32,7 @@ tiến độ hiện tại ở `docs/STATUS.md`.
 ## Kiến trúc
 
 ```
-PersonalArena/ (repo private ngotrongduong/Personal-Arena)
+PersonalArena/ (repo public ngotrongduong/Personal-Arena, D-015)
   Unity/                      Unity project
     Assets/Arena/Core/        logic thuần C# (không MonoBehaviour), test bằng dotnet (CoreTests/)
       Combat (máu, năng lượng, cooldown, stun, backstab, parry), SkillSystem, ArenaRules
@@ -114,7 +114,7 @@ và hạ zombie, thưởng backstab/parry, phạt khi mất máu và khi chết.
 
 | # | Milestone | Kết quả nghiệm thu |
 |---|---|---|
-| M0 | **Thiết lập và spike**: repo private, Unity project, `.gitignore` Unity, cài uv + Py 3.10.12 + torch cu121 + mlagents 1.1.0, package ML-Agents 4.x; chạy thử 3DBall/`mlagents-learn` trên GPU; spike nạp ONNX runtime trong build | Train mẫu chạy; biết chắc cách nạp model runtime |
+| M0 | **Thiết lập và spike**: repo GitHub, Unity project, `.gitignore` Unity, cài uv + Py 3.10.12 + torch cu121 + mlagents 1.1.0, package ML-Agents 4.x; chạy thử 3DBall/`mlagents-learn` trên GPU; spike nạp ONNX runtime trong build | Train mẫu chạy; biết chắc cách nạp model runtime |
 | M1 | **Arena chơi tay**: Warrior + Walker, combat giống video (đâm, đá choáng, khiên/parry, backstab), camera top-down, HUD máu/năng lượng; logic Core có test EditMode | Bạn chơi được 1 đấu N zombie |
 | M2 | **Warrior tự học**: `HeroAgent`, reward, nhiều arena song song, curriculum 1→2→4→8→16, xem model trong Editor; demo bạn chơi → BC | Agent hạ ổn định 1 zombie rồi lên 16; dashboard TensorBoard |
 | M3 | **Nội dung data-driven**: Mage, Archer, 4 loại zombie, `ArenaConfig` (kích thước, độ khó, trộn loại) + random hóa khi train; model nền cho 3 class | 3 class tự học; cấu hình arena bất kỳ trong khoảng cho phép vẫn đánh được |

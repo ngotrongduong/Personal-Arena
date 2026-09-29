@@ -18,3 +18,5 @@ Mỗi quyết định có mã `D-xxx`. Muốn đổi thì thêm quyết định 
 | D-010 | 2026-09-29 | Chia việc: Codex làm task nhỏ theo file trong `docs/tasks/`, không chạy git; Claude review, git, tích hợp | Hai AI làm song song, không đụng nhau |
 | D-011 | 2026-09-29 | Asset chỉ dùng CC0/MIT: Quaternius, Kenney | Không lo bản quyền |
 | D-012 | 2026-09-29 | Tài liệu cho owner viết tiếng Việt; code, commit, prompt agent viết tiếng Anh | Owner đọc dễ, agent làm việc chuẩn |
+| D-015 | 2026-09-29 | **Thay D-002:** repo để **public**. Hệ quả: tuyệt đối không commit secret, token, dữ liệu cá nhân | Owner chọn: repo public thì GitHub Actions (CI) miễn phí, private phải trả phí |
+| D-016 | 2026-09-29 | Owner dừng dự án PersonalGameAI; **mọi công sức chỉ dồn vào Personal Arena** | Owner chọn hướng đi |

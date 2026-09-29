@@ -3,6 +3,12 @@
 > File này là "bộ nhớ" giữa các phiên. Đọc đầu tiên, cập nhật cuối cùng.
 > Cập nhật lần cuối: 2026-09-29 tối (phiên Claude, PC — rà soát & thống nhất).
 
+## Hướng đi
+
+- **Chỉ tập trung vào Personal Arena** (D-016). Dự án PersonalGameAI đã dừng; không làm gì
+  thêm ở đó trừ khi owner yêu cầu.
+- Repo để **public** để CI trên GitHub chạy miễn phí (D-015) → không bao giờ commit secret.
+
 ## Đang ở đâu
 
 - **Milestone:** M0 xong (trừ spike ONNX), **M1 xong** (chơi tay được), **M2 phần code xong**
@@ -61,8 +67,8 @@
 
 ## Vướng mắc / câu hỏi mở
 
-- **CI chưa chạy được:** GitHub báo lỗi thanh toán Actions. Owner vào GitHub → Settings →
-  Billing & plans để sửa. Workflow đã sẵn sàng (`.github/workflows/ci.yml`).
+- CI (`.github/workflows/ci.yml`) **đã chạy xanh** trên mọi lần push từ 2026-09-29 (repo public
+  nên miễn phí). Không còn vướng thanh toán.
 - Unity MCP: đề xuất CoplayDev `unity-mcp` (D-008), chưa cài.
 - Core dùng 72 tia, video ~92. Giữ 72 cho tới khi training cho thấy cần hơn.
 - Package Inference tự thêm define `SENTIS_ANALYTICS_ENABLED` (analytics phía Editor). Xem lại
@@ -75,6 +81,8 @@
 - Sửa lỗi: `TrainingBuild` để lại cài đặt player 640x360/windowed cho cả game → nay lưu và trả lại
   trong `finally`. Đã kiểm: build env OK, `ProjectSettings.asset` không đổi, EditMode 18/18, pytest 3/3.
 - `main` fast-forward = `develop`; xóa worktree `-m1view`, `-m2agent` và các nhánh tính năng đã merge.
+- Owner chốt hướng: dừng PersonalGameAI, chỉ làm Personal Arena (D-016); repo public để CI miễn
+  phí (D-015, thay D-002). CI đã xanh. Cập nhật PLAN, AGENTS, DECISIONS cho khớp.
 - Lưu ý: chạy test EditMode làm package Inference bỏ define `SENTIS_ANALYTICS_ENABLED` trong
   `ProjectSettings.asset` — đừng commit thay đổi đó cho tới khi quyết định chuyện analytics.
 

@@ -51,6 +51,8 @@ set it to `review`. Claude reviews, commits and sets `done`.
   `Co-Authored-By` trailer the harness gives you.
 - Never commit trained models (`*.onnx`, `*.sentis`), demos (`*.demo`), `results/`, saves,
   logs or Unity `Library/`. **Do** commit every Unity `.meta` file next to its asset.
+- The repo is **public** (D-015, keeps GitHub Actions free). Never commit secrets, tokens,
+  credentials, personal data or machine-private files. Do not make it private: that costs money.
 
 ## 5. Product rules
 
