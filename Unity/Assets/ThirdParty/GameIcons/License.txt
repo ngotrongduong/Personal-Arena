@@ -1,0 +1,22 @@
+Skill icons from game-icons.net
+https://game-icons.net  (source repository: https://github.com/game-icons/icons)
+
+License: Creative Commons Attribution 3.0 Unported (CC BY 3.0)
+https://creativecommons.org/licenses/by/3.0/
+
+Changes: rendered white on transparent, resized to 256x256 and renamed to the skill id.
+In game, each glyph is drawn over a colored badge.
+
+File                              Icon                  Author
+Resources/SkillIcons/spear-strike     spear-hook            Lorc (https://lorcblog.blogspot.com)
+Resources/SkillIcons/kick             boot-kick             Lorc
+Resources/SkillIcons/shield-block     shield-impact         Delapouite (https://delapouite.com)
+Resources/SkillIcons/dash             sprint                Lorc
+Resources/SkillIcons/fireball         fireball              Lorc
+Resources/SkillIcons/frost-nova       snowflake-1           Lorc
+Resources/SkillIcons/blink            teleport              Lorc
+Resources/SkillIcons/mana-shield      magic-shield          Lorc
+Resources/SkillIcons/arrow            high-shot             Lorc
+Resources/SkillIcons/piercing-arrow   supersonic-arrow      Lorc
+Resources/SkillIcons/leap-back        return-arrow          Lorc
+Resources/SkillIcons/concussive-arrow charged-arrow         Lorc

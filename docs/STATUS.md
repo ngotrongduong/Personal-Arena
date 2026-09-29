@@ -119,6 +119,13 @@
 
 ## Nhật ký phiên (mới nhất trên cùng)
 
+### 2026-09-30 01:00 — Claude (PC): icon skill từ game-icons.net
+- Owner duyệt dùng icon miễn phí và đặt hướng mới: **ưu tiên asset có sẵn / free** (D-025, thay D-011;
+  cho phép CC BY nếu ghi công trong `ThirdParty/CREDITS.md`).
+- 12 icon của Lorc/Delapouite (CC BY 3.0) ở `ThirdParty/GameIcons/Resources/SkillIcons/<skill-id>.png`;
+  `SkillIconFactory` giữ nền màu, thay hình tự vẽ bằng icon này; `SkillIconImporter` giữ ảnh đọc được lúc chạy.
+- EditMode 48/48, build lại `Build/Watch`, ảnh chụp Archer thấy icon mới. warrior-003 vẫn train (3.18M, reward 70.9, 4 zombie).
+
 ### 2026-09-29 23:00 – 2026-09-30 00:45 — Claude (PC): M3 vào game, icon skill
 - M3 tích hợp đủ: 4 loại zombie (Walker/Runner/Brute/Spitter), 3 class (Warrior/Mage/Archer), luật v3,
   883 quan sát. Trình xem: phím H đổi class, M đổi kiểu zombie, nút TRAIN train class đang chọn.
