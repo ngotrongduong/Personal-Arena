@@ -40,6 +40,7 @@ __pycache__/
 results/
 summaries/
 Trainer/runs/
+/Build/
 
 # Trained brains, demos, saves (large / personal) — never commit
 *.onnx

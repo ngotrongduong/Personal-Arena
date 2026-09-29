@@ -1,0 +1,20 @@
+{
+    "name": "PersonalArena.ML.Editor",
+    "rootNamespace": "PersonalArena.ML.Editor",
+    "references": [
+        "PersonalArena.Core",
+        "PersonalArena.ML",
+        "Unity.ML-Agents"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

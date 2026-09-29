@@ -2,24 +2,58 @@
 
 Nguồn chung cho skill `/mlagents-training` (Claude) và `train-and-report` (Codex).
 
-## Chạy
+Môi trường M2: mỗi process Unity chạy **16 arena độc lập** (headless). Mỗi agent chạy sim Core
+60 Hz của riêng nó và ra quyết định mỗi 5 tick (12 Hz). Behavior `Warrior`, action 9/3/5.
+
+## 1. Build môi trường
+
+Trong Editor: **Personal Arena > Build Training Scene**, rồi **Personal Arena > Build Training
+Env (Windows)**. Hoặc headless (không mở Editor):
 
 ```powershell
-cd C:\PersonalArena
-# Trong Editor (bấm Play khi thấy "Listening on port 5004"):
-.venv-ml\Scripts\mlagents-learn Trainer/config/warrior_ppo.yaml --run-id=warrior-001
-# Với bản build headless (nhanh hơn nhiều):
-.venv-ml\Scripts\mlagents-learn Trainer/config/warrior_ppo.yaml --run-id=warrior-002 `
-  --env=Builds/Headless/PersonalArena.exe --no-graphics --num-envs=4 --time-scale=20
-# Tiếp tục run bị dừng:           --resume
-# Fine-tune từ model nền class:    --initialize-from=warrior-base
-.venv-ml\Scripts\tensorboard --logdir results
+& "C:\Program Files\Unity\Hub\Editor\6000.3.2f1\Editor\Unity.exe" `
+  -batchmode -nographics -quit -projectPath Unity `
+  -executeMethod PersonalArena.ML.Editor.TrainingSceneBuilder.Build
+& "C:\Program Files\Unity\Hub\Editor\6000.3.2f1\Editor\Unity.exe" `
+  -batchmode -nographics -quit -projectPath Unity `
+  -executeMethod PersonalArena.ML.Editor.TrainingBuild.BuildWindows
 ```
 
-- Kết quả ở `results/<run-id>/` (không commit). Model: `results/<run-id>/Warrior.onnx`.
-- Đặt tên run: `<class>-<3 số>` và ghi 1 dòng vào bảng "Nhật ký run" bên dưới.
+- Kết quả: `Build/Training/PersonalArenaTraining.exe` (không commit). `-buildPath <thư mục>`
+  để đổi chỗ ra.
+- Bản build chỉ chứa `Assets/Scenes/Training.unity`; tool không đổi `EditorBuildSettings`.
+- Lúc chạy, `--arena-agents N` đổi số agent mỗi process (mặc định 16).
+- **Luôn có `-quit`** với `-executeMethod` đồng bộ, nếu không Unity treo mãi sau khi xong.
 
-## Đọc kết quả (TensorBoard)
+## 2. Chạy
+
+Từ gốc repo (`C:\PersonalArena`, nơi có `.venv-ml`):
+
+```powershell
+# Wrapper: 4 process, time-scale 20, no-graphics, config warrior_ppo.yaml, ra Trainer/runs/
+& .venv-ml\Scripts\python.exe Trainer\arena_trainer.py --run-id warrior-001
+& .venv-ml\Scripts\python.exe Trainer\arena_trainer.py --run-id warrior-001 --dry-run   # chỉ in lệnh
+& .venv-ml\Scripts\python.exe Trainer\arena_trainer.py --run-id warrior-001 --resume
+& .venv-ml\Scripts\python.exe Trainer\arena_trainer.py --run-id warrior-ft --initialize-from warrior-001
+# Gọi thẳng mlagents-learn (vd. smoke test 1 process):
+& .venv-ml\Scripts\mlagents-learn.exe Trainer/config/warrior_ppo.yaml --run-id smoke `
+  --env Build/Training/PersonalArenaTraining.exe --num-envs 1 --time-scale 20 --no-graphics `
+  --results-dir Trainer/runs
+& .venv-ml\Scripts\tensorboard.exe --logdir Trainer/runs
+```
+
+- Kết quả ở `Trainer/runs/<run-id>/` (không commit). Model: `Trainer/runs/<run-id>/Warrior.onnx`.
+- Đặt tên run: `<class>-<3 số>` và ghi 1 dòng vào bảng "Nhật ký run" bên dưới.
+- Config:
+  - `warrior_ppo.yaml`: curriculum `zombie_count` 1→2→4→8→16, arena cố định 20 m.
+  - `warrior_ppo_randomized.yaml`: giữ 4 bài đầu, bài cuối random `arena_size` 14–32 và
+    `hp_mult` / `damage_mult` / `speed_mult` 0.8–1.25.
+- Ngưỡng curriculum (reward 6, tối thiểu 300 episode mỗi bài) là **ước lượng đầu**: chỉnh
+  sau run thật.
+- Environment parameters mà `HeroAgent` đọc: `zombie_count`, `arena_size`, `hp_mult`,
+  `damage_mult`, `speed_mult`.
+
+## 3. Đọc kết quả (TensorBoard)
 
 | Chỉ số | Mong đợi | Nếu sai |
 |---|---|---|
@@ -28,15 +62,16 @@ cd C:\PersonalArena
 | `Environment/Episode Length` | tăng (sống lâu hơn) | |
 | `Environment/Lesson` (curriculum) | lên dần 0→4 | kẹt: hạ `threshold` hoặc tăng `min_lesson_length` |
 | `Losses/Value Loss` | giảm rồi ổn định | tăng mãi: `normalize: true`, giảm `learning_rate` |
+| `Arena/*` (kill, sống sót, backstab, parry…) | tăng | ghi bởi `EpisodeStats` trong `HeroAgent` |
 
-## Bài học từ video Pezzza
+## 4. Bài học từ video Pezzza
 
 - Kiểm tra **dấu** mọi reward term (agent không bao giờ dùng giáo vì phạt nhầm).
 - Curriculum số zombie 1→2→4→8→16; chỉ lên cấp khi reward ổn định.
 - Quyết định 12 Hz; video dùng ~92 tia 360°, mình dùng 72 (D-013).
 
-## Nhật ký run
+## 5. Nhật ký run
 
 | Run id | Ngày | Config | Bước | Kết quả | Ghi chú |
 |---|---|---|---|---|---|
-| — | | | | | |
+| smoke | 2026-09-29 | warrior_ppo.yaml, 1 env × 16 arena, time-scale 20, RTX 4070 Ti | 210k (5 phút) | Mean reward −0.01 → 15.4; tự lên bài 2 (TwoZombies) | Chỉ để kiểm tra pipeline; ~700 bước/s |
