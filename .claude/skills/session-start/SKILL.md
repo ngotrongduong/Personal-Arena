@@ -5,7 +5,8 @@ description: Rebuild context at the start of a Personal Arena session - read STA
 
 # Session start
 
-1. Sync: `git fetch origin && git status -sb`. If `main` is behind, `git pull --ff-only`.
+1. Sync: `git fetch origin develop main` (cloud clones are shallow, `main` only by default),
+   `git checkout develop` (create from `origin/develop` if missing), `git pull --ff-only`.
    If there are uncommitted changes, they are probably Codex work: note them, do not discard.
 2. Read `docs/STATUS.md` fully, then `docs/tasks/BOARD.md`.
 3. `git log --oneline -15` — anything newer than the last STATUS session log entry means

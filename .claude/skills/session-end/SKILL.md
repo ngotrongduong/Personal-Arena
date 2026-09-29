@@ -18,5 +18,7 @@ description: Close a Personal Arena session so the next one starts exactly where
 3. `docs/DECISIONS.md`: add any choice made this session that later work depends on.
 4. `docs/TRAINING.md`: log any real training run.
 5. Git: commit on the current branch (`docs(status): session YYYY-MM-DD` if only docs), merge
-   `--no-ff` into `main` if the branch is done and CI-safe, `git push origin main <branch>`.
+   `--no-ff` into `develop` if the branch is done, push. If `develop` is stable (tests pass),
+   fast-forward `main` (`git push origin develop:main`) so the default branch shows the
+   current STATUS; otherwise at least cherry-pick the STATUS/BOARD commit onto `main`.
 6. Tell the owner in 2–4 Vietnamese lines what was done and what is next.

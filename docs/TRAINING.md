@@ -33,7 +33,7 @@ cd C:\PersonalArena
 
 - Kiểm tra **dấu** mọi reward term (agent không bao giờ dùng giáo vì phạt nhầm).
 - Curriculum số zombie 1→2→4→8→16; chỉ lên cấp khi reward ổn định.
-- Quyết định 12 Hz; ~90 tia 360°.
+- Quyết định 12 Hz; video dùng ~92 tia 360°, mình dùng 72 (D-013).
 
 ## Nhật ký run
 

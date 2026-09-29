@@ -1,10 +1,10 @@
-# T-006: Spike — load an ONNX model at runtime in a player build
+# T-002: Spike — load an ONNX model at runtime in a player build
 
 - **Owner:** Claude (on the linked PC) + Owner
 - **Status:** todo
 - **Milestone:** M0
-- **Parallel OK with:** T-001..T-003
-- **Depends on:** T-000
+- **Parallel OK with:** T-003..T-005
+- **Depends on:** T-001 (GPU/venv confirmed). Packages already installed: ml-agents 4.1.0, ai.inference 2.6.1
 
 ## Question
 

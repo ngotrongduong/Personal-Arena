@@ -13,8 +13,9 @@ Versions: `com.unity.ml-agents` 4.x, `mlagents==1.1.0`, venv `.venv-ml` (see `do
 - One YAML per class: `Trainer/config/<class>_ppo.yaml`, behavior name = class name
   (`Warrior`, `Mage`, `Archer`), must equal `BehaviorParameters.BehaviorName` in Unity.
 - `environment_parameters` names must match what `HeroAgent` reads via
-  `Academy.Instance.EnvironmentParameters.GetWithDefault(...)`: `zombie_count`, `arena_size`,
-  `kind_mix_runner`, `kind_mix_brute`, `kind_mix_spitter`, `health_mult`, `damage_mult`.
+  `Academy.Instance.EnvironmentParameters.GetWithDefault(...)` and map onto `ArenaConfig`:
+  `zombie_count`, `arena_size`, `hp_mult`, `damage_mult`, `speed_mult`,
+  `kind_mix_runner`, `kind_mix_brute`, `kind_mix_spitter` (M3).
 - Change one hyperparameter at a time; record why in the run log.
 
 ## Run
