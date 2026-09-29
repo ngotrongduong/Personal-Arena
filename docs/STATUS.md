@@ -1,7 +1,7 @@
 # Trạng thái dự án
 
 > File này là "bộ nhớ" giữa các phiên. Đọc đầu tiên, cập nhật cuối cùng.
-> Cập nhật lần cuối: 2026-09-29 19:30 (phiên Claude, PC — luật v2: sàn tròn trên vực, hiệu ứng, camera tự do, màn hình TRAINING DATA).
+> Cập nhật lần cuối: 2026-09-29 22:45 (phiên Claude, PC — sửa 2 lỗi hình: chấm trắng trên đầu, vệt đen quanh khiên).
 
 ## Hướng đi
 
@@ -109,6 +109,15 @@
   trước khi phát hành để đảm bảo game không gọi mạng.
 
 ## Nhật ký phiên (mới nhất trên cùng)
+
+### 2026-09-29 22:45 — Claude (PC): sửa lỗi hình (chấm trắng, vệt đen)
+- Chấm trắng trên đầu mọi nhân vật: `CreateStunStars` gọi `SetVisible(false)` nhưng `Visible` mặc định đã
+  false nên hàm return sớm → 3 sao choáng nằm phẳng trên đầu suốt trận. Giờ tắt trực tiếp khi tạo.
+- Sao choáng làm lại: sao vàng 5 cánh viền cam đậm (alpha-blend, `FxAssets.StunStarMaterial`), to hơn,
+  quay rộng hơn; zombie bị choáng còn lắc lư chóng mặt (`BodyRoot.localRotation`).
+- Vệt đen quanh warrior: mép khiên Block. `Sin(PI)` float ra -8.7e-8, `Pow(âm, 0.8)` = NaN → mép đen.
+  Kẹp về 0 (`BuildShieldBand`); cũng kẹp độ mờ của nhát chém.
+- Build lại `Build/Watch`, kiểm tra ảnh chụp: hết chấm trắng, khiên không còn viền đen. warrior-002 vẫn train (~40.7M).
 
 ### 2026-09-29 16:30–19:30 — Claude (PC): luật v2, đồ họa sống động, TRAINING DATA
 - Owner muốn: đấu trường tròn giữa vực (rơi là chết, cả zombie), rộng hơn; di chuyển mượt, dash
