@@ -19,11 +19,16 @@ namespace PersonalArena.Core
         }
     }
 
-    /// <summary>Validated settings for one deterministic arena episode.</summary>
+    /// <summary>
+    /// Validated settings for one deterministic arena episode. The arena is a round platform
+    /// inscribed in the Width x Height box and surrounded by an abyss.
+    /// </summary>
     public sealed class ArenaConfig
     {
-        public float Width = 20f;
-        public float Height = 20f;
+        public const float DefaultSize = 28f;
+
+        public float Width = DefaultSize;
+        public float Height = DefaultSize;
         public int ZombieCount = 1;
         public ZombieSpawnEntry[] ZombieSpawns =
             { new ZombieSpawnEntry(DefaultDefs.Walker()) };
@@ -32,7 +37,17 @@ namespace PersonalArena.Core
         public float SpeedMultiplier = 1f;
         public float EpisodeSeconds = 120f;
         public bool RespawnKilledZombies = true;
+        public float PotionDropChance = 0.15f;
+        public float PotionHeal = 30f;
+        public float PotionLifetime = 15f;
+        public int MaxPotions = 4;
         public int Seed = 1;
+
+        /// <summary>Centre of the round platform.</summary>
+        public Vec2 Center => new Vec2(Width * 0.5f, Height * 0.5f);
+
+        /// <summary>Radius of the round platform; beyond it is the abyss.</summary>
+        public float Radius => MathF.Min(Width, Height) * 0.5f;
 
         public void Validate()
         {
@@ -46,6 +61,14 @@ namespace PersonalArena.Core
             ValidateRange(HpMultiplier, 0.25f, 4f, nameof(HpMultiplier));
             ValidateRange(DamageMultiplier, 0.25f, 4f, nameof(DamageMultiplier));
             ValidateRange(SpeedMultiplier, 0.25f, 4f, nameof(SpeedMultiplier));
+            ValidateRange(PotionDropChance, 0f, 1f, nameof(PotionDropChance));
+            ValidateRange(PotionHeal, 0f, 1000f, nameof(PotionHeal));
+            ValidateRange(PotionLifetime, 0.1f, 600f, nameof(PotionLifetime));
+            if (MaxPotions < 0 || MaxPotions > 32)
+            {
+                throw new ArgumentException("MaxPotions must be between 0 and 32.", nameof(MaxPotions));
+            }
+
             if (EpisodeSeconds <= 0f || float.IsNaN(EpisodeSeconds) || float.IsInfinity(EpisodeSeconds))
             {
                 throw new ArgumentException("EpisodeSeconds must be greater than zero.", nameof(EpisodeSeconds));

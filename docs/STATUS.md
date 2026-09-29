@@ -1,7 +1,7 @@
 # Trạng thái dự án
 
 > File này là "bộ nhớ" giữa các phiên. Đọc đầu tiên, cập nhật cuối cùng.
-> Cập nhật lần cuối: 2026-09-29 16:30 (phiên Claude, PC — train tự hồi phục khi crash, nút Power).
+> Cập nhật lần cuối: 2026-09-29 19:30 (phiên Claude, PC — luật v2: sàn tròn trên vực, hiệu ứng, camera tự do, màn hình TRAINING DATA).
 
 ## Hướng đi
 
@@ -12,8 +12,9 @@
 ## Đang ở đâu
 
 - **Milestone:** M0 xong, **M1 xong** (chơi tay được), **M2 phần code xong** (agent + môi trường
-  train + trainer + **trình xem AI chơi**). Đang: training thật `warrior-001`. Còn: chỉnh
-  curriculum, BC từ demo.
+  train + trainer + **trình xem AI chơi**). **Luật v2 (D-022)**: sàn tròn trên vực sâu, kick
+  hất lùi, block làm choáng, dash lướt thật, bình máu. Đang: training thật `warrior-002` (luật v2;
+  não `warrior-001` là luật cũ, không nạp được nữa). Còn: BC từ demo.
   Chi tiết milestone ở `docs/PLAN.md`.
 - **Nhánh:** làm việc trên `develop` (nhánh tính năng → PR merge commit vào `develop`); `main`
   fast-forward theo `develop` khi ổn định.
@@ -34,8 +35,8 @@
     ONNX). Hướng dẫn: `docs/TRAINING.md` mục 4.
   - **Đồ họa KayKit (feature/kaykit-art, D-018):** hiệp sĩ kiếm + khiên, bộ xương làm zombie
     (3 kiểu), hoạt ảnh chạy/chém/đá/đỡ/lướt/trúng đòn/chết/trồi lên (`CharacterAnimator`,
-    Playables theo đồng hồ sim), hầm ngục + đuốc lập lòe (`DungeonDressing`), camera phối cảnh
-    nghiêng. Asset ở `Unity/Assets/ThirdParty/KayKit` (CC0, `CREDITS.md`); map bằng
+    Playables theo đồng hồ sim), camera phối cảnh nghiêng. (Hầm ngục `DungeonDressing` đã bỏ ở
+    luật v2, thay bằng `ArenaStage`.) Asset ở `Unity/Assets/ThirdParty/KayKit` (CC0, `CREDITS.md`); map bằng
     `Assets/Arena/View/Art/KayKitArtSet.asset` (dựng lại: menu *Personal Arena/Rebuild KayKit Art
     Set*). Scene training không dùng renderer nên huấn luyện không bị ảnh hưởng.
   - Owner **chỉ xem AI tự học, không chơi tay** (D-019) → mọi việc hiển thị nhắm vào `Xem-AI.cmd`.
@@ -48,7 +49,14 @@
     từ checkpoint (2 lần crash nhanh → CPU); lỗi service ghi `training_service.err.log` và hiện
     lên bảng. Nút Power LIGHT/NORMAL/FAST/MAX = 32/64/128/256 arena cùng lúc (mặc định FAST,
     MAX ~2 lần nhanh hơn mức cũ). Bảng đo ở `docs/TRAINING.md` mục 4.
-  - Test: Unity EditMode 32/32, CoreTests 58/58, pytest trainer 34/34.
+  - **Luật v2 + đồ họa mới (feature/arena-v2, D-022):** Core: sàn tròn bán kính 14 (arena 28),
+    rơi vực = chết (`HeroFell`/`ZombieFell`), kick knockback, block stagger, dash 18 m/s, gia tốc,
+    bình máu; quan sát 811; `ArenaSim.RulesVersion = 2` ghi vào `rules_version.txt` của run.
+    View: `ArenaStage` (sàn đá tròn, vực, đảo đá bay, đuốc), `ArenaEffects` (vệt chém, sóng kick,
+    khiên block + sao choáng, bóng mờ dash, bình máu, hạt bụi), di chuyển nội suy mượt, HUD bo góc
+    có hiệu ứng, `TopDownCamera` xoay/zoom/dời + 3 chế độ, màn hình **TRAINING DATA** (nút hoặc
+    phím `G`, 6 đồ thị từ `training_history.json` do `Trainer/training_history.py` ghi).
+  - Test: Unity EditMode 38/38, CoreTests 73/73, pytest trainer 47/47.
   - **Smoke training 5 phút trên GPU:** mean reward −0.01 → 15.4, curriculum tự lên 2 zombie.
     AI học được thật; pipeline chạy đầu-cuối.
 
@@ -64,15 +72,16 @@
 | Đồ họa KayKit + hoạt ảnh cho trình xem AI | xong (D-018) |
 | Nút train trong trình xem AI | xong (D-020) — đã thử bật, dừng, đóng game: đều lưu êm |
 | Train tự hồi phục khi crash + nút Power | xong (D-021) — đã thử đổi FAST→MAX lúc đang train: lưu + chạy lại trong 1 s |
-| M2: training thật, curriculum lên 16 zombie | `warrior-001` đang train ở mức MAX (10.5M bước lúc 16:22). Curriculum đang ở bài 1 zombie (mất khi kill cứng ở 9.5M, các phiên sau quá ngắn để leo lại) — cứ train liên tục là tự lên |
+| Luật v2: sàn tròn + vực, kick/block/dash thật, bình máu, hiệu ứng, camera, TRAINING DATA | xong (D-022) — đã chụp bản build: sàn tròn, HUD, 6 đồ thị đúng |
+| M2: training thật, curriculum lên 16 zombie | `warrior-002` (luật v2) đang train ở MAX: 24M bước lúc 19:16, đã lên 16 zombie từ ~3M, reward ~290, rơi vực 4.8% (từ ~97%) |
 | M2: ghi demo chơi tay → BC/GAIL | **chưa** |
 
 ## Việc tiếp theo (theo thứ tự)
 
-1. **Training Warrior:** owner bật/tắt bằng nút trong `Xem-AI.cmd`. `warrior-001` từng bị kill
-   cứng nên curriculum về lại bài 1 zombie ở 9.5M (sẽ tự leo lại; từ nay dừng êm nên giữ được).
-   Curriculum lên 16 zombie ở ~480k bước — ngưỡng 6 quá dễ. Khi đủ lâu: đọc TensorBoard, nâng
-   `threshold`, chạy `warrior-002`, ghi "Nhật ký run" trong `docs/TRAINING.md`.
+1. **Training Warrior:** owner bật/tắt bằng nút trong `Xem-AI.cmd`; `warrior-002` (luật v2) đang
+   train. Curriculum vẫn lên 16 zombie rất sớm (~3M) — ngưỡng dễ. AI gần như không hất zombie
+   xuống vực (đồ thị tím ~0): cân nhắc thưởng thêm cho `ZombieFell` do kick. Ghi kết quả vào
+   "Nhật ký run" trong `docs/TRAINING.md`.
 2. **Cân bằng:** với 4 zombie mặc định, hero đứng yên chết sau ~4 s — có thể quá khó cho người chơi.
 4. **M3:** Mage, Archer, 4 loại zombie (Walker/Runner/Brute/Spitter), random hóa arena.
 5. **M4:** menu, Roster/Shop (vàng trong game), Training Center (gọi trainer, dashboard), lưu/tải.
@@ -100,6 +109,18 @@
   trước khi phát hành để đảm bảo game không gọi mạng.
 
 ## Nhật ký phiên (mới nhất trên cùng)
+
+### 2026-09-29 16:30–19:30 — Claude (PC): luật v2, đồ họa sống động, TRAINING DATA
+- Owner muốn: đấu trường tròn giữa vực (rơi là chết, cả zombie), rộng hơn; di chuyển mượt, dash
+  không như teleport; hiệu ứng cho strike/kick/block/dash; kick hất lùi, block làm choáng thấy
+  được; bình máu rớt từ zombie; camera xoay/zoom; màn hình đồ thị học tập; nút/HUD đẹp hơn.
+- Làm theo D-022 (Claude + Codex; Claude review, tích hợp, build, kiểm trên bản build). Bỏ
+  `DungeonDressing`; thêm `ArenaStage`, `ArenaEffects`, `UiSprites`, `TrainingHistoryPanel`,
+  `TrainingHistory.cs`, `Trainer/training_history.py`. Trình xem chỉ nạp não đúng `RulesVersion`.
+- Train `warrior-002` từ đầu ở MAX: 24M bước sau ~2.5 giờ, reward ~290, ~143 zombie/ván ở bài 16.
+- Lỗi đã sửa: trùng tên class `Slash` trong `ArenaEffects` (CS0102) → `SlashFx`. Click giả lập
+  vào nút TRAINING DATA không ăn (cửa sổ đổi kích thước khi focus) → thêm phím `G`.
+- Kiểm: CoreTests 73/73, pytest 47/47, EditMode 38/38, build watch OK, ảnh chụp sàn tròn + 6 đồ thị.
 
 ### 2026-09-29 15:30–16:30 — Claude (PC): train "tự tắt", nút Power
 - Owner báo bấm TRAIN thì vài giây sau tự tắt. Nguyên nhân tìm được: mlagents crash `0xC0000409`

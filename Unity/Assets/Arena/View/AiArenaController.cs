@@ -39,7 +39,7 @@ namespace PersonalArena.View
         };
 
         [Header("Arena")]
-        [SerializeField, Range(8f, 80f)] private float arenaSize = 20f;
+        [SerializeField, Range(8f, 80f)] private float arenaSize = ArenaConfig.DefaultSize;
         [SerializeField, Range(0, 64)] private int zombieCount = 4;
         [SerializeField, Min(1f)] private float episodeSeconds = 120f;
         [SerializeField] private int seed = 1;
@@ -78,6 +78,8 @@ namespace PersonalArena.View
         private string trainingNotice;
         private int powerIndex = DefaultPowerIndex;
         private bool restartWithNewPower;
+        private TrainingHistoryPanel historyPanel;
+        private TopDownCamera.ViewMode shownCameraMode;
 
         public ArenaSim Sim => sim;
         public BrainPilot Pilot => pilot;
@@ -97,8 +99,7 @@ namespace PersonalArena.View
                 runsDirectory = BrainLocator.FindRunsDirectory(Application.dataPath);
             }
 
-            arenaHud.SetHelpText(
-                "AI is playing   1-6 zombies: 1/2/4/8/16/32   Space view speed   T choice mode   R new round   Esc pause");
+            RefreshHelp();
             arenaHud.SetResultFooter("Next round starts automatically");
             if (!string.IsNullOrWhiteSpace(runsDirectory) && string.IsNullOrWhiteSpace(brainFile))
             {
@@ -107,6 +108,8 @@ namespace PersonalArena.View
                 arenaHud.TrainingButtonClicked += OnTrainingButton;
                 arenaHud.TrainingPowerClicked += OnPowerButton;
                 arenaHud.ShowTrainingPanel(true);
+                historyPanel = arenaHud.HistoryPanel;
+                historyPanel?.SetRunDirectory(BrainLocator.FindNewestRunDirectory(runsDirectory, behaviorName));
                 PollTraining();
             }
 
@@ -135,6 +138,10 @@ namespace PersonalArena.View
         private void Update()
         {
             HandleKeys();
+            if (topDownCamera.Mode != shownCameraMode)
+            {
+                RefreshHelp();
+            }
             if (Time.unscaledTime >= nextPoll)
             {
                 PollBrain();
@@ -214,7 +221,9 @@ namespace PersonalArena.View
                 return;
             }
 
-            if (keyboard.escapeKey.wasPressedThisFrame)
+            // Esc first closes the training data screen; only a second press pauses.
+            bool historyHandlesEscape = historyPanel != null && (historyPanel.IsOpen || historyPanel.ConsumedEscapeThisFrame);
+            if (keyboard.escapeKey.wasPressedThisFrame && !historyHandlesEscape)
             {
                 paused = !paused;
                 accumulator = 0f;
@@ -233,6 +242,23 @@ namespace PersonalArena.View
                 pilot.Deterministic = !pilot.Deterministic;
                 RefreshInfo();
             }
+
+            if (keyboard.gKey.wasPressedThisFrame && historyPanel != null)
+            {
+                historyPanel.Toggle();
+            }
+        }
+
+        private void RefreshHelp()
+        {
+            shownCameraMode = topDownCamera.Mode;
+            arenaHud.SetHelpText(
+                "AI is playing by itself\n" +
+                "1-6 zombies: 1/2/4/8/16/32   R new round\n" +
+                "Space view speed   T choice mode   Esc pause\n" +
+                "G training data (learning graphs)\n\n" +
+                topDownCamera.ModeLabel.ToUpperInvariant() + "\n" +
+                TopDownCamera.ControlsHint);
         }
 
         private void PollBrain()
@@ -245,9 +271,20 @@ namespace PersonalArena.View
             {
                 if (pilot.Brain == null)
                 {
-                    brainStatus = runsDirectory == null && string.IsNullOrWhiteSpace(brainFile)
-                        ? "Trainer/runs folder not found (pass -runs <folder>)."
-                        : "Waiting for the AI to save its first brain...";
+                    if (runsDirectory == null && string.IsNullOrWhiteSpace(brainFile))
+                    {
+                        brainStatus = "Trainer/runs folder not found (pass -runs <folder>).";
+                    }
+                    else if (string.IsNullOrWhiteSpace(brainFile) &&
+                        BrainLocator.FindNewestBrain(runsDirectory, behaviorName, false) != null)
+                    {
+                        brainStatus = "The arena changed: a round platform over\na deadly abyss. The old brain only knows\n" +
+                            "the square arena, so the warrior waits.\nPress TRAIN THE AI to teach it the new rules.";
+                    }
+                    else
+                    {
+                        brainStatus = "Waiting for the AI to save its first brain...";
+                    }
                 }
 
                 RefreshInfo();
@@ -283,6 +320,10 @@ namespace PersonalArena.View
                     loadedWriteTime = written;
                     loadedAt = DateTime.Now;
                     brainStatus = null;
+                    if (training == null || !trainingSnapshot.IsActive)
+                    {
+                        historyPanel?.SetRunDirectory(BrainLocator.RunDirectory(path));
+                    }
                     Debug.Log("Loaded brain " + path + " (step " + brain.Step + ").");
                 }
             }
@@ -367,6 +408,15 @@ namespace PersonalArena.View
             }
 
             TrainingStatus status = trainingSnapshot.Status;
+            if (historyPanel != null && trainingSnapshot.IsActive && status != null && !string.IsNullOrEmpty(status.run_id))
+            {
+                string activeRun = Path.Combine(runsDirectory, status.run_id);
+                if (Directory.Exists(activeRun))
+                {
+                    historyPanel.SetRunDirectory(activeRun);
+                }
+            }
+
             CultureInfo culture = CultureInfo.InvariantCulture;
             bool stopAsked = Time.unscaledTime - stopRequestedAt < StopFeedbackSeconds;
             string lastRun = status != null && status.step > 0

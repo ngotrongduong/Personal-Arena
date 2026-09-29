@@ -15,8 +15,12 @@ namespace PersonalArena.Core
         SkillUsed,
         SkillFailedCooldown,
         SkillFailedEnergy,
-        HitWall,
-        EpisodeTimeout
+        EpisodeTimeout,
+        HeroFell,
+        ZombieFell,
+        Stagger,
+        PotionDropped,
+        PotionPicked
     }
 
     /// <summary>Allocation-free event payload produced by the simulation.</summary>

@@ -40,7 +40,7 @@ namespace PersonalArena.ML.Tests
                 9);
 
             Assert.That(config.ZombieCount, Is.EqualTo(4));
-            Assert.That(config.Width, Is.EqualTo(20f));
+            Assert.That(config.Width, Is.EqualTo(ArenaConfig.DefaultSize));
             Assert.That(config.HpMultiplier, Is.EqualTo(1f));
             Assert.That(config.DamageMultiplier, Is.EqualTo(1f));
             Assert.That(config.SpeedMultiplier, Is.EqualTo(1.25f));

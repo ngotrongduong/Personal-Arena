@@ -25,6 +25,9 @@ namespace PersonalArena.ML
         private int parries;
         private float damageTaken;
         private bool died;
+        private bool fell;
+        private int ringOuts;
+        private int potionsPicked;
 
         public ArenaSim Sim { get; private set; }
         public HeroClassDef ClassDef { get; private set; }
@@ -78,6 +81,9 @@ namespace PersonalArena.ML
             parries = 0;
             damageTaken = 0f;
             died = false;
+            fell = false;
+            ringOuts = 0;
+            potionsPicked = 0;
         }
 
         public override void CollectObservations(VectorSensor sensor)
@@ -185,6 +191,15 @@ namespace PersonalArena.ML
                     case SimEventType.HeroDied:
                         died = true;
                         break;
+                    case SimEventType.HeroFell:
+                        fell = true;
+                        break;
+                    case SimEventType.ZombieFell:
+                        ringOuts++;
+                        break;
+                    case SimEventType.PotionPicked:
+                        potionsPicked++;
+                        break;
                 }
             }
         }
@@ -198,7 +213,10 @@ namespace PersonalArena.ML
                 Sim.Time,
                 died || !Sim.Hero.Alive,
                 damageTaken,
-                Sim.Config.ZombieCount);
+                Sim.Config.ZombieCount,
+                fell,
+                ringOuts,
+                potionsPicked);
 
             StatsRecorder recorder = Academy.Instance.StatsRecorder;
             recorder.Add("Arena/Kills", stats.Kills);
@@ -208,6 +226,9 @@ namespace PersonalArena.ML
             recorder.Add("Arena/Died", stats.Died ? 1f : 0f);
             recorder.Add("Arena/DamageTaken", stats.DamageTaken);
             recorder.Add("Arena/ZombieCount", stats.ZombieCount);
+            recorder.Add("Arena/Fell", stats.Fell ? 1f : 0f);
+            recorder.Add("Arena/RingOuts", stats.RingOuts);
+            recorder.Add("Arena/Potions", stats.PotionsPicked);
 
             EpisodeEnded?.Invoke(this, stats);
             EndEpisode();

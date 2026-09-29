@@ -27,12 +27,18 @@ from typing import Iterable, Sequence
 
 import numpy as np
 
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from Trainer import arena_trainer  # noqa: E402
+
 FORMAT_VERSION = 1
 MAGIC = b"PABR"
 BODY_PATTERN = re.compile(r"^network_body\._body_endoder\.seq_layers\.(\d+)\.weight$")
 BRANCH_PATTERN = re.compile(r"^action_model\._discrete_distribution\.branches\.(\d+)\.weight$")
 CHECKPOINT_PATTERN = re.compile(r"^(?P<behavior>.+)-(?P<step>\d+)\.pt$")
 LATEST_NAME = "latest.brain"
+HISTORY_INTERVAL = 30.0
 
 Layer = tuple[np.ndarray, np.ndarray]
 
@@ -182,8 +188,22 @@ def checkpoints(behavior_dir: Path) -> list[tuple[int, Path]]:
     return sorted(found)
 
 
-def newest_behavior_dir(runs_dir: Path, behavior: str) -> Path | None:
+def newest_behavior_dir(
+    runs_dir: Path, behavior: str, rules_version: int | None = None
+) -> Path | None:
     candidates = [path for path in runs_dir.glob(f"*/{behavior}") if path.is_dir() and checkpoints(path)]
+    if rules_version is None:
+        current = [
+            path
+            for path in candidates
+            if arena_trainer.run_rules_version(path.parent) == arena_trainer.RULES_VERSION
+        ]
+        if current:
+            candidates = current
+    else:
+        candidates = [
+            path for path in candidates if arena_trainer.run_rules_version(path.parent) == rules_version
+        ]
     if not candidates:
         return None
     return max(candidates, key=lambda path: max(p.stat().st_mtime for _, p in checkpoints(path)))
@@ -209,6 +229,23 @@ def export_newest(runs_dir: Path, behavior: str, exported: dict[Path, int], log=
     return output
 
 
+def write_newest_history(runs_dir: Path, behavior: str, log=print) -> Path | None:
+    try:
+        behavior_dir = newest_behavior_dir(runs_dir, behavior)
+        if behavior_dir is None:
+            return None
+        from Trainer import training_history
+
+        run_dir = behavior_dir.parent
+        output = run_dir / training_history.HISTORY_NAME
+        if training_history.write_history(run_dir, behavior) or output.is_file():
+            return output
+        return None
+    except Exception as error:  # History must never take down the watch loop.
+        log(f"[export_brain] history export failed: {error}")
+        return None
+
+
 def main(argv: Iterable[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--checkpoint", type=Path, help="Export one checkpoint and exit.")
@@ -226,14 +263,25 @@ def main(argv: Iterable[str] | None = None) -> int:
         return 0
 
     exported: dict[Path, int] = {}
-    while True:
+    if not args.watch:
         result = export_newest(args.runs_dir, args.behavior, exported)
-        if not args.watch:
-            if result is None:
-                print(f"[export_brain] no {args.behavior} checkpoints under {args.runs_dir}", file=sys.stderr)
-                return 1
-            return 0
-        time.sleep(args.interval)
+        if result is None:
+            print(f"[export_brain] no {args.behavior} checkpoints under {args.runs_dir}", file=sys.stderr)
+            return 1
+        return 0
+
+    next_export = 0.0
+    next_history = 0.0
+    while True:
+        now = time.monotonic()
+        if now >= next_export:
+            export_newest(args.runs_dir, args.behavior, exported)
+            next_export = now + args.interval
+        if now >= next_history:
+            write_newest_history(args.runs_dir, args.behavior)
+            next_history = now + HISTORY_INTERVAL
+        delay = max(0.0, min(next_export, next_history) - time.monotonic())
+        time.sleep(delay)
 
 
 if __name__ == "__main__":

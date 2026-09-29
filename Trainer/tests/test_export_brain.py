@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from Trainer import export_brain
+from Trainer import arena_trainer, export_brain
 
 
 def actor_state(obs: int = 6, hidden: int = 4, branches=(9, 3, 5), seed: int = 0) -> dict:
@@ -116,3 +116,22 @@ def test_newest_behavior_dir_and_checkpoint_order(tmp_path: Path):
     assert export_brain.newest_behavior_dir(tmp_path, "Warrior") == new
     assert [step for step, _ in export_brain.checkpoints(new)] == [1000, 20000]
     assert export_brain.newest_behavior_dir(tmp_path, "Mage") is None
+
+
+def test_newest_behavior_dir_prefers_current_rules_before_checkpoint_time(tmp_path: Path):
+    old = tmp_path / "warrior-001" / "Warrior"
+    current = tmp_path / "warrior-002" / "Warrior"
+    old.mkdir(parents=True)
+    current.mkdir(parents=True)
+    old_checkpoint = old / "Warrior-200.pt"
+    current_checkpoint = current / "Warrior-100.pt"
+    old_checkpoint.write_bytes(b"old")
+    current_checkpoint.write_bytes(b"current")
+    arena_trainer.write_rules_version(current.parent)
+    import os
+
+    os.utime(current_checkpoint, (1, 1))
+    os.utime(old_checkpoint, (2, 2))
+
+    assert export_brain.newest_behavior_dir(tmp_path, "Warrior") == current
+    assert export_brain.newest_behavior_dir(tmp_path, "Warrior", rules_version=1) == old

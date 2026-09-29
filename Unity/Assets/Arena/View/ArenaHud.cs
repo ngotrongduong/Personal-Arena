@@ -8,22 +8,55 @@ using UnityEngine.UI;
 
 namespace PersonalArena.View
 {
-    /// <summary>Runtime-built uGUI HUD for manual arena play.</summary>
+    /// <summary>Runtime-built uGUI HUD shared by manual play and the watch-AI viewer.</summary>
     public sealed class ArenaHud : MonoBehaviour
     {
+        private const int TrainingBarCount = 64;
+        private const float TrainingGraphHeight = 64f;
+        private const float BarWidth = 384f;
+
+        private static readonly Color PanelColor = new Color(0.05f, 0.055f, 0.085f, 0.86f);
+        private static readonly Color PanelEdge = new Color(0.55f, 0.6f, 0.85f, 0.18f);
+        private static readonly Color TrackColor = new Color(0.1f, 0.1f, 0.14f, 1f);
+        private static readonly Color HpColor = new Color(0.86f, 0.18f, 0.2f);
+        private static readonly Color HpLowColor = new Color(1f, 0.35f, 0.2f);
+        private static readonly Color EnergyColor = new Color(0.2f, 0.58f, 1f);
+        private static readonly Color GoldText = new Color(1f, 0.86f, 0.45f);
+        private static readonly Color[] SkillColors =
+        {
+            new Color(0.85f, 0.9f, 1f),
+            new Color(1f, 0.6f, 0.25f),
+            new Color(0.4f, 0.75f, 1f),
+            new Color(0.35f, 0.9f, 1f)
+        };
+
         private ArenaSim sim;
         private ArenaStats stats;
         private Font font;
-        private Image hpFill;
-        private Image energyFill;
+        private RectTransform hpFill;
+        private RectTransform hpTrail;
+        private Image hpFillImage;
+        private RectTransform energyFill;
+        private RectTransform energyTrail;
         private Text hpText;
         private Text energyText;
+        private float hpShown = 1f;
+        private float hpTrailShown = 1f;
+        private float energyShown = 1f;
+        private float energyTrailShown = 1f;
         private readonly Image[] cooldownFills = new Image[4];
         private readonly Text[] cooldownTexts = new Text[4];
+        private readonly Text[] skillHints = new Text[4];
+        private readonly Image[] skillGlows = new Image[4];
+        private readonly Image[] skillFrames = new Image[4];
+        private readonly float[] skillFlash = new float[4];
+        private readonly float[] lastCooldown = new float[4];
+        private bool showSkillKeys = true;
         private Text timerText;
         private Text countersText;
         private Text pauseText;
         private GameObject resultPanel;
+        private Text resultTitle;
         private Text resultText;
         private Text helpText;
         private Text infoText;
@@ -39,8 +72,7 @@ namespace PersonalArena.View
         private Text trainingText;
         private Text trainingGraphCaption;
         private readonly Image[] trainingBars = new Image[TrainingBarCount];
-        private const int TrainingBarCount = 64;
-        private const float TrainingGraphHeight = 64f;
+        private TrainingHistoryPanel historyPanel;
 
         /// <summary>Raised when the owner clicks the Train the AI / Stop button.</summary>
         public event Action TrainingButtonClicked;
@@ -48,18 +80,31 @@ namespace PersonalArena.View
         /// <summary>Raised when the owner clicks the training power (speed) selector.</summary>
         public event Action TrainingPowerClicked;
 
+        /// <summary>The full-screen training data panel (created with the training panel).</summary>
+        public TrainingHistoryPanel HistoryPanel => historyPanel;
+
         public void Bind(ArenaSim arenaSim, ArenaStats arenaStats)
         {
             EnsureBuilt();
             sim = arenaSim;
             stats = arenaStats;
+            if (sim != null)
+            {
+                hpShown = hpTrailShown = HpRatio();
+                energyShown = energyTrailShown = EnergyRatio();
+                for (int i = 0; i < 4; i++)
+                {
+                    lastCooldown[i] = sim.Hero.CooldownRemaining[i];
+                    skillFlash[i] = 0f;
+                }
+            }
             Refresh();
         }
 
         public void SetPaused(bool paused)
         {
             EnsureBuilt();
-            pauseText.gameObject.SetActive(paused);
+            pauseText.transform.parent.gameObject.SetActive(paused);
         }
 
         /// <summary>Replaces the controls hint in the bottom-left corner.</summary>
@@ -67,6 +112,17 @@ namespace PersonalArena.View
         {
             EnsureBuilt();
             helpText.text = text ?? string.Empty;
+        }
+
+        /// <summary>Skill slots show their keys (manual play) or what each skill does (watching the AI).</summary>
+        public void ShowSkillKeys(bool show)
+        {
+            EnsureBuilt();
+            showSkillKeys = show;
+            for (int i = 0; i < 4; i++)
+            {
+                skillHints[i].text = show ? SkillKey(i) : SkillEffect(i);
+            }
         }
 
         /// <summary>Shows a multi-line panel in the top-right corner (hidden when empty).</summary>
@@ -187,6 +243,16 @@ namespace PersonalArena.View
             Refresh();
         }
 
+        private float HpRatio()
+        {
+            return sim.HeroDef.MaxHp > 0f ? Mathf.Clamp01(sim.Hero.Hp / sim.HeroDef.MaxHp) : 0f;
+        }
+
+        private float EnergyRatio()
+        {
+            return sim.HeroDef.MaxEnergy > 0f ? Mathf.Clamp01(sim.Hero.Energy / sim.HeroDef.MaxEnergy) : 0f;
+        }
+
         private void Refresh()
         {
             if (!built || sim == null)
@@ -194,19 +260,44 @@ namespace PersonalArena.View
                 return;
             }
 
-            float hpRatio = sim.HeroDef.MaxHp > 0f ? sim.Hero.Hp / sim.HeroDef.MaxHp : 0f;
-            float energyRatio = sim.HeroDef.MaxEnergy > 0f ? sim.Hero.Energy / sim.HeroDef.MaxEnergy : 0f;
-            hpFill.fillAmount = Mathf.Clamp01(hpRatio);
-            energyFill.fillAmount = Mathf.Clamp01(energyRatio);
+            // Bars glide to their value; a pale trail shows the chunk just lost.
+            float delta = Time.unscaledDeltaTime;
+            float hpRatio = HpRatio();
+            float energyRatio = EnergyRatio();
+            hpShown = Mathf.MoveTowards(hpShown, hpRatio, delta * 2.5f + Mathf.Abs(hpRatio - hpShown) * delta * 10f);
+            energyShown = Mathf.MoveTowards(energyShown, energyRatio, delta * 3f + Mathf.Abs(energyRatio - energyShown) * delta * 10f);
+            hpTrailShown = hpTrailShown < hpShown ? hpShown : Mathf.MoveTowards(hpTrailShown, hpShown, delta * 0.45f);
+            energyTrailShown = energyTrailShown < energyShown ? energyShown : Mathf.MoveTowards(energyTrailShown, energyShown, delta * 0.6f);
+            SetFill(hpFill, hpShown);
+            SetFill(hpTrail, hpTrailShown);
+            SetFill(energyFill, energyShown);
+            SetFill(energyTrail, energyTrailShown);
+            bool lowHp = hpRatio < 0.3f && sim.Hero.Alive;
+            float pulse = lowHp ? 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 8f) : 0f;
+            hpFillImage.color = Color.Lerp(HpColor, HpLowColor, pulse);
             hpText.text = "HP  " + Mathf.CeilToInt(sim.Hero.Hp) + " / " + Mathf.CeilToInt(sim.HeroDef.MaxHp);
             energyText.text = "ENERGY  " + Mathf.CeilToInt(sim.Hero.Energy) + " / " + Mathf.CeilToInt(sim.HeroDef.MaxEnergy);
 
             for (int i = 0; i < 4; i++)
             {
                 float cooldown = sim.Hero.CooldownRemaining[i];
-                float maximum = sim.HeroDef.Skills[i].Cooldown;
+                SkillDef skill = sim.HeroDef.Skills[i];
+                float maximum = skill != null ? skill.Cooldown : 0f;
+                if (cooldown > lastCooldown[i] + 0.01f)
+                {
+                    skillFlash[i] = 1f;
+                }
+                lastCooldown[i] = cooldown;
+                bool active = i == 2 && sim.Hero.IsBlocking;
+                skillFlash[i] = Mathf.Max(active ? 0.6f : 0f, skillFlash[i] - delta * 3.5f);
                 cooldownFills[i].fillAmount = maximum > 0f ? Mathf.Clamp01(cooldown / maximum) : 0f;
                 cooldownTexts[i].text = cooldown > 0.05f ? cooldown.ToString("0.0") : string.Empty;
+                Color glow = SkillColors[i];
+                glow.a = skillFlash[i] * 0.55f;
+                skillGlows[i].color = glow;
+                Color frame = SkillColors[i];
+                frame.a = cooldown > 0.05f ? 0.25f : 0.75f;
+                skillFrames[i].color = frame;
             }
 
             int alive = 0;
@@ -219,18 +310,25 @@ namespace PersonalArena.View
             }
 
             timerText.text = FormatTime(sim.Time) + " / " + FormatTime(sim.Config.EpisodeSeconds);
-            countersText.text = "Kills  " + (stats != null ? stats.Kills : 0) + "     Zombies  " + alive;
+            countersText.text = "KILLS  " + (stats != null ? stats.Kills : 0) + "      ZOMBIES  " + alive;
             resultPanel.SetActive(sim.Done);
             if (sim.Done && stats != null)
             {
-                string heading = sim.Hero.Alive ? "EPISODE COMPLETE" : "WARRIOR FALLEN";
-                resultText.text = heading + "\n\nSurvived  " + FormatTime(stats.TimeSurvived) +
+                bool fell = !sim.Hero.Alive && sim.Hero.FellOff;
+                resultTitle.text = sim.Hero.Alive ? "ROUND COMPLETE" : fell ? "FELL INTO THE ABYSS" : "WARRIOR FALLEN";
+                resultTitle.color = sim.Hero.Alive ? GoldText : new Color(1f, 0.4f, 0.35f);
+                resultText.text = "Survived  " + FormatTime(stats.TimeSurvived) +
                     "\nKills  " + stats.Kills +
                     "\nBackstabs  " + stats.Backstabs +
                     "\nParries  " + stats.Parries +
                     "\nDamage taken  " + stats.DamageTaken.ToString("0") +
                     "\n\n" + resultFooter;
             }
+        }
+
+        private static void SetFill(RectTransform fill, float ratio)
+        {
+            fill.anchorMax = new Vector2(Mathf.Clamp01(ratio), 1f);
         }
 
         private void EnsureBuilt()
@@ -254,43 +352,75 @@ namespace PersonalArena.View
             canvasObject.AddComponent<GraphicRaycaster>();
             canvasRoot = canvasObject.transform;
 
-            RectTransform vitals = CreatePanel("Vitals", canvasObject.transform, new Color(0.04f, 0.05f, 0.07f, 0.84f));
-            SetRect(vitals, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(28f, -28f), new Vector2(420f, 126f), new Vector2(0f, 1f));
-            CreateBar(vitals, "HP Bar", new Vector2(18f, -18f), new Color(0.72f, 0.12f, 0.12f), out hpFill, out hpText);
-            CreateBar(vitals, "Energy Bar", new Vector2(18f, -70f), new Color(0.12f, 0.48f, 0.92f), out energyFill, out energyText);
+            RectTransform vitals = CreatePanel("Vitals", canvasRoot, PanelColor);
+            SetRect(vitals, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(24f, -24f), new Vector2(420f, 128f), new Vector2(0f, 1f));
+            Text heroName = CreateText("Name", vitals, 17, TextAnchor.UpperLeft, GoldText);
+            heroName.text = "WARRIOR";
+            heroName.fontStyle = FontStyle.Bold;
+            SetRect(heroName.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -10f), new Vector2(300f, 22f), new Vector2(0f, 1f));
+            CreateBar(vitals, "HP Bar", new Vector2(18f, -36f), 40f, HpColor, out hpFill, out hpTrail, out hpText);
+            hpFillImage = hpFill.GetComponent<Image>();
+            CreateBar(vitals, "Energy Bar", new Vector2(18f, -84f), 28f, EnergyColor, out energyFill, out energyTrail, out energyText);
+            energyText.fontSize = 16;
 
-            timerText = CreateText("Timer", canvasObject.transform, 28, TextAnchor.UpperCenter, Color.white);
-            SetRect(timerText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -26f), new Vector2(360f, 42f), new Vector2(0.5f, 1f));
-            countersText = CreateText("Counters", canvasObject.transform, 23, TextAnchor.UpperCenter, new Color(0.85f, 0.9f, 0.95f));
-            SetRect(countersText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -68f), new Vector2(420f, 36f), new Vector2(0.5f, 1f));
+            RectTransform clock = CreatePanel("Clock", canvasRoot, PanelColor);
+            SetRect(clock, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -18f), new Vector2(360f, 84f), new Vector2(0.5f, 1f));
+            timerText = CreateText("Timer", clock, 30, TextAnchor.UpperCenter, Color.white);
+            timerText.fontStyle = FontStyle.Bold;
+            SetRect(timerText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -8f), new Vector2(340f, 40f), new Vector2(0.5f, 1f));
+            countersText = CreateText("Counters", clock, 18, TextAnchor.UpperCenter, new Color(0.8f, 0.85f, 0.95f));
+            SetRect(countersText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -50f), new Vector2(340f, 26f), new Vector2(0.5f, 1f));
 
-            RectTransform skills = CreatePanel("Skills", canvasObject.transform, new Color(0.04f, 0.05f, 0.07f, 0.86f));
-            SetRect(skills, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 26f), new Vector2(760f, 142f), new Vector2(0.5f, 0f));
+            RectTransform skills = CreatePanel("Skills", canvasRoot, PanelColor);
+            SetRect(skills, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 20f), new Vector2(720f, 128f), new Vector2(0.5f, 0f));
             for (int i = 0; i < 4; i++)
             {
-                CreateSkillSlot(skills, i, -276f + i * 184f);
+                CreateSkillSlot(skills, i, -261f + i * 174f);
             }
 
-            helpText = CreateText("Help", canvasObject.transform, 18, TextAnchor.LowerLeft, new Color(0.82f, 0.84f, 0.88f));
-            helpText.text = "WASD move   Mouse aim   Q/E turn   Esc pause   R restart   1-6 zombies: 1/2/4/8/16/32";
-            SetRect(helpText.rectTransform, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(24f, 12f), new Vector2(1040f, 32f), new Vector2(0f, 0f));
+            // Controls live under the vitals panel and grow with their text, clear of the skill bar.
+            RectTransform help = CreatePanel("Help", canvasRoot, new Color(0.03f, 0.035f, 0.055f, 0.62f));
+            SetRect(help, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(24f, -164f), new Vector2(420f, 60f), new Vector2(0f, 1f));
+            VerticalLayoutGroup helpLayout = help.gameObject.AddComponent<VerticalLayoutGroup>();
+            helpLayout.padding = new RectOffset(16, 14, 10, 12);
+            helpLayout.childControlWidth = true;
+            helpLayout.childControlHeight = true;
+            helpLayout.childForceExpandWidth = true;
+            helpLayout.childForceExpandHeight = false;
+            ContentSizeFitter helpFitter = help.gameObject.AddComponent<ContentSizeFitter>();
+            helpFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            helpText = CreateText("Help Text", help, 15, TextAnchor.UpperLeft, new Color(0.8f, 0.83f, 0.9f));
+            helpText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            helpText.lineSpacing = 1.1f;
+            helpText.text = "WASD move   Mouse aim   Q/E turn\nEsc pause   R restart\n1-6 zombies: 1/2/4/8/16/32\n" +
+                "Camera: middle-drag rotate   Scroll zoom\nC camera mode   Home reset view";
 
-            RectTransform info = CreatePanel("Info", canvasObject.transform, new Color(0.04f, 0.05f, 0.07f, 0.84f));
+            RectTransform info = CreatePanel("Info", canvasRoot, PanelColor);
             SetRect(info, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20f, -20f), new Vector2(430f, 180f), new Vector2(1f, 1f));
-            infoText = CreateText("Info Text", info, 18, TextAnchor.UpperLeft, new Color(0.9f, 0.93f, 0.97f));
+            infoText = CreateText("Info Text", info, 17, TextAnchor.UpperLeft, new Color(0.9f, 0.93f, 0.97f));
+            infoText.lineSpacing = 1.1f;
             SetStretch(infoText.rectTransform, 18f, 14f, 14f, 12f);
             info.gameObject.SetActive(false);
 
-            pauseText = CreateText("Paused", canvasObject.transform, 52, TextAnchor.MiddleCenter, new Color(1f, 0.9f, 0.3f));
+            RectTransform pause = CreatePanel("Paused", canvasRoot, new Color(0.03f, 0.03f, 0.05f, 0.8f));
+            SetRect(pause, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 140f), new Vector2(360f, 96f), new Vector2(0.5f, 0.5f));
+            pauseText = CreateText("Label", pause, 46, TextAnchor.MiddleCenter, GoldText);
             pauseText.text = "PAUSED";
-            SetRect(pauseText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(420f, 100f), new Vector2(0.5f, 0.5f));
-            pauseText.gameObject.SetActive(false);
+            pauseText.fontStyle = FontStyle.Bold;
+            SetStretch(pauseText.rectTransform, 0f, 0f, 0f, 0f);
+            pause.gameObject.SetActive(false);
 
-            RectTransform result = CreatePanel("Result Panel", canvasObject.transform, new Color(0.025f, 0.03f, 0.045f, 0.94f));
-            SetRect(result, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(510f, 480f), new Vector2(0.5f, 0.5f));
+            RectTransform result = CreatePanel("Result Panel", canvasRoot, new Color(0.035f, 0.035f, 0.06f, 0.94f));
+            SetRect(result, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(520f, 440f), new Vector2(0.5f, 0.5f));
             resultPanel = result.gameObject;
-            resultText = CreateText("Result", result, 30, TextAnchor.MiddleCenter, Color.white);
-            SetStretch(resultText.rectTransform, 30f, 30f, 30f, 30f);
+            RectTransform accent = CreatePanel("Accent", result, new Color(1f, 0.8f, 0.4f, 0.8f));
+            SetRect(accent, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -86f), new Vector2(300f, 3f), new Vector2(0.5f, 1f));
+            resultTitle = CreateText("Title", result, 36, TextAnchor.UpperCenter, GoldText);
+            resultTitle.fontStyle = FontStyle.Bold;
+            SetRect(resultTitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -30f), new Vector2(500f, 48f), new Vector2(0.5f, 1f));
+            resultText = CreateText("Result", result, 26, TextAnchor.UpperCenter, Color.white);
+            resultText.lineSpacing = 1.15f;
+            SetStretch(resultText.rectTransform, 30f, 30f, 110f, 26f);
             resultPanel.SetActive(false);
         }
 
@@ -302,100 +432,182 @@ namespace PersonalArena.View
                 events.transform.SetParent(transform, false);
             }
 
-            RectTransform panel = CreatePanel("Training", canvasRoot, new Color(0.04f, 0.05f, 0.07f, 0.86f));
-            SetRect(panel, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20f, -212f), new Vector2(430f, 370f), new Vector2(1f, 1f));
+            RectTransform panel = CreatePanel("Training", canvasRoot, PanelColor);
+            SetRect(panel, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20f, -212f), new Vector2(430f, 420f), new Vector2(1f, 1f));
             trainingPanel = panel.gameObject;
 
-            Text title = CreateText("Title", panel, 20, TextAnchor.UpperLeft, new Color(1f, 0.86f, 0.45f));
+            Text title = CreateText("Title", panel, 20, TextAnchor.UpperLeft, GoldText);
             title.text = "TRAINING";
             title.fontStyle = FontStyle.Bold;
             SetRect(title.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -12f), new Vector2(394f, 26f), new Vector2(0f, 1f));
 
-            RectTransform buttonRect = CreatePanel("Train Button", panel, new Color(0.2f, 0.6f, 0.32f, 1f));
-            SetRect(buttonRect, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -44f), new Vector2(394f, 54f), new Vector2(0f, 1f));
-            trainingButtonImage = buttonRect.GetComponent<Image>();
-            trainingButton = buttonRect.gameObject.AddComponent<Button>();
-            trainingButton.targetGraphic = trainingButtonImage;
+            trainingButton = CreateButton("Train Button", panel, new Color(0.2f, 0.6f, 0.32f, 1f), new Vector2(18f, -44f), new Vector2(394f, 54f),
+                24, out trainingButtonImage, out trainingButtonLabel);
             trainingButton.onClick.AddListener(() => TrainingButtonClicked?.Invoke());
-            trainingButtonLabel = CreateText("Label", buttonRect, 24, TextAnchor.MiddleCenter, Color.white);
-            trainingButtonLabel.fontStyle = FontStyle.Bold;
-            SetStretch(trainingButtonLabel.rectTransform, 0f, 0f, 0f, 0f);
 
-            RectTransform powerRect = CreatePanel("Power Button", panel, new Color(0.16f, 0.2f, 0.28f, 1f));
-            SetRect(powerRect, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -106f), new Vector2(394f, 34f), new Vector2(0f, 1f));
-            powerButton = powerRect.gameObject.AddComponent<Button>();
-            powerButton.targetGraphic = powerRect.GetComponent<Image>();
+            powerButton = CreateButton("Power Button", panel, new Color(0.17f, 0.21f, 0.32f, 1f), new Vector2(18f, -106f), new Vector2(394f, 36f),
+                16, out _, out powerLabel);
+            powerLabel.fontStyle = FontStyle.Normal;
             powerButton.onClick.AddListener(() => TrainingPowerClicked?.Invoke());
-            powerLabel = CreateText("Label", powerRect, 16, TextAnchor.MiddleCenter, new Color(0.92f, 0.95f, 1f));
-            SetStretch(powerLabel.rectTransform, 6f, 6f, 0f, 0f);
 
-            trainingText = CreateText("Status", panel, 17, TextAnchor.UpperLeft, new Color(0.9f, 0.93f, 0.97f));
-            SetRect(trainingText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -150f), new Vector2(394f, 116f), new Vector2(0f, 1f));
+            trainingText = CreateText("Status", panel, 16, TextAnchor.UpperLeft, new Color(0.9f, 0.93f, 0.97f));
+            SetRect(trainingText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -152f), new Vector2(394f, 116f), new Vector2(0f, 1f));
 
-            trainingGraphCaption = CreateText("Graph Caption", panel, 15, TextAnchor.UpperLeft, new Color(0.7f, 0.76f, 0.84f));
+            trainingGraphCaption = CreateText("Graph Caption", panel, 14, TextAnchor.UpperLeft, new Color(0.7f, 0.76f, 0.84f));
             SetRect(trainingGraphCaption.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -270f), new Vector2(394f, 20f), new Vector2(0f, 1f));
 
-            RectTransform graph = CreatePanel("Reward Graph", panel, new Color(0.1f, 0.11f, 0.14f, 1f));
+            RectTransform graph = CreatePanel("Reward Graph", panel, new Color(0.08f, 0.09f, 0.13f, 1f));
             SetRect(graph, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -292f), new Vector2(394f, TrainingGraphHeight), new Vector2(0f, 1f));
             float slot = 394f / TrainingBarCount;
             for (int i = 0; i < TrainingBarCount; i++)
             {
-                RectTransform bar = CreatePanel("Bar " + i, graph, Color.clear);
-                SetRect(bar, Vector2.zero, Vector2.zero, new Vector2(i * slot + 0.5f, 0f), new Vector2(slot - 1f, 0f), Vector2.zero);
-                trainingBars[i] = bar.GetComponent<Image>();
-                trainingBars[i].raycastTarget = false;
-                bar.gameObject.SetActive(false);
+                GameObject barObject = CreateUiObject("Bar " + i, graph);
+                Image bar = barObject.AddComponent<Image>();
+                bar.raycastTarget = false;
+                SetRect(bar.rectTransform, Vector2.zero, Vector2.zero, new Vector2(i * slot + 0.5f, 0f), new Vector2(slot - 1f, 0f), Vector2.zero);
+                trainingBars[i] = bar;
+                barObject.SetActive(false);
             }
+
+            Button dataButton = CreateButton("Training Data Button", panel, new Color(0.36f, 0.25f, 0.62f, 1f), new Vector2(18f, -366f), new Vector2(394f, 40f),
+                18, out _, out Text dataLabel);
+            dataLabel.text = "TRAINING DATA  (learning graphs)  G";
+            dataButton.onClick.AddListener(() => historyPanel?.Toggle());
+
+            historyPanel = GetComponent<TrainingHistoryPanel>();
+            if (historyPanel == null)
+            {
+                historyPanel = gameObject.AddComponent<TrainingHistoryPanel>();
+            }
+            historyPanel.Build(canvasRoot, font);
 
             trainingPanel.SetActive(false);
         }
 
-        private void CreateBar(Transform parent, string barName, Vector2 position, Color fillColor, out Image fill, out Text label)
+        private Button CreateButton(string objectName, Transform parent, Color color, Vector2 position, Vector2 size, int fontSize,
+            out Image image, out Text label)
         {
-            RectTransform background = CreatePanel(barName, parent, new Color(0.13f, 0.14f, 0.17f, 1f));
-            SetRect(background, new Vector2(0f, 1f), new Vector2(0f, 1f), position, new Vector2(384f, 38f), new Vector2(0f, 1f));
-            GameObject fillObject = CreateUiObject("Fill", background);
-            fill = fillObject.AddComponent<Image>();
-            fill.color = fillColor;
-            fill.type = Image.Type.Filled;
-            fill.fillMethod = Image.FillMethod.Horizontal;
-            fill.fillOrigin = 0;
-            SetStretch(fill.rectTransform, 3f, 3f, 3f, 3f);
-            label = CreateText("Label", background, 20, TextAnchor.MiddleCenter, Color.white);
+            RectTransform rect = CreatePanel(objectName, parent, color);
+            SetRect(rect, new Vector2(0f, 1f), new Vector2(0f, 1f), position, size, new Vector2(0f, 1f));
+            image = rect.GetComponent<Image>();
+            Shadow shadow = rect.gameObject.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0f, 0f, 0f, 0.45f);
+            shadow.effectDistance = new Vector2(0f, -3f);
+            Button button = rect.gameObject.AddComponent<Button>();
+            button.targetGraphic = image;
+            ColorBlock colors = button.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = new Color(1.18f, 1.18f, 1.18f, 1f);
+            colors.pressedColor = new Color(0.78f, 0.78f, 0.78f, 1f);
+            colors.selectedColor = Color.white;
+            colors.disabledColor = new Color(0.7f, 0.7f, 0.7f, 0.8f);
+            colors.colorMultiplier = 1.2f;
+            colors.fadeDuration = 0.08f;
+            button.colors = colors;
+            label = CreateText("Label", rect, fontSize, TextAnchor.MiddleCenter, Color.white);
+            label.fontStyle = FontStyle.Bold;
+            SetStretch(label.rectTransform, 6f, 6f, 0f, 0f);
+            return button;
+        }
+
+        private void CreateBar(Transform parent, string barName, Vector2 position, float height, Color fillColor,
+            out RectTransform fill, out RectTransform trail, out Text label)
+        {
+            RectTransform background = CreatePanel(barName, parent, TrackColor);
+            SetRect(background, new Vector2(0f, 1f), new Vector2(0f, 1f), position, new Vector2(BarWidth, height), new Vector2(0f, 1f));
+
+            RectTransform inner = CreateUiObject("Inner", background).GetComponent<RectTransform>();
+            SetStretch(inner, 3f, 3f, 3f, 3f);
+
+            trail = CreateSliced("Trail", inner, new Color(1f, 0.92f, 0.75f, 0.55f));
+            trail.anchorMin = Vector2.zero;
+            trail.anchorMax = Vector2.one;
+            trail.offsetMin = Vector2.zero;
+            trail.offsetMax = Vector2.zero;
+
+            fill = CreateSliced("Fill", inner, fillColor);
+            fill.anchorMin = Vector2.zero;
+            fill.anchorMax = Vector2.one;
+            fill.offsetMin = Vector2.zero;
+            fill.offsetMax = Vector2.zero;
+
+            RectTransform shine = CreateSliced("Shine", fill, new Color(1f, 1f, 1f, 0.16f));
+            shine.anchorMin = new Vector2(0f, 0.55f);
+            shine.anchorMax = Vector2.one;
+            shine.offsetMin = new Vector2(2f, 0f);
+            shine.offsetMax = new Vector2(-2f, -2f);
+
+            label = CreateText("Label", background, 19, TextAnchor.MiddleCenter, Color.white);
+            label.fontStyle = FontStyle.Bold;
+            Shadow shadow = label.gameObject.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0f, 0f, 0f, 0.7f);
+            shadow.effectDistance = new Vector2(1f, -1f);
             SetStretch(label.rectTransform, 0f, 0f, 0f, 0f);
         }
 
         private void CreateSkillSlot(Transform parent, int index, float x)
         {
-            RectTransform slot = CreatePanel("Skill " + (index + 1), parent, new Color(0.13f, 0.15f, 0.19f, 1f));
-            SetRect(slot, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(x, 0f), new Vector2(164f, 112f), new Vector2(0.5f, 0.5f));
-            Text title = CreateText("Title", slot, 21, TextAnchor.UpperCenter, Color.white);
-            title.text = SkillName(index);
-            SetRect(title.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, -9f), new Vector2(0f, 30f), new Vector2(0.5f, 1f));
-            Text hint = CreateText("Key Hint", slot, 16, TextAnchor.LowerCenter, new Color(0.7f, 0.76f, 0.84f));
-            hint.text = SkillKey(index);
-            SetRect(hint.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 7f), new Vector2(0f, 28f), new Vector2(0.5f, 0f));
+            RectTransform slot = CreatePanel("Skill " + (index + 1), parent, new Color(0.1f, 0.11f, 0.16f, 1f));
+            SetRect(slot, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(x, 0f), new Vector2(160f, 104f), new Vector2(0.5f, 0.5f));
+
+            RectTransform glow = CreateSliced("Glow", slot, Color.clear);
+            SetStretch(glow, 0f, 0f, 0f, 0f);
+            skillGlows[index] = glow.GetComponent<Image>();
+
+            RectTransform frame = CreateSliced("Accent", slot, SkillColors[index]);
+            frame.anchorMin = new Vector2(0f, 1f);
+            frame.anchorMax = new Vector2(1f, 1f);
+            frame.pivot = new Vector2(0.5f, 1f);
+            frame.anchoredPosition = new Vector2(0f, -4f);
+            frame.sizeDelta = new Vector2(-24f, 4f);
+            skillFrames[index] = frame.GetComponent<Image>();
+
+            Text title = CreateText("Title", slot, 22, TextAnchor.UpperCenter, Color.white);
+            title.text = SkillName(index).ToUpperInvariant();
+            title.fontStyle = FontStyle.Bold;
+            SetRect(title.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, -16f), new Vector2(0f, 30f), new Vector2(0.5f, 1f));
+            Text hint = CreateText("Key Hint", slot, 14, TextAnchor.LowerCenter, new Color(0.68f, 0.74f, 0.84f));
+            hint.text = showSkillKeys ? SkillKey(index) : SkillEffect(index);
+            SetRect(hint.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 9f), new Vector2(0f, 24f), new Vector2(0.5f, 0f));
+            skillHints[index] = hint;
 
             GameObject shadeObject = CreateUiObject("Cooldown", slot);
             Image shade = shadeObject.AddComponent<Image>();
-            shade.color = new Color(0.03f, 0.04f, 0.06f, 0.76f);
+            shade.color = new Color(0.02f, 0.02f, 0.04f, 0.72f);
             shade.type = Image.Type.Filled;
-            shade.fillMethod = Image.FillMethod.Radial360;
-            shade.fillOrigin = 2;
-            shade.fillClockwise = false;
-            SetStretch(shade.rectTransform, 2f, 2f, 2f, 2f);
+            shade.fillMethod = Image.FillMethod.Vertical;
+            shade.fillOrigin = 0;
+            shade.raycastTarget = false;
+            SetStretch(shade.rectTransform, 3f, 3f, 3f, 3f);
             cooldownFills[index] = shade;
 
-            Text cooldown = CreateText("Cooldown Time", slot, 28, TextAnchor.MiddleCenter, new Color(1f, 0.9f, 0.35f));
+            Text cooldown = CreateText("Cooldown Time", slot, 30, TextAnchor.MiddleCenter, new Color(1f, 0.9f, 0.35f));
+            cooldown.fontStyle = FontStyle.Bold;
             SetStretch(cooldown.rectTransform, 0f, 0f, 0f, 0f);
             cooldownTexts[index] = cooldown;
         }
 
         private RectTransform CreatePanel(string objectName, Transform parent, Color color)
         {
+            RectTransform rect = CreateSliced(objectName, parent, color);
+            if (color.a > 0.5f && color.r + color.g + color.b < 0.6f)
+            {
+                Outline outline = rect.gameObject.AddComponent<Outline>();
+                outline.effectColor = PanelEdge;
+                outline.effectDistance = new Vector2(1f, -1f);
+            }
+            return rect;
+        }
+
+        private static RectTransform CreateSliced(string objectName, Transform parent, Color color)
+        {
             GameObject panelObject = CreateUiObject(objectName, parent);
             Image image = panelObject.AddComponent<Image>();
+            image.sprite = UiSprites.RoundedSprite();
+            image.type = Image.Type.Sliced;
+            image.pixelsPerUnitMultiplier = 1.6f;
             image.color = color;
+            image.raycastTarget = false;
             return image.rectTransform;
         }
 
@@ -409,6 +621,7 @@ namespace PersonalArena.View
             text.color = color;
             text.horizontalOverflow = HorizontalWrapMode.Overflow;
             text.verticalOverflow = VerticalWrapMode.Overflow;
+            text.raycastTarget = false;
             return text;
         }
 
@@ -461,6 +674,17 @@ namespace PersonalArena.View
                 case 1: return "F / K";
                 case 2: return "RMB / L";
                 default: return "Space / Shift";
+            }
+        }
+
+        private static string SkillEffect(int index)
+        {
+            switch (index)
+            {
+                case 0: return "spear hit";
+                case 1: return "knockback + stun";
+                case 2: return "stagger / parry";
+                default: return "burst of speed";
             }
         }
     }

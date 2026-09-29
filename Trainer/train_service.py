@@ -137,8 +137,10 @@ def plan_run(runs_dir: Path, behavior: str, requested: str | None = None) -> Run
     if requested:
         run_id = requested
     else:
-        newest = export_brain.newest_behavior_dir(runs_dir, behavior)
-        run_id = newest.parent.name if newest is not None else f"{behavior.lower()}-001"
+        newest = export_brain.newest_behavior_dir(
+            runs_dir, behavior, rules_version=arena_trainer.RULES_VERSION
+        )
+        run_id = newest.parent.name if newest is not None else next_run_id(runs_dir, behavior)
 
     run_dir = runs_dir / run_id
     behavior_dir = run_dir / behavior
@@ -151,6 +153,18 @@ def plan_run(runs_dir: Path, behavior: str, requested: str | None = None) -> Run
     else:
         mode = "new"
     return RunPlan(run_id, mode, last_step)
+
+
+def next_run_id(runs_dir: Path, behavior: str) -> str:
+    prefix = behavior.lower()
+    pattern = re.compile(rf"^{re.escape(prefix)}-(\d{{3}})$")
+    numbers = []
+    if runs_dir.is_dir():
+        for path in runs_dir.iterdir():
+            match = pattern.match(path.name)
+            if path.is_dir() and match:
+                numbers.append(int(match.group(1)))
+    return f"{prefix}-{max(numbers, default=0) + 1:03d}"
 
 
 def configured_max_steps(config: dict, behavior: str) -> int:
@@ -309,6 +323,14 @@ class TrainingService:
         except Exception as error:  # Exporting must never take training down.
             self.log(f"brain export failed: {error}")
 
+    def write_history(self) -> None:
+        try:
+            from Trainer import training_history
+
+            training_history.write_history(self.runs_dir / self.run_id, self.behavior)
+        except Exception as error:  # History must never hide the training result.
+            self.log(f"training history export failed: {error}")
+
     # -- control -------------------------------------------------------------------------
 
     def stop_requested(self) -> bool:
@@ -381,6 +403,8 @@ class TrainingService:
             self.fail(traceback.format_exc())
             return 1
         finally:
+            if self.run_id:
+                self.write_history()
             if self.log_file is not None:
                 self.log_file.close()
             lock.close()
@@ -389,6 +413,8 @@ class TrainingService:
         self.stop_path.unlink(missing_ok=True)
         plan = plan_run(self.runs_dir, self.behavior, self.args.run_id)
         self.run_id = plan.run_id
+        if plan.mode in ("new", "force"):
+            arena_trainer.write_rules_version(self.runs_dir / plan.run_id)
         log_path = self.runs_dir / f"{plan.run_id}.log"
         tail = LogTail(log_path)
         for line in tail.read_lines():
@@ -503,6 +529,7 @@ class TrainingService:
 
             if now >= next_export and stopping_since is None:
                 self.export()
+                self.write_history()
                 next_export = now + EXPORT_INTERVAL
             if now >= next_status:
                 if stopping_since is not None:

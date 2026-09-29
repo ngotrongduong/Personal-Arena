@@ -52,20 +52,78 @@ namespace PersonalArena.CoreTests
             zombie.AttackTimer = 0.1f;
 
             sim.Step(new HeroInput(0, 0, 2));
-            float kickedX = zombie.Position.X;
-            Assert.That(kickedX, Is.GreaterThan(11f));
+            float firstTickX = zombie.Position.X;
+            Assert.That(firstTickX, Is.GreaterThan(11f));
+            Assert.That(firstTickX, Is.LessThan(12f), "knockback slides over several ticks, no teleport");
+            Assert.That(zombie.KnockbackVelocity.X, Is.GreaterThan(0f));
             Assert.That(zombie.StunRemaining, Is.GreaterThan(1.1f));
             Assert.That(zombie.AttackPhase, Is.EqualTo(ZombieAttackPhase.Idle));
 
             sim.Step(new HeroInput(0, 0, 2));
             Assert.That(TestHelpers.HasEvent(sim, SimEventType.SkillFailedCooldown), Is.True);
 
-            for (int i = 0; i < 30; i++)
+            for (int i = 0; i < 50; i++)
             {
                 sim.Step(default);
             }
 
-            Assert.That(zombie.Position.X, Is.EqualTo(kickedX).Within(1e-5f));
+            float settledX = zombie.Position.X;
+            Assert.That(settledX, Is.EqualTo(11f + DefaultDefs.Warrior().Skills[1].Knockback).Within(0.05f));
+            Assert.That(zombie.KnockbackVelocity, Is.EqualTo(Vec2.Zero));
+
+            for (int i = 0; i < 10; i++)
+            {
+                sim.Step(default);
+            }
+
+            Assert.That(zombie.Position.X, Is.EqualTo(settledX).Within(1e-5f), "still stunned, so it stays put");
+        }
+
+        [Test]
+        public void KickCanThrowZombieIntoTheAbyssWithoutPotionDrop()
+        {
+            ArenaSim sim = TestHelpers.Sim();
+            sim.Config.PotionDropChance = 1f;
+            sim.Hero.Position = new Vec2(17f, 10f);
+            sim.Hero.Facing = 0f;
+            ZombieState zombie = sim.Zombies[0];
+            zombie.Position = new Vec2(18f, 10f);
+            zombie.Facing = MathF.PI;
+
+            sim.Step(new HeroInput(0, 0, 2));
+            bool fell = false;
+            for (int i = 0; i < 60 && !fell; i++)
+            {
+                sim.Step(default);
+                fell = TestHelpers.HasEvent(sim, SimEventType.ZombieFell);
+                if (fell)
+                {
+                    Assert.That(TestHelpers.HasEvent(sim, SimEventType.ZombieKilled), Is.True);
+                }
+            }
+
+            Assert.That(fell, Is.True);
+            Assert.That(zombie.Alive, Is.False);
+            Assert.That(zombie.FellOff, Is.True);
+            Assert.That(sim.Potions[0].Active, Is.False);
+        }
+
+        [Test]
+        public void BlockStaggersAndPushesTheAttacker()
+        {
+            ArenaSim sim = TestHelpers.Sim();
+            for (int i = 0; i < 14; i++)
+            {
+                sim.Step(new HeroInput(0, 0, 3));
+            }
+
+            TestHelpers.PlaceForAttack(sim);
+            sim.Step(new HeroInput(0, 0, 3));
+
+            ZombieState zombie = sim.Zombies[0];
+            Assert.That(TestHelpers.HasEvent(sim, SimEventType.Stagger), Is.True);
+            Assert.That(zombie.StunRemaining, Is.GreaterThanOrEqualTo(0.5f));
+            Assert.That(zombie.KnockbackVelocity.Y, Is.GreaterThan(0f), "pushed away from the hero");
         }
 
         [Test]
@@ -126,15 +184,44 @@ namespace PersonalArena.CoreTests
         }
 
         [Test]
-        public void DashUsesMoveDirectionAndConsumesEnergy()
+        public void DashGlidesAlongMoveDirectionAndConsumesEnergy()
         {
-            ArenaSim sim = TestHelpers.Sim(0);
+            ArenaSim sim = TestHelpers.Sim(0, true);
             Vec2 start = sim.Hero.Position;
 
             sim.Step(new HeroInput(1, 0, 4));
 
-            Assert.That(sim.Hero.Position.X, Is.GreaterThan(start.X + 3f));
+            Assert.That(sim.Hero.DashRemaining, Is.GreaterThan(0f));
+            Assert.That(sim.Hero.Position.X, Is.GreaterThan(start.X));
+            Assert.That(sim.Hero.Position.X, Is.LessThan(start.X + 1f), "a dash is a glide, not a teleport");
             Assert.That(sim.Hero.Energy, Is.EqualTo(85f).Within(1e-4f));
+
+            for (int i = 0; i < 12 && sim.Hero.DashRemaining > 0f; i++)
+            {
+                sim.Step(new HeroInput(3, 0, 0));
+            }
+
+            Assert.That(sim.Hero.DashRemaining, Is.Zero);
+            Assert.That(sim.Hero.Position.X, Is.EqualTo(start.X + 3f).Within(0.35f));
+            Assert.That(sim.Hero.Position.Y, Is.EqualTo(start.Y).Within(1e-4f), "move input ignored mid-dash");
+        }
+
+        [Test]
+        public void MovementAcceleratesSmoothly()
+        {
+            ArenaSim sim = TestHelpers.Sim(0, true);
+            float moveSpeed = sim.HeroDef.MoveSpeed;
+
+            sim.Step(new HeroInput(1, 0, 0));
+            Assert.That(sim.Hero.Velocity.X, Is.GreaterThan(0f));
+            Assert.That(sim.Hero.Velocity.X, Is.LessThan(moveSpeed));
+
+            for (int i = 0; i < 30; i++)
+            {
+                sim.Step(new HeroInput(1, 0, 0));
+            }
+
+            Assert.That(sim.Hero.Velocity.X, Is.EqualTo(moveSpeed).Within(1e-4f));
         }
     }
 }

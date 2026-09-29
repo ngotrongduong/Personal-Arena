@@ -54,7 +54,6 @@ namespace PersonalArena.View
         public GameObject[] Props = Array.Empty<GameObject>();
 
         public bool HasCharacters => Hero != null && HeroIdle != null;
-        public bool HasDungeon => FloorTile != null && Wall != null;
 
         [Serializable]
         public struct WalkerLook

@@ -45,7 +45,7 @@ Từ gốc repo (`C:\PersonalArena`, nơi có `.venv-ml`):
 - Kết quả ở `Trainer/runs/<run-id>/` (không commit). Model: `Trainer/runs/<run-id>/Warrior.onnx`.
 - Đặt tên run: `<class>-<3 số>` và ghi 1 dòng vào bảng "Nhật ký run" bên dưới.
 - Config:
-  - `warrior_ppo.yaml`: curriculum `zombie_count` 1→2→4→8→16, arena cố định 20 m.
+  - `warrior_ppo.yaml`: curriculum `zombie_count` 1→2→4→8→16, arena cố định 28 m (sàn tròn bán kính 14, D-022).
   - `warrior_ppo_randomized.yaml`: giữ 4 bài đầu, bài cuối random `arena_size` 14–32 và
     `hp_mult` / `damage_mult` / `speed_mult` 0.8–1.25.
 - Ngưỡng curriculum (reward 6, tối thiểu 300 episode mỗi bài) là **ước lượng đầu**: chỉnh
@@ -114,6 +114,15 @@ kinh nghiệm mỗi giây. Luật chơi chạy theo tick cố định nên time-
   training lưu não mới (~500k bước, ~8 phút). Đóng cửa sổ thì exporter cũng tắt.
 - Phím: `1`–`6` số zombie 1/2/4/8/16/32, `Space` tốc độ x1/x2/x4, `T` chọn hành động
   deterministic/sampled, `R` ván mới, `Esc` tạm dừng. Hết ván tự chơi lại sau 3 s.
+- Camera (D-022): kéo chuột trái/phải = xoay, lăn chuột hoặc `+`/`-` = zoom, `Q`/`E` = xoay
+  ngang, chuột giữa hoặc `Shift`+kéo = dời, `C` = đổi chế độ (toàn sân / theo warrior / tự do),
+  `Home` = về góc mặc định.
+- Nút **TRAINING DATA** (cuối bảng TRAINING) hoặc phím `G` mở màn hình 6 đồ thị: reward, zombie giết mỗi ván,
+  số giây sống, tỉ lệ rơi vực, số zombie bị hất xuống vực, độ khó curriculum. Dữ liệu đọc từ
+  `Trainer/runs/<run>/training_history.json` (service ghi từ TensorBoard), tự cập nhật mỗi 5 s.
+  `Esc`, `G` hoặc nút X để đóng.
+- Não luật cũ (`rules_version.txt` khác `ArenaSim.RulesVersion`) không được nạp; khi chỉ còn não
+  cũ, bảng góc phải nhắc bấm TRAIN THE AI.
 - Build trình xem: **Personal Arena > Build Watch AI Viewer (Windows)**, hoặc headless
   `-batchmode -quit -executeMethod PersonalArena.View.Editor.WatchBuild.BuildWindows`.
 - Xuất tay: `python Trainer/export_brain.py --checkpoint <file.pt> --output <file.brain>`.
@@ -134,3 +143,4 @@ kinh nghiệm mỗi giây. Luật chơi chạy theo tick cố định nên time-
 |---|---|---|---|---|---|
 | smoke | 2026-09-29 | warrior_ppo.yaml, 1 env × 16 arena, time-scale 20, RTX 4070 Ti | 210k (5 phút) | Mean reward −0.01 → 15.4; tự lên bài 2 (TwoZombies) | Chỉ để kiểm tra pipeline; ~700 bước/s |
 | warrior-001 | 2026-09-29 | warrior_ppo.yaml, 4 env × 16 arena, time-scale 20, RTX 4070 Ti | 9.87M (13:27–15:26), tiếp tục bằng nút | Curriculum lên 16 zombie ở ~480k (quá nhanh); mean reward 14.2 ở 720k; ở 1M bước, xem thử 4 zombie: 8 kill, sống 20 s | ~1000 bước/s. Ngưỡng 6 quá dễ → cần nâng |
+| warrior-002 | 2026-09-29 | **luật v2 (D-022)**, warrior_ppo.yaml, 4 env × 64 arena (MAX), time-scale 20, RTX 4070 Ti | 24M (16:49–19:16), vẫn train | Lên 16 zombie ở ~3M; ở 24M: reward ~290, ~143 zombie giết/ván, sống ~98 s, rơi vực 4.8% (đầu run ~97%); gần như không hất zombie xuống vực | ~2 700 bước/s. Não luật cũ (`warrior-001`) không dùng được |
