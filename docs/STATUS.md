@@ -1,7 +1,7 @@
 # Trạng thái dự án
 
 > File này là "bộ nhớ" giữa các phiên. Đọc đầu tiên, cập nhật cuối cùng.
-> Cập nhật lần cuối: 2026-09-29 tối (phiên Claude, PC — rà soát & thống nhất).
+> Cập nhật lần cuối: 2026-09-29 13:50 (phiên Claude, PC — training warrior-001 + trình xem AI).
 
 ## Hướng đi
 
@@ -11,8 +11,9 @@
 
 ## Đang ở đâu
 
-- **Milestone:** M0 xong (trừ spike ONNX), **M1 xong** (chơi tay được), **M2 phần code xong**
-  (agent + môi trường train + trainer). Còn: chạy training thật lâu, chỉnh curriculum, BC từ demo.
+- **Milestone:** M0 xong, **M1 xong** (chơi tay được), **M2 phần code xong** (agent + môi trường
+  train + trainer + **trình xem AI chơi**). Đang: training thật `warrior-001`. Còn: chỉnh
+  curriculum, BC từ demo.
   Chi tiết milestone ở `docs/PLAN.md`.
 - **Nhánh:** làm việc trên `develop` (nhánh tính năng → PR merge commit vào `develop`); `main`
   fast-forward theo `develop` khi ổn định.
@@ -27,7 +28,11 @@
     12 Hz, action 9/3/5, mask skill, thống kê `Arena/*`), `TrainingArenaHost` (16 arena/process),
     `TrainingSceneBuilder`, `TrainingBuild` → `Build/Training/PersonalArenaTraining.exe`.
     `Trainer/arena_trainer.py` + 2 config PPO (curriculum 1→2→4→8→16). Hướng dẫn: `docs/TRAINING.md`.
-  - Test: Unity EditMode 18/18 pass (ML + view), pytest trainer 3/3 pass.
+  - **Trình xem AI (feature/watch-ai):** `Xem-AI.cmd` → exporter `.pt`→`.brain` chạy ngầm +
+    `Build/Watch/PersonalArenaWatch.exe` (scene `ArenaWatch`, `AiArenaController`), tự nạp não
+    mới khi training lưu. Não chạy bằng `Core/PolicyBrain.cs` + `BrainPilot.cs` (D-017, không
+    ONNX). Hướng dẫn: `docs/TRAINING.md` mục 4.
+  - Test: Unity EditMode 20/20, CoreTests 58/58, pytest trainer 11/11.
   - **Smoke training 5 phút trên GPU:** mean reward −0.01 → 15.4, curriculum tự lên 2 zombie.
     AI học được thật; pipeline chạy đầu-cuối.
 
@@ -36,19 +41,19 @@
 | Việc | Trạng thái |
 |---|---|
 | M0: repo, Unity project, ML-Agents, venv ML trên GPU | xong |
-| M0: spike nạp ONNX lúc runtime | **chưa** — T-002 (cần trước M4) |
+| M0: spike nạp ONNX lúc runtime | xong — không được, thay bằng `.brain` (D-017) |
 | M1: Core + view + input + HUD + scene chơi tay | xong (PR #5) |
 | M2: HeroAgent + env train + trainer wrapper | xong (PR M2) |
-| M2: training thật, curriculum lên 16 zombie | **chưa** |
+| M2: trình xem AI chơi (T-010) | xong (`Xem-AI.cmd`) |
+| M2: training thật, curriculum lên 16 zombie | **đang chạy** — `warrior-001` |
 | M2: ghi demo chơi tay → BC/GAIL | **chưa** |
 
 ## Việc tiếp theo (theo thứ tự)
 
-1. **Training thật Warrior:** `arena_trainer.py --run-id warrior-001` (vài giờ trên RTX 4070 Ti),
-   xem TensorBoard, chỉnh `threshold` curriculum (đang là 6, đoán), ghi vào "Nhật ký run" của
-   `docs/TRAINING.md`.
+1. **Training Warrior:** `warrior-001` đang chạy (bắt đầu 13:27, ~1000 bước/s, max_steps theo
+   config). Curriculum lên 16 zombie ở ~480k bước — ngưỡng 6 quá dễ. Khi xong/đủ lâu: đọc
+   TensorBoard, nâng `threshold`, chạy `warrior-002`, ghi "Nhật ký run" trong `docs/TRAINING.md`.
 2. **Cân bằng:** với 4 zombie mặc định, hero đứng yên chết sau ~4 s — có thể quá khó cho người chơi.
-3. **Xem AI đánh:** nạp `Warrior.onnx` vào `ArenaPlay` (chế độ "AI chơi") — cần T-002.
 4. **M3:** Mage, Archer, 4 loại zombie (Walker/Runner/Brute/Spitter), random hóa arena.
 5. **M4:** menu, Roster/Shop (vàng trong game), Training Center (gọi trainer, dashboard), lưu/tải.
 
@@ -75,6 +80,13 @@
   trước khi phát hành để đảm bảo game không gọi mạng.
 
 ## Nhật ký phiên (mới nhất trên cùng)
+
+### 2026-09-29 13:20–13:50 — Claude (PC): training warrior-001, trình xem AI
+- Bắt đầu `warrior-001` (4 env × 16 arena). 1M bước sau ~15 phút; curriculum đã lên 16 zombie.
+- Owner muốn xem AI train trực tiếp → phát hiện bản build không nạp được ONNX (importer chỉ có
+  trong Editor) → tự viết định dạng `.brain` + MLP C# (D-017), khớp mlagents sai số ~5e-7.
+- Thêm `export_brain.py --watch`, scene `ArenaWatch`, `AiArenaController` (tự nạp não mới,
+  đổi số zombie/tốc độ), `WatchBuild`, `Xem-AI.cmd`. Đã chạy thử: não 1M bước giết 8 zombie/ván.
 
 ### 2026-09-29 tối — Claude (PC): rà soát, thống nhất bản chính thức
 - Kiểm tra GitHub: không còn PR/nhánh nào của phiên cloud chưa merge.

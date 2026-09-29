@@ -13,14 +13,34 @@ namespace PersonalArena.View.Editor
     {
         private const string SceneFolder = "Assets/Scenes";
         private const string ScenePath = SceneFolder + "/ArenaPlay.unity";
+        public const string WatchScenePath = SceneFolder + "/ArenaWatch.unity";
 
         [MenuItem("Personal Arena/Build Play Scene")]
         public static void Build()
         {
+            Run(() =>
+            {
+                BuildScene(ScenePath, typeof(KeyboardArenaController));
+                SetFirstBuildScene(ScenePath);
+                Debug.Log("Built Personal Arena play scene at " + ScenePath);
+            });
+        }
+
+        [MenuItem("Personal Arena/Build Watch AI Scene")]
+        public static void BuildWatch()
+        {
+            Run(() =>
+            {
+                BuildScene(WatchScenePath, typeof(AiArenaController));
+                Debug.Log("Built Personal Arena watch-AI scene at " + WatchScenePath);
+            });
+        }
+
+        private static void Run(Action build)
+        {
             try
             {
-                BuildScene();
-                Debug.Log("Built Personal Arena play scene at " + ScenePath);
+                build();
                 if (Application.isBatchMode)
                 {
                     EditorApplication.Exit(0);
@@ -38,7 +58,7 @@ namespace PersonalArena.View.Editor
             }
         }
 
-        private static void BuildScene()
+        internal static void BuildScene(string scenePath, Type controllerType)
         {
             EnsureSceneFolder();
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -65,10 +85,9 @@ namespace PersonalArena.View.Editor
             GameObject arenaObject = new GameObject("Arena");
             arenaObject.AddComponent<ArenaRenderer>();
             arenaObject.AddComponent<ArenaHud>();
-            arenaObject.AddComponent<KeyboardArenaController>();
+            arenaObject.AddComponent(controllerType);
 
-            EditorSceneManager.SaveScene(scene, ScenePath);
-            SetFirstBuildScene(ScenePath);
+            EditorSceneManager.SaveScene(scene, scenePath);
             EnsureAlwaysIncludedShader("Standard");
             Selection.activeGameObject = arenaObject;
             AssetDatabase.SaveAssets();

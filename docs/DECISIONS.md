@@ -20,3 +20,4 @@ Mỗi quyết định có mã `D-xxx`. Muốn đổi thì thêm quyết định 
 | D-012 | 2026-09-29 | Tài liệu cho owner viết tiếng Việt; code, commit, prompt agent viết tiếng Anh | Owner đọc dễ, agent làm việc chuẩn |
 | D-015 | 2026-09-29 | **Thay D-002:** repo để **public**. Hệ quả: tuyệt đối không commit secret, token, dữ liệu cá nhân | Owner chọn: repo public thì GitHub Actions (CI) miễn phí, private phải trả phí |
 | D-016 | 2026-09-29 | Owner dừng dự án PersonalGameAI; **mọi công sức chỉ dồn vào Personal Arena** | Owner chọn hướng đi |
+| D-017 | 2026-09-29 | Bản build **không nạp ONNX**. "Não" AI lưu ở định dạng riêng `.brain` (PABR v1: trọng số MLP của actor ML-Agents + 1 mẫu tự kiểm), xuất bằng `Trainer/export_brain.py`, chạy bằng `Core/PolicyBrain.cs` (C# thuần, CPU). Đóng T-002 | Importer ONNX của Inference Engine chỉ có trong Editor, không nạp file `.onnx` lúc runtime được. MLP 736→256→256 đủ nhỏ để tự chạy; C# khớp Python sai số < 1e-6 |

@@ -21,6 +21,9 @@ namespace PersonalArena.View
         private Text pauseText;
         private GameObject resultPanel;
         private Text resultText;
+        private Text helpText;
+        private Text infoText;
+        private string resultFooter = "Press R to restart";
         private bool built;
 
         public void Bind(ArenaSim arenaSim, ArenaStats arenaStats)
@@ -35,6 +38,27 @@ namespace PersonalArena.View
         {
             EnsureBuilt();
             pauseText.gameObject.SetActive(paused);
+        }
+
+        /// <summary>Replaces the controls hint in the bottom-left corner.</summary>
+        public void SetHelpText(string text)
+        {
+            EnsureBuilt();
+            helpText.text = text ?? string.Empty;
+        }
+
+        /// <summary>Shows a multi-line panel in the top-right corner (hidden when empty).</summary>
+        public void SetInfoText(string text)
+        {
+            EnsureBuilt();
+            infoText.text = text ?? string.Empty;
+            infoText.transform.parent.gameObject.SetActive(!string.IsNullOrEmpty(text));
+        }
+
+        /// <summary>Last line of the end-of-episode panel.</summary>
+        public void SetResultFooter(string text)
+        {
+            resultFooter = text ?? string.Empty;
         }
 
         private void Awake()
@@ -89,7 +113,7 @@ namespace PersonalArena.View
                     "\nBackstabs  " + stats.Backstabs +
                     "\nParries  " + stats.Parries +
                     "\nDamage taken  " + stats.DamageTaken.ToString("0") +
-                    "\n\nPress R to restart";
+                    "\n\n" + resultFooter;
             }
         }
 
@@ -130,9 +154,15 @@ namespace PersonalArena.View
                 CreateSkillSlot(skills, i, -276f + i * 184f);
             }
 
-            Text help = CreateText("Help", canvasObject.transform, 18, TextAnchor.LowerLeft, new Color(0.82f, 0.84f, 0.88f));
-            help.text = "WASD move   Mouse aim   Q/E turn   Esc pause   R restart   1-6 zombies: 1/2/4/8/16/32";
-            SetRect(help.rectTransform, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(24f, 12f), new Vector2(1040f, 32f), new Vector2(0f, 0f));
+            helpText = CreateText("Help", canvasObject.transform, 18, TextAnchor.LowerLeft, new Color(0.82f, 0.84f, 0.88f));
+            helpText.text = "WASD move   Mouse aim   Q/E turn   Esc pause   R restart   1-6 zombies: 1/2/4/8/16/32";
+            SetRect(helpText.rectTransform, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(24f, 12f), new Vector2(1040f, 32f), new Vector2(0f, 0f));
+
+            RectTransform info = CreatePanel("Info", canvasObject.transform, new Color(0.04f, 0.05f, 0.07f, 0.84f));
+            SetRect(info, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20f, -20f), new Vector2(430f, 180f), new Vector2(1f, 1f));
+            infoText = CreateText("Info Text", info, 18, TextAnchor.UpperLeft, new Color(0.9f, 0.93f, 0.97f));
+            SetStretch(infoText.rectTransform, 18f, 14f, 14f, 12f);
+            info.gameObject.SetActive(false);
 
             pauseText = CreateText("Paused", canvasObject.transform, 52, TextAnchor.MiddleCenter, new Color(1f, 0.9f, 0.3f));
             pauseText.text = "PAUSED";

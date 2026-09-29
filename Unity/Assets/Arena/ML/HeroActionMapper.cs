@@ -31,41 +31,8 @@ namespace PersonalArena.ML
             return new HeroInput(moveBranch, HeroInput.BranchToTurn(turnBranch), skillBranch);
         }
 
-        public static bool IsSkillActionEnabled(HeroClassDef classDef, HeroState hero, int action)
-        {
-            if (action == 0)
-            {
-                return true;
-            }
-
-            if (classDef == null)
-            {
-                throw new ArgumentNullException(nameof(classDef));
-            }
-
-            if (hero == null)
-            {
-                throw new ArgumentNullException(nameof(hero));
-            }
-
-            if (action < 0 || action >= HeroInput.SkillBranchSize)
-            {
-                throw new ArgumentOutOfRangeException(nameof(action));
-            }
-
-            SkillDef skill = classDef.Skills[action - 1];
-            if (skill == null || skill.Kind == SkillKind.None)
-            {
-                return false;
-            }
-
-            if (skill.Kind == SkillKind.Block && hero.IsBlocking)
-            {
-                return true;
-            }
-
-            return hero.CooldownRemaining[action - 1] <= 0f && hero.Energy >= skill.EnergyCost;
-        }
+        public static bool IsSkillActionEnabled(HeroClassDef classDef, HeroState hero, int action) =>
+            HeroActionMask.IsSkillActionEnabled(classDef, hero, action);
 
         public static void WriteSkillMask(
             IDiscreteActionMask mask,
