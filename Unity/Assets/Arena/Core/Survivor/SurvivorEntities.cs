@@ -62,6 +62,8 @@ namespace PersonalArena.Core.Survivor
         internal float AttackCooldown;
         internal float ContactCooldown;
         internal float SummonCooldown;
+        internal float OrbitNextHitTime;
+        internal int LastShockwaveId;
         internal bool RelocatedThisTick;
         internal bool Separated;
     }
@@ -79,6 +81,19 @@ namespace PersonalArena.Core.Survivor
         public int PierceRemaining { get; internal set; }
         internal readonly int[] HitIds = new int[3];
         internal int HitCount;
+    }
+
+    public sealed class SurvivorEnemyProjectile
+    {
+        public bool Active { get; internal set; }
+        public int Id { get; internal set; }
+        public Vec2 Position { get; internal set; }
+        public Vec2 Velocity { get; internal set; }
+        public float Radius { get; internal set; }
+        public float Damage { get; internal set; }
+        public float Lifetime { get; internal set; }
+        public int SourceId { get; internal set; }
+        internal bool JustSpawned;
     }
 
     public sealed class SurvivorPickup
@@ -103,8 +118,9 @@ namespace PersonalArena.Core.Survivor
     public sealed class SurvivorInventory
     {
         private readonly int[] levels = new int[SurvivorCatalog.CatalogSize];
-        private readonly int[] weapons = new int[SurvivorCatalog.MaxWeapons];
-        private readonly int[] passives = new int[SurvivorCatalog.MaxPassives];
+        // Storage covers test/debug grants beyond the gameplay slot caps; offers still enforce 4 + 4.
+        private readonly int[] weapons = new int[SurvivorCatalog.CatalogSize];
+        private readonly int[] passives = new int[SurvivorCatalog.CatalogSize];
         public int WeaponCount { get; internal set; }
         public int PassiveCount { get; internal set; }
         public System.Collections.Generic.IReadOnlyList<int> ItemLevels => levels;

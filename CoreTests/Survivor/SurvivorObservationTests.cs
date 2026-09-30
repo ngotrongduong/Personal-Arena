@@ -47,10 +47,11 @@ namespace PersonalArena.Core.Tests.Survivor
             sim.GiveXpForTests(5f); sim.Step(default); SurvivorActionMask.WriteMask(sim, move, skill, pick); Assert.That(move[0], Is.True); Assert.That(move[1], Is.False); Assert.That(skill[0], Is.True); Assert.That(skill[1], Is.False); Assert.That(pick[1], Is.True);
         }
 
-        [Test]
-        public void Performance_LateGame()
+        [TestCase(false)]
+        [TestCase(true)]
+        public void Performance_LateGame(bool fullKit)
         {
-            SurvivorSim sim = PopulatedSim(); SurvivorObservation observation = new SurvivorObservation(); float[] values = new float[SurvivorObservation.Size]; sim.SetHeroInvulnerableForTests();
+            SurvivorSim sim = PopulatedSim(fullKit); SurvivorObservation observation = new SurvivorObservation(); float[] values = new float[SurvivorObservation.Size]; sim.SetHeroInvulnerableForTests();
             sim.SetEnemiesInvulnerableForTests();
             sim.DisablePickupCollectionForTests();
             // Long warm-up so tiered JIT reaches optimized code; the best of several batches filters scheduler noise.
@@ -76,10 +77,11 @@ namespace PersonalArena.Core.Tests.Survivor
             Assert.That(stepMs, Is.LessThan(stepBudgetMs)); Assert.That(writeMs, Is.LessThan(writeBudgetMs));
         }
 
-        [Test]
-        public void Step_Write_WriteMask_DoNotAllocate()
+        [TestCase(false)]
+        [TestCase(true)]
+        public void Step_Write_WriteMask_DoNotAllocate(bool fullKit)
         {
-            SurvivorSim sim = PopulatedSim(); sim.SetHeroInvulnerableForTests(); sim.SetEnemiesInvulnerableForTests(); sim.DisablePickupCollectionForTests();
+            SurvivorSim sim = PopulatedSim(fullKit); sim.SetHeroInvulnerableForTests(); sim.SetEnemiesInvulnerableForTests(); sim.DisablePickupCollectionForTests();
             SurvivorObservation observation = new SurvivorObservation(); float[] values = new float[SurvivorObservation.Size];
             bool[] move = new bool[SurvivorInput.MoveBranchSize], skill = new bool[SurvivorInput.SkillBranchSize], pick = new bool[SurvivorInput.PickBranchSize];
             for (int i = 0; i < 300; i++) { sim.Step(new SurvivorInput(i % 9, i % 5, 0)); observation.Write(sim, values); SurvivorActionMask.WriteMask(sim, move, skill, pick); }
@@ -118,10 +120,13 @@ namespace PersonalArena.Core.Tests.Survivor
             Assert.That(sum, Is.EqualTo(0.05f + 0.4f + 0.05f + 0.2f).Within(1e-5f), "no other density cell is set");
         }
 
-        private static SurvivorSim PopulatedSim()
+        private static SurvivorSim PopulatedSim(bool fullKit = false)
         {
             SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.Config(), 55);
-            for (int i = 0; i < 250; i++) { float angle = i * 2.399963f; float radius = 6f + i % 24; sim.SpawnEnemyForTests(i % 3, Vec2.FromAngle(angle) * radius); }
+            // Full kit = worst case: all 6 weapons at level 5 plus spitters firing projectiles.
+            if (fullKit) for (int item = 0; item <= 5; item++) sim.GiveItemForTests(item, 5);
+            int types = fullKit ? 4 : 3;
+            for (int i = 0; i < 250; i++) { float angle = i * 2.399963f; float radius = 6f + i % 24; sim.SpawnEnemyForTests(i % types, Vec2.FromAngle(angle) * radius); }
             for (int i = 0; i < 400; i++) { float angle = i * 1.7f; sim.SpawnGemForTests(Vec2.FromAngle(angle) * (3f + i % 27), 1 + i % 8); }
             return sim;
         }

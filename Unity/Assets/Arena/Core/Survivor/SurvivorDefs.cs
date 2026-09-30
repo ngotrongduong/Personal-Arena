@@ -41,6 +41,16 @@ namespace PersonalArena.Core.Survivor
         public int Pierce { get; init; }
         /// <summary>Projectiles per volley, indexed by level − 1.</summary>
         public IReadOnlyList<int> CountByLevel { get; init; } = Array.Empty<int>();
+        /// <summary>Duration of a persistent weapon volley (seconds).</summary>
+        public float Duration { get; init; }
+        /// <summary>Minimum interval between repeated hits or aura ticks (seconds).</summary>
+        public float HitInterval { get; init; }
+        /// <summary>Counter-clockwise angular speed (degrees per second).</summary>
+        public float AngularSpeedDegrees { get; init; }
+        /// <summary>Cooldown change for each level above one (seconds).</summary>
+        public float CooldownPerLevel { get; init; }
+        /// <summary>Half-width of an instant capsule weapon before the area multiplier.</summary>
+        public float Width { get; init; }
         /// <summary>Passive: effect per level (see <see cref="SurvivorCatalog.PassivePerLevel"/>).</summary>
         public float PerLevel { get; init; }
     }
@@ -50,6 +60,13 @@ namespace PersonalArena.Core.Survivor
         public const int CatalogSize = 64;
         public const int MaxWeapons = 4;
         public const int MaxPassives = 4;
+
+        public const int SweepIndex = 0;
+        public const int SpearThrustIndex = 1;
+        public const int OrbitAxeIndex = 2;
+        public const int ThrownHammerIndex = 3;
+        public const int AuraIndex = 4;
+        public const int ShockwaveIndex = 5;
 
         public const int IronHeartIndex = 6;
         public const int BoneArmorIndex = 7;
@@ -62,11 +79,30 @@ namespace PersonalArena.Core.Survivor
         public const int BonusGoldIndex = 62;
         public const int BonusHealIndex = 63;
 
+        public const float MagnetChance = 0.002f;
+        public const float MagnetDropAngle = 3.6f;
+        public const float ChestDropAngle = 4.8f;
+        public const float ChestGoldMin = 50f;
+        public const float ChestGoldMax = 150f;
+
         private static readonly ItemDef Sweep = new ItemDef
         {
             CatalogIndex = 0, Id = "sword-sweep", Name = "Kiếm quét", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Sweep,
             BaseDamage = 20f, DamagePerLevel = 8f, BaseRange = 2.5f, BaseCooldown = 1.2f, Knockback = 0.5f,
             RangePerLevel = 0.1f, ArcDegrees = 120f, BackArcLevel = 5
+        };
+        private static readonly ItemDef SpearThrust = new ItemDef
+        {
+            CatalogIndex = SpearThrustIndex, Id = "spear-thrust", Name = "Giáo đâm", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Thrust,
+            BaseDamage = 30f, DamagePerLevel = 10f, BaseRange = 5f, BaseCooldown = 1.8f, Knockback = 0.3f,
+            Width = 0.3f, CountByLevel = Array.AsReadOnly(new[] { 1, 1, 2, 2, 3 })
+        };
+        private static readonly ItemDef OrbitAxe = new ItemDef
+        {
+            CatalogIndex = OrbitAxeIndex, Id = "orbit-axe", Name = "Rìu xoay", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Orbit,
+            BaseDamage = 12f, DamagePerLevel = 4f, BaseRange = 2.2f, BaseCooldown = 3f, Knockback = 0.4f,
+            ProjectileRadius = 0.5f, Duration = 4f, HitInterval = 0.5f, AngularSpeedDegrees = 300f,
+            CountByLevel = Array.AsReadOnly(new[] { 1, 2, 2, 3, 3 })
         };
         private static readonly ItemDef Hammer = new ItemDef
         {
@@ -75,6 +111,18 @@ namespace PersonalArena.Core.Survivor
             ProjectileSpeed = 12f, ProjectileRadius = 0.4f, ProjectileRange = 12f, Pierce = 1,
             CountByLevel = Array.AsReadOnly(new[] { 1, 2, 2, 3, 3 })
         };
+        private static readonly ItemDef Aura = new ItemDef
+        {
+            CatalogIndex = AuraIndex, Id = "aura", Name = "Hào quang", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Aura,
+            BaseDamage = 5f, DamagePerLevel = 2f, BaseRange = 1.8f, Knockback = 0.15f,
+            RangePerLevel = 0.1f, HitInterval = 0.4f
+        };
+        private static readonly ItemDef Shockwave = new ItemDef
+        {
+            CatalogIndex = ShockwaveIndex, Id = "shockwave", Name = "Sóng chấn động", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Shockwave,
+            BaseDamage = 18f, DamagePerLevel = 6f, BaseRange = 5f, BaseCooldown = 4f, CooldownPerLevel = -0.3f,
+            Knockback = 2f, ProjectileSpeed = 10f
+        };
         private static readonly ItemDef IronHeart = Passive(IronHeartIndex, "iron-heart", "Tim sắt");
         private static readonly ItemDef BoneArmor = Passive(BoneArmorIndex, "bone-armor", "Giáp xương");
         private static readonly ItemDef CritEye = Passive(CritEyeIndex, "crit-eye", "Mắt chí mạng");
@@ -82,16 +130,29 @@ namespace PersonalArena.Core.Survivor
         private static readonly ItemDef BonusGold = Filler(62, "bonus-gold", "+25 vàng");
         private static readonly ItemDef BonusHeal = Filler(63, "bonus-heal", "Hồi 30 máu");
 
+        private static readonly ItemDef MightGauntlet = Passive(MightGauntletIndex, "might-gauntlet", "Găng sức mạnh");
+        private static readonly ItemDef Hourglass = Passive(HourglassIndex, "hourglass", "Đồng hồ cát");
+        private static readonly ItemDef AreaCharm = Passive(AreaCharmIndex, "area-charm", "Bùa vùng");
+        private static readonly ItemDef MagnetCharm = Passive(MagnetCharmIndex, "magnet-charm", "Nam châm");
+
         public static ItemDef Get(int index)
         {
             return index switch
             {
                 0 => Sweep,
+                1 => SpearThrust,
+                2 => OrbitAxe,
                 3 => Hammer,
+                4 => Aura,
+                5 => Shockwave,
                 6 => IronHeart,
                 7 => BoneArmor,
+                8 => MightGauntlet,
                 9 => CritEye,
+                10 => Hourglass,
+                11 => AreaCharm,
                 12 => WindBoots,
+                13 => MagnetCharm,
                 62 => BonusGold,
                 63 => BonusHeal,
                 _ => null
@@ -125,6 +186,10 @@ namespace PersonalArena.Core.Survivor
 
         private static ItemDef Filler(int index, string id, string name) =>
             new ItemDef { CatalogIndex = index, Id = id, Name = name, Kind = ItemKind.Filler, MaxLevel = 0 };
+
+        /// <summary>Angular offset of spear k in an n-spear fan, in radians.</summary>
+        public static float ThrustAngleOffset(int k, int n) =>
+            (k - (n - 1) * 0.5f) * 20f * MathF.PI / 180f;
     }
 
     public static class StatInfo
@@ -156,7 +221,7 @@ namespace PersonalArena.Core.Survivor
         }
     }
 
-    public enum SurvivorAttackKind { Contact, Melee }
+    public enum SurvivorAttackKind { Contact, Melee, Ranged }
 
     public sealed class SurvivorEnemyDef
     {
@@ -176,6 +241,10 @@ namespace PersonalArena.Core.Survivor
         public float KnockbackResist { get; init; }
         public float TurnSpeedDegPerSec { get; init; }
         public bool IsBoss { get; init; }
+        public float PreferredDistance { get; init; }
+        public float ProjectileSpeed { get; init; }
+        public float ProjectileRadius { get; init; }
+        public float ProjectileRange { get; init; }
     }
 
     public sealed class SpawnPhase
@@ -215,7 +284,14 @@ namespace PersonalArena.Core.Survivor
             Enemy(0, "walker", 15f, 2f, 0.45f, 1f, SurvivorAttackKind.Contact, 8f, 0f, 0f, 0f, 0.5f, 1, 0f, 360f),
             Enemy(1, "runner", 10f, 4f, 0.4f, 1f, SurvivorAttackKind.Contact, 5f, 0f, 0f, 0f, 0.5f, 1, 0f, 360f),
             Enemy(2, "brute", 80f, 1.6f, 0.7f, 3f, SurvivorAttackKind.Melee, 25f, 1.8f, 90f, 0.9f, 1.8f, 5, 0.6f, 180f),
-            null,
+            new SurvivorEnemyDef
+            {
+                TypeIndex = 3, Id = "spitter", BaseHp = 20f, MoveSpeed = 2.4f, Radius = 0.4f, Mass = 1f,
+                AttackKind = SurvivorAttackKind.Ranged, AttackDamage = 10f, PreferredDistance = 7f,
+                AttackRange = 9f, AttackArcDegrees = 60f, WindupSeconds = 0.5f, RecoverSeconds = 2.5f,
+                ProjectileSpeed = 7f, ProjectileRadius = 0.3f, ProjectileRange = 12f,
+                Xp = 2, KnockbackResist = 0f, TurnSpeedDegPerSec = 360f
+            },
             Enemy(4, "bone-lord", 6000f, 1.4f, 1.75f, 1000f, SurvivorAttackKind.Melee, 40f, 3.5f, 180f, 1.2f, 4.8f, 0, 1f, 180f, true),
             null, null, null
         };
@@ -223,9 +299,9 @@ namespace PersonalArena.Core.Survivor
         private static readonly SpawnPhase[] Phases =
         {
             Phase(0, 60, 1, 0, 0, 0, 30, 1), Phase(60, 180, 3, 1, 0, 0, 60, 2),
-            Phase(180, 300, 3, 2, 1, 0, 90, 3), Phase(300, 420, 2, 2, 1, 0, 120, 4),
-            Phase(420, 600, 2, 3, 1, 0, 160, 5), Phase(600, 720, 1, 3, 2, 0, 200, 6),
-            Phase(720, 900, 1, 3, 3, 0, 250, 8)
+            Phase(180, 300, 3, 2, 1, 0, 90, 3), Phase(300, 420, 2, 2, 1, 1, 120, 4),
+            Phase(420, 600, 2, 3, 1, 2, 160, 5), Phase(600, 720, 1, 3, 2, 2, 200, 6),
+            Phase(720, 900, 1, 3, 3, 3, 250, 8)
         };
 
         public static SurvivorClassDef Warrior()
@@ -235,7 +311,7 @@ namespace PersonalArena.Core.Survivor
                 Id = "warrior", MaxHp = 150f, Regen = 0.2f, Armor = 0f, MoveSpeed = 4.5f,
                 Acceleration = 30f, Radius = 0.5f, PickupRadius = 1.5f, CritChance = 0.05f,
                 CritDamage = 1.5f, MaxEnergy = 100f, EnergyRegen = 15f, Mass = 1f,
-                StartingWeapon = 0, WeaponPool = new[] { 0, 3 }, PassivePool = new[] { 6, 7, 9, 12 },
+                StartingWeapon = 0, WeaponPool = new[] { 0, 1, 2, 3, 4, 5 }, PassivePool = new[] { 6, 7, 8, 9, 10, 11, 12, 13 },
                 ActiveSkills = new[]
                 {
                     new SkillDef { Id = "kick", Kind = SkillKind.Kick, Damage = 10f, Range = 1.8f, ArcDegrees = 100f, StunSeconds = 1.2f, Knockback = 3f, Cooldown = 3f },
