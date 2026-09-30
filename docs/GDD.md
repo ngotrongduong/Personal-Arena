@@ -248,13 +248,18 @@ Dùng 4 loại zombie của M3, nhưng chỉnh số liệu hợp với kiểu "�
 Trước khi bấm TRAIN, owner chọn **trọng tâm huấn luyện**. Mỗi trọng tâm là một bộ hệ số thưởng khác nhau
 (vẫn giữ thứ bậc ở mục 4.3, chỉ đổi độ nặng):
 
-| Trọng tâm | Ý nghĩa | Hệ số đổi so với Cân bằng (chốt ở T-023) |
+| Trọng tâm | Ý nghĩa | Hệ số đổi so với Cân bằng (chốt ở T-023, thưởng hạ quái thêm ở T-027) |
 |---|---|---|
-| Cân bằng | Mặc định | Thắng 10, hết giờ 5, chết −5, sống 0,01/s, mất máu 1/máu tối đa, EXP 0,05, vàng 0,001, boss 2 |
-| Sống sót | Phạt mất máu nặng hơn | mất máu 1,6; chết −6; vàng 0,0005 |
+| Cân bằng | Mặc định | Thắng 10, hết giờ 5, chết −5, sống 0,01/s, mất máu 1/máu tối đa, EXP 0,05, vàng 0,001, boss 2, **hạ quái 0,004, hạ tinh anh +0,1** |
+| Sống sót | Phạt mất máu nặng hơn | mất máu 1,6; chết −6; vàng 0,0005; hạ quái 0,002 |
 | Vàng | Thưởng vàng cao hơn | vàng 0,003 |
 | Boss | Thưởng gây sát thương lên boss cao hơn | boss 5 |
-| Tấn công | Thưởng tiến độ EXP cao hơn, chấp nhận mất máu | EXP 0,1; mất máu 0,7 |
+| Tấn công | Thưởng tiến độ EXP và hạ quái cao hơn, chấp nhận mất máu | EXP 0,1; mất máu 0,7; hạ quái 0,008; hạ tinh anh +0,2 |
+
+- **Thưởng hạ quái (T-027):** trước đó AI chỉ được thưởng gián tiếp qua ngọc EXP quái rớt, nên lối an
+  toàn nhất là lùi và chạy. Nay mỗi con quái hạ được cộng thẳng điểm. Cả trận 15 phút (~1500 con) đáng
+  khoảng 6 điểm, gần bằng "hết giờ" nhưng vẫn nhỏ hơn chết + mất máu, nên AI được khuyến khích tiến lên
+  đánh chứ không lao vào chỗ chết (test: chết sớm với thêm 400 mạng hạ vẫn thua sống hết giờ).
 
 - Khi owner bấm TRAIN: khoảng **70% trận huấn luyện** dùng loadout đang chọn của owner ở bậc đã chọn
   (lệch nhẹ tối đa 2 điểm để não không học thuộc một build), 30% còn lại là ôn tập / trận khó / build
