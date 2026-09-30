@@ -22,5 +22,6 @@ này (M0 scaffold, Unity project, Core M1) ghi ở `docs/STATUS.md`.
 | [T-015](T-015-survivor-trainer-brain-upgrade.md) | Trainer Survivor: schema version, config `warrior_survivor_ppo.yaml` + curriculum đo bằng reward, run `warrior-sNNN`, export 2264 | Codex | done | M4A | T-014 |
 | T-016 | Tích hợp Unity Survivor: `HeroAgent` 3 nhánh, stat `Arena/…`, trình xem (camera theo, nghĩa địa, HUD, bảng lên cấp tô sáng lựa chọn AI, màn kết trận) | Claude (PC) | done | M4A | |
 | [T-017](T-017-remove-round-arena.md) | Dọn code đấu trường tròn cũ (sàn, vực, config cũ) | Claude (PC) | done | M4A | |
-| T-018 | Champion/challenger (không ghi đè não tốt nhất), đánh giá tự động 100 seed, telemetry hành vi, Behavior Profile trong trình xem | Codex + Claude | todo | M4B | |
+| [T-018](T-018-champion-eval-behavior.md) | Champion/challenger (không ghi đè não tốt nhất), đánh giá tự động 100 seed trong dịch vụ train, telemetry hành vi (Core + SurvivorEval) | Codex | done | M4B | T-020 |
+| [T-020](T-020-viewer-best-brain-profile.md) | Trình xem: mục "Não giỏi nhất" (M4A đạt/chưa, Behavior Profile so với champion trước), phím `B` đổi não mới nhất ↔ giỏi nhất | Claude (PC) | todo | M4B | T-018 |
 | T-019 | `brain_upgrade.py` + mô tả schema JSON, não theo build ngẫu nhiên, curriculum ôn tập 70/20/10 | Codex | todo | M4B | T-018 |

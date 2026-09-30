@@ -27,6 +27,10 @@ namespace PersonalArena.Tools.SurvivorEval
 
         private sealed class Output
         {
+            [JsonPropertyName("brain")]
+            public BrainInfo Brain { get; set; }
+            [JsonPropertyName("settings")]
+            public SettingsInfo Settings { get; set; }
             [JsonPropertyName("summary")]
             public SurvivorEvalSummary Summary { get; set; }
             [JsonPropertyName("passes_m4a")]
@@ -35,13 +39,28 @@ namespace PersonalArena.Tools.SurvivorEval
             public SurvivorRunStats[] Runs { get; set; }
         }
 
+        private sealed class BrainInfo
+        {
+            [JsonPropertyName("name")] public string Name { get; set; }
+            [JsonPropertyName("step")] public long Step { get; set; }
+        }
+        private sealed class SettingsInfo
+        {
+            [JsonPropertyName("seeds")] public int Seeds { get; set; }
+            [JsonPropertyName("seed_start")] public int SeedStart { get; set; }
+            [JsonPropertyName("tier")] public int Tier { get; set; }
+            [JsonPropertyName("run_seconds")] public float RunSeconds { get; set; }
+            [JsonPropertyName("deterministic")] public bool Deterministic { get; set; }
+        }
+
         public static int Main(string[] args)
         {
             try
             {
                 Options options = Parse(args);
                 byte[] brainData = options.SelfTest ? FakeBrain() : File.ReadAllBytes(options.Brain);
-                string validation = SurvivorPilot.Validate(PolicyBrain.Load(brainData));
+                PolicyBrain metadataBrain = PolicyBrain.Load(brainData);
+                string validation = SurvivorPilot.Validate(metadataBrain);
                 if (validation != null) throw new ArgumentException(validation);
                 SurvivorRunStats[] runs = new SurvivorRunStats[options.Seeds];
                 // One brain per worker thread: PolicyBrain keeps evaluation buffers and is not thread-safe.
@@ -61,7 +80,15 @@ namespace PersonalArena.Tools.SurvivorEval
                 {
                     JsonSerializerOptions jsonOptions = new JsonSerializerOptions { WriteIndented = true };
                     jsonOptions.Converters.Add(new JsonStringEnumConverter());
-                    File.WriteAllText(options.Out, JsonSerializer.Serialize(new Output { Summary = summary, PassesM4A = passes, Runs = runs }, jsonOptions));
+                    jsonOptions.Converters.Add(new BehaviorPropertyConverter<SurvivorEvalSummary>());
+                    jsonOptions.Converters.Add(new BehaviorPropertyConverter<SurvivorRunStats>());
+                    Output output = new Output
+                    {
+                        Brain = new BrainInfo { Name = metadataBrain.BehaviorName, Step = metadataBrain.Step },
+                        Settings = new SettingsInfo { Seeds = options.Seeds, SeedStart = options.SeedStart, Tier = options.Tier, RunSeconds = options.RunSeconds, Deterministic = options.Deterministic },
+                        Summary = summary, PassesM4A = passes, Runs = runs
+                    };
+                    File.WriteAllText(options.Out, JsonSerializer.Serialize(output, jsonOptions));
                 }
                 return 0;
             }
@@ -109,6 +136,7 @@ namespace PersonalArena.Tools.SurvivorEval
             Console.WriteLine($"Runs: {s.Runs}"); Console.WriteLine($"Survival median / P10 / mean: {s.MedianSurvivedSeconds:0.0}s / {s.P10SurvivedSeconds:0.0}s / {s.MeanSurvivedSeconds:0.0}s");
             Console.WriteLine($"Win rate: {s.WinRate:P1}; catastrophic: {s.CatastrophicCount}");
             Console.WriteLine($"Gold/min: {s.GoldPerMinute:0.0}; XP/min: {s.XpPerMinute:0.0}; damage taken/min: {s.DamageTakenPerMinute:0.0}");
+            Console.WriteLine($"Behavior aggression / caution / greed / exploration: {s.Behavior.Aggression:0.00} / {s.Behavior.Caution:0.00} / {s.Behavior.Greed:0.00} / {s.Behavior.Exploration:0.00}");
             Console.WriteLine("M4A acceptance: " + (passes ? "PASS" : "FAIL"));
         }
 
@@ -123,6 +151,25 @@ namespace PersonalArena.Tools.SurvivorEval
         private static void WriteLayer(BinaryWriter writer, int inputs, int outputs)
         {
             writer.Write(inputs); writer.Write(outputs); for (int i = 0; i < inputs * outputs + outputs; i++) writer.Write(0f);
+        }
+
+        private sealed class BehaviorPropertyConverter<T> : JsonConverter<T>
+        {
+            public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => throw new NotSupportedException();
+
+            public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
+            {
+                JsonSerializerOptions inner = new JsonSerializerOptions(options);
+                inner.Converters.Remove(this);
+                JsonElement element = JsonSerializer.SerializeToElement(value, inner);
+                writer.WriteStartObject();
+                foreach (JsonProperty property in element.EnumerateObject())
+                {
+                    writer.WritePropertyName(property.Name == "Behavior" ? "behavior" : property.Name);
+                    property.Value.WriteTo(writer);
+                }
+                writer.WriteEndObject();
+            }
         }
     }
 }

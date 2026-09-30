@@ -130,3 +130,12 @@ def test_cli_prefers_current_schema_events_without_requiring_a_checkpoint(
     assert capsys.readouterr().out.strip() == str(output)
     assert output.is_file()
     assert not (old_dir / training_history.HISTORY_NAME).exists()
+
+
+def test_history_scanners_ignore_champions_directory(tmp_path: Path):
+    fake_run = tmp_path / "champions"
+    write_events(fake_run / "Warrior", ".fake", [("Arena/Kills", 1.0, 1)])
+    arena_trainer.write_schema_version(fake_run)
+
+    assert training_history.discover_behaviors(tmp_path) == []
+    assert training_history._newest_run_dir(tmp_path, "Warrior") is None

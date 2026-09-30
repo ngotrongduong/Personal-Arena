@@ -42,6 +42,36 @@ namespace PersonalArena.Core.Tests.Survivor
         }
 
         [Test]
+        public void Summary_BehaviorMeansIgnoreNoData_AndCountersSum()
+        {
+            SurvivorEvaluator evaluator = new SurvivorEvaluator();
+            List<SurvivorRunStats> runs = new List<SurvivorRunStats>
+            {
+                new SurvivorRunStats { SurvivedSeconds = 10f, Behavior = new SurvivorBehaviorStats { Aggression = -1f, Caution = 0.25f, KickUses = 2 } },
+                new SurvivorRunStats { SurvivedSeconds = 20f, Behavior = new SurvivorBehaviorStats { Aggression = 0.75f, Caution = -1f, KickUses = 3 } }
+            };
+
+            SurvivorBehaviorStats behavior = evaluator.Summarize(runs).Behavior;
+
+            Assert.That(behavior.Aggression, Is.EqualTo(0.75f));
+            Assert.That(behavior.Caution, Is.EqualTo(0.25f));
+            Assert.That(behavior.Greed, Is.EqualTo(-1f));
+            Assert.That(behavior.KickUses, Is.EqualTo(5));
+        }
+
+        [Test]
+        public void Evaluator_WithTracker_IsDeterministic()
+        {
+            SurvivorEvaluator evaluator = new SurvivorEvaluator(); PolicyBrain brain = SurvivorTestHelpers.Brain(favouredMove: 1);
+            SurvivorRunStats a = evaluator.RunOne(brain, SurvivorTestHelpers.Config(runSeconds: 60f), 321, true);
+            SurvivorRunStats b = evaluator.RunOne(brain, SurvivorTestHelpers.Config(runSeconds: 60f), 321, true);
+
+            Assert.That(b.SurvivedSeconds, Is.EqualTo(a.SurvivedSeconds)); Assert.That(b.Kills, Is.EqualTo(a.Kills));
+            Assert.That(b.Gold, Is.EqualTo(a.Gold)); Assert.That(b.EndReason, Is.EqualTo(a.EndReason));
+            Assert.That(b.Behavior.Aggression, Is.EqualTo(a.Behavior.Aggression));
+        }
+
+        [Test]
         public void Determinism_TwoSimsSameSeed()
         {
             SurvivorSim a = new SurvivorSim(SurvivorTestHelpers.Config(), 99); SurvivorSim b = new SurvivorSim(SurvivorTestHelpers.Config(), 99);

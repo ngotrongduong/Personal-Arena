@@ -26,6 +26,7 @@ import re
 import signal
 import subprocess
 import sys
+import threading
 import time
 import traceback
 from typing import Callable, Iterable, TextIO
@@ -34,6 +35,7 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from Trainer import arena_trainer, export_brain  # noqa: E402
+from Trainer import champion  # noqa: E402
 
 STATUS_NAME = "training_service.json"
 STOP_NAME = "training_service.stop"
@@ -165,7 +167,7 @@ class RunPlan:
 
 def plan_run(runs_dir: Path, behavior: str, requested: str | None = None) -> RunPlan:
     if requested:
-        run_id = requested
+        run_id = next_run_id(runs_dir, behavior) if requested == champion.CHAMPIONS_DIR else requested
         requested_dir = runs_dir / run_id
         requested_behavior = requested_dir / behavior
         if (
@@ -178,6 +180,7 @@ def plan_run(runs_dir: Path, behavior: str, requested: str | None = None) -> Run
             path
             for path in runs_dir.glob(f"*/{behavior}")
             if path.is_dir()
+            and path.parent.name != champion.CHAMPIONS_DIR
             and (path / "checkpoint.pt").is_file()
             and export_brain.checkpoints(path)
             and arena_trainer.run_schema_version(path.parent)
@@ -219,7 +222,7 @@ def next_run_id(runs_dir: Path, behavior: str) -> str:
     if runs_dir.is_dir():
         for path in runs_dir.iterdir():
             match = pattern.match(path.name)
-            if path.is_dir() and match:
+            if path.is_dir() and path.name != champion.CHAMPIONS_DIR and match:
                 numbers.append(int(match.group(1)))
     return f"{prefix}-s{max(numbers, default=0) + 1:03d}"
 
@@ -341,6 +344,14 @@ class TrainingService:
         self.torch_device: str | None = getattr(args, "torch_device", None)
         self.log_file: TextIO | None = None
         self.exported: dict[Path, int] = {}
+        self.evaluation_thread: threading.Thread | None = None
+        self.evaluation_runner: champion.EvaluationRunner | None = None
+        self.evaluation_attempt_step = 0
+        self.last_eval_step = 0
+        self.last_eval_won: bool | None = None
+        self.evaluation_message = ""
+        self._evaluation_lock = threading.Lock()
+        self._status_lock = threading.Lock()
 
     # -- reporting -------------------------------------------------------------------------
 
@@ -350,6 +361,13 @@ class TrainingService:
             self.log_file.flush()
 
     def status(self, state: str, message: str = "") -> dict:
+        current = champion.load_champion(self.runs_dir, self.behavior)
+        summary = current.get("summary", {}) if current else {}
+        with self._evaluation_lock:
+            evaluating = self.evaluation_thread is not None and self.evaluation_thread.is_alive()
+            last_eval_step = self.last_eval_step
+            last_eval_won = self.last_eval_won
+            evaluation_message = self.evaluation_message
         return {
             "state": state,
             "message": message,
@@ -375,10 +393,20 @@ class TrainingService:
             "updated_unix": self.clock(),
             "steps": self.progress.steps,
             "rewards": self.progress.rewards,
+            "champion_step": current.get("step") if current else None,
+            "champion_run": current.get("run_id") if current else None,
+            "champion_median": summary.get("MedianSurvivedSeconds") if current else None,
+            "champion_p10": summary.get("P10SurvivedSeconds") if current else None,
+            "champion_passes_m4a": current.get("passes_m4a") if current else None,
+            "last_eval_step": last_eval_step or None,
+            "last_eval_won": last_eval_won,
+            "evaluating": evaluating,
+            "evaluation_message": evaluation_message,
         }
 
     def publish(self, state: str, message: str = "") -> None:
-        write_json_atomically(self.status_path, self.status(state, message))
+        with self._status_lock:
+            write_json_atomically(self.status_path, self.status(state, message))
 
     def export(self) -> None:
         try:
@@ -393,6 +421,71 @@ class TrainingService:
             training_history.write_history(self.runs_dir / self.run_id, self.behavior)
         except Exception as error:  # History must never hide the training result.
             self.log(f"training history export failed: {error}")
+
+    def initialize_evaluation_state(self) -> None:
+        self.last_eval_step = champion.last_evaluated_step(
+            self.runs_dir, self.behavior, self.run_id
+        )
+        latest = champion.latest_evaluation(self.runs_dir, self.behavior)
+        if latest is not None and latest.get("run_id") == self.run_id:
+            self.last_eval_won = bool(latest.get("won", False))
+        self.evaluation_attempt_step = self.last_eval_step
+
+    def maybe_start_evaluation(self) -> bool:
+        with self._evaluation_lock:
+            if self.evaluation_thread is not None and self.evaluation_thread.is_alive():
+                return False
+            behavior_dir = self.runs_dir / self.run_id / self.behavior
+            found = export_brain.checkpoints(behavior_dir) if behavior_dir.is_dir() else []
+            if not found:
+                return False
+            step = found[-1][0]
+            threshold = self.last_eval_step + champion.EVALUATION_INTERVAL
+            if step < threshold or step <= self.evaluation_attempt_step:
+                return False
+            self.evaluation_attempt_step = step
+            runner = champion.EvaluationRunner()
+            thread = threading.Thread(
+                target=self._evaluate_checkpoint,
+                args=(step, runner),
+                name=f"champion-eval-{self.behavior}",
+                daemon=True,
+            )
+            self.evaluation_runner = runner
+            self.evaluation_thread = thread
+            self.evaluation_message = ""
+            thread.start()
+            return True
+
+    def _evaluate_checkpoint(self, step: int, runner: champion.EvaluationRunner) -> None:
+        try:
+            result = champion.evaluate_latest(
+                self.runs_dir, self.behavior, self.run_id, runner=runner, log=self.log
+            )
+            with self._evaluation_lock:
+                if not result.get("cancelled") and not result.get("skipped"):
+                    self.last_eval_step = int(result.get("step", step))
+                    self.last_eval_won = bool(result.get("won", False))
+                if result.get("skipped"):
+                    self.evaluation_message = str(result.get("message", "Evaluation skipped."))
+        except Exception as error:
+            message = f"Champion evaluation failed: {error}"
+            self.log(message)
+            with self._evaluation_lock:
+                self.evaluation_message = message
+        finally:
+            with self._evaluation_lock:
+                if self.evaluation_runner is runner:
+                    self.evaluation_runner = None
+
+    def cancel_evaluation(self) -> None:
+        with self._evaluation_lock:
+            runner = self.evaluation_runner
+            thread = self.evaluation_thread
+        if runner is not None:
+            runner.cancel()
+        if thread is not None and thread.is_alive():
+            thread.join(timeout=10.0)
 
     # -- control -------------------------------------------------------------------------
 
@@ -469,6 +562,7 @@ class TrainingService:
             self.fail(traceback.format_exc())
             return 1
         finally:
+            self.cancel_evaluation()
             if self.run_id:
                 self.write_history()
             if self.log_file is not None:
@@ -487,6 +581,7 @@ class TrainingService:
 
         plan = plan_run(self.runs_dir, self.behavior, self.args.run_id)
         self.run_id = plan.run_id
+        self.initialize_evaluation_state()
         if plan.mode in ("new", "force"):
             arena_trainer.write_schema_version(self.runs_dir / plan.run_id)
         log_path = self.runs_dir / f"{plan.run_id}.log"
@@ -591,6 +686,7 @@ class TrainingService:
             if stopping_since is None and self.stop_requested():
                 stopping_since = now
                 self.log("stop requested; asking ML-Agents to save and quit")
+                self.cancel_evaluation()
                 send_ctrl_c(process)
                 next_status = 0.0
             if stopping_since is not None and code is None and now - stopping_since > STOP_TIMEOUT:
@@ -604,6 +700,7 @@ class TrainingService:
             if now >= next_export and stopping_since is None:
                 self.export()
                 self.write_history()
+                self.maybe_start_evaluation()
                 next_export = now + EXPORT_INTERVAL
             if now >= next_status:
                 if stopping_since is not None:

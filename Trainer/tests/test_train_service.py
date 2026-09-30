@@ -125,6 +125,16 @@ def test_plan_run_numbers_only_survivor_runs(tmp_path: Path):
     assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-s003", "new", 0)
 
 
+def test_plan_run_ignores_champions_directory(tmp_path: Path):
+    fake = tmp_path / "champions" / "Warrior"
+    fake.mkdir(parents=True)
+    (fake / "checkpoint.pt").write_bytes(b"x")
+    (fake / "Warrior-999.pt").write_bytes(b"x")
+    arena_trainer.write_schema_version(fake.parent)
+
+    assert train_service.plan_run(tmp_path, "Warrior").run_id == "warrior-s001"
+
+
 @pytest.mark.parametrize("schema_version", [None, 3])
 def test_plan_run_does_not_resume_an_unmarked_or_older_schema_run(
     tmp_path: Path, schema_version: int | None
@@ -304,6 +314,53 @@ def test_status_payload_matches_the_viewer_fields(tmp_path: Path):
     }
     assert status["steps"] == [60000]
     assert status["updated_unix"] == 100.0
+    assert status["champion_step"] is None
+    assert status["last_eval_step"] is None
+    assert status["last_eval_won"] is None
+    assert status["evaluating"] is False
+
+
+def test_service_evaluation_trigger_is_two_million_and_one_at_a_time(tmp_path: Path, monkeypatch):
+    args = train_service.create_parser().parse_args(["--results-dir", str(tmp_path)])
+    service = train_service.TrainingService(args)
+    service.run_id = "warrior-s001"
+    make_checkpoint(tmp_path, service.run_id, 1_999_999)
+    assert not service.maybe_start_evaluation()
+
+    make_checkpoint(tmp_path, service.run_id, 2_000_000)
+    started = threading.Event()
+    release = threading.Event()
+
+    def fake_evaluate(*args, **kwargs):
+        started.set()
+        release.wait(2)
+        return {"run_id": service.run_id, "step": 2_000_000, "won": True}
+
+    monkeypatch.setattr(train_service.champion, "evaluate_latest", fake_evaluate)
+    assert service.maybe_start_evaluation()
+    assert started.wait(2)
+    assert not service.maybe_start_evaluation()
+    release.set()
+    service.evaluation_thread.join(2)
+    assert service.last_eval_step == 2_000_000
+    assert service.last_eval_won is True
+
+
+def test_service_cancels_running_evaluation(tmp_path: Path):
+    args = train_service.create_parser().parse_args(["--results-dir", str(tmp_path)])
+    service = train_service.TrainingService(args)
+
+    class FakeRunner:
+        def __init__(self):
+            self.cancelled = False
+
+        def cancel(self):
+            self.cancelled = True
+
+    runner = FakeRunner()
+    service.evaluation_runner = runner
+    service.cancel_evaluation()
+    assert runner.cancelled
 
 
 @pytest.mark.parametrize(

@@ -31,6 +31,7 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from Trainer import arena_trainer  # noqa: E402
+from Trainer.champion import CHAMPIONS_DIR  # noqa: E402
 
 FORMAT_VERSION = 1
 MAGIC = b"PABR"
@@ -198,7 +199,7 @@ def discover_behaviors(
     for run_dir in runs_dir.iterdir():
         if (
             not run_dir.is_dir()
-            or run_dir.name == "run_logs"
+            or run_dir.name in ("run_logs", CHAMPIONS_DIR)
             or arena_trainer.run_schema_version(run_dir) != schema_version
         ):
             continue
@@ -222,7 +223,10 @@ def newest_behavior_dir(
     behavior: str,
     schema_version: int | None = arena_trainer.SCHEMA_VERSION,
 ) -> Path | None:
-    candidates = [path for path in runs_dir.glob(f"*/{behavior}") if path.is_dir() and checkpoints(path)]
+    candidates = [
+        path for path in runs_dir.glob(f"*/{behavior}")
+        if path.is_dir() and path.parent.name != CHAMPIONS_DIR and checkpoints(path)
+    ]
     if schema_version is not None:
         candidates = [
             path
