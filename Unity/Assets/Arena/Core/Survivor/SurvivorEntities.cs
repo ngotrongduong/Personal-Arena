@@ -2,6 +2,9 @@ using PersonalArena.Core;
 
 namespace PersonalArena.Core.Survivor
 {
+    /// <summary>Where run gold came from: normal-kill drops, elite drops, the boss, chests, level-up fillers.</summary>
+    public enum GoldSource { Normal, Elite, Boss, Chest, Filler }
+
     public sealed class SurvivorHero
     {
         public Vec2 Position { get; internal set; }
@@ -64,6 +67,8 @@ namespace PersonalArena.Core.Survivor
         internal float SummonCooldown;
         internal float OrbitNextHitTime;
         internal int LastShockwaveId;
+        /// <summary>Run time of the last hit taken (spawn time until first hit); drives the tier-8 regen.</summary>
+        internal float LastHitTime;
         internal bool RelocatedThisTick;
         internal bool Separated;
     }
@@ -103,6 +108,8 @@ namespace PersonalArena.Core.Survivor
         public Vec2 Position { get; internal set; }
         public float Value { get; internal set; }
         public bool Attracted { get; internal set; }
+        /// <summary>Where a gold pickup came from (Normal or Elite); ignored for other kinds.</summary>
+        public GoldSource Source { get; internal set; }
         public float Radius => Kind == PickupKind.Gem ? GemRadius(Value) : 0.3f;
         public static int GemSize(float value) => value < 10f ? 0 : value < 100f ? 1 : 2;
         public static float GemRadius(float value) => GemSize(value) == 0 ? 0.18f : GemSize(value) == 1 ? 0.25f : 0.35f;

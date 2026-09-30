@@ -22,6 +22,8 @@ namespace PersonalArena.Core.Survivor
         public float MinHpTime { get; set; }
         public int[] SkillUses { get; set; } = new int[4];
         public int[] FinalItemLevels { get; set; } = new int[SurvivorCatalog.CatalogSize];
+        /// <summary>Run gold per <see cref="GoldSource"/> (length <see cref="SurvivorSim.GoldSourceCount"/>).</summary>
+        public float[] GoldBySource { get; set; } = new float[SurvivorSim.GoldSourceCount];
         public SurvivorBehaviorStats Behavior { get; set; } = new SurvivorBehaviorStats();
     }
 
@@ -64,6 +66,7 @@ namespace PersonalArena.Core.Survivor
             };
             Array.Copy(sim.SkillUses, result.SkillUses, 4);
             for (int i = 0; i < result.FinalItemLevels.Length; i++) result.FinalItemLevels[i] = sim.Inventory.Level(i);
+            for (int i = 0; i < result.GoldBySource.Length; i++) result.GoldBySource[i] = sim.GetGold((GoldSource)i);
             return result;
         }
 

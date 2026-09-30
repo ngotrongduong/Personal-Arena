@@ -23,13 +23,13 @@ namespace PersonalArena.Core.Survivor
             SpawnPickup(PickupKind.Gem, point, value, false);
         }
 
-        private SurvivorPickup SpawnPickup(PickupKind kind, Vec2 point, float value, bool countDrop)
+        private SurvivorPickup SpawnPickup(PickupKind kind, Vec2 point, float value, bool countDrop, GoldSource source = GoldSource.Normal)
         {
             SurvivorPickup pickup = null;
             for (int i = 0; i < pickupLimit; i++) if (!pickups[i].Active) { pickup = pickups[i]; break; }
             if (pickup == null && pickupLimit < pickups.Length) pickup = pickups[pickupLimit++];
             if (pickup == null) return null;
-            pickup.Active = true; pickup.Kind = kind; pickup.Position = point; pickup.Value = value; pickup.Attracted = false;
+            pickup.Active = true; pickup.Kind = kind; pickup.Position = point; pickup.Value = value; pickup.Attracted = false; pickup.Source = source;
             if (kind == PickupKind.Gem) gemCount++;
             if (countDrop && (kind == PickupKind.Gold || kind == PickupKind.Meat)) DropsSpawned++;
             return pickup;
@@ -55,7 +55,7 @@ namespace PersonalArena.Core.Survivor
                 if (testDisablePickupCollection) continue;
                 p.Active = false;
                 if (p.Kind == PickupKind.Gem) { gemCount--; CollectXp(p.Value); }
-                else if (p.Kind == PickupKind.Gold) { Gold += p.Value; DropsCollected++; AddEvent(SurvivorEventType.GoldCollected, p.Value, point: p.Position); }
+                else if (p.Kind == PickupKind.Gold) { AddGold(p.Value, p.Source); DropsCollected++; AddEvent(SurvivorEventType.GoldCollected, p.Value, point: p.Position); }
                 else if (p.Kind == PickupKind.Meat) { DropsCollected++; Heal(tuning.MeatHeal, true); }
                 else if (p.Kind == PickupKind.Magnet) CollectMagnet();
                 else if (p.Kind == PickupKind.Chest) OpenChest(p.Position);
@@ -94,7 +94,7 @@ namespace PersonalArena.Core.Survivor
                 inventory.Set(upgraded, newLevel); RecomputeStats(true);
             }
             float gold = MathF.Floor(rng.Range(SurvivorCatalog.ChestGoldMin, SurvivorCatalog.ChestGoldMax)) * stats.TierGold * stats.GreedMul;
-            Gold += gold;
+            AddGold(gold, GoldSource.Chest);
             AddEvent(SurvivorEventType.GoldCollected, gold, point: point);
             AddEvent(SurvivorEventType.ChestOpened, gold, newLevel, upgraded, point);
         }
@@ -160,7 +160,7 @@ namespace PersonalArena.Core.Survivor
         {
             if (pick < 1 || pick > OfferCount) return;
             int index = offers[pick - 1]; int newLevel = offerLevels[pick - 1];
-            if (index == SurvivorCatalog.BonusGoldIndex) Gold += Config.Tuning.FillerGold * stats.GreedMul * stats.TierGold;
+            if (index == SurvivorCatalog.BonusGoldIndex) AddGold(Config.Tuning.FillerGold * stats.GreedMul * stats.TierGold, GoldSource.Filler);
             else if (index == SurvivorCatalog.BonusHealIndex) Heal(Config.Tuning.FillerHeal, true);
             else
             {

@@ -15,6 +15,23 @@ namespace PersonalArena.Core.Survivor
         public float BossDamage = 2f;
         public float PerDamage = 0f;
 
+        /// <summary>
+        /// A new reward config for a Training Focus. Balanced is exactly the defaults; each other
+        /// focus changes only the fields in the T-023 table.
+        /// </summary>
+        public static SurvivorRewardConfig ForFocus(TrainingFocus focus)
+        {
+            SurvivorRewardConfig config = new SurvivorRewardConfig();
+            switch (focus)
+            {
+                case TrainingFocus.Survival: config.HpLostPerMaxHp = 1.6f; config.Death = 6f; config.PerGold = 0.0005f; break;
+                case TrainingFocus.Gold: config.PerGold = 0.003f; break;
+                case TrainingFocus.Boss: config.BossDamage = 5f; break;
+                case TrainingFocus.Offense: config.PerLevelProgress = 0.1f; config.HpLostPerMaxHp = 0.7f; break;
+            }
+            return config;
+        }
+
         public void Validate()
         {
             Check(Win); Check(TimeUp); Check(Death); Check(SurvivePerSecond); Check(HpLostPerMaxHp);

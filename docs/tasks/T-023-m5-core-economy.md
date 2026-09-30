@@ -1,7 +1,7 @@
 # T-023: M5 Core — economy, loadouts, tier modifiers, Training Focus, spectator labels, run story
 
 - **Owner:** Codex
-- **Status:** doing
+- **Status:** review
 - **Milestone:** M5
 - **Parallel OK with:** T-024 (Trainer glue, different files)
 - **Depends on:** T-021 (merged)
@@ -309,4 +309,112 @@ At least one focused test per behaviour:
 
 ## Report
 
-(Codex fills this in.)
+Done by Claude (subagent) in `C:\PersonalArena-wt\t023` on 2026-09-30. No git commands were run.
+
+### What changed
+
+- **Edited (Core/Survivor):**
+  - `SurvivorConfig.cs`: new tier-modifier tuning in `SurvivorTuning`:
+    - `DenserSpawnsMul` 1.1, `EarlyEliteSeconds` 90, `FastRunnerSpeedMul` 1.15, `LessMeatMul` 0.5;
+    - `EarlyBruteFromSeconds` 60, `EarlyBruteMinWeight` 1, `DoubleEliteCount` 2;
+    - `RegenDelaySeconds` 3, `RegenFractionPerSecond` 0.02, `BossSummonFasterMul` 0.5;
+    - `NightmareSpeedMul` 1.1, `NightmareEliteHpMul` 1.5.
+  - `SurvivorRewardConfig.cs`: `ForFocus(TrainingFocus)`.
+  - `SurvivorEntities.cs`: `GoldSource` enum, `SurvivorPickup.Source`, and a per-enemy last-damaged time.
+  - `SurvivorSim.cs`, `SurvivorSim.Enemies.cs`, `SurvivorSim.EnemyProjectiles.cs`, `SurvivorSim.Progression.cs`, `SurvivorSim.Weapons.cs`:
+    - tier modifiers;
+    - per-source gold totals (`GetGold`, `GoldSourceCount` = 5);
+    - `LastHitCause`;
+    - new internal test hooks.
+  - `SurvivorEvaluator.cs`: `SurvivorRunStats.GoldBySource`, filled by `RunOne`.
+- **New files (each with a `.meta`, plus the `Core/Meta.meta` folder file):**
+  - `Core/Survivor/TrainingFocus.cs`, `TierModifiers.cs`, `SpectatorLabeler.cs`, `RunChronicle.cs`;
+  - `Core/Meta/PlayerProfile.cs`, `ProfileRules.cs`, `FarmSession.cs`, `EconomyLog.cs`.
+  - `CoreTests.csproj` already globs `Core/**`, so it was not edited.
+- **New tests:**
+  - `CoreTests/Survivor/SurvivorM5GoldenTests.cs`, `SurvivorM5TierTests.cs`, `SurvivorM5FocusTests.cs`, `SurvivorM5GoldTests.cs`, `SurvivorM5LabelerTests.cs`, `SurvivorM5ChronicleTests.cs`;
+  - `CoreTests/Meta/ProfileRulesTests.cs`, `FarmSessionTests.cs`, `EconomyLogTests.cs`.
+- **Not touched:**
+  - `Trainer/schemas/survivor_v4.json`, the observation layout (still 2264 floats) and the action space 9/5/5;
+  - the default `SurvivorRewardConfig` numbers;
+  - the existing tests, and their budgets.
+  - Core still has no `UnityEngine` reference.
+
+### Test counts
+
+- `dotnet test CoreTests -c Release`: **201 passed, 0 failed.**
+  - 65 of these are `SurvivorM5*` tests and 24 are `CoreTests/Meta` tests.
+  - The other 112 are existing tests, all green without edits, including the schema v4, golden/determinism, allocation and performance tests.
+- `dotnet build CoreTests` (Debug): 0 warnings, 0 errors.
+- `--no-restore` was not needed.
+
+### Decisions on details the spec left open
+
+1. **Focus hierarchy.** For every focus the test checks that `Win > 900 · SurvivePerSecond` and `Death > 0`, plus the sign of every term and "outcome dominates". It does not check the full `Win > Death > 900·SPS` chain.
+2. **Tier names.**
+   - Tier 9's display name is "Boss gọi quân nhanh gấp đôi" (the real effect: summon interval × 0.5), not the GDD's "gọi thêm Runner".
+   - Tier 10's name is the Nightmare text from this spec.
+   - Claude should update GDD §3.5 to match.
+3. **Tier modifier effects.**
+   - The EarlyElite (90 s) elite is also doubled at tier ≥ 7, as the spec says "including the tier-3 one".
+   - The EarlyElite and DoubleElites spawns use the normal elite spawn with its raw type weights.
+   - The Nightmare speed bonus also applies to the boss ("every enemy").
+   - EarlyBrutes raises the Brute weight to ≥ 1 only in spawn phases with `60 s ≤ From <` the first phase where brutes already have weight (in today's table, 180 s).
+   - EnemyRegen skips the boss. Any damage resets the enemy's last-damaged time, and spawning resets it too.
+4. **Gold sources.**
+   - The sim keeps a float total per source.
+   - The sum of the five equals `Gold` within float rounding. The tests allow `1e-5 · gold + 1e-3`, because the same values are added in a different grouping.
+   - The elite gold drop keeps `Source = Elite` on the pickup.
+   - Pickups spawned without a source are `Normal`.
+5. **`LastHitCause`.**
+   - This new public sim property holds the type of the last enemy hit taken: Brute, Boss, Projectile or Contact.
+   - It is `None` until the first hit and resets with the run.
+   - `RunChronicle` uses it for the NearDeath cause (Surrounded wins when ≥ `SurroundedCount` enemies touch).
+6. **Spectator labels.**
+   - `SpectatorLabeler` also has `ComputeRaw(sim)` and `ObserveRaw(label, dt)`, used by the tests.
+   - `Observe` with `dt = 0` records `DamageDealt` events but does not move the hysteresis clock.
+   - The Kiting 1.0 s window uses a 1e-4 s tolerance.
+   - The labeler tests set the hero velocity directly with `SetHeroStateForTests` so each scene is exact. One test (`ObserveAfterSteps_ShowsCharging`) drives the hero through real inputs and `Step`.
+7. **Chronicle rules.**
+   - StyleChange compares against the **last added** style entry.
+   - A NearDeath is not recorded while the hero is dead. The first dip's cause is `None` if no enemy has hit yet.
+   - The 60 s gap is measured between NearDeath entries.
+   - **Cap of 64:**
+     - a new StyleChange is dropped;
+     - a new NewItem replaces the latest StyleChange, or is dropped if there is none;
+     - any other kind replaces the latest StyleChange, then the latest NewItem, or is dropped;
+     - `End` replaces the last entry when nothing can be evicted, so a story always ends with End.
+   - `Finish` is idempotent, and `Observe` after `Finish` is ignored.
+8. **LevelCost.**
+   - It uses the exact `floor(100 · 1.25^n)` in double math: 0 → 100, 9 → 745, **19 → 6938** (the GDD rounds to 6939).
+   - It saturates at `long.MaxValue`, which happens from about level 170.
+   - `TryBuyLevel` stops at 190 anyway.
+9. **Sanitize.**
+   - Null, empty-id and duplicate characters are removed (the first one is kept).
+   - A missing Warrior is inserted at index 0.
+   - `SelectedClassId` falls back to "warrior" when that class is missing.
+   - Loadout names are trimmed and cut to 16 characters; an empty name becomes "Bộ N".
+   - Points arrays longer than 16 are cut.
+   - The record is repaired: `Wins ≤ Runs`; NaN, Inf and negative totals become 0; NaN, Inf and negative `RecentSeconds` entries are removed; the list keeps its last 20.
+   - Negative profile stats become 0.
+   - A focus id is parsed case-insensitively and trimmed, then stored in canonical form.
+10. **RecordRun.**
+    - Gold that is NaN or ≤ 0 books 0.
+    - Survived seconds that are NaN or negative book 0.
+    - The tier unlocks only when `End == Won && r.Tier == UnlockedTier && UnlockedTier < 10`.
+    - A null profile or result throws, and so does a bad loadout index.
+    - `RecordFarmSession(p)` counts a finished session.
+11. **Profile classes.** They are `[Serializable]` with public fields only; a test checks there are no properties. `RunResult`, `RunReward` and `LoadoutSummary` use public fields.
+12. **FarmSession.**
+    - It has an optional `runSeconds` constructor parameter (default 900 s). The tests use 60 s.
+    - The build is validated and cloned in the constructor.
+    - `Cancel()` only sets a flag. The match in progress finishes, and the worker sets `IsDone` at the end of that match or on its next `RunNext()`.
+    - The worker loop is `while (session.RunNext()) { }`.
+    - `Completed` uses `Interlocked`/`Volatile`; `TotalGold`, `IsDone` and `IsCancelled` are volatile.
+13. **EconomyLog.**
+    - The header has 19 fields.
+    - Numbers are written as `"0.###"` (invariant culture) and the time as `yyyy-MM-ddTHH:mm:ssZ`.
+    - A `Local` time is converted to UTC; an `Unspecified` time is treated as UTC.
+    - Commas, `;`, `"`, CR and LF in text fields become spaces, and the field is then trimmed.
+    - With a null build the stat points are zeros.
+    - Gold per minute is 0 when the survived time is 0.

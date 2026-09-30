@@ -198,7 +198,7 @@ namespace PersonalArena.Core.Survivor
             float damage = baseDamage * stats.Might;
             float critChance = enemy.StunRemaining > 0f ? MathF.Min(1f, stats.CritChance * 2f) : stats.CritChance;
             if (rng.NextFloat() < critChance) { damage *= stats.CritDamage; AddEvent(SurvivorEventType.Crit, id: enemy.Id, point: enemy.Position); }
-            float removed = MathF.Min(enemy.Hp, damage); enemy.Hp -= removed; DamageDealtTotal += removed;
+            float removed = MathF.Min(enemy.Hp, damage); enemy.Hp -= removed; DamageDealtTotal += removed; enemy.LastHitTime = Time;
             AddEvent(SurvivorEventType.DamageDealt, removed, removed / enemy.MaxHp, enemy.Id, enemy.Position);
             if (enemy.IsBoss) { float fraction = removed / enemy.MaxHp; BossDamageFraction += fraction; AddEvent(SurvivorEventType.BossDamaged, removed, fraction, enemy.Id, enemy.Position); }
             if (knockback > 0f) PushEnemy(enemy, pushDirection, knockback);
@@ -215,7 +215,7 @@ namespace PersonalArena.Core.Survivor
             if (enemy.IsBoss)
             {
                 AddEvent(SurvivorEventType.BossKilled, id: enemy.Id, point: enemy.Position);
-                float gold = tuning.BossGold * stats.TierGold * stats.GreedMul; Gold += gold; AddEvent(SurvivorEventType.GoldCollected, gold, id: enemy.Id);
+                float gold = tuning.BossGold * stats.TierGold * stats.GreedMul; AddGold(gold, GoldSource.Boss); AddEvent(SurvivorEventType.GoldCollected, gold, id: enemy.Id);
                 EndReason = EndReason.Won; AddEvent(SurvivorEventType.RunWon); return;
             }
             SurvivorEnemyDef def = SurvivorDefaults.EnemyDef(enemy.TypeIndex);
@@ -224,7 +224,7 @@ namespace PersonalArena.Core.Survivor
             if (enemy.Elite)
             {
                 float gold = MathF.Floor(rng.Range(tuning.EliteGoldMin, tuning.EliteGoldMax)) * stats.TierGold * stats.GreedMul;
-                SpawnPickup(PickupKind.Gold, goldPoint, gold, true);
+                SpawnPickup(PickupKind.Gold, goldPoint, gold, true, GoldSource.Elite);
                 SpawnPickup(PickupKind.Chest, enemy.Position + Vec2.FromAngle(SurvivorCatalog.ChestDropAngle) * tuning.DropOffset, 0f, false);
             }
             else if (rng.NextFloat() < tuning.GoldChance * (1f + stats.Luck / 100f))
@@ -232,7 +232,7 @@ namespace PersonalArena.Core.Survivor
                 float gold = MathF.Floor(rng.Range(tuning.GoldMin, tuning.GoldMax)) * stats.TierGold * stats.GreedMul;
                 SpawnPickup(PickupKind.Gold, goldPoint, gold, true);
             }
-            if (rng.NextFloat() < tuning.MeatChance) SpawnPickup(PickupKind.Meat, enemy.Position + Vec2.FromAngle(tuning.MeatDropAngle) * tuning.DropOffset, tuning.MeatHeal, true);
+            if (rng.NextFloat() < EffectiveMeatChance) SpawnPickup(PickupKind.Meat, enemy.Position + Vec2.FromAngle(tuning.MeatDropAngle) * tuning.DropOffset, tuning.MeatHeal, true);
             if (!enemy.Elite && RollMagnetDrop())
                 SpawnPickup(PickupKind.Magnet, enemy.Position + Vec2.FromAngle(SurvivorCatalog.MagnetDropAngle) * tuning.DropOffset, 0f, false);
         }

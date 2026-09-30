@@ -17,6 +17,7 @@ namespace PersonalArena.Core.Survivor
         private const int DashSlot = 2;
         private const int BossTypeIndex = 4;
         private const int BruteTypeIndex = 2;
+        private const int RunnerTypeIndex = 1;
         /// <summary>Cell size of the obstacle lookup grid (m).</summary>
         private const float ObstacleCellSize = 4f;
         /// <summary>Bodies up to this radius use the obstacle grid; larger ones scan every obstacle.</summary>
@@ -68,6 +69,10 @@ namespace PersonalArena.Core.Survivor
         private bool testInvulnerable;
         private bool testEnemiesInvulnerable;
         private bool testDisablePickupCollection;
+        /// <summary>Tier 3+: whether the extra 90 s elite has spawned this run.</summary>
+        private bool earlyEliteSpawned;
+        private readonly float[] goldBySource = new float[GoldSourceCount];
+        public const int GoldSourceCount = 5;
 
         public SurvivorSim(SurvivorConfig config, int seed)
         {
@@ -100,6 +105,11 @@ namespace PersonalArena.Core.Survivor
         public int DropsCollected { get; private set; }
         public EndReason EndReason { get; private set; }
         public DeathCause DeathCause { get; private set; }
+        /// <summary>
+        /// Kind of the last enemy hit taken (Boss, Brute for a brute swing, Projectile, else Contact);
+        /// None until the hero is first hit. Used by the run story; does not change the sim.
+        /// </summary>
+        public DeathCause LastHitCause { get; private set; }
         public bool IsEnded => EndReason != EndReason.None;
         public bool IsAwaitingPick => OfferCount > 0;
         public int OfferCount { get; private set; }
@@ -148,7 +158,8 @@ namespace PersonalArena.Core.Survivor
             Time = 0f; Level = 1; Xp = 0f; Gold = 0f; Kills = 0; EliteKills = 0;
             TotalXp = 0f; DamageTaken = 0f; DamageDealtTotal = 0f; BossDamageFraction = 0f;
             DropsSpawned = 0; DropsCollected = 0; MinHpRatio = 1f; MinHpTime = 0f;
-            EndReason = EndReason.None; DeathCause = DeathCause.None; OfferCount = 0;
+            EndReason = EndReason.None; DeathCause = DeathCause.None; LastHitCause = DeathCause.None; OfferCount = 0;
+            earlyEliteSpawned = false; Array.Clear(goldBySource, 0, goldBySource.Length);
             pendingLevelUps = 0; spawnAccumulator = 0f; nextEnemyId = 1; nextProjectileId = 1; nextEnemyProjectileId = 1;
             nextEliteIndex = 0; bossSpawned = false; LastMove = 0; LastSkill = 0; LastStepSeconds = 0f;
             bossEnemy = null; aliveEnemyCount = 0; aliveNormalCount = 0; maxEnemyRadius = 0f; hashDrift = 0f;
@@ -512,6 +523,39 @@ namespace PersonalArena.Core.Survivor
         private static SurvivorObstacle[] CreateObstacles() { SurvivorObstacle[] a = new SurvivorObstacle[ObstacleCapacity]; for (int i = 0; i < a.Length; i++) a[i] = new SurvivorObstacle(); return a; }
         private void AddEvent(SurvivorEventType type, float value = 0f, float extra = 0f, int id = -1, Vec2 point = default) => events.Add(new SurvivorEvent(type, value, extra, id, point));
 
+        /// <summary>Gold of this run that came from <paramref name="source"/>; the five sources sum to <see cref="Gold"/>.</summary>
+        public float GetGold(GoldSource source)
+        {
+            int index = (int)source;
+            return index >= 0 && index < goldBySource.Length ? goldBySource[index] : 0f;
+        }
+
+        private void AddGold(float amount, GoldSource source)
+        {
+            Gold += amount;
+            goldBySource[(int)source] += amount;
+        }
+
+        /// <summary>Number of active enemies touching the hero (same rule as the Surrounded death cause).</summary>
+        public int TouchingEnemyCount()
+        {
+            float margin = Config.Tuning.ContactMargin;
+            int touching = 0;
+            for (int i = 0; i < enemyLimit; i++) if (enemies[i].Active && Vec2.Distance(enemies[i].Position, Hero.Position) <= Hero.Radius + enemies[i].Radius + margin) touching++;
+            return touching;
+        }
+
+        private bool Has(TierModifier modifier) => TierModifiers.Has(Config.Build.Tier, modifier);
+
+        /// <summary>Meat drop chance after the LessMeat modifier.</summary>
+        internal float EffectiveMeatChance => Has(TierModifier.LessMeat) ? Config.Tuning.MeatChance * Config.Tuning.LessMeatMul : Config.Tuning.MeatChance;
+
+        /// <summary>Boss summon interval after the BossSummonsFaster modifier.</summary>
+        internal float EffectiveBossSummonInterval => Has(TierModifier.BossSummonsFaster) ? Config.Tuning.BossSummonIntervalSeconds * Config.Tuning.BossSummonFasterMul : Config.Tuning.BossSummonIntervalSeconds;
+
+        /// <summary>Elites spawned at each scheduled elite time (DoubleElites modifier).</summary>
+        internal int ElitesPerScheduledTime => Has(TierModifier.DoubleElites) ? Config.Tuning.DoubleEliteCount : 1;
+
         internal void SetTimeForTests(float time) { Time = time; }
         internal void SetHeroInvulnerableForTests() { testInvulnerable = true; }
         internal void SetEnemiesInvulnerableForTests() { testEnemiesInvulnerable = true; }
@@ -526,7 +570,9 @@ namespace PersonalArena.Core.Survivor
         internal void SetHeroStateForTests(Vec2 position, Vec2 velocity, float facing) { Hero.Position = position; Hero.Velocity = velocity; Hero.Facing = facing; }
         internal void SetEnemyVelocityForTests(SurvivorEnemy enemy, Vec2 velocity) { enemy.Velocity = velocity; }
         internal void DamageHeroForTests(float raw, SurvivorEnemy source, bool contact = true) => DamageHero(raw, source, contact);
-        internal SurvivorPickup SpawnPickupForTests(PickupKind kind, Vec2 point, float value) => SpawnPickup(kind, point, value, false);
+        internal SurvivorPickup SpawnPickupForTests(PickupKind kind, Vec2 point, float value, GoldSource source = GoldSource.Normal) => SpawnPickup(kind, point, value, false, source);
+        internal SurvivorEnemy SpawnBossForTests(Vec2 position) => SpawnEnemy(BossTypeIndex, position, false, true);
+        internal float SummonCooldownForTests(SurvivorEnemy enemy) => enemy.SummonCooldown;
         internal SurvivorEnemyProjectile SpawnEnemyProjectileForTests(Vec2 point, Vec2 velocity, float radius, float damage, float lifetime, int sourceId = -1) =>
             SpawnEnemyProjectile(point, velocity, radius, damage, lifetime, sourceId);
         internal float WeaponCooldownForTests(int index) => weaponCooldowns[index];

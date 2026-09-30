@@ -43,7 +43,9 @@ namespace PersonalArena.Core.Survivor
                     continue;
                 }
                 if (testInvulnerable) continue;
-                if (ApplyHeroDamage(projectile.Damage, projectile.SourceId))
+                bool killed = ApplyHeroDamage(projectile.Damage, projectile.SourceId);
+                LastHitCause = DeathCause.Projectile;
+                if (killed)
                 {
                     KillHero(null, false, true, projectile.SourceId);
                     return;

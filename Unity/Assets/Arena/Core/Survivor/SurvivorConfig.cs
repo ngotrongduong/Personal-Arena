@@ -124,6 +124,31 @@ namespace PersonalArena.Core.Survivor
         public float FillerGold = 25f;
         public float FillerHeal = 30f;
 
+        // Tier modifiers (GDD §3.5; see TierModifiers). Tier 1 uses none of these.
+        /// <summary>DenserSpawns (tier ≥ 2): max alive and spawns per second × this, on top of SpawnPerTier.</summary>
+        public float DenserSpawnsMul = 1.1f;
+        /// <summary>EarlyElite (tier ≥ 3): one extra scheduled elite at this time (s).</summary>
+        public float EarlyEliteSeconds = 90f;
+        /// <summary>FastRunners (tier ≥ 4): runner (type 1) move speed × this.</summary>
+        public float FastRunnerSpeedMul = 1.15f;
+        /// <summary>LessMeat (tier ≥ 5): meat drop chance × this.</summary>
+        public float LessMeatMul = 0.5f;
+        /// <summary>EarlyBrutes (tier ≥ 6): phases starting at or after this time, before brutes normally appear, get brute weight ≥ EarlyBruteMinWeight.</summary>
+        public float EarlyBruteFromSeconds = 60f;
+        public int EarlyBruteMinWeight = 1;
+        /// <summary>DoubleElites (tier ≥ 7): elites spawned at every scheduled elite time.</summary>
+        public int DoubleEliteCount = 2;
+        /// <summary>EnemyRegen (tier ≥ 8): a non-boss enemy not damaged for this long (s) regenerates.</summary>
+        public float RegenDelaySeconds = 3f;
+        /// <summary>EnemyRegen: fraction of max HP regained per second.</summary>
+        public float RegenFractionPerSecond = 0.02f;
+        /// <summary>BossSummonsFaster (tier ≥ 9): boss summon interval × this.</summary>
+        public float BossSummonFasterMul = 0.5f;
+        /// <summary>Nightmare (tier 10): every enemy's move speed × this.</summary>
+        public float NightmareSpeedMul = 1.1f;
+        /// <summary>Nightmare (tier 10): elite HP × this (on top of EliteHpMul).</summary>
+        public float NightmareEliteHpMul = 1.5f;
+
         public void Validate()
         {
             Check(FacingRange); Check(HeroTurnRateDegPerSec); Check(HpPerMinute); Check(DamagePerMinute); Check(HpPerTier);
@@ -134,6 +159,9 @@ namespace PersonalArena.Core.Survivor
             Check(EnemySeparation); Check(GoldChance); Check(GoldMin); Check(GoldMax); Check(EliteGoldMin); Check(EliteGoldMax);
             Check(MeatChance); Check(MeatHeal); Check(BossGold); Check(DropOffset); Check(GoldDropAngle); Check(MeatDropAngle);
             Check(PickupFlySpeed); Check(CollectMargin); Check(FillerGold); Check(FillerHeal);
+            Check(DenserSpawnsMul); Check(EarlyEliteSeconds); Check(FastRunnerSpeedMul); Check(LessMeatMul); Check(EarlyBruteFromSeconds);
+            Check(RegenDelaySeconds); Check(RegenFractionPerSecond); Check(BossSummonFasterMul); Check(NightmareSpeedMul); Check(NightmareEliteHpMul);
+            if (EarlyBruteMinWeight < 0 || DoubleEliteCount < 1 || BossSummonFasterMul <= 0f) throw new ArgumentOutOfRangeException(nameof(DoubleEliteCount));
             if (SpawnRingMax < SpawnRingMin || GoldMax < GoldMin || EliteGoldMax < EliteGoldMin) throw new ArgumentOutOfRangeException(nameof(SpawnRingMax), "A range has max < min.");
             if (SummonReserve < 0 || EliteCount < 0 || SurroundedCount < 1 || BossSummonCount < 0) throw new ArgumentOutOfRangeException(nameof(SummonReserve));
             if (SpawnAttempts < 1 || EliteSpawnAttempts < 1 || ObstacleAttemptsPerObstacle < 1) throw new ArgumentOutOfRangeException(nameof(SpawnAttempts));
