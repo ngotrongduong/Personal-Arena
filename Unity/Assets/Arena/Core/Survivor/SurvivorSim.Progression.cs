@@ -5,11 +5,11 @@ namespace PersonalArena.Core.Survivor
 {
     public sealed partial class SurvivorSim
     {
+        private int gemCount;
+
         private void SpawnGem(Vec2 point, float value)
         {
-            int gems = 0;
-            for (int i = 0; i < pickupLimit; i++) if (pickups[i].Active && pickups[i].Kind == PickupKind.Gem) gems++;
-            if (gems >= GemCapacity)
+            if (gemCount >= GemCapacity)
             {
                 SurvivorPickup nearest = null; float best = float.PositiveInfinity;
                 for (int i = 0; i < pickupLimit; i++)
@@ -25,42 +25,38 @@ namespace PersonalArena.Core.Survivor
 
         private SurvivorPickup SpawnPickup(PickupKind kind, Vec2 point, float value, bool countDrop)
         {
-            for (int i = 0; i < pickupLimit; i++)
-            {
-                if (pickups[i].Active) continue;
-                pickups[i].Active = true; pickups[i].Kind = kind; pickups[i].Position = point;
-                pickups[i].Value = value; pickups[i].Attracted = false;
-                if (countDrop && (kind == PickupKind.Gold || kind == PickupKind.Meat)) DropsSpawned++;
-                return pickups[i];
-            }
-            if (pickupLimit < pickups.Length)
-            {
-                SurvivorPickup pickup = pickups[pickupLimit++]; pickup.Active = true; pickup.Kind = kind; pickup.Position = point; pickup.Value = value; pickup.Attracted = false;
-                if (countDrop && (kind == PickupKind.Gold || kind == PickupKind.Meat)) DropsSpawned++;
-                return pickup;
-            }
-            return null;
+            SurvivorPickup pickup = null;
+            for (int i = 0; i < pickupLimit; i++) if (!pickups[i].Active) { pickup = pickups[i]; break; }
+            if (pickup == null && pickupLimit < pickups.Length) pickup = pickups[pickupLimit++];
+            if (pickup == null) return null;
+            pickup.Active = true; pickup.Kind = kind; pickup.Position = point; pickup.Value = value; pickup.Attracted = false;
+            if (kind == PickupKind.Gem) gemCount++;
+            if (countDrop && (kind == PickupKind.Gold || kind == PickupKind.Meat)) DropsSpawned++;
+            return pickup;
         }
 
         private void UpdatePickups()
         {
+            SurvivorTuning tuning = Config.Tuning;
+            float flyStep = tuning.PickupFlySpeed * FixedDeltaTime;
+            float collectRadius = Hero.Radius + tuning.CollectMargin;
+            float pickupRadiusSquared = stats.PickupRadius * stats.PickupRadius;
             for (int i = 0; i < pickupLimit; i++)
             {
                 SurvivorPickup p = pickups[i]; if (!p.Active) continue;
                 Vec2 toHero = Hero.Position - p.Position; float distanceSquared = toHero.LengthSquared;
-                if (distanceSquared <= stats.PickupRadius * stats.PickupRadius) p.Attracted = true;
+                if (distanceSquared <= pickupRadiusSquared) p.Attracted = true;
                 if (p.Attracted && distanceSquared > 1e-6f)
                 {
-                    float distance = MathF.Sqrt(distanceSquared); p.Position += toHero / distance * MathF.Min(distance, 12f * FixedDeltaTime);
+                    float distance = MathF.Sqrt(distanceSquared); p.Position += toHero / distance * MathF.Min(distance, flyStep);
                     toHero = Hero.Position - p.Position; distanceSquared = toHero.LengthSquared;
                 }
-                float collectRadius = Hero.Radius + 0.3f;
                 if (distanceSquared > collectRadius * collectRadius) continue;
                 if (testDisablePickupCollection) continue;
                 p.Active = false;
-                if (p.Kind == PickupKind.Gem) CollectXp(p.Value);
+                if (p.Kind == PickupKind.Gem) { gemCount--; CollectXp(p.Value); }
                 else if (p.Kind == PickupKind.Gold) { Gold += p.Value; DropsCollected++; AddEvent(SurvivorEventType.GoldCollected, p.Value, point: p.Position); }
-                else if (p.Kind == PickupKind.Meat) { DropsCollected++; Heal(30f, true); }
+                else if (p.Kind == PickupKind.Meat) { DropsCollected++; Heal(tuning.MeatHeal, true); }
             }
         }
 
@@ -102,7 +98,7 @@ namespace PersonalArena.Core.Survivor
             int wanted = 3 + (rng.NextFloat() < stats.Luck / (100f + stats.Luck) ? 1 : 0);
             if (count == 0)
             {
-                offers[0] = 62; offerLevels[0] = 0; offers[1] = 63; offerLevels[1] = 0; OfferCount = 2;
+                offers[0] = SurvivorCatalog.BonusGoldIndex; offerLevels[0] = 0; offers[1] = SurvivorCatalog.BonusHealIndex; offerLevels[1] = 0; OfferCount = 2;
             }
             else
             {
@@ -117,13 +113,21 @@ namespace PersonalArena.Core.Survivor
             AddEvent(SurvivorEventType.OfferShown, OfferCount);
         }
 
+        /// <summary>
+        /// Applies a level-up pick. Filler gold is added without a GoldCollected event (a pick gives
+        /// no reward); a weapon's cooldown resets only when the weapon is newly acquired.
+        /// </summary>
         private void HandlePick(int pick)
         {
             if (pick < 1 || pick > OfferCount) return;
             int index = offers[pick - 1]; int newLevel = offerLevels[pick - 1];
-            if (index == 62) { float gold = 25f * stats.GreedMul * stats.TierGold; Gold += gold; AddEvent(SurvivorEventType.GoldCollected, gold); }
-            else if (index == 63) Heal(30f, true);
-            else { inventory.Set(index, newLevel); RecomputeStats(true); weaponCooldowns[index] = 0f; }
+            if (index == SurvivorCatalog.BonusGoldIndex) Gold += Config.Tuning.FillerGold * stats.GreedMul * stats.TierGold;
+            else if (index == SurvivorCatalog.BonusHealIndex) Heal(Config.Tuning.FillerHeal, true);
+            else
+            {
+                inventory.Set(index, newLevel); RecomputeStats(true);
+                if (newLevel == 1) weaponCooldowns[index] = 0f;
+            }
             AddEvent(SurvivorEventType.ItemPicked, newLevel, id: index);
             pendingLevelUps--; OfferCount = 0;
             if (pendingLevelUps > 0) OpenOffer();

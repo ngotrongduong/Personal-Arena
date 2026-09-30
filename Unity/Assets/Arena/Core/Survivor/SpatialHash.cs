@@ -30,6 +30,10 @@ namespace PersonalArena.Core.Survivor
         internal int[] UsedCells => usedCells;
         internal int UsedCount => usedCount;
 
+        /// <summary>
+        /// Re-buckets active enemies. Indices are pushed in ascending order, so every cell chain
+        /// (Heads → Next) lists pool indices in descending order; callers rely on this.
+        /// </summary>
         public void Rebuild(SurvivorEnemy[] enemies, int count)
         {
             for (int i = 0; i < usedCount; i++) heads[usedCells[i]] = -1;

@@ -625,3 +625,32 @@ the same seed + config + inputs (all randomness from the sim's own `Rng`), no al
   - Deterministic fallback choices: obstacle placement stops after 64 attempts per requested
     obstacle; a failed elite/boss ring placement is clamped and pushed out at the facing-side ring
     point; full pools skip the spawn, except a full gem quota merges into the nearest gem.
+  - Spawn accumulator at the cap: `SpawnScheduledEnemies` drains the accumulator by 1 per pending
+    spawn even while the max-alive cap blocks it, so blocked spawns are dropped, not banked. When
+    kills free room, spawning resumes at the phase rate instead of bursting.
+
+### Review fixes (T-018, branch `fix/t014-review`)
+
+- The run end is final within a tick: once `EndReason` is set (boss killed, death, expiry) no hero
+  damage, `HeroDied` or spawn can follow in the same tick; `Step` skips the remaining phases.
+- A failed boss spawn (pool full) is retried every tick; if the boss never spawns the run ends
+  `Expired` at `BossExpireSeconds`.
+- `SurvivorPilot` decides afresh on the first unpaused tick after a pick. The evaluator salts the
+  pilot seed with `SurvivorEvaluator.PilotSeedSalt` (`seed ^ 0x5EED5EED`).
+- Knockback from sweep, kick and block pushes away from the hero (facing when the positions
+  coincide); hammers push along their flight direction.
+- The spatial-hash neighbour margin is the largest active enemy radius (elites and the boss
+  included); separated enemies are re-clamped to the map and obstacles; hero velocity is the actual
+  motion after separation.
+- Inline tunables moved to `SurvivorTuning` / `ItemDef` (values unchanged); `RecomputeStats` uses
+  `StatInfo.PerPoint` and `SurvivorCatalog.PassivePerLevel`.
+- Nits: weapon cooldown resets only for a newly acquired weapon; filler gold emits no
+  `GoldCollected`; `LastSkill` is set only when a skill is applied; spawn clearance uses the
+  enemy radius; the hammer `WeaponFired` point is the throw direction; `Tools/SurvivorEval` loads the
+  brain once per worker thread and maps `AggregateException` to exit code 2.
+- Performance: obstacle broad-phase grid (4 m cells), projectile hits through the spatial hash,
+  cached boss reference and alive counters, one-pass hammer targeting. Late-game fixture (250
+  enemies, 400 gems), best of 5 x 200 after a 600-tick / 600 ms warm-up: **Release Step 0.031 ms,
+  Write 0.016 ms; Debug Step 0.150 ms, Write 0.295 ms**. The Debug assert is back to `Step < 0.2 ms`.
+  Standalone bench before/after (Release steady state): 0 obstacles 0.045-0.058 -> 0.036-0.041 ms;
+  40 obstacles 0.092 -> 0.038-0.041 ms. Step, Write and WriteMask allocate 0 bytes (tested).

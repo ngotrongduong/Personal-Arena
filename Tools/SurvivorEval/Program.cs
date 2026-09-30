@@ -44,13 +44,17 @@ namespace PersonalArena.Tools.SurvivorEval
                 string validation = SurvivorPilot.Validate(PolicyBrain.Load(brainData));
                 if (validation != null) throw new ArgumentException(validation);
                 SurvivorRunStats[] runs = new SurvivorRunStats[options.Seeds];
-                Parallel.For(0, runs.Length, new ParallelOptions { MaxDegreeOfParallelism = options.Threads }, i =>
-                {
-                    PolicyBrain brain = PolicyBrain.Load(brainData);
-                    SurvivorConfig config = new SurvivorConfig { RunSeconds = options.RunSeconds };
-                    config.Build.Tier = options.Tier;
-                    runs[i] = new SurvivorEvaluator().RunOne(brain, config, options.SeedStart + i, options.Deterministic);
-                });
+                // One brain per worker thread: PolicyBrain keeps evaluation buffers and is not thread-safe.
+                Parallel.For(0, runs.Length, new ParallelOptions { MaxDegreeOfParallelism = options.Threads },
+                    () => PolicyBrain.Load(brainData),
+                    (i, state, brain) =>
+                    {
+                        SurvivorConfig config = new SurvivorConfig { RunSeconds = options.RunSeconds };
+                        config.Build.Tier = options.Tier;
+                        runs[i] = new SurvivorEvaluator().RunOne(brain, config, options.SeedStart + i, options.Deterministic);
+                        return brain;
+                    },
+                    brain => { });
                 SurvivorEvaluator evaluator = new SurvivorEvaluator(); SurvivorEvalSummary summary = evaluator.Summarize(runs); bool passes = evaluator.PassesM4A(summary);
                 Print(summary, passes);
                 if (options.Out != null)
@@ -64,6 +68,12 @@ namespace PersonalArena.Tools.SurvivorEval
             catch (Exception exception) when (exception is ArgumentException || exception is IOException || exception is InvalidDataException || exception is UnauthorizedAccessException || exception is FormatException || exception is OverflowException)
             {
                 Console.Error.WriteLine("Error: " + exception.Message); return 2;
+            }
+            catch (AggregateException exception)
+            {
+                // Errors thrown inside Parallel.For arrive wrapped; report each inner message.
+                foreach (Exception inner in exception.Flatten().InnerExceptions) Console.Error.WriteLine("Error: " + inner.Message);
+                return 2;
             }
         }
 

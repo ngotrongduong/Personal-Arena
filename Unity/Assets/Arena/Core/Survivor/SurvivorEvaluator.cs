@@ -43,10 +43,13 @@ namespace PersonalArena.Core.Survivor
 
     public sealed class SurvivorEvaluator
     {
+        /// <summary>The pilot's sampling Rng is seeded with seed ^ PilotSeedSalt so it is not the sim's stream.</summary>
+        public const int PilotSeedSalt = 0x5EED5EED;
+
         public SurvivorRunStats RunOne(PolicyBrain brain, SurvivorConfig config, int seed, bool deterministic)
         {
             string problem = SurvivorPilot.Validate(brain); if (problem != null) throw new ArgumentException(problem, nameof(brain));
-            SurvivorSim sim = new SurvivorSim(config, seed); SurvivorPilot pilot = new SurvivorPilot(brain, seed) { Deterministic = deterministic };
+            SurvivorSim sim = new SurvivorSim(config, seed); SurvivorPilot pilot = new SurvivorPilot(brain, seed ^ PilotSeedSalt) { Deterministic = deterministic };
             while (!sim.IsEnded) sim.Step(pilot.NextInput(sim));
             SurvivorRunStats result = new SurvivorRunStats
             {

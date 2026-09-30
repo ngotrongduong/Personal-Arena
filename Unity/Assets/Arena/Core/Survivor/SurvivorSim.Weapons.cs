@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using PersonalArena.Core;
 
 namespace PersonalArena.Core.Survivor
@@ -7,7 +8,7 @@ namespace PersonalArena.Core.Survivor
     {
         private void FireWeapons()
         {
-            for (int i = 0; i < inventory.WeaponCount; i++)
+            for (int i = 0; i < inventory.WeaponCount && !IsEnded; i++)
             {
                 int index = inventory.WeaponAt(i);
                 if (weaponCooldowns[index] > 0f) continue;
@@ -15,65 +16,85 @@ namespace PersonalArena.Core.Survivor
                 int level = inventory.Level(index);
                 if (def.Pattern == WeaponPattern.Sweep)
                 {
+                    Vec2 facing = Vec2.FromAngle(Hero.Facing);
                     Sweep(def, level);
                     weaponCooldowns[index] = def.BaseCooldown * stats.CooldownMul;
-                    AddEvent(SurvivorEventType.WeaponFired, id: index, point: Vec2.FromAngle(Hero.Facing));
+                    AddEvent(SurvivorEventType.WeaponFired, id: index, point: facing);
                 }
-                else if (def.Pattern == WeaponPattern.Thrown && ThrowHammers(def, level))
+                else if (def.Pattern == WeaponPattern.Thrown && ThrowHammers(def, level, out Vec2 throwDirection))
                 {
                     weaponCooldowns[index] = def.BaseCooldown * stats.CooldownMul;
-                    AddEvent(SurvivorEventType.WeaponFired, id: index, point: Vec2.FromAngle(Hero.Facing));
+                    AddEvent(SurvivorEventType.WeaponFired, id: index, point: throwDirection);
                 }
             }
         }
 
         private void Sweep(ItemDef def, int level)
         {
-            float range = def.BaseRange * (1f + 0.1f * (level - 1)) * stats.AreaMul;
+            float range = def.BaseRange * (1f + def.RangePerLevel * (level - 1)) * stats.AreaMul;
             float damage = def.BaseDamage + def.DamagePerLevel * (level - 1);
-            for (int i = 0; i < enemyLimit; i++)
+            bool hasBackArc = def.BackArcLevel > 0 && level >= def.BackArcLevel;
+            for (int i = 0; i < enemyLimit && !IsEnded; i++)
             {
                 SurvivorEnemy enemy = enemies[i]; if (!enemy.Active) continue;
                 Vec2 delta = enemy.Position - Hero.Position;
-                if (delta.Length > range + enemy.Radius) continue;
-                bool front = InArc(Hero.Facing, delta, 120f);
-                bool back = level >= 5 && InArc(Hero.Facing + MathF.PI, delta, 120f);
-                if (front || back) { DamageEnemy(enemy, damage, def.Knockback); }
+                float reach = range + enemy.Radius;
+                if (delta.LengthSquared > reach * reach) continue;
+                bool front = InArc(Hero.Facing, delta, def.ArcDegrees);
+                bool back = hasBackArc && InArc(Hero.Facing + MathF.PI, delta, def.ArcDegrees);
+                if (front || back) DamageEnemy(enemy, damage, def.Knockback, AwayFromHero(enemy));
             }
         }
 
-        private bool ThrowHammers(ItemDef def, int level)
+        private bool ThrowHammers(ItemDef def, int level, out Vec2 firstDirection)
         {
-            int count = level == 1 ? 1 : level <= 3 ? 2 : 3;
+            firstDirection = Vec2.Zero;
+            IReadOnlyList<int> counts = def.CountByLevel;
+            int count = counts.Count == 0 ? 1 : counts[Math.Max(1, Math.Min(level, counts.Count)) - 1];
+            count = Math.Min(count, hammerTargetIds.Length);
+            float speed = def.ProjectileSpeed;
             int fired = 0;
             for (int hammer = 0; hammer < count; hammer++)
             {
-                SurvivorEnemy target = RandomTarget(fired);
+                SurvivorEnemy target = RandomTarget(fired, def.BaseRange);
                 if (target == null) break;
                 SurvivorProjectile projectile = NewProjectile();
                 if (projectile == null) break;
                 Vec2 direction = (target.Position - Hero.Position).Normalized();
+                if (fired == 0) firstDirection = direction;
                 projectile.Active = true; projectile.Id = nextProjectileId++; projectile.Position = Hero.Position;
-                projectile.Velocity = direction * 12f; projectile.Radius = 0.4f * stats.AreaMul;
+                projectile.Velocity = direction * speed; projectile.Radius = def.ProjectileRadius * stats.AreaMul;
                 projectile.Damage = def.BaseDamage + def.DamagePerLevel * (level - 1);
-                projectile.Knockback = def.Knockback; projectile.Lifetime = 1f; projectile.PierceRemaining = 1;
+                projectile.Knockback = def.Knockback; projectile.Lifetime = speed > 0f ? def.ProjectileRange / speed : 0f;
+                projectile.PierceRemaining = def.Pierce;
                 projectile.HitCount = 0; hammerTargetIds[fired] = target.Id; fired++;
             }
             return fired > 0;
         }
 
-        private SurvivorEnemy RandomTarget(int usedCount)
+        /// <summary>
+        /// Uniform pick among enemies within <paramref name="range"/> that no hammer of this volley
+        /// targets yet; when every enemy in range is taken, among all enemies in range. One pass.
+        /// </summary>
+        private SurvivorEnemy RandomTarget(int usedCount, float range)
         {
-            int count = 0;
-            for (int i = 0; i < enemyLimit; i++) if (enemies[i].Active && Vec2.Distance(enemies[i].Position, Hero.Position) <= 10f && !UsedHammerTarget(enemies[i].Id, usedCount)) count++;
-            bool allowUsed = count == 0;
-            if (allowUsed) for (int i = 0; i < enemyLimit; i++) if (enemies[i].Active && Vec2.Distance(enemies[i].Position, Hero.Position) <= 10f) count++;
-            if (count == 0) return null;
-            int pick = rng.NextInt(count);
+            float rangeSquared = range * range;
+            int total = 0, fresh = 0;
             for (int i = 0; i < enemyLimit; i++)
             {
-                if (!enemies[i].Active || Vec2.Distance(enemies[i].Position, Hero.Position) > 10f || (!allowUsed && UsedHammerTarget(enemies[i].Id, usedCount))) continue;
-                if (pick-- == 0) return enemies[i];
+                SurvivorEnemy e = enemies[i];
+                if (!e.Active || (e.Position - Hero.Position).LengthSquared > rangeSquared) continue;
+                enemyScratch[total++] = i;
+                if (!UsedHammerTarget(e.Id, usedCount)) fresh++;
+            }
+            if (total == 0) return null;
+            if (fresh == 0) return enemies[enemyScratch[rng.NextInt(total)]];
+            int pick = rng.NextInt(fresh);
+            for (int n = 0; n < total; n++)
+            {
+                SurvivorEnemy e = enemies[enemyScratch[n]];
+                if (UsedHammerTarget(e.Id, usedCount)) continue;
+                if (pick-- == 0) return e;
             }
             return null;
         }
@@ -87,21 +108,52 @@ namespace PersonalArena.Core.Survivor
             return null;
         }
 
+        /// <summary>
+        /// Moves projectiles and resolves hits through the spatial hash. Hits of one projectile are
+        /// applied in ascending enemy-pool order (same order as a full scan).
+        /// </summary>
         private void UpdateProjectiles()
         {
+            bool any = false;
+            for (int i = 0; i < projectileLimit; i++) if (projectiles[i].Active) { any = true; break; }
+            if (!any) return;
+            RebuildHash();
+            int[] heads = spatialHash.Heads; int[] next = spatialHash.Next;
             for (int i = 0; i < projectileLimit; i++)
             {
                 SurvivorProjectile p = projectiles[i]; if (!p.Active) continue;
                 p.Position += p.Velocity * FixedDeltaTime; p.Lifetime -= FixedDeltaTime;
                 if (p.Lifetime <= 0f || MathF.Abs(p.Position.X) > Config.MapHalfSize || MathF.Abs(p.Position.Y) > Config.MapHalfSize) { p.Active = false; continue; }
-                for (int j = 0; j < enemyLimit; j++)
+                float query = p.Radius + maxEnemyRadius + hashDrift;
+                int minX = spatialHash.MinCell(p.Position.X - query), maxX = spatialHash.MinCell(p.Position.X + query);
+                int minY = spatialHash.MinCell(p.Position.Y - query), maxY = spatialHash.MinCell(p.Position.Y + query);
+                int found = 0;
+                for (int y = minY; y <= maxY; y++)
                 {
-                    SurvivorEnemy e = enemies[j]; if (!e.Active || AlreadyHit(p, e.Id)) continue;
-                    float radius = p.Radius + e.Radius;
-                    if ((p.Position - e.Position).LengthSquared > radius * radius) continue;
-                    DamageEnemy(e, p.Damage, p.Knockback); p.HitIds[p.HitCount++] = e.Id;
-                    if (p.PierceRemaining-- <= 0) { p.Active = false; break; }
+                    for (int x = minX; x <= maxX; x++)
+                    {
+                        for (int j = heads[spatialHash.CellIndex(x, y)]; j >= 0; j = next[j])
+                        {
+                            SurvivorEnemy e = enemies[j];
+                            if (!e.Active) continue;
+                            float radius = p.Radius + e.Radius;
+                            if ((p.Position - e.Position).LengthSquared > radius * radius || AlreadyHit(p, e.Id)) continue;
+                            int slot = found++;
+                            while (slot > 0 && enemyScratch[slot - 1] > j) { enemyScratch[slot] = enemyScratch[slot - 1]; slot--; }
+                            enemyScratch[slot] = j;
+                        }
+                    }
                 }
+                if (found == 0) continue;
+                Vec2 pushDirection = p.Velocity.Normalized();
+                for (int n = 0; n < found; n++)
+                {
+                    SurvivorEnemy e = enemies[enemyScratch[n]];
+                    DamageEnemy(e, p.Damage, p.Knockback, pushDirection);
+                    if (p.HitCount < p.HitIds.Length) p.HitIds[p.HitCount++] = e.Id;
+                    if (p.PierceRemaining-- <= 0 || p.HitCount >= p.HitIds.Length) { p.Active = false; break; }
+                }
+                if (IsEnded) return;
             }
         }
 
@@ -114,19 +166,21 @@ namespace PersonalArena.Core.Survivor
         private int Kick(SkillDef skill)
         {
             int hits = 0;
-            for (int i = 0; i < enemyLimit; i++)
+            for (int i = 0; i < enemyLimit && !IsEnded; i++)
             {
                 SurvivorEnemy e = enemies[i]; if (!e.Active) continue;
                 Vec2 delta = e.Position - Hero.Position;
-                if (delta.Length > skill.Range + e.Radius || !InArc(Hero.Facing, delta, skill.ArcDegrees)) continue;
-                DamageEnemy(e, skill.Damage, skill.Knockback); e.StunRemaining = MathF.Max(e.StunRemaining, skill.StunSeconds); hits++;
+                float reach = skill.Range + e.Radius;
+                if (delta.LengthSquared > reach * reach || !InArc(Hero.Facing, delta, skill.ArcDegrees)) continue;
+                DamageEnemy(e, skill.Damage, skill.Knockback, AwayFromHero(e)); e.StunRemaining = MathF.Max(e.StunRemaining, skill.StunSeconds); hits++;
             }
             return hits;
         }
 
-        private void DamageEnemy(SurvivorEnemy enemy, float baseDamage, float knockback)
+        /// <summary>Deals damage (crit chance doubled against stunned enemies) and knocks the enemy along <paramref name="pushDirection"/>.</summary>
+        private void DamageEnemy(SurvivorEnemy enemy, float baseDamage, float knockback, Vec2 pushDirection)
         {
-            if (enemy == null || !enemy.Active) return;
+            if (IsEnded || enemy == null || !enemy.Active) return;
             if (testEnemiesInvulnerable) return;
             float damage = baseDamage * stats.Might;
             float critChance = enemy.StunRemaining > 0f ? MathF.Min(1f, stats.CritChance * 2f) : stats.CritChance;
@@ -134,34 +188,37 @@ namespace PersonalArena.Core.Survivor
             float removed = MathF.Min(enemy.Hp, damage); enemy.Hp -= removed; DamageDealtTotal += removed;
             AddEvent(SurvivorEventType.DamageDealt, removed, removed / enemy.MaxHp, enemy.Id, enemy.Position);
             if (enemy.IsBoss) { float fraction = removed / enemy.MaxHp; BossDamageFraction += fraction; AddEvent(SurvivorEventType.BossDamaged, removed, fraction, enemy.Id, enemy.Position); }
-            if (knockback > 0f) PushEnemy(enemy, knockback);
+            if (knockback > 0f) PushEnemy(enemy, pushDirection, knockback);
             if (enemy.Hp <= 0f) KillEnemy(enemy);
         }
 
         private void KillEnemy(SurvivorEnemy enemy)
         {
-            enemy.Active = false; Kills++;
+            SurvivorTuning tuning = Config.Tuning;
+            enemy.Active = false; Kills++; aliveEnemyCount--;
+            if (enemy.IsBoss) bossEnemy = null; else aliveNormalCount--;
             AddEvent(SurvivorEventType.EnemyKilled, enemy.TypeIndex, id: enemy.Id, point: enemy.Position);
             if (enemy.Elite) { EliteKills++; AddEvent(SurvivorEventType.EliteKilled, id: enemy.Id, point: enemy.Position); }
             if (enemy.IsBoss)
             {
                 AddEvent(SurvivorEventType.BossKilled, id: enemy.Id, point: enemy.Position);
-                float gold = 500f * stats.TierGold * stats.GreedMul; Gold += gold; AddEvent(SurvivorEventType.GoldCollected, gold, id: enemy.Id);
+                float gold = tuning.BossGold * stats.TierGold * stats.GreedMul; Gold += gold; AddEvent(SurvivorEventType.GoldCollected, gold, id: enemy.Id);
                 EndReason = EndReason.Won; AddEvent(SurvivorEventType.RunWon); return;
             }
             SurvivorEnemyDef def = SurvivorDefaults.EnemyDef(enemy.TypeIndex);
-            SpawnGem(enemy.Position, enemy.Elite ? 50f : def.Xp);
+            SpawnGem(enemy.Position, enemy.Elite ? tuning.EliteXp : def.Xp);
+            Vec2 goldPoint = enemy.Position + Vec2.FromAngle(tuning.GoldDropAngle) * tuning.DropOffset;
             if (enemy.Elite)
             {
-                float gold = MathF.Floor(rng.Range(20f, 41f)) * stats.TierGold * stats.GreedMul;
-                SpawnPickup(PickupKind.Gold, enemy.Position + Vec2.FromAngle(1.2f) * 0.3f, gold, true);
+                float gold = MathF.Floor(rng.Range(tuning.EliteGoldMin, tuning.EliteGoldMax)) * stats.TierGold * stats.GreedMul;
+                SpawnPickup(PickupKind.Gold, goldPoint, gold, true);
             }
-            else if (rng.NextFloat() < 0.03f * (1f + stats.Luck / 100f))
+            else if (rng.NextFloat() < tuning.GoldChance * (1f + stats.Luck / 100f))
             {
-                float gold = MathF.Floor(rng.Range(1f, 6f)) * stats.TierGold * stats.GreedMul;
-                SpawnPickup(PickupKind.Gold, enemy.Position + Vec2.FromAngle(1.2f) * 0.3f, gold, true);
+                float gold = MathF.Floor(rng.Range(tuning.GoldMin, tuning.GoldMax)) * stats.TierGold * stats.GreedMul;
+                SpawnPickup(PickupKind.Gold, goldPoint, gold, true);
             }
-            if (rng.NextFloat() < 0.005f) SpawnPickup(PickupKind.Meat, enemy.Position + Vec2.FromAngle(2.4f) * 0.3f, 30f, true);
+            if (rng.NextFloat() < tuning.MeatChance) SpawnPickup(PickupKind.Meat, enemy.Position + Vec2.FromAngle(tuning.MeatDropAngle) * tuning.DropOffset, tuning.MeatHeal, true);
         }
     }
 }

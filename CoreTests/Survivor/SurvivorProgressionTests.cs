@@ -96,6 +96,49 @@ namespace PersonalArena.Core.Tests.Survivor
             Assert.That(calc.Compute(Array.Empty<SurvivorEvent>(), 1f), Is.Positive);
         }
 
+        [Test]
+        public void Reward_SignsOfOptionalTerms()
+        {
+            SurvivorRewardCalculator calc = new SurvivorRewardCalculator(new SurvivorRewardConfig());
+            Assert.That(calc.Compute(new[] { new SurvivorEvent(SurvivorEventType.BossDamaged, 60f, extra: 0.01f) }, 0), Is.Positive);
+            Assert.That(calc.Compute(new[] { new SurvivorEvent(SurvivorEventType.DamageDealt, 20f, extra: 0.5f) }, 0), Is.Zero, "PerDamage defaults to 0");
+            SurvivorRewardCalculator perDamage = new SurvivorRewardCalculator(new SurvivorRewardConfig { PerDamage = 0.01f });
+            Assert.That(perDamage.Compute(new[] { new SurvivorEvent(SurvivorEventType.DamageDealt, 20f, extra: 0.5f) }, 0), Is.Positive);
+            Assert.That(calc.Compute(Array.Empty<SurvivorEvent>(), 0f), Is.Zero, "no survive reward for a pick step");
+        }
+
+        [Test]
+        public void Pick_FillerGold_NoGoldEventAndNoReward()
+        {
+            SurvivorConfig config = SurvivorTestHelpers.Config(); config.ClassDef.WeaponPool = Array.Empty<int>(); config.ClassDef.PassivePool = Array.Empty<int>();
+            SurvivorSim sim = new SurvivorSim(config, 8); sim.GiveItemForTests(0, 5); sim.GiveXpForTests(5f); sim.Step(default);
+            Assert.That(sim.OfferCount, Is.EqualTo(2)); Assert.That(sim.GetOffer(0).CatalogIndex, Is.EqualTo(SurvivorCatalog.BonusGoldIndex));
+            float before = sim.Gold; sim.Step(new SurvivorInput(0, 0, 1));
+            Assert.That(sim.Gold - before, Is.EqualTo(config.Tuning.FillerGold * sim.DerivedStats.GreedMul * sim.DerivedStats.TierGold).Within(1e-4f));
+            Assert.That(sim.Events, Has.None.Matches<SurvivorEvent>(e => e.Type == SurvivorEventType.GoldCollected));
+            Assert.That(new SurvivorRewardCalculator(config.Rewards).Compute(sim.Events, sim.LastStepSeconds), Is.Zero);
+        }
+
+        [Test]
+        public void Pick_WeaponUpgrade_KeepsCooldown()
+        {
+            SurvivorConfig config = SurvivorTestHelpers.Config(); config.ClassDef.WeaponPool = new[] { 0 }; config.ClassDef.PassivePool = Array.Empty<int>();
+            SurvivorSim sim = new SurvivorSim(config, 9); sim.Step(default);
+            Assert.That(sim.WeaponCooldownForTests(0), Is.GreaterThan(1f), "sweep fired on the first tick");
+            sim.GiveXpForTests(5f); sim.Step(default); Assert.That(sim.OfferCount, Is.EqualTo(1)); Assert.That(sim.GetOffer(0).CatalogIndex, Is.EqualTo(0));
+            sim.Step(new SurvivorInput(0, 0, 1));
+            Assert.That(sim.Inventory.Level(0), Is.EqualTo(2)); Assert.That(sim.WeaponCooldownForTests(0), Is.GreaterThan(1f));
+        }
+
+        [Test]
+        public void Pick_NewWeapon_IsReadyImmediately()
+        {
+            SurvivorConfig config = SurvivorTestHelpers.Config(); config.ClassDef.WeaponPool = new[] { 3 }; config.ClassDef.PassivePool = Array.Empty<int>(); config.ClassDef.StartingWeapon = 0;
+            SurvivorSim sim = new SurvivorSim(config, 9); sim.GiveItemForTests(0, 5); sim.GiveXpForTests(5f); sim.Step(default);
+            Assert.That(sim.GetOffer(0).CatalogIndex, Is.EqualTo(3)); sim.Step(new SurvivorInput(0, 0, 1));
+            Assert.That(sim.Inventory.Level(3), Is.EqualTo(1)); Assert.That(sim.WeaponCooldownForTests(3), Is.EqualTo(0f));
+        }
+
         private static float GoldPickup(SurvivorSim sim) { for (int i = 0; i < sim.Pickups.Count; i++) if (sim.Pickups[i].Active && sim.Pickups[i].Kind == PickupKind.Gold) return sim.Pickups[i].Value; return 0; }
         private static SurvivorEvent Find(IReadOnlyList<SurvivorEvent> events, SurvivorEventType type) { for (int i = 0; i < events.Count; i++) if (events[i].Type == type) return events[i]; Assert.Fail("Missing event " + type); return default; }
     }
