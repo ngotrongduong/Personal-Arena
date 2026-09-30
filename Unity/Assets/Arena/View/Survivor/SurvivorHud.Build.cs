@@ -135,6 +135,10 @@ namespace PersonalArena.View
         private AutoFarmPanel farmPanel;
         private LoadoutComparePanel comparePanel;
 
+        // M6: the brain lineage panel ("Lịch sử não", key L) and its button in the training panel.
+        private BrainLineagePanel lineagePanel;
+        private const float TrainingHeight = 506f;
+
         private void EnsureBuilt()
         {
             if (built)
@@ -239,6 +243,13 @@ namespace PersonalArena.View
                 comparePanel = gameObject.AddComponent<LoadoutComparePanel>();
             }
             comparePanel.Build(canvasRoot, font);
+
+            lineagePanel = GetComponent<BrainLineagePanel>();
+            if (lineagePanel == null)
+            {
+                lineagePanel = gameObject.AddComponent<BrainLineagePanel>();
+            }
+            lineagePanel.Build(canvasRoot, font);
         }
 
         private void BuildTop()
@@ -585,7 +596,7 @@ namespace PersonalArena.View
             }
 
             RectTransform panel = CreatePanel("Training", canvasRoot, PanelColor);
-            SetRect(panel, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20f, TrainingTop), new Vector2(430f, 460f), new Vector2(1f, 1f));
+            SetRect(panel, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20f, TrainingTop), new Vector2(430f, TrainingHeight), new Vector2(1f, 1f));
             trainingPanel = panel.gameObject;
 
             Text title = CreateText("Title", panel, 20, TextAnchor.UpperLeft, GoldText);
@@ -632,6 +643,11 @@ namespace PersonalArena.View
                 17, out _, out Text profileLabel);
             profileLabel.text = "HỒ SƠ AI  (P)";
             profileButton.onClick.AddListener(ToggleProfilePanel);
+
+            Button lineageButton = CreateButton("Lineage Button", panel, new Color(0.18f, 0.44f, 0.5f, 1f), new Vector2(18f, -452f), new Vector2(394f, 40f),
+                17, out _, out Text lineageLabel);
+            lineageLabel.text = "LỊCH SỬ NÃO  (L)";
+            lineageButton.onClick.AddListener(ToggleLineagePanel);
 
             historyPanel = GetComponent<TrainingHistoryPanel>();
             if (historyPanel == null)

@@ -79,6 +79,28 @@ namespace PersonalArena.View
             }
         }
 
+        public BrainLineagePanel LineagePanel
+        {
+            get
+            {
+                EnsureBuilt();
+                return lineagePanel;
+            }
+        }
+
+        /// <summary>Opens or closes the brain lineage (L); only one full-screen panel is open at a time.</summary>
+        public void ToggleLineagePanel()
+        {
+            EnsureBuilt();
+            if (lineagePanel == null || !lineagePanel.IsBound)
+            {
+                return;
+            }
+
+            CloseOtherPanels(lineagePanel);
+            lineagePanel.Toggle();
+        }
+
         /// <summary>Opens or closes the training charts; only one full-screen panel is open at a time.</summary>
         public void ToggleHistoryPanel()
         {
@@ -122,7 +144,7 @@ namespace PersonalArena.View
         /// <summary>True when a full-screen panel is open or closed itself with Escape this frame (Escape must not pause then).</summary>
         public bool PanelHandlesEscape()
         {
-            return Handles(characterPanel) || Handles(farmPanel) || Handles(comparePanel) ||
+            return Handles(characterPanel) || Handles(farmPanel) || Handles(comparePanel) || Handles(lineagePanel) ||
                 (historyPanel != null && (historyPanel.IsOpen || historyPanel.ConsumedEscapeThisFrame)) ||
                 (profilePanel != null && (profilePanel.IsOpen || profilePanel.ConsumedEscapeThisFrame));
         }
@@ -153,6 +175,10 @@ namespace PersonalArena.View
             if (comparePanel != null && !ReferenceEquals(comparePanel, keep))
             {
                 comparePanel.SetOpen(false);
+            }
+            if (lineagePanel != null && !ReferenceEquals(lineagePanel, keep))
+            {
+                lineagePanel.SetOpen(false);
             }
         }
 

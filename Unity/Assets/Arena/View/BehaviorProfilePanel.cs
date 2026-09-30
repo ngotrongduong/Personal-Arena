@@ -505,6 +505,27 @@ namespace PersonalArena.View
             tiles[index].Note.text = note;
         }
 
+        /// <summary>Number of play-style traits (shared with the brain lineage compare view).</summary>
+        public static int TraitCount => Traits.Length;
+
+        /// <summary>Vietnamese name of trait <paramref name="index"/>.</summary>
+        public static string TraitName(int index)
+        {
+            return Traits[index].Name;
+        }
+
+        /// <summary>Bar colour of trait <paramref name="index"/>.</summary>
+        public static Color TraitColor(int index)
+        {
+            return Traits[index].Color;
+        }
+
+        /// <summary>Value 0..1 of trait <paramref name="index"/>, or -1 when there is no data.</summary>
+        public static float TraitValue(int index, ChampionBehavior behavior)
+        {
+            return behavior == null ? -1f : Traits[index].Read(behavior);
+        }
+
         /// <summary>Vietnamese name for a DeathCause enum name.</summary>
         public static string DeathCauseName(string cause)
         {

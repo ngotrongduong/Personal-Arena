@@ -233,6 +233,43 @@ namespace PersonalArena.View.Tests
                 Is.EqualTo(" --training-focus boss"));
         }
 
+        [Test]
+        public void ServiceArguments_WithoutRunIdHasNoRunIdFlag()
+        {
+            string runs = Path.Combine(Path.GetTempPath(), "PA-Root", "Trainer", "runs");
+            TrainingServiceClient client = new TrainingServiceClient(runs);
+            string arguments = client.ServiceArguments(42, new TrainingPower("FAST", 8, 16, 20f), "Warrior");
+
+            Assert.That(arguments, Does.StartWith("\"" + client.ScriptPath + "\" --parent-pid 42"));
+            Assert.That(arguments, Does.EndWith(" --behavior Warrior"));
+            Assert.That(arguments, Does.Not.Contain("--run-id"));
+            Assert.That(client.ServiceArguments(42, new TrainingPower("FAST", 8, 16, 20f), "Warrior", null, ""),
+                Does.Not.Contain("--run-id"));
+        }
+
+        [Test]
+        public void ServiceArguments_WithRunIdContinuesThatBranch()
+        {
+            string runs = Path.Combine(Path.GetTempPath(), "PA-Root", "Trainer", "runs");
+            TrainingServiceClient client = new TrainingServiceClient(runs);
+            string arguments = client.ServiceArguments(42, new TrainingPower("FAST", 8, 16, 20f), "Warrior", null, "warrior-s002");
+
+            Assert.That(arguments, Does.EndWith(" --behavior Warrior --run-id warrior-s002"));
+        }
+
+        [Test]
+        public void ServiceArguments_IgnoresUnsafeRunIds()
+        {
+            Assert.That(TrainingServiceClient.RunIdArgument("warrior-s001"), Is.EqualTo(" --run-id warrior-s001"));
+            Assert.That(TrainingServiceClient.RunIdArgument(null), Is.Empty);
+            Assert.That(TrainingServiceClient.RunIdArgument("a b"), Is.Empty);
+            Assert.That(TrainingServiceClient.RunIdArgument("x\" --evil"), Is.Empty);
+            Assert.That(TrainingServiceClient.RunIdArgument("..\\up"), Is.Empty);
+            Assert.That(TrainingServiceClient.RunIdArgument(".hidden"), Is.Empty);
+            Assert.That(TrainingServiceClient.RunIdArgument("--flag"), Is.Empty);
+            Assert.That(TrainingServiceClient.RunIdArgument(new string('a', 65)), Is.Empty);
+        }
+
         private static TrainingState Classify(TrainingStatus status, DateTime? newestLog = null, DateTime? launched = null)
         {
             return TrainingServiceClient.Classify(status, NowUnix, newestLog, Now, launched);

@@ -731,6 +731,14 @@ class TrainingService:
             self.log(f"owner settings: build {getattr(self.args, 'owner_build', None) or 'random'}, "
                      f"tier {getattr(self.args, 'owner_tier', None) or 1}, "
                      f"focus {getattr(self.args, 'training_focus', None) or 'balanced'}")
+        try:
+            from Trainer import brain_lineage  # late import, like champion's evaluator hook
+
+            imported = brain_lineage.sync(self.runs_dir, self.behavior)
+            if imported:
+                self.log(f"lineage: imported {imported} champion history versions")
+        except Exception as error:  # noqa: BLE001 - lineage must never stop training
+            self.log(f"lineage sync failed: {error}")
         self.publish("starting", starting_message)
 
         restarts = 0

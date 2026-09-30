@@ -183,6 +183,16 @@ def evaluate_latest(
         results_dir, behavior, actual_run_id, step, candidate_brain, raw,
         runner=evaluator, log=log,
     )
+    try:
+        from Trainer import brain_lineage  # late import: brain_lineage imports this module
+
+        if "won" in result:
+            brain_lineage.record_evaluation(
+                results_dir, behavior, actual_run_id, step, candidate_brain, checkpoint, result,
+                log=log,
+            )
+    except Exception as error:  # noqa: BLE001 - lineage must never break the evaluator
+        log(f"lineage: {error}")
     if not result["won"]:
         candidate_brain.unlink(missing_ok=True)
         candidate_eval.unlink(missing_ok=True)
