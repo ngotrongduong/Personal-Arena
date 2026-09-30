@@ -1,7 +1,7 @@
 # Trạng thái dự án
 
 > File này là "bộ nhớ" giữa các phiên. Đọc đầu tiên, cập nhật cuối cùng.
-> Cập nhật lần cuối: 2026-09-30 khuya (phiên Claude, PC — M5 code xong: T-023..T-027; `warrior-s001` đang train ~57M bước).
+> Cập nhật lần cuối: 2026-10-01 (phiên Claude, PC — M6 Lịch sử não code xong: T-028, T-029; `warrior-s001` đang train ~106.6M bước).
 
 ## Hướng đi
 
@@ -121,6 +121,7 @@
 | M4B: nâng cấp não + build ngẫu nhiên + ôn tập (T-019) | xong — có hiệu lực từ lần bấm TRAIN kế tiếp (tự tráo `Build/TrainingNext`) |
 | M4C: đủ nội dung (6 vũ khí, 8 phụ kiện, đồ nhặt, rương, spitter, HUD) | code xong (T-021, T-022) — chờ train trên bản mới và qua đánh giá 100 seed |
 | M5: kinh tế và build (T-023..T-026) + thưởng hạ quái (T-027, D-036) | code xong — chờ nghiệm thu: đổi build → TRAIN → AI đổi lối đánh |
+| M6: Lịch sử não (T-028, T-029, D-037) | code xong — chờ nghiệm thu: mở bảng `L`, chọn não cũ, bấm "Xem ngay" |
 
 ## Việc tiếp theo (theo thứ tự)
 
@@ -161,6 +162,17 @@ thưởng theo thứ bậc, nghiệm thu bằng đánh giá 100 seed). Đấu tr
      (`Trainer/watch_ai.ps1`) tự tráo nó vào `Build/Watch` ở lần mở sau.
    - Nghiệm thu M5: owner cộng điểm/đổi trọng tâm → bấm TRAIN → Hồ sơ AI (`P`) cho thấy lối đánh
      đổi, điểm hồi phục nhanh. Theo dõi `economy_log.csv` để cân bằng giá cấp và vàng.
+4. M6 Lịch sử não (D-037) code xong 2026-10-01:
+   - T-028 (Trainer): `Trainer/brain_lineage.py` giữ phiên bản não ở
+     `runs/champions/Warrior/lineage/` (mỗi lần chấm, lưu tay, lịch sử champion), rẽ nhánh/nhân bản
+     thành run mới, dọn `.pt` cũ. `champion.py` ghi mỗi lần chấm; `train_service` chạy `sync` lúc bắt đầu.
+   - T-029 (trình xem): bảng **Lịch sử não** (phím/nút `L`): cây nhánh, danh sách phiên bản, Xem ngay,
+     So sánh, Ghim, Đổi tên, Rẽ nhánh, Nhân bản, Lưu phiên bản hiện tại, Dùng nhánh này (TRAIN học
+     tiếp nhánh đó qua `BrainRunId` trong profile). Cờ `-watchVersion <id>` cho bản build.
+   - Dịch vụ train đang chạy vẫn dùng `champion.py` cũ → phiên bản theo từng lần chấm (có `.pt`, rẽ
+     nhánh được) bắt đầu có từ lần bấm TRAIN kế tiếp. 8 não champion cũ chỉ xem được (`.pt` đã bị
+     ML-Agents dọn). Lưu phiên bản hiện tại và Nhân bản dùng được ngay.
+   - Nghiệm thu M6: mở `L`, chọn một não cũ, bấm Xem ngay → trình xem chơi bằng não đó ngay.
 
 ## Cách làm trên PC (Claude)
 
@@ -186,6 +198,18 @@ thưởng theo thứ bậc, nghiệm thu bằng đánh giá 100 seed). Đấu tr
   trước khi phát hành để đảm bảo game không gọi mạng.
 
 ## Nhật ký phiên (mới nhất trên cùng)
+
+### 2026-10-01 — Claude (PC): M6 Lịch sử não (T-028, T-029)
+- Owner bấm TRAIN lại: `warrior-s001` khỏe ở ~106.6M bước; champion (96,999,889) qua M4A.
+- T-028 (Claude): `brain_lineage.py` + nối vào `champion`/`train_service`. Smoke test trên bản sao run
+  thật: sync 8 não lịch sử, snapshot 106,093,272, nhân bản ra `warrior-s002` học tiếp được.
+- T-029 (subagent viết, Claude kiểm): bảng `L`, `LineageStore`/`LineageCommand`/`LineageCompare`,
+  cờ `-watchVersion`. Ảnh chụp 1080p/720p và xem não cũ đều đúng.
+- Sửa sau review: `prune` không xoá gì khi `labels.json`/`branches.json` hỏng; kiểm tên run/phiên
+  bản; phiên bản ghi vào thư mục tạm rồi mới đổi tên; lỗi chấm/ghi cây nhánh thành cảnh báo; trình
+  xem không ghi đè `labels.json` hỏng; `taskkill /T` khi huỷ lệnh. `brain_upgrade` dùng chung
+  `replace_directory` (hết lỗi `PermissionError` hiếm gặp trong test).
+- Test: pytest 145/145, EditMode 180/180.
 
 ### 2026-09-30 khuya — Claude (PC): M5 T-023..T-027
 - T-023 (Core kinh tế), T-024 (Trainer build owner, D-035), T-025 (Unity ML đọc build owner) đã merge.

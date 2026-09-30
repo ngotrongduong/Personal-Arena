@@ -96,6 +96,7 @@ namespace PersonalArena.View
         private CharacterPanel characterPanel;
         private AutoFarmPanel farmPanel;
         private LoadoutComparePanel comparePanel;
+        private BrainLineagePanel lineagePanel;
         private float nextFarmInfoRefresh;
         private float shortRunSeconds;
 
@@ -109,7 +110,13 @@ namespace PersonalArena.View
         private string switchNotice;
         private float switchNoticeUntil;
 
-        // Screenshot mode (-screenshot <png> [-quitAfterScreenshot] [-showProfile] [-openPanel character|farm|compare]
+        // M6: a saved brain version picked in the lineage panel ("Xem ngay"); not saved across restarts. B clears it.
+        private LineageVersion watchedVersion;
+        private string watchedBranchName;
+        private bool loadedIsVersion;
+        private int brainLoadCount;
+
+        // Screenshot mode (-screenshot <png> [-quitAfterScreenshot] [-showProfile] [-openPanel character|farm|compare|lineage]
         // [-farmRuns N] [-endShot] [-labelShot]) used to check the build. Pass -profile <scratch path> with it.
         private const float PanelOpenSeconds = 6f;
         private const float PanelShotSeconds = 8f;
@@ -185,7 +192,7 @@ namespace PersonalArena.View
                 "Space tốc độ xem   T kiểu chọn   Esc tạm dừng\n" +
                 "R trận mới   G biểu đồ học   P hồ sơ AI\n" +
                 "C nhân vật   F farm vàng   V so sánh build\n" +
-                "B đổi não mới nhất / giỏi nhất\n" +
+                "B đổi não mới nhất / giỏi nhất   L lịch sử não\n" +
                 "Lăn chuột: phóng to / thu nhỏ");
 
             characterPanel = hud.CharacterPanel;
@@ -197,6 +204,15 @@ namespace PersonalArena.View
             characterPanel.ProfileChanged += OnProfileChanged;
             farmPanel.ProfileChanged += OnProfileChanged;
             comparePanel.ProfileChanged += OnProfileChanged;
+
+            // M6 brain lineage (L): needs the runs folder; with -brain it still opens but cannot switch brains.
+            lineagePanel = hud.LineagePanel;
+            if (lineagePanel != null && !string.IsNullOrWhiteSpace(runsDirectory) && Directory.Exists(runsDirectory))
+            {
+                lineagePanel.Bind(store, runsDirectory, BehaviorName, () => trainingSnapshot);
+                lineagePanel.ProfileChanged += OnProfileChanged;
+                lineagePanel.WatchVersionRequested += OnWatchVersionRequested;
+            }
 
             if (!string.IsNullOrWhiteSpace(runsDirectory) && string.IsNullOrWhiteSpace(brainFile))
             {
@@ -229,6 +245,18 @@ namespace PersonalArena.View
             hud.BindHeroLabel(survivorRenderer, followCamera.ViewCamera);
             StartRun();
             PollBrain();
+
+            // -watchVersion <id> (checks the build): start on a saved lineage version, as "Xem ngay" does.
+            string startVersion = CommandLineValue("-watchVersion");
+            if (!string.IsNullOrWhiteSpace(startVersion) && !string.IsNullOrWhiteSpace(runsDirectory))
+            {
+                LineageIndex lineage = LineageStore.Load(runsDirectory, BehaviorName);
+                LineageVersion version = lineage.FindVersion(startVersion.Trim());
+                if (version != null)
+                {
+                    OnWatchVersionRequested(version, lineage.BranchName(version.RunId));
+                }
+            }
         }
 
         private void OnDestroy()
@@ -249,6 +277,11 @@ namespace PersonalArena.View
             if (comparePanel != null)
             {
                 comparePanel.ProfileChanged -= OnProfileChanged;
+            }
+            if (lineagePanel != null)
+            {
+                lineagePanel.ProfileChanged -= OnProfileChanged;
+                lineagePanel.WatchVersionRequested -= OnWatchVersionRequested;
             }
         }
 
@@ -296,6 +329,63 @@ namespace PersonalArena.View
             {
                 PollTraining();
             }
+
+            // M6: the newest brain follows the active branch (profile BrainRunId).
+            if (watchedVersion == null && !loadedIsChampion && string.IsNullOrWhiteSpace(brainFile))
+            {
+                PollBrain();
+            }
+        }
+
+        /// <summary>"Xem ngay" in the lineage panel: watch that saved version now (fresh run), until B.</summary>
+        private void OnWatchVersionRequested(LineageVersion version, string branchName)
+        {
+            if (!string.IsNullOrWhiteSpace(brainFile))
+            {
+                ShowSwitchNotice("Đang xem một bộ não cố định (-brain), không đổi được.");
+                return;
+            }
+
+            if (version == null || string.IsNullOrEmpty(version.BrainPath))
+            {
+                return;
+            }
+
+            watchedVersion = version;
+            watchedBranchName = string.IsNullOrEmpty(branchName) ? LineageStore.DefaultBranchName(version.RunId) : branchName;
+            int loadsBefore = brainLoadCount;
+            loadedPath = null; // force a reload even when the same file was loaded before
+            PollBrain();
+
+            if (brainLoadCount == loadsBefore || !loadedIsVersion)
+            {
+                // Rejected or unreadable: back to the newest (or best) brain.
+                string problem = brainStatus;
+                watchedVersion = null;
+                watchedBranchName = null;
+                loadedPath = null;
+                PollBrain();
+                ShowSwitchNotice("Không xem được phiên bản " + version.Name + ".\n" +
+                    (string.IsNullOrEmpty(problem) ? "Không đọc được tệp não." : problem));
+                return;
+            }
+
+            ShowSwitchNotice("Đang xem phiên bản " + version.Name + " — bấm B để về não mới nhất");
+            switchNoticeUntil = Time.unscaledTime + ProfileNoticeSeconds;
+            if (sim != null && pilot.Brain != null)
+            {
+                RestartNow();
+            }
+        }
+
+        /// <summary>Newest brain: the active branch's latest.brain when it exists with the current schema, else the newest run's.</summary>
+        private string NewestBrainPath()
+        {
+            CharacterProfile warrior = store != null ? store.Warrior : null;
+            string branchBrain = warrior != null
+                ? LineageStore.BranchLatestBrain(runsDirectory, BehaviorName, warrior.BrainRunId)
+                : null;
+            return branchBrain ?? BrainLocator.FindNewestBrain(runsDirectory, BehaviorName);
         }
 
         private void ShowProfileLoadNotice(ProfileLoadOutcome outcome)
@@ -541,6 +631,11 @@ namespace PersonalArena.View
                 hud.ToggleComparePanel();
             }
 
+            if (keyboard.lKey.wasPressedThisFrame)
+            {
+                hud.ToggleLineagePanel();
+            }
+
             // Esc first closes an open full-screen panel; only a second press pauses.
             if (keyboard.escapeKey.wasPressedThisFrame && !hud.PanelHandlesEscape())
             {
@@ -584,6 +679,24 @@ namespace PersonalArena.View
             if (!string.IsNullOrWhiteSpace(brainFile))
             {
                 ShowSwitchNotice("Đang xem một bộ não cố định (-brain), không đổi được.");
+                return;
+            }
+
+            if (watchedVersion != null)
+            {
+                // M6: leave the saved version picked in the lineage panel and go back to the newest brain.
+                watchedVersion = null;
+                watchedBranchName = null;
+                watchBest = false;
+                PlayerPrefs.SetInt(WatchBestPreference, 0);
+                PlayerPrefs.Save();
+                loadedPath = null;
+                PollBrain();
+                ShowSwitchNotice("Đang xem NÃO MỚI NHẤT");
+                if (sim != null && pilot.Brain != null)
+                {
+                    RestartNow();
+                }
                 return;
             }
 
@@ -640,12 +753,14 @@ namespace PersonalArena.View
         private void PollBrain()
         {
             nextPoll = Time.unscaledTime + BrainPollSeconds;
-            string champion = string.IsNullOrWhiteSpace(brainFile) && watchBest
+            // Order: -brain, then a version picked in the lineage panel, then the champion (B), then the newest brain.
+            string versionPath = string.IsNullOrWhiteSpace(brainFile) && watchedVersion != null ? watchedVersion.BrainPath : null;
+            string champion = string.IsNullOrWhiteSpace(brainFile) && versionPath == null && watchBest
                 ? BrainLocator.FindChampionBrain(runsDirectory, BehaviorName)
                 : null;
             string path = !string.IsNullOrWhiteSpace(brainFile)
                 ? brainFile
-                : champion ?? BrainLocator.FindNewestBrain(runsDirectory, BehaviorName);
+                : versionPath ?? champion ?? NewestBrainPath();
             if (string.IsNullOrEmpty(path) || !File.Exists(path))
             {
                 if (pilot.Brain == null)
@@ -712,15 +827,25 @@ namespace PersonalArena.View
                     pilot.Deterministic = deterministic;
                     // Auto Farm builds its own brain instance from these bytes (never shares this one across threads).
                     loadedBrainBytes = bytes;
-                    loadedBrainName = champion != null ? "não giỏi nhất" : BrainLocator.RunName(path);
+                    loadedBrainName = versionPath != null
+                        ? watchedVersion.Name
+                        : champion != null ? "não giỏi nhất" : BrainLocator.RunName(path);
                     loadedAt = DateTime.Now;
                     brainStatus = null;
                     loadedIsChampion = champion != null;
+                    loadedIsVersion = versionPath != null;
+                    brainLoadCount++;
                     loadedStep = brain.Step;
                     loadedChampion = loadedIsChampion ? ChampionInfo.Load(runsDirectory, BehaviorName).Champion : null;
                     if (loadedIsChampion)
                     {
                         FollowChampionRun();
+                    }
+                    else if (loadedIsVersion)
+                    {
+                        FollowRun(TrainingServiceClient.IsSafeRunId(watchedVersion.RunId)
+                            ? Path.Combine(runsDirectory, watchedVersion.RunId)
+                            : null);
                     }
                     else
                     {
@@ -774,7 +899,10 @@ namespace PersonalArena.View
         {
             // The owner's build and tier (once the Warrior has a level or a tier above 1) and the training focus.
             OwnerTraining owner = MetaViewLogic.OwnerTrainingFor(store.Profile);
-            trainingNotice = training.Start(System.Diagnostics.Process.GetCurrentProcess().Id, Powers[powerIndex], BehaviorName, owner);
+            // M6: continue the active branch when it has a checkpoint (null: the service picks the newest run).
+            CharacterProfile warrior = store.Warrior;
+            string runId = LineageStore.TrainRunId(runsDirectory, BehaviorName, warrior != null ? warrior.BrainRunId : null);
+            trainingNotice = training.Start(System.Diagnostics.Process.GetCurrentProcess().Id, Powers[powerIndex], BehaviorName, owner, runId);
             startedTraining = trainingNotice == null;
             if (startedTraining)
             {
@@ -1003,7 +1131,13 @@ namespace PersonalArena.View
             }
             else
             {
-                if (loadedIsChampion)
+                if (loadedIsVersion && watchedVersion != null)
+                {
+                    text = "AI CHIẾN BINH\nNão: " + watchedVersion.Name + " (" + watchedBranchName + ")" +
+                        "\nĐã học " + brain.Step.ToString("N0", culture) + " bước" +
+                        "   Phiên bản đã lưu   (B: não mới nhất)";
+                }
+                else if (loadedIsChampion)
                 {
                     text = "AI CHIẾN BINH   NÃO GIỎI NHẤT" +
                         (loadedChampion != null ? "   " + loadedChampion.run_id : string.Empty) +
@@ -1146,7 +1280,7 @@ namespace PersonalArena.View
             }
         }
 
-        /// <summary>-openPanel character|farm|compare: open that panel (farm: start a session), capture it, then optionally quit.</summary>
+        /// <summary>-openPanel character|farm|compare|lineage: open that panel (farm: start a session), capture it, then optionally quit.</summary>
         private void UpdatePanelScreenshot(float real)
         {
             string panel = openPanel.Trim().ToLowerInvariant();
@@ -1161,6 +1295,9 @@ namespace PersonalArena.View
                         break;
                     case "compare":
                         hud.ToggleComparePanel();
+                        break;
+                    case "lineage":
+                        hud.ToggleLineagePanel();
                         break;
                     default:
                         hud.ToggleCharacterPanel();

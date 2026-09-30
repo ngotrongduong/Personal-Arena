@@ -230,8 +230,52 @@ namespace PersonalArena.View
             return null;
         }
 
-        /// <summary>Launches the service in a hidden console; returns an error message or null.</summary>
-        public string Start(int parentProcessId, TrainingPower power, string behavior = "Warrior", OwnerTraining owner = null)
+        /// <summary>
+        /// " --run-id &lt;id&gt;" for the service (M6: TRAIN continues the active branch), or empty when there is no
+        /// run id or it is not a plain run folder name (letters, digits, '-', '_', '.', not starting with '.').
+        /// </summary>
+        public static string RunIdArgument(string runId)
+        {
+            return IsSafeRunId(runId) ? " --run-id " + runId : string.Empty;
+        }
+
+        /// <summary>True for a plain run folder name that is safe on a command line.</summary>
+        public static bool IsSafeRunId(string runId)
+        {
+            if (string.IsNullOrEmpty(runId) || runId.Length > 64 || runId[0] == '.' || runId[0] == '-')
+            {
+                return false;
+            }
+
+            for (int i = 0; i < runId.Length; i++)
+            {
+                char c = runId[i];
+                bool ok = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') ||
+                    c == '-' || c == '_' || c == '.';
+                if (!ok)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>The service's command line after the python executable (tested without starting anything).</summary>
+        public string ServiceArguments(int parentProcessId, TrainingPower power, string behavior = "Warrior",
+            OwnerTraining owner = null, string runId = null)
+        {
+            return Quote(ScriptPath) + " --parent-pid " + parentProcessId + power.Arguments() +
+                " --behavior " + (string.IsNullOrEmpty(behavior) ? "Warrior" : behavior) + OwnerTraining.Arguments(owner) +
+                RunIdArgument(runId);
+        }
+
+        /// <summary>
+        /// Launches the service in a hidden console; returns an error message or null. <paramref name="runId"/>
+        /// picks the run to train (null: the service resumes the newest run).
+        /// </summary>
+        public string Start(int parentProcessId, TrainingPower power, string behavior = "Warrior", OwnerTraining owner = null,
+            string runId = null)
         {
             string missing = MissingPiece();
             if (missing != null)
@@ -247,8 +291,7 @@ namespace PersonalArena.View
                 }
 
                 System.Diagnostics.ProcessStartInfo info = new System.Diagnostics.ProcessStartInfo(
-                    PythonPath, Quote(ScriptPath) + " --parent-pid " + parentProcessId + power.Arguments() +
-                    " --behavior " + (string.IsNullOrEmpty(behavior) ? "Warrior" : behavior) + OwnerTraining.Arguments(owner))
+                    PythonPath, ServiceArguments(parentProcessId, power, behavior, owner, runId))
                 {
                     UseShellExecute = false,
                     CreateNoWindow = true,

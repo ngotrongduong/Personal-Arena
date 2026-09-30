@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import time
 from typing import Sequence
 
 
@@ -78,6 +79,18 @@ def run_schema_version(run_dir: Path) -> int:
 def write_schema_version(run_dir: Path, version: int = SCHEMA_VERSION) -> None:
     run_dir.mkdir(parents=True, exist_ok=True)
     (run_dir / SCHEMA_FILE).write_text(str(version), encoding="utf-8")
+
+
+def replace_directory(source: Path, destination: Path, attempts: int = 10) -> None:
+    """``os.replace`` a freshly built folder; Windows scanners can hold it open for a moment."""
+    for attempt in range(attempts):
+        try:
+            os.replace(source, destination)
+            return
+        except PermissionError:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(0.2 * (attempt + 1))
 
 
 def schema_path(version: int) -> Path:

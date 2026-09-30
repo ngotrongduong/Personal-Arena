@@ -379,7 +379,7 @@ def _upgrade_run(
             (partial_logs / "training_status.json").write_text(
                 json.dumps(_without_checkpoint_lists(status), indent=4) + "\n", encoding="utf-8"
             )
-        os.replace(partial_dir, target_dir)
+        arena_trainer.replace_directory(partial_dir, target_dir)
     except BaseException:
         shutil.rmtree(partial_dir, ignore_errors=True)
         raise
