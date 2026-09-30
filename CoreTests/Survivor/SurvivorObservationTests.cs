@@ -66,7 +66,14 @@ namespace PersonalArena.Core.Tests.Survivor
             }
             TestContext.Progress.WriteLine($"Late-game Step {stepMs:0.0000} ms; Write {writeMs:0.0000} ms; alive={sim.AliveEnemyCount}, t={sim.Time:0.0}, ended={sim.IsEnded}, pick={sim.IsAwaitingPick}");
             Assert.That(sim.IsEnded, Is.False); Assert.That(sim.AliveEnemyCount, Is.GreaterThanOrEqualTo(250));
-            Assert.That(stepMs, Is.LessThan(0.2), "Debug budget; Release target is 0.05 ms"); Assert.That(writeMs, Is.LessThan(1.0));
+#if DEBUG
+            // Debug builds skip JIT optimizations; only catch gross regressions there. CI runs Release.
+            const double stepBudgetMs = 1.0, writeBudgetMs = 2.0;
+#else
+            // Release target is 0.05 ms; the margin absorbs shared CI runners and a busy PC.
+            const double stepBudgetMs = 0.2, writeBudgetMs = 1.0;
+#endif
+            Assert.That(stepMs, Is.LessThan(stepBudgetMs)); Assert.That(writeMs, Is.LessThan(writeBudgetMs));
         }
 
         [Test]
