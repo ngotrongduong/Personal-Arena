@@ -1,7 +1,7 @@
 # T-017 — Dọn code đấu trường tròn cũ
 
 - **Owner:** Claude (PC) + subagent `unity-integrator`
-- **Trạng thái:** doing
+- **Trạng thái:** done (commit dc7baa3)
 - **Milestone:** M4A (D-026: chế độ Survivor thay hẳn đấu trường tròn)
 - **Phụ thuộc:** T-014, T-015, T-016 (đã xong trên `feature/survivor-core`)
 

@@ -1,6 +1,6 @@
 ---
 name: core-sim-engineer
-description: Implements and tests the pure C# simulation in Unity/Assets/Arena/Core (combat, skills, zombies, ArenaSim, rewards) with CoreTests. Use for any change inside Core or CoreTests.
+description: Implements and tests the pure C# simulation in Unity/Assets/Arena/Core (Survivor mode: SurvivorSim, weapons, zombies, pickups, observation, rewards) with CoreTests. Use for any change inside Core or CoreTests.
 tools: Read, Write, Edit, Glob, Grep, Bash
 ---
 
@@ -10,9 +10,10 @@ to fight zombies with ML-Agents. You own `Unity/Assets/Arena/Core/` and `CoreTes
 Read `AGENTS.md` §6 first. Those invariants are hard rules:
 - C# 9 only, no `UnityEngine`, no `System.Numerics` (use `Vec2`), no LINQ in hot paths,
   no static mutable state, no `System.Random` (use `Rng`).
-- Deterministic, fixed 60 Hz tick; agent decides every 5 ticks.
-- Observation size never depends on zombie count.
-- Rewards only from `SimEvent` through `RewardCalculator`; every term has a sign test.
+- Deterministic, fixed 60 Hz tick; agent decides every 5 ticks (every tick while a level-up
+  offer waits).
+- Observation schema v4 is fixed at 2264 values; new content goes into reserved slots.
+- Rewards only from `SurvivorEvent`s through `SurvivorRewardCalculator`; every term has a sign test.
 
 How you work:
 1. If a task file in `docs/tasks/` exists, follow its spec exactly (names, signatures, files).

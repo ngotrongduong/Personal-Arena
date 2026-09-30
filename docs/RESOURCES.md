@@ -18,7 +18,7 @@
 
 | Tài nguyên | Dùng thế nào |
 |---|---|
-| [ml-agents `config/ppo/*.yaml`](https://github.com/Unity-Technologies/ml-agents/tree/develop/config/ppo) | `Trainer/config/warrior_ppo.yaml` dựa trên cấu trúc `WallJump_curriculum.yaml` |
+| [ml-agents `config/ppo/*.yaml`](https://github.com/Unity-Technologies/ml-agents/tree/develop/config/ppo) | `Trainer/config/warrior_survivor_ppo.yaml` dựa trên cấu trúc `WallJump_curriculum.yaml` |
 | ml-agents example envs: *DungeonEscape*, *PushBlock*, *Crawler*, *SoccerTwos* | Tham khảo cách dựng nhiều arena song song trong một scene (M2) |
 | [ML-Agents 4.0 docs](https://docs.unity3d.com/Packages/com.unity.ml-agents@4.0/manual/Inference-Engine.html) | Inference Engine, nạp model; dùng cho spike T-006 |
 

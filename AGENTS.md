@@ -65,20 +65,30 @@ set it to `review`. Claude reviews, commits and sets `done`.
 - Pure C# 9, no `UnityEngine`, no `System.Numerics` (use `Vec2`), no LINQ in hot paths, no
   static mutable state. Assembly `PersonalArena.Core` has `noEngineReferences: true`.
 - Deterministic: all randomness comes from the seeded `Rng`. Same seed + same inputs = same result.
-- Fixed step: `ArenaSim.Step` advances exactly one tick (`ArenaSim.FixedDeltaTime` = 1/60 s);
-  the agent decides every 5 ticks (12 Hz). Unity code must not assume Unity's fixed timestep
-  equals the sim tick.
-- Observations come from Core (`ObservationBuilder` = 19 hero values + `RaySensor` 72 rays ×
-  12 = 883, rules v3 / D-024). Size is the same for every hero class and never depends on zombie
-  count or zombie types (`BrainPilot.Validate` relies on it).
-- Rules v2 (D-022): round platform of radius `min(Width, Height) / 2` over an abyss; leaving it
-  kills (hero or zombie). Changing rules that invalidate trained brains means bumping
-  `ArenaSim.RulesVersion` (runs record it in `rules_version.txt`; the viewer loads only matching brains).
-- Rewards come only from `SimEvent`s via `RewardCalculator` (weights in `RewardConfig`). Every
-  reward term has a **sign test** (the video's agent never used its spear because of a sign bug).
+- The only game mode is Survivor (D-026): `PersonalArena.Core.Survivor` (`SurvivorSim`,
+  `SurvivorConfig`, balance numbers in `SurvivorTuning` with `Validate()`). The old round arena
+  (`ArenaSim`, abyss, obs 883) was removed in T-017.
+- Fixed step: `SurvivorSim.Step` advances exactly one tick (`SurvivorSim.FixedDeltaTime` = 1/60 s);
+  the agent decides every 5 ticks (`SurvivorPilot.DecisionPeriod`), and again on every tick while
+  a level-up offer is waiting. Unity code must not assume Unity's fixed timestep equals the sim tick.
+- `Step`, `SurvivorObservation.Write` and `WriteMask` allocate nothing (pooled entities,
+  `SpatialHash`). Keep the Release `Step` under about 0.05 ms at the late-game horde.
+- Observations: `SurvivorObservation`, schema v4 = 2264 values in [-1, 1] (self 64, inventory 64,
+  offers 4 × 66, 72 rays × 25, density 3 × 8 × 3). Slots are reserved (64-item catalog, 8 enemy
+  kinds) so new content fills slots instead of changing the size. Actions: 3 discrete branches
+  9 / 5 / 5 (move, active skill, level-up pick).
+- Adaptive brains (D-027): a run records `schema_version.txt`; the trainer resumes any run whose
+  schema matches, even after rule changes. Only a change to the observation or action layout
+  bumps `SurvivorObservation.SchemaVersion` (then `brain_upgrade.py` grows the old brain,
+  never train from scratch). The viewer loads only brains with the current schema.
+- Rewards come only from `SurvivorEvent`s (`SurvivorSim.Events`) via `SurvivorRewardCalculator` (weights in
+  `SurvivorRewardConfig`, hierarchy in D-030). Every reward term has a **sign test** (the video's
+  agent never used its spear because of a sign bug).
+- Evaluation: `SurvivorEvaluator` / `Tools/SurvivorEval` plays fixed seeds with an exported
+  `.brain`. M4A acceptance is 100 seeds, median ≥ 600 s, P10 ≥ 420 s, no death before 180 s.
 - Units: metres, seconds, radians; +x right, +y "up" on the arena floor (= Unity +z); facing
   0 = +x, counter-clockwise positive.
-- Game rules live only in Core. Unity MonoBehaviours read Core state and feed `HeroInput`.
+- Game rules live only in Core. Unity MonoBehaviours read Core state and feed `SurvivorInput`.
 
 ## 7. Code style
 
