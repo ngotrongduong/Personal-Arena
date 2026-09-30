@@ -127,6 +127,7 @@ namespace PersonalArena.View
             ReleaseAllEnemies();
             HideAllPickups();
             HideAllHammers();
+            HideAllWeapons();
             RebuildObstacles();
             if (sim == null)
             {
@@ -159,6 +160,7 @@ namespace PersonalArena.View
             SyncEnemies();
             SyncPickups();
             SyncHammers();
+            SyncWeapons();
             PresentFrame(0f);
         }
 
@@ -179,6 +181,7 @@ namespace PersonalArena.View
             SyncEnemies();
             SyncPickups();
             SyncHammers();
+            SyncWeapons();
             UpdateHeroAnimationState();
             lastSyncedTime = sim.Time;
         }
@@ -240,6 +243,7 @@ namespace PersonalArena.View
             PresentDying(realDelta);
             PresentPickups();
             PresentHammers();
+            PresentWeapons(realDelta);
         }
 
         private Camera ResolveCamera()
@@ -278,6 +282,7 @@ namespace PersonalArena.View
             BuildEnemyPools();
             BuildPickups();
             BuildHammers();
+            BuildWeapons();
         }
 
         private static Transform CreateChild(string childName, Transform parent)
@@ -542,6 +547,12 @@ namespace PersonalArena.View
                         effects.Sparkle(heroPosition, color, 16, 0.7f, 2.4f, 0.25f);
                         break;
                     }
+                    case SurvivorEventType.ChestOpened:
+                        OnChestOpened(e);
+                        break;
+                    case SurvivorEventType.MagnetPicked:
+                        OnMagnetPicked(heroPosition);
+                        break;
                     case SurvivorEventType.GoldCollected:
                         if (e.Id < 0 && e.Point.X * e.Point.X + e.Point.Y * e.Point.Y > 0f && sparksLeft > 0)
                         {
@@ -580,6 +591,10 @@ namespace PersonalArena.View
             else if (e.Id == 3)
             {
                 PlayHeroOneShot(HeroThrow, 1.9f, false);
+            }
+            else
+            {
+                OnNewWeaponFired(e, heroPosition, direction);
             }
         }
 

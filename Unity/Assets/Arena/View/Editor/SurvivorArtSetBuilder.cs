@@ -54,6 +54,7 @@ namespace PersonalArena.View.Editor
 
             art.Chest = Model(Dungeon + "chest_gold.fbx");
             art.HammerProp = null; // No hammer model in the packs; the renderer builds one procedurally.
+            art.AxeProp = Model(Root + "Adventurers/Weapons/axe_1handed.fbx");
 
             art.BossBody = Model(Skeletons + "Characters/Skeleton_Warrior.fbx");
             art.BossMainHand = Model(Skeletons + "Weapons/Skeleton_Axe.fbx");

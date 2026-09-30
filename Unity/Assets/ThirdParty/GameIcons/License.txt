@@ -28,3 +28,11 @@ Resources/SkillIcons/crit-eye         archery-target        Lorc
 Resources/SkillIcons/wind-boots       wingfoot              Lorc
 Resources/SkillIcons/bonus-gold       two-coins             Delapouite
 Resources/SkillIcons/bonus-heal       heart-bottle          Lorc
+Resources/SkillIcons/spear-thrust     barbed-spear          Lorc
+Resources/SkillIcons/orbit-axe        spinning-blades       Lorc
+Resources/SkillIcons/aura             aura                  Lorc
+Resources/SkillIcons/shockwave        sonic-boom            Lorc
+Resources/SkillIcons/might-gauntlet   mailed-fist           Lorc
+Resources/SkillIcons/hourglass        sands-of-time         Lorc
+Resources/SkillIcons/area-charm       expanded-rays         Lorc
+Resources/SkillIcons/magnet-charm     magnet                Lorc

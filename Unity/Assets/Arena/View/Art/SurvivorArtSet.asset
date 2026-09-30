@@ -65,6 +65,7 @@ MonoBehaviour:
   HalloweenTexture: {fileID: 2800000, guid: 313d6e8f24579db43b9721d80bb0295e, type: 3}
   Chest: {fileID: 919132149155446097, guid: 9b65bb4fa9988564886eabbf6f8026d2, type: 3}
   HammerProp: {fileID: 0}
+  AxeProp: {fileID: 919132149155446097, guid: c35d0eca1fbb2a945a104a849c34a626, type: 3}
   BossBody: {fileID: 919132149155446097, guid: 3c6226aba9a44ee46a2a1c1c564ae368, type: 3}
   BossMainHand: {fileID: 919132149155446097, guid: 9833496efa3ba4d4a9d695b050a28d2a, type: 3}
   BossOffHand: {fileID: 919132149155446097, guid: 73b7fb6a8c605f54ab0ca462aa9f6d5a, type: 3}

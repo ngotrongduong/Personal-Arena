@@ -7,7 +7,7 @@ namespace PersonalArena.View.Tests
 {
     public sealed class SurvivorViewLogicTests
     {
-        private static readonly int[] CatalogItems = { 0, 3, 6, 7, 9, 12, 62, 63 };
+        private static readonly int[] CatalogItems = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 62, 63 };
 
         [TestCase(0f, "00:00")]
         [TestCase(0.99f, "00:00")]

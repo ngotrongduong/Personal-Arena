@@ -108,6 +108,22 @@ namespace PersonalArena.View
                         return "Chém vòng cung trước mặt";
                     }
                     return nextLevel >= 5 ? "+Sát thương, chém cả phía sau" : "+8 sát thương, +10% tầm";
+                case 1:
+                    if (isNew)
+                    {
+                        return "Đâm giáo xuyên thẳng vào quái gần";
+                    }
+                    return nextLevel == 3 || nextLevel == 5 ? "+10 sát thương, thêm 1 giáo" : "+10 sát thương";
+                case 2:
+                    if (isNew)
+                    {
+                        return "Rìu bay vòng quanh người";
+                    }
+                    return nextLevel == 2 || nextLevel == 4 ? "+4 sát thương, thêm 1 rìu" : "+4 sát thương";
+                case 4:
+                    return isNew ? "Vùng hào quang đốt quái sát bên" : "+2 sát thương, +10% vùng";
+                case 5:
+                    return isNew ? "Sóng chấn đẩy lùi quái xung quanh" : "+6 sát thương, hồi nhanh hơn";
                 case 3:
                     if (isNew)
                     {
@@ -118,10 +134,18 @@ namespace PersonalArena.View
                     return "+10% máu tối đa";
                 case 7:
                     return "+1 giáp (giảm sát thương)";
+                case 8:
+                    return "+8% sát thương";
                 case 9:
                     return "+4% tỉ lệ chí mạng";
+                case 10:
+                    return "-6% thời gian hồi vũ khí";
+                case 11:
+                    return "+8% vùng ảnh hưởng";
                 case 12:
                     return "+8% tốc độ chạy";
+                case 13:
+                    return "+25% tầm hút đồ";
                 case 62:
                     return "Nhận ngay 25 vàng";
                 case 63:
@@ -148,11 +172,19 @@ namespace PersonalArena.View
             switch (catalogIndex)
             {
                 case 0: return new Color(0.78f, 0.86f, 1f);
+                case 1: return new Color(0.55f, 0.8f, 1f);
+                case 2: return new Color(0.95f, 0.5f, 0.35f);
                 case 3: return new Color(1f, 0.66f, 0.3f);
+                case 4: return new Color(1f, 0.92f, 0.45f);
+                case 5: return new Color(0.6f, 0.65f, 1f);
                 case 6: return new Color(1f, 0.36f, 0.4f);
                 case 7: return new Color(0.84f, 0.8f, 0.68f);
+                case 8: return new Color(1f, 0.5f, 0.25f);
                 case 9: return new Color(1f, 0.85f, 0.3f);
+                case 10: return new Color(0.75f, 0.6f, 1f);
+                case 11: return new Color(0.45f, 0.85f, 1f);
                 case 12: return new Color(0.4f, 0.95f, 0.75f);
+                case 13: return new Color(1f, 0.45f, 0.6f);
                 case 62: return new Color(1f, 0.82f, 0.3f);
                 case 63: return new Color(0.45f, 1f, 0.5f);
                 default: return new Color(0.8f, 0.82f, 0.9f);

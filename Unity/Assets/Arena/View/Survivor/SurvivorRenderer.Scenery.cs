@@ -297,7 +297,7 @@ namespace PersonalArena.View
             {
                 return false;
             }
-            if (prefab == survivorArt.Chest || prefab == survivorArt.HammerProp)
+            if (prefab == survivorArt.Chest || prefab == survivorArt.HammerProp || prefab == survivorArt.AxeProp)
             {
                 return false;
             }

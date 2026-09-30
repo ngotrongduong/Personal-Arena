@@ -31,6 +31,8 @@ namespace PersonalArena.View
         [Header("Props")]
         public GameObject Chest;
         public GameObject HammerProp;
+        [Tooltip("Axe model for the orbiting axes (KayKit Adventurers); a primitive axe is built when empty.")]
+        public GameObject AxeProp;
 
         [Header("Boss (bone lord)")]
         public GameObject BossBody;

@@ -12,7 +12,9 @@ namespace PersonalArena.View
         private const int LookRunner = 1;
         private const int LookBrute = 2;
         private const int LookBoss = 3;
-        private const int LookCount = 4;
+        private const int LookSpitter = 4;
+        private const int LookCount = 5;
+        private const int SpitterTypeIndex = 3;
         private const int MaxCreatesPerFrame = 3;
         private const int MaxDying = 60;
         private const float SinkAfterSeconds = 1.1f;
@@ -25,6 +27,7 @@ namespace PersonalArena.View
         private const int WalkerDeath = 4;
         private const int WalkerSpawn = 5;
         private const int WalkerRun = 6;
+        private const int WalkerThrowState = 7;
 
         private const int TintNone = 0;
         private const int TintFlash = 1;
@@ -34,8 +37,8 @@ namespace PersonalArena.View
         private const int TintBoss = 5;
 
         private static readonly bool[] WalkerLoops = { true, true, false, false, false, false, true, false };
-        private static readonly int[] PrewarmCounts = { 40, 20, 10, 1 };
-        private static readonly int[] ReserveCounts = { 16, 10, 6, 1 };
+        private static readonly int[] PrewarmCounts = { 40, 20, 10, 1, 8 };
+        private static readonly int[] ReserveCounts = { 16, 10, 6, 1, 4 };
         private static readonly Color[] TintColors =
         {
             Color.white,
@@ -128,7 +131,8 @@ namespace PersonalArena.View
             }
             else if (artSet != null && artSet.HasCharacters && artSet.Walkers.Length > 0)
             {
-                ArenaArtSet.WalkerLook walker = artSet.WalkerFor(look == LookBoss ? LookBrute : look);
+                int walkerIndex = look == LookBoss ? LookBrute : look == LookSpitter ? SpitterTypeIndex : look;
+                ArenaArtSet.WalkerLook walker = artSet.WalkerFor(walkerIndex);
                 body = walker.Body;
                 mainHand = walker.MainHand;
                 offHand = walker.OffHand;
@@ -196,6 +200,7 @@ namespace PersonalArena.View
                 case LookRunner: return "Runner";
                 case LookBrute: return "Brute";
                 case LookBoss: return "Bone Lord";
+                case LookSpitter: return "Spitter";
                 default: return "Walker";
             }
         }
@@ -214,6 +219,10 @@ namespace PersonalArena.View
             if (type == 2)
             {
                 return LookBrute;
+            }
+            if (type == SpitterTypeIndex)
+            {
+                return LookSpitter;
             }
             return LookWalker;
         }
@@ -408,12 +417,13 @@ namespace PersonalArena.View
             {
                 SurvivorEnemyDef def = SurvivorDefaults.EnemyDef(enemy.TypeIndex);
                 float windup = def != null && def.WindupSeconds > 0f ? def.WindupSeconds : 0.9f;
-                animator.PlayOneShot(WalkerAttack, Mathf.Clamp(0.55f / windup, 0.6f, 1.4f), false);
+                // Spitters lob a bone from range; everyone else swings.
+                animator.PlayOneShot(view.Look == LookSpitter ? WalkerThrowState : WalkerAttack, Mathf.Clamp(0.55f / windup, 0.6f, 1.4f), false);
             }
             view.WasWinding = winding;
 
             view.Claw -= SurvivorSim.FixedDeltaTime;
-            if (!winding && view.Claw <= 0f && enemy.StunRemaining <= 0f && sim.Hero.Alive && animator.OneShot < 0)
+            if (!winding && view.Look != LookSpitter && view.Claw <= 0f && enemy.StunRemaining <= 0f && sim.Hero.Alive && animator.OneShot < 0)
             {
                 float reach = heroRadius + enemy.Radius + 0.35f;
                 float dx = view.Current.x - hero.x;

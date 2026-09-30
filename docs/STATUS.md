@@ -1,7 +1,7 @@
 # Trạng thái dự án
 
 > File này là "bộ nhớ" giữa các phiên. Đọc đầu tiên, cập nhật cuối cùng.
-> Cập nhật lần cuối: 2026-09-30 chiều muộn (phiên Claude, PC — M4B xong: T-018, T-019, T-020; đang train `warrior-s001`).
+> Cập nhật lần cuối: 2026-09-30 tối (phiên Claude, PC — M4C code xong: T-021, T-022; `warrior-s001` đang train 26.8M bước).
 
 ## Hướng đi
 
@@ -38,6 +38,14 @@
   - Bản build train mới (có T-019) nằm ở `Build/TrainingNext`, tự được tráo vào khi bấm TRAIN lần
     tới (dịch vụ đang chạy là bản cũ).
   - Test: CoreTests 85/85, pytest 100/100, EditMode 90/90.
+- **M4C code xong (D-034):**
+  - T-021 (Codex, Claude làm nốt + review): giáo đâm, rìu xoay, hào quang, sóng chấn động; 4 phụ
+    kiện mới; Spitter + đạn địch; nam châm; rương từ tinh anh. Schema v4 không đổi → não học tiếp.
+  - T-022 (Claude): hình ảnh 4 vũ khí mới (rìu KayKit xoay quanh người), đạn nhổ xanh, hiệu ứng
+    rương/nam châm, Spitter có look riêng, 8 icon game-icons.net mới trong HUD và bảng lên cấp.
+  - `Build/Watch` đã build lại. Bản train mới (có M4C) ở `Build/TrainingNext`, tự tráo vào khi owner
+    bấm TRAIN lần tới.
+  - Test: CoreTests 112/112, EditMode 90/90.
 - **Lịch sử M0–M3:** BC từ demo đã bỏ (D-023: owner không chơi tay).
 - **Nhánh:** làm việc trên `develop` (nhánh tính năng → PR merge commit vào `develop`); `main`
   fast-forward theo `develop` khi ổn định.
@@ -111,7 +119,7 @@
 | M4A: train `warrior-s001` qua đánh giá 100 seed | đang làm — 23.1M bước, bài 360 s. Đánh giá 100 seed thử ở 17M: trung vị 10:32, P10 5:17 (cần 7:00), 1 lần chết sớm |
 | M4B: champion/challenger + Hồ sơ AI (T-018, T-020) | xong |
 | M4B: nâng cấp não + build ngẫu nhiên + ôn tập (T-019) | xong — có hiệu lực từ lần bấm TRAIN kế tiếp (tự tráo `Build/TrainingNext`) |
-| M4C: đủ nội dung (6 vũ khí, 8 phụ kiện, đồ nhặt, rương, spitter, HUD) | chưa làm — việc kế tiếp |
+| M4C: đủ nội dung (6 vũ khí, 8 phụ kiện, đồ nhặt, rương, spitter, HUD) | code xong (T-021, T-022) — chờ train trên bản mới và qua đánh giá 100 seed |
 
 ## Việc tiếp theo (theo thứ tự)
 
@@ -121,17 +129,19 @@ Lộ trình mới M4A–M8 ở `docs/PLAN.md` (owner góp ý thiết kế → D-
 thưởng theo thứ bậc, nghiệm thu bằng đánh giá 100 seed). Đấu trường tròn luật v3 sẽ bị thay;
 `warrior-003` không cần train tiếp.
 
-0. Lần tới owner dừng rồi bấm TRAIN, dịch vụ mới sẽ tự tráo `Build/TrainingNext` vào, chạy
-   curriculum T-019 và chấm não mỗi 2M bước. Kiểm tra log run có dòng "installed the new training
-   build". (`Build/Watch` đã có phím `B`/`P`.)
+0. Lần tới owner dừng rồi bấm TRAIN, dịch vụ mới sẽ tự tráo `Build/TrainingNext` vào (có cả T-019
+   lẫn nội dung M4C), chạy curriculum T-019 và chấm não mỗi 2M bước. Kiểm tra log run có dòng
+   "installed the new training build". Schema không đổi nên `warrior-s001` học tiếp, không mở run mới.
+   Sau đó theo dõi: AI có chọn vũ khí mới không, tỉ lệ chết vì `Projectile` (Spitter) từ phút 5.
 1. Train `warrior-s001` (nút TRAIN THE AI) tới khi qua đánh giá 100 seed bằng
    `Tools/SurvivorEval`: trung vị ≥ 10:00, P10 ≥ 7:00, không chết trước 3:00.
    - Theo dõi: `Arena/Died`, `Arena/SurvivedSeconds`, `Environment/Lesson Number/run_seconds`.
    - AI nhặt ít EXP (~54 EXP, cấp ~3.7 mỗi trận 180 s dù giết ~195 quái). Nếu lên bài 360/600 s mà
      chết nhiều vì thiếu nâng cấp: tăng `PerLevelProgress` (hiện 0.05) nhưng vẫn giữ thứ bậc D-030.
    - Nếu kẹt ở bài 180 s lâu (reward không lên 5.0): xem lại ngưỡng curriculum.
-2. **M4C** (đủ nội dung) — viết spec T-021+ cho Codex; nội dung mới đi vào chỗ trống của schema v4
-   nên não học tiếp. Rồi M5–M8.
+2. Nghiệm thu M4C = qua đánh giá 100 seed trên bản có nội dung mới. Rồi M5 (kinh tế và build).
+   Nợ nhỏ còn lại của T-021 ghi ở phần Report của `docs/tasks/T-021-m4c-survivor-content.md`
+   (N2, N3, N5, N6 — rương có thể mất khi pool đồ nhặt đầy).
 
 ## Cách làm trên PC (Claude)
 
@@ -157,6 +167,17 @@ thưởng theo thứ bậc, nghiệm thu bằng đánh giá 100 seed). Đấu tr
   trước khi phát hành để đảm bảo game không gọi mạng.
 
 ## Nhật ký phiên (mới nhất trên cùng)
+
+### 2026-09-30 tối — Claude (PC): M4C T-021 + T-022
+- **T-021** (Codex viết tới lúc hết hạn mức, Claude làm nốt + subagent reviewer duyệt): nội dung M4C
+  trong Core, giữ nguyên schema v4.
+  - Sửa sau review: tính vị trí rìu một lần mỗi tick; thêm test tất định với trận thật, test
+    hiệu năng/không cấp phát với đủ 6 vũ khí, test pool và lựa chọn thay thế khi đầy ô.
+- **T-022** (Claude): hình ảnh vũ khí/đạn/rương/nam châm, look Spitter, 8 icon mới (CC BY, đã ghi
+  `CREDITS.md`).
+- Build lại `Build/Watch` (ảnh chụp: HUD có icon mới, hào quang quanh Warrior, bảng lên cấp hiện
+  phụ kiện mới) và `Build/TrainingNext`. Owner đang train nên chưa tráo bản train.
+- Test: CoreTests 112, EditMode 90 — xanh.
 
 ### 2026-09-30 chiều muộn — Claude (PC): M4B T-019, xong M4B
 - **T-019** (Codex viết, Claude review): schema JSON, `brain_upgrade.py`, 3 loại trận
