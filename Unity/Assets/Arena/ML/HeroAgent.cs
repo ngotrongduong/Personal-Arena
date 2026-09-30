@@ -36,19 +36,36 @@ namespace PersonalArena.ML
         /// <summary>Owner build mixed into training (M5); null means random builds only.</summary>
         public CharacterBuild OwnBuild { get; set; }
 
+        /// <summary>Reward weighting chosen by the owner for this TRAIN session (M5).</summary>
+        public TrainingFocus Focus { get; private set; } = TrainingFocus.Balanced;
+
         public event Action<HeroAgent> EpisodeEnded;
 
-        public void Configure(int agentIndex, string heroClassId)
+        public void Configure(int agentIndex, string heroClassId, CharacterBuild ownBuild = null,
+            TrainingFocus focus = TrainingFocus.Balanced)
         {
             AgentIndex = agentIndex;
             HeroClassId = heroClassId;
+            OwnBuild = ownBuild;
+            Focus = focus;
+            if (Config != null)
+            {
+                // Already initialised (the object was active when it was configured): switch the rewards now.
+                ApplyFocus();
+            }
         }
 
         public override void Initialize()
         {
             Config = new SurvivorConfig { ClassDef = ClassRegistry.Create(HeroClassId) };
-            rewardCalculator = new SurvivorRewardCalculator(Config.Rewards);
+            ApplyFocus();
             MaxStep = 0;
+        }
+
+        private void ApplyFocus()
+        {
+            Config.Rewards = SurvivorRewardConfig.ForFocus(Focus);
+            rewardCalculator = new SurvivorRewardCalculator(Config.Rewards);
         }
 
         public override void OnEpisodeBegin()
@@ -188,6 +205,7 @@ namespace PersonalArena.ML
             {
                 case SurvivorEpisodeKind.Review: return "Arena/Episode/SurvivedReview";
                 case SurvivorEpisodeKind.Hard: return "Arena/Episode/SurvivedHard";
+                case SurvivorEpisodeKind.Own: return "Arena/Episode/SurvivedOwn";
                 default: return "Arena/Episode/SurvivedNew";
             }
         }

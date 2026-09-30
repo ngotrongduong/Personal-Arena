@@ -22,13 +22,20 @@ namespace PersonalArena.ML
 
             int count = CommandLineAgentCount(agentCount);
             string classId = CommandLineHeroClass(ClassRegistry.WarriorId);
+            OwnerTrainingArgs owner = OwnerTrainingArgs.Parse(Environment.GetCommandLineArgs());
+            foreach (string warning in owner.Warnings)
+            {
+                Debug.LogWarning(warning);
+            }
+            Debug.Log(owner.Describe());
+
             for (int i = 0; i < count; i++)
             {
-                SpawnAgent(i, classId);
+                SpawnAgent(i, classId, owner);
             }
         }
 
-        private void SpawnAgent(int index, string classId)
+        private void SpawnAgent(int index, string classId, OwnerTrainingArgs owner)
         {
             GameObject agentObject = new GameObject($"HeroAgent_{index:D2}");
             agentObject.SetActive(false);
@@ -38,7 +45,8 @@ namespace PersonalArena.ML
             BehaviorSetup.Configure(behavior, classId);
 
             HeroAgent agent = agentObject.AddComponent<HeroAgent>();
-            agent.Configure(index, classId);
+            // Each agent gets its own copy: the factory only reads it, but a shared mutable build is a trap.
+            agent.Configure(index, classId, owner.OwnBuild?.Clone(), owner.Focus);
 
             DecisionRequester requester = agentObject.AddComponent<DecisionRequester>();
             requester.DecisionPeriod = 5;

@@ -4,7 +4,8 @@ using PersonalArena.Core.Survivor;
 
 namespace PersonalArena.ML
 {
-    public enum SurvivorEpisodeKind { New, Review, Hard }
+    /// <summary>New = random build at the curriculum tier, Own = the owner's build (M5).</summary>
+    public enum SurvivorEpisodeKind { New, Review, Hard, Own }
 
     public sealed class SurvivorEpisode
     {
@@ -20,6 +21,7 @@ namespace PersonalArena.ML
         public const float MinimumRunSeconds = 60f;
         public const float MaximumRunSeconds = 900f;
         public const int MaximumBuildLevel = 50;
+        public const int MaximumJitterMoves = 2;
 
         public static float RunSeconds(float value)
         {
@@ -58,16 +60,24 @@ namespace PersonalArena.ML
         public static CharacterBuild CreateBuild(Rng rng, float tierMin, float tierMax, float buildLevelMax,
             float ownBuildShare, CharacterBuild ownBuild)
         {
+            return CreateBuild(rng, tierMin, tierMax, buildLevelMax, ownBuildShare, ownBuild, out _);
+        }
+
+        private static CharacterBuild CreateBuild(Rng rng, float tierMin, float tierMax, float buildLevelMax,
+            float ownBuildShare, CharacterBuild ownBuild, out bool usedOwnBuild)
+        {
             if (rng == null)
             {
                 throw new ArgumentNullException(nameof(rng));
             }
 
+            usedOwnBuild = false;
             int low = Tier(tierMin);
             int high = Math.Max(low, Tier(tierMax));
             if (ownBuild != null && ownBuildShare > 0f && rng.NextFloat() < ownBuildShare)
             {
-                return ownBuild.Clone();
+                usedOwnBuild = true;
+                return Jitter(rng, ownBuild);
             }
 
             int level = BuildLevel(buildLevelMax);
@@ -77,6 +87,59 @@ namespace PersonalArena.ML
             }
 
             return BuildRandomizer.Random(rng, level, low, high);
+        }
+
+        /// <summary>
+        /// A copy of the owner's build with up to <see cref="MaximumJitterMoves"/> points moved between used
+        /// stats, so the brain does not overfit one exact build. The total, the caps and the tier are kept.
+        /// </summary>
+        public static CharacterBuild Jitter(Rng rng, CharacterBuild ownBuild)
+        {
+            CharacterBuild build = ownBuild.Clone();
+            int moves = rng.NextInt(MaximumJitterMoves + 1);
+            for (int move = 0; move < moves; move++)
+            {
+                int from = PickStat(rng, build, stat => build.Points[stat] > 0, -1);
+                int to = from < 0 ? -1 : PickStat(rng, build, stat => build.Points[stat] < StatInfo.Cap((StatId)stat), from);
+                if (to < 0)
+                {
+                    continue;
+                }
+
+                build.Points[from]--;
+                build.Points[to]++;
+            }
+
+            return build;
+        }
+
+        /// <summary>A uniformly random used stat that passes <paramref name="allowed"/> (never <paramref name="except"/>), or -1.</summary>
+        private static int PickStat(Rng rng, CharacterBuild build, Func<int, bool> allowed, int except)
+        {
+            int count = 0;
+            for (int stat = 0; stat < StatInfo.UsedCount; stat++)
+            {
+                if (stat != except && allowed(stat))
+                {
+                    count++;
+                }
+            }
+
+            if (count == 0)
+            {
+                return -1;
+            }
+
+            int chosen = rng.NextInt(count);
+            for (int stat = 0; stat < StatInfo.UsedCount; stat++)
+            {
+                if (stat != except && allowed(stat) && chosen-- == 0)
+                {
+                    return stat;
+                }
+            }
+
+            return -1;
         }
 
         public static SurvivorEpisode CreateEpisode(Rng rng, float tierMin, float tierMax,
@@ -100,11 +163,7 @@ namespace PersonalArena.ML
 
             if (total <= 0f)
             {
-                return new SurvivorEpisode
-                {
-                    Kind = SurvivorEpisodeKind.New,
-                    Build = CreateBuild(rng, tierMin, tierMax, buildLevelMax, ownBuildShare, ownBuild)
-                };
+                return NewEpisode(rng, tierMin, tierMax, buildLevelMax, ownBuildShare, ownBuild);
             }
 
             float roll = rng.NextFloat();
@@ -128,10 +187,17 @@ namespace PersonalArena.ML
                 };
             }
 
+            return NewEpisode(rng, tierMin, tierMax, buildLevelMax, ownBuildShare, ownBuild);
+        }
+
+        private static SurvivorEpisode NewEpisode(Rng rng, float tierMin, float tierMax, float buildLevelMax,
+            float ownBuildShare, CharacterBuild ownBuild)
+        {
+            CharacterBuild build = CreateBuild(rng, tierMin, tierMax, buildLevelMax, ownBuildShare, ownBuild, out bool own);
             return new SurvivorEpisode
             {
-                Kind = SurvivorEpisodeKind.New,
-                Build = CreateBuild(rng, tierMin, tierMax, buildLevelMax, ownBuildShare, ownBuild)
+                Kind = own ? SurvivorEpisodeKind.Own : SurvivorEpisodeKind.New,
+                Build = build
             };
         }
 

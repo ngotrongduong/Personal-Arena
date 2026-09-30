@@ -41,6 +41,10 @@ namespace PersonalArena.View
         public double updated_unix;
         public long[] steps;
         public float[] rewards;
+        // M5: what the service passed to Unity (older status files leave these empty / false / 0).
+        public string training_focus;
+        public bool owner_build;
+        public int owner_tier;
 
         public static TrainingStatus Parse(string json)
         {
@@ -115,6 +119,37 @@ namespace PersonalArena.View
         }
     }
 
+    /// <summary>The owner's choices for a TRAIN session (M5): stat points and tier, and the reward focus.</summary>
+    public sealed class OwnerTraining
+    {
+        /// <summary>16 stat point counts, or null to train on random builds only.</summary>
+        public int[] Points;
+        public int Tier = 1;
+        /// <summary>Training Focus id ("balanced", "gold", ...), or null to leave the default.</summary>
+        public string FocusId;
+
+        /// <summary>Command-line arguments for Trainer/train_service.py (leading space, or empty).</summary>
+        public static string Arguments(OwnerTraining owner)
+        {
+            if (owner == null)
+            {
+                return string.Empty;
+            }
+
+            System.Text.StringBuilder builder = new System.Text.StringBuilder();
+            if (owner.Points != null)
+            {
+                builder.Append(" --owner-build ").Append(string.Join(",", owner.Points))
+                    .Append(" --owner-tier ").Append(Math.Max(1, Math.Min(10, owner.Tier)));
+            }
+            if (!string.IsNullOrWhiteSpace(owner.FocusId))
+            {
+                builder.Append(" --training-focus ").Append(owner.FocusId.Trim().ToLowerInvariant());
+            }
+            return builder.ToString();
+        }
+    }
+
     public readonly struct TrainingSnapshot
     {
         public readonly TrainingState State;
@@ -185,7 +220,7 @@ namespace PersonalArena.View
         }
 
         /// <summary>Launches the service in a hidden console; returns an error message or null.</summary>
-        public string Start(int parentProcessId, TrainingPower power, string behavior = "Warrior")
+        public string Start(int parentProcessId, TrainingPower power, string behavior = "Warrior", OwnerTraining owner = null)
         {
             string missing = MissingPiece();
             if (missing != null)
@@ -202,7 +237,7 @@ namespace PersonalArena.View
 
                 System.Diagnostics.ProcessStartInfo info = new System.Diagnostics.ProcessStartInfo(
                     PythonPath, Quote(ScriptPath) + " --parent-pid " + parentProcessId + power.Arguments() +
-                    " --behavior " + (string.IsNullOrEmpty(behavior) ? "Warrior" : behavior))
+                    " --behavior " + (string.IsNullOrEmpty(behavior) ? "Warrior" : behavior) + OwnerTraining.Arguments(owner))
                 {
                     UseShellExecute = false,
                     CreateNoWindow = true,

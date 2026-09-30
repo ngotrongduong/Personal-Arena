@@ -158,6 +158,64 @@ namespace PersonalArena.View.Tests
             Assert.That(TrainingHistory.Bucket(new[] { 1f, 3f, 5f, 7f, 9f, 11f }, 3), Is.EqualTo(new[] { 2f, 6f, 10f }));
         }
 
+        [Test]
+        public void Parse_ReadsOwnerTrainingFields()
+        {
+            TrainingStatus status = TrainingStatus.Parse(
+                "{\"state\": \"training\", \"training_focus\": \"gold\", \"owner_build\": true, \"owner_tier\": 3}");
+
+            Assert.That(status.training_focus, Is.EqualTo("gold"));
+            Assert.That(status.owner_build, Is.True);
+            Assert.That(status.owner_tier, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void Parse_OldStatusFilesHaveNoOwnerTraining()
+        {
+            TrainingStatus status = TrainingStatus.Parse("{\"state\": \"training\", \"step\": 5}");
+
+            Assert.That(status.training_focus, Is.Null.Or.Empty);
+            Assert.That(status.owner_build, Is.False);
+            Assert.That(status.owner_tier, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void OwnerTrainingArguments_EmptyWithoutOwner()
+        {
+            Assert.That(OwnerTraining.Arguments(null), Is.Empty);
+            Assert.That(OwnerTraining.Arguments(new OwnerTraining()), Is.Empty);
+        }
+
+        [Test]
+        public void OwnerTrainingArguments_BuildTierAndFocus()
+        {
+            var owner = new OwnerTraining
+            {
+                Points = new[] { 5, 0, 2, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+                Tier = 4,
+                FocusId = " Gold ",
+            };
+
+            Assert.That(OwnerTraining.Arguments(owner), Is.EqualTo(
+                " --owner-build 5,0,2,0,3,0,0,0,0,0,0,0,0,0,0,0 --owner-tier 4 --training-focus gold"));
+        }
+
+        [TestCase(0, 1)]
+        [TestCase(12, 10)]
+        public void OwnerTrainingArguments_ClampsTheTier(int tier, int expected)
+        {
+            var owner = new OwnerTraining { Points = new int[16], Tier = tier };
+
+            Assert.That(OwnerTraining.Arguments(owner), Does.EndWith(" --owner-tier " + expected));
+        }
+
+        [Test]
+        public void OwnerTrainingArguments_FocusOnly()
+        {
+            Assert.That(OwnerTraining.Arguments(new OwnerTraining { FocusId = "survival" }),
+                Is.EqualTo(" --training-focus survival"));
+        }
+
         private static TrainingState Classify(TrainingStatus status, DateTime? newestLog = null, DateTime? launched = null)
         {
             return TrainingServiceClient.Classify(status, NowUnix, newestLog, Now, launched);

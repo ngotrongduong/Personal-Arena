@@ -93,18 +93,119 @@ namespace PersonalArena.ML.Tests
         }
 
         [Test]
-        public void FullOwnBuildShareReturnsACopyOfTheOwnerBuild()
+        public void FullOwnBuildShareReturnsAJitteredCopyOfTheOwnerBuild()
         {
             var own = new CharacterBuild { Tier = 4 };
             own.Points[0] = 5;
             own.Points[4] = 3;
 
-            CharacterBuild build = SurvivorEnvFactory.CreateBuild(new Rng(5), 1f, 1f, 30f, 1f, own);
+            var rng = new Rng(5);
+            for (int i = 0; i < 200; i++)
+            {
+                CharacterBuild build = SurvivorEnvFactory.CreateBuild(rng, 1f, 1f, 30f, 1f, own);
 
-            Assert.AreNotSame(own, build);
-            Assert.AreEqual(4, build.Tier);
-            Assert.AreEqual(5, build.Points[0]);
-            Assert.AreEqual(3, build.Points[4]);
+                Assert.AreNotSame(own, build);
+                Assert.AreEqual(4, build.Tier);
+                Assert.AreEqual(8, build.Level);
+                Assert.LessOrEqual(MovedPoints(own, build), SurvivorEnvFactory.MaximumJitterMoves);
+                build.Validate();
+            }
+
+            Assert.AreEqual(5, own.Points[0], "The owner's build itself is never changed.");
+            Assert.AreEqual(3, own.Points[4]);
+        }
+
+        [Test]
+        public void JitterKeepsCapsAndSometimesMovesPoints()
+        {
+            var own = new CharacterBuild { Tier = 2 };
+            own.Points[(int)StatId.MaxHp] = StatInfo.Cap(StatId.MaxHp);
+            own.Points[(int)StatId.Armor] = StatInfo.Cap(StatId.Armor);
+            int changed = 0;
+            var rng = new Rng(17);
+            for (int i = 0; i < 300; i++)
+            {
+                CharacterBuild build = SurvivorEnvFactory.Jitter(rng, own);
+
+                build.Validate();
+                Assert.AreEqual(own.Level, build.Level);
+                for (int slot = StatInfo.UsedCount; slot < StatInfo.SlotCount; slot++)
+                {
+                    Assert.AreEqual(0, build.Points[slot]);
+                }
+                if (MovedPoints(own, build) > 0) changed++;
+            }
+
+            Assert.Greater(changed, 100);
+            Assert.Less(changed, 300);
+        }
+
+        [Test]
+        public void JitterOfAnEmptyBuildStaysEmpty()
+        {
+            var own = new CharacterBuild { Tier = 3 };
+
+            CharacterBuild build = SurvivorEnvFactory.Jitter(new Rng(8), own);
+
+            Assert.AreEqual(0, build.Level);
+            Assert.AreEqual(3, build.Tier);
+        }
+
+        [Test]
+        public void JitterIsDeterministicPerSeed()
+        {
+            var own = new CharacterBuild { Tier = 5 };
+            own.Points[3] = 7;
+            own.Points[5] = 4;
+            own.Points[11] = 2;
+
+            CharacterBuild first = SurvivorEnvFactory.Jitter(new Rng(99), own);
+            CharacterBuild second = SurvivorEnvFactory.Jitter(new Rng(99), own);
+
+            CollectionAssert.AreEqual(first.Points, second.Points);
+        }
+
+        [Test]
+        public void OwnerEpisodesAreMarkedOwn()
+        {
+            var own = new CharacterBuild { Tier = 6 };
+            own.Points[1] = 4;
+
+            SurvivorEpisode episode = SurvivorEnvFactory.CreateEpisode(new Rng(4), 1f, 1f, 0f, 1f, 0f, 0f, own);
+            SurvivorEpisode random = SurvivorEnvFactory.CreateEpisode(new Rng(4), 1f, 1f, 0f, 0f, 0f, 0f, own);
+
+            Assert.AreEqual(SurvivorEpisodeKind.Own, episode.Kind);
+            Assert.AreEqual(6, episode.Build.Tier);
+            Assert.AreEqual(SurvivorEpisodeKind.New, random.Kind);
+            Assert.AreEqual(1, random.Build.Tier);
+        }
+
+        [Test]
+        public void OwnBuildShareIsRoughlyRespected()
+        {
+            var own = new CharacterBuild { Tier = 2 };
+            own.Points[0] = 3;
+            var rng = new Rng(123);
+            int owner = 0;
+            for (int i = 0; i < 2000; i++)
+            {
+                if (SurvivorEnvFactory.CreateEpisode(rng, 1f, 1f, 10f, 0.7f, 0f, 0f, own).Kind == SurvivorEpisodeKind.Own)
+                {
+                    owner++;
+                }
+            }
+
+            Assert.That(owner, Is.InRange(1300, 1500));
+        }
+
+        private static int MovedPoints(CharacterBuild before, CharacterBuild after)
+        {
+            int moved = 0;
+            for (int i = 0; i < before.Points.Length; i++)
+            {
+                moved += System.Math.Max(0, after.Points[i] - before.Points[i]);
+            }
+            return moved;
         }
 
         [Test]
