@@ -136,12 +136,10 @@ def build_history(run_dir: Path, behavior: str, max_points: int = 240) -> dict |
             "values": [float(value) for _, value in points],
         })
 
-    schema_version = arena_trainer.run_schema_version(run_dir)
     return {
         "run_id": run_dir.name,
         "behavior": behavior,
-        "rules_version": schema_version,
-        "schema_version": schema_version,
+        "schema_version": arena_trainer.run_schema_version(run_dir),
         "updated_unix": time.time(),
         "last_step": last_step,
         "series": series,

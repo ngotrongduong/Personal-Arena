@@ -12,9 +12,6 @@ namespace PersonalArena.View
         /// <summary>Marker written by the trainer with the observation schema of a run.</summary>
         public const string SchemaFileName = "schema_version.txt";
 
-        /// <summary>Legacy marker from runs made before the schema marker existed.</summary>
-        public const string RulesFileName = "rules_version.txt";
-
         /// <summary>The only schema this viewer can drive (the survivor observation layout).</summary>
         public const int CurrentSchemaVersion = SurvivorObservation.SchemaVersion;
 
@@ -126,8 +123,8 @@ namespace PersonalArena.View
         }
 
         /// <summary>
-        /// Observation schema recorded for a run: schema_version.txt, else the legacy
-        /// rules_version.txt, else 1 (mirrors run_schema_version in Trainer/arena_trainer.py).
+        /// Observation schema recorded for a run in schema_version.txt, else 1
+        /// (mirrors run_schema_version in Trainer/arena_trainer.py).
         /// </summary>
         public static int RunSchemaVersion(string runDirectory)
         {
@@ -139,11 +136,6 @@ namespace PersonalArena.View
             try
             {
                 string path = Path.Combine(runDirectory, SchemaFileName);
-                if (!File.Exists(path))
-                {
-                    path = Path.Combine(runDirectory, RulesFileName);
-                }
-
                 if (!File.Exists(path))
                 {
                     return 1;
@@ -165,12 +157,6 @@ namespace PersonalArena.View
             {
                 return 1;
             }
-        }
-
-        /// <summary>Old name of <see cref="RunSchemaVersion"/>, kept for the legacy arena viewer.</summary>
-        public static int RunRulesVersion(string runDirectory)
-        {
-            return RunSchemaVersion(runDirectory);
         }
 
         /// <summary>Run directory for a brain path (.../runs/&lt;run&gt;/&lt;Behavior&gt;/latest.brain).</summary>

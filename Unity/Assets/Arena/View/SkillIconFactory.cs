@@ -20,6 +20,14 @@ namespace PersonalArena.View
         private static readonly string[] SlotDefaults = { "spear-strike", "kick", "shield-block", "dash" };
         private static readonly Dictionary<string, Sprite> Cache = new Dictionary<string, Sprite>();
 
+        /// <summary>Skill ids with a shipped glyph, one row of four slots per class: warrior, mage, archer.</summary>
+        public static readonly IReadOnlyList<IReadOnlyList<string>> ClassSkillIds = new IReadOnlyList<string>[]
+        {
+            new[] { "spear-strike", "kick", "shield-block", "dash" },
+            new[] { "fireball", "frost-nova", "mana-shield", "blink" },
+            new[] { "arrow", "piercing-arrow", "leap-back", "concussive-arrow" }
+        };
+
         /// <summary>Icon key for a skill; an empty slot falls back to the warrior skill of that slot.</summary>
         public static string KeyFor(SkillDef skill, int index)
         {

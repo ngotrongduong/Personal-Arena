@@ -53,6 +53,8 @@ CPU_FALLBACK_AFTER = 2
 STABLE_RUN_SECONDS = 600.0
 RETRY_DELAY = 5.0
 BEHAVIORS = {name.lower(): name for name in ("Warrior", "Mage", "Archer")}
+# Survivor mode trains only the Warrior until these classes get their own Survivor configs.
+FUTURE_BEHAVIORS = ("Mage", "Archer")
 
 SUMMARY_PATTERN = re.compile(
     r"\[INFO\] (?P<behavior>[^.\s]+)\. Step: (?P<step>\d+)\. Time Elapsed: [\d.]+ s\."
@@ -74,6 +76,13 @@ def normalize_behavior(value: str) -> str:
 
 def default_config(behavior: str) -> str:
     return str(Path("Trainer/config") / f"{behavior.lower()}_survivor_ppo.yaml")
+
+
+def missing_config_message(behavior: str, config_path: Path) -> str:
+    """What the viewer shows when a behavior has no trainer config yet."""
+    if behavior in FUTURE_BEHAVIORS and config_path.name == Path(default_config(behavior)).name:
+        return f"{behavior} training arrives in M7 (Mage/Archer Survivor brains). Only the Warrior can train for now."
+    return f"Trainer config not found: {config_path.name}."
 
 
 @dataclass
@@ -468,6 +477,14 @@ class TrainingService:
 
     def _run_locked(self) -> int:
         self.stop_path.unlink(missing_ok=True)
+        # Check the config before planning, so an untrainable behavior never creates a run folder.
+        config_path = arena_trainer.resolve_path(self.args.config, self.root)
+        if not config_path.is_file():
+            message = missing_config_message(self.behavior, config_path)
+            print(message, file=sys.stderr)
+            self.publish("error", message)
+            return 2
+
         plan = plan_run(self.runs_dir, self.behavior, self.args.run_id)
         self.run_id = plan.run_id
         if plan.mode in ("new", "force"):

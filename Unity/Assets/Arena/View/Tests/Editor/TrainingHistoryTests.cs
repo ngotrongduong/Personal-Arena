@@ -8,7 +8,7 @@ namespace PersonalArena.View.Tests
         public void Parse_ReadsHistoryAndFindsSeries()
         {
             const string json = "{\"run_id\":\"warrior-002\",\"behavior\":\"Warrior\"," +
-                "\"rules_version\":2,\"updated_unix\":1790000000.0,\"last_step\":1200000," +
+                "\"schema_version\":4,\"updated_unix\":1790000000.0,\"last_step\":1200000," +
                 "\"series\":[{\"tag\":\"Environment/Cumulative Reward\"," +
                 "\"steps\":[30000,60000],\"values\":[-1.8,-1.0]}]}";
 
@@ -17,7 +17,7 @@ namespace PersonalArena.View.Tests
             Assert.That(history, Is.Not.Null);
             Assert.That(history.run_id, Is.EqualTo("warrior-002"));
             Assert.That(history.behavior, Is.EqualTo("Warrior"));
-            Assert.That(history.rules_version, Is.EqualTo(2));
+            Assert.That(history.schema_version, Is.EqualTo(4));
             Assert.That(history.updated_unix, Is.EqualTo(1790000000.0).Within(1e-6));
             Assert.That(history.last_step, Is.EqualTo(1200000L));
             TrainingSeries reward = history.Find("Environment/Cumulative Reward");

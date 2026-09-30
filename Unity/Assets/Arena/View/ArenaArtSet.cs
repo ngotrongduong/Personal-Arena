@@ -4,8 +4,8 @@ using UnityEngine;
 namespace PersonalArena.View
 {
     /// <summary>
-    /// Optional art pack for <see cref="ArenaRenderer"/>. When assigned, the renderer swaps its primitive
-    /// placeholders for rigged characters, animation clips and modular dungeon pieces.
+    /// Art pack for <see cref="SurvivorRenderer"/>: rigged characters, animation clips and modular
+    /// dungeon pieces that replace the primitive placeholders.
     /// </summary>
     [CreateAssetMenu(menuName = "Personal Arena/Arena Art Set")]
     public sealed class ArenaArtSet : ScriptableObject
@@ -22,7 +22,7 @@ namespace PersonalArena.View
         [Header("Hero looks by class id (warrior, mage, archer)")]
         public HeroLook[] Heroes = Array.Empty<HeroLook>();
 
-        [Header("Zombie looks by ZombieTypeDef.TypeIndex (walker, runner, brute, spitter)")]
+        [Header("Zombie looks by type index (walker, runner, brute, spitter)")]
         public WalkerLook[] Walkers = Array.Empty<WalkerLook>();
 
         [Header("Hero clips")]

@@ -11,11 +11,13 @@ namespace PersonalArena.View.Tests
         public void EverySkillOfEveryClass_GetsItsOwnIcon()
         {
             HashSet<string> seen = new HashSet<string>();
-            foreach (HeroClassDef hero in new[] { DefaultDefs.Warrior(), DefaultDefs.Mage(), DefaultDefs.Archer() })
+            Assert.That(SkillIconFactory.ClassSkillIds.Count, Is.EqualTo(3));
+            foreach (IReadOnlyList<string> row in SkillIconFactory.ClassSkillIds)
             {
-                for (int i = 0; i < hero.Skills.Length; i++)
+                Assert.That(row.Count, Is.EqualTo(4));
+                for (int i = 0; i < row.Count; i++)
                 {
-                    SkillDef skill = hero.Skills[i];
+                    SkillDef skill = new SkillDef { Id = row[i] };
                     // Every skill ships a readable game-icons.net glyph (see SkillIconImporter).
                     Texture2D glyph = Resources.Load<Texture2D>(SkillIconFactory.GlyphFolder + skill.Id);
                     Assert.That(glyph, Is.Not.Null, skill.Id + " glyph image");

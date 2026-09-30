@@ -56,17 +56,6 @@ namespace PersonalArena.View.Tests
         }
 
         [Test]
-        public void Viewer_MapsClassesToBehaviorsAndMixesToSpawns()
-        {
-            Assert.That(AiArenaController.BehaviorFor("mage"), Is.EqualTo("Mage"));
-            Assert.That(AiArenaController.BehaviorFor("archer"), Is.EqualTo("Archer"));
-            Assert.That(AiArenaController.BehaviorFor(null), Is.EqualTo("Warrior"));
-            Assert.That(AiArenaController.MixSpawns(0), Has.Length.EqualTo(1));
-            Assert.That(AiArenaController.MixSpawns(1), Has.Length.EqualTo(4));
-            Assert.That(AiArenaController.MixSpawns(4)[1].Type.Id, Is.EqualTo("spitter"));
-        }
-
-        [Test]
         public void Parse_RejectsEmptyOrBrokenText()
         {
             Assert.That(TrainingStatus.Parse(null), Is.Null);
@@ -164,9 +153,9 @@ namespace PersonalArena.View.Tests
         [Test]
         public void Bucket_AveragesLongHistoriesAndKeepsShortOnes()
         {
-            Assert.That(ArenaHud.Bucket(null, 4), Is.Empty);
-            Assert.That(ArenaHud.Bucket(new[] { 1f, 2f }, 4), Is.EqualTo(new[] { 1f, 2f }));
-            Assert.That(ArenaHud.Bucket(new[] { 1f, 3f, 5f, 7f, 9f, 11f }, 3), Is.EqualTo(new[] { 2f, 6f, 10f }));
+            Assert.That(TrainingHistory.Bucket(null, 4), Is.Empty);
+            Assert.That(TrainingHistory.Bucket(new[] { 1f, 2f }, 4), Is.EqualTo(new[] { 1f, 2f }));
+            Assert.That(TrainingHistory.Bucket(new[] { 1f, 3f, 5f, 7f, 9f, 11f }, 3), Is.EqualTo(new[] { 2f, 6f, 10f }));
         }
 
         private static TrainingState Classify(TrainingStatus status, DateTime? newestLog = null, DateTime? launched = null)

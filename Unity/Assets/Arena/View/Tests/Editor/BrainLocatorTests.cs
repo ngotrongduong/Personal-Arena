@@ -72,25 +72,12 @@ namespace PersonalArena.View.Tests
         }
 
         [Test]
-        public void RunSchemaVersion_FallsBackToLegacyRulesFile()
-        {
-            string run = Directory.CreateDirectory(Path.Combine(root, "warrior-legacy")).FullName;
-            File.WriteAllText(Path.Combine(run, BrainLocator.RulesFileName), "3");
-            Assert.That(BrainLocator.RunSchemaVersion(run), Is.EqualTo(3));
-            Assert.That(BrainLocator.RunRulesVersion(run), Is.EqualTo(3));
-
-            // The schema marker wins over the legacy file when both exist.
-            File.WriteAllText(Path.Combine(run, BrainLocator.SchemaFileName), Current.ToString());
-            Assert.That(BrainLocator.RunSchemaVersion(run), Is.EqualTo(Current));
-        }
-
-        [Test]
         public void FindNewestBrain_SkipsNewerBrainFromOtherSchema()
         {
             string current = WriteBrain("survivor-001", "Warrior",
                 new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
             string old = WriteBrain("warrior-002", "Warrior",
-                new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc), 3, true);
+                new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc), 3);
 
             Assert.That(BrainLocator.FindNewestBrain(root, "Warrior"), Is.EqualTo(current));
             Assert.That(BrainLocator.FindNewestBrain(root, "Warrior", false), Is.EqualTo(current));
@@ -128,11 +115,11 @@ namespace PersonalArena.View.Tests
         }
 
         private string WriteBrain(string run, string behavior, DateTime writtenUtc,
-            int schemaVersion = Current, bool legacyMarker = false)
+            int schemaVersion = Current)
         {
             string folder = Directory.CreateDirectory(Path.Combine(root, run, behavior)).FullName;
-            string marker = legacyMarker ? BrainLocator.RulesFileName : BrainLocator.SchemaFileName;
-            File.WriteAllText(Path.Combine(Directory.GetParent(folder).FullName, marker), schemaVersion.ToString());
+            File.WriteAllText(Path.Combine(Directory.GetParent(folder).FullName, BrainLocator.SchemaFileName),
+                schemaVersion.ToString());
             string path = Path.Combine(folder, BrainLocator.LatestFileName);
             File.WriteAllBytes(path, new byte[] { 1 });
             File.SetLastWriteTimeUtc(path, writtenUtc);

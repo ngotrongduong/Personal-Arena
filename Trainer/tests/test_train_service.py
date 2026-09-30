@@ -80,7 +80,6 @@ def make_checkpoint(
     step: int,
     resumable: bool = True,
     schema_version: int | None = arena_trainer.SCHEMA_VERSION,
-    rules_version: int | None = None,
     behavior: str = "Warrior",
 ) -> None:
     behavior_dir = runs / run_id / behavior
@@ -91,10 +90,6 @@ def make_checkpoint(
     if schema_version is not None:
         (behavior_dir.parent / arena_trainer.SCHEMA_FILE).write_text(
             str(schema_version), encoding="utf-8"
-        )
-    if rules_version is not None:
-        (behavior_dir.parent / "rules_version.txt").write_text(
-            str(rules_version), encoding="utf-8"
         )
 
 
@@ -130,14 +125,11 @@ def test_plan_run_numbers_only_survivor_runs(tmp_path: Path):
     assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-s003", "new", 0)
 
 
-def test_plan_run_does_not_resume_a_rules_v3_run_under_schema_v4(tmp_path: Path):
-    make_checkpoint(
-        tmp_path,
-        "warrior-011",
-        100,
-        schema_version=None,
-        rules_version=3,
-    )
+@pytest.mark.parametrize("schema_version", [None, 3])
+def test_plan_run_does_not_resume_an_unmarked_or_older_schema_run(
+    tmp_path: Path, schema_version: int | None
+):
+    make_checkpoint(tmp_path, "warrior-011", 100, schema_version=schema_version)
 
     plan = train_service.plan_run(tmp_path, "Warrior")
 
@@ -159,13 +151,7 @@ def test_plan_run_uses_the_newest_current_schema_run(tmp_path: Path):
 
 
 def test_plan_run_does_not_resume_an_explicit_incompatible_run(tmp_path: Path):
-    make_checkpoint(
-        tmp_path,
-        "warrior-011",
-        100,
-        schema_version=None,
-        rules_version=3,
-    )
+    make_checkpoint(tmp_path, "warrior-011", 100, schema_version=3)
 
     plan = train_service.plan_run(tmp_path, "Warrior", "warrior-011")
 
@@ -335,6 +321,47 @@ def test_parser_normalizes_behavior_and_chooses_its_default_config(
 
     assert args.behavior == expected
     assert Path(args.config) == Path("Trainer/config") / config
+
+
+def test_only_the_warrior_has_a_survivor_config_for_now():
+    root = arena_trainer.repository_root()
+
+    assert (root / train_service.default_config("Warrior")).is_file()
+    for behavior in train_service.FUTURE_BEHAVIORS:
+        assert not (root / train_service.default_config(behavior)).exists()
+
+
+@pytest.mark.parametrize("behavior", ["Mage", "Archer"])
+def test_mage_and_archer_report_a_clear_error_without_a_run_folder(
+    tmp_path: Path, capsys, behavior: str
+):
+    args = train_service.create_parser().parse_args(
+        ["--behavior", behavior, "--results-dir", str(tmp_path)]
+    )
+
+    assert train_service.TrainingService(args).run() == 2
+
+    status = read_status(tmp_path)
+    assert status["state"] == "error"
+    assert status["behavior"] == behavior
+    assert "arrives in M7" in status["message"]
+    assert "Only the Warrior can train" in status["message"]
+    assert "arrives in M7" in capsys.readouterr().err
+    assert not (tmp_path / train_service.ERROR_LOG_NAME).exists()
+    assert not (tmp_path / f"{behavior.lower()}-s001").exists()
+
+
+def test_a_missing_custom_config_is_reported_by_name(tmp_path: Path):
+    args = train_service.create_parser().parse_args(
+        ["--results-dir", str(tmp_path), "--config", str(tmp_path / "gone.yaml")]
+    )
+
+    assert train_service.TrainingService(args).run() == 2
+
+    status = read_status(tmp_path)
+    assert status["state"] == "error"
+    assert status["message"] == "Trainer config not found: gone.yaml."
+    assert list(tmp_path.glob("warrior-s*")) == []
 
 
 def test_a_second_service_cannot_take_the_lock(tmp_path: Path):

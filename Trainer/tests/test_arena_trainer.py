@@ -135,21 +135,12 @@ def test_schema_version_defaults_to_one_and_round_trips_current_version(tmp_path
     assert (run_dir / arena_trainer.SCHEMA_FILE).read_text(encoding="utf-8") == "4"
 
 
-def test_schema_version_falls_back_to_legacy_rules_marker(tmp_path: Path):
-    run_dir = tmp_path / "warrior-011"
+def test_schema_version_reads_an_older_schema_marker(tmp_path: Path):
+    run_dir = tmp_path / "warrior-s000"
     run_dir.mkdir()
-    (run_dir / "rules_version.txt").write_text("3", encoding="utf-8")
+    (run_dir / arena_trainer.SCHEMA_FILE).write_text("3\n", encoding="utf-8")
 
     assert arena_trainer.run_schema_version(run_dir) == 3
-
-
-def test_schema_version_takes_precedence_over_legacy_rules_marker(tmp_path: Path):
-    run_dir = tmp_path / "warrior-s001"
-    run_dir.mkdir()
-    (run_dir / "rules_version.txt").write_text("3", encoding="utf-8")
-    (run_dir / arena_trainer.SCHEMA_FILE).write_text("4", encoding="utf-8")
-
-    assert arena_trainer.run_schema_version(run_dir) == 4
 
 
 def test_schema_version_treats_an_unreadable_marker_as_version_one(tmp_path: Path):

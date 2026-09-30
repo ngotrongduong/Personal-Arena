@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 
@@ -21,7 +22,7 @@ namespace PersonalArena.View
 
         public string run_id;
         public string behavior;
-        public int rules_version;
+        public int schema_version;
         public double updated_unix;
         public long last_step;
         public TrainingSeries[] series;
@@ -124,6 +125,32 @@ namespace PersonalArena.View
             }
 
             return smoothed;
+        }
+
+        /// <summary>Averages <paramref name="values"/> into at most <paramref name="count"/> buckets.</summary>
+        public static float[] Bucket(IReadOnlyList<float> values, int count)
+        {
+            if (values == null || values.Count == 0 || count <= 0)
+            {
+                return Array.Empty<float>();
+            }
+
+            int buckets = Math.Min(count, values.Count);
+            float[] result = new float[buckets];
+            for (int bucket = 0; bucket < buckets; bucket++)
+            {
+                int start = bucket * values.Count / buckets;
+                int end = Math.Max(start + 1, (bucket + 1) * values.Count / buckets);
+                float sum = 0f;
+                for (int i = start; i < end; i++)
+                {
+                    sum += values[i];
+                }
+
+                result[bucket] = sum / (end - start);
+            }
+
+            return result;
         }
     }
 }

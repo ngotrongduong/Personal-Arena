@@ -536,7 +536,7 @@ namespace PersonalArena.View
         {
             ShowTrainingPanel(true);
             trainingGraphCaption.text = caption ?? string.Empty;
-            float[] buckets = ArenaHud.Bucket(values, TrainingBarCount);
+            float[] buckets = TrainingHistory.Bucket(values, TrainingBarCount);
             float minimum = 0f;
             float maximum = 0f;
             foreach (float value in buckets)

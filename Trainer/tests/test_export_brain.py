@@ -190,7 +190,7 @@ def test_discover_behaviors_finds_current_schema_and_ignores_old_or_non_behavior
     old_behavior = old / "Archer"
     old_behavior.mkdir(parents=True)
     (old_behavior / "Archer-200.pt").write_bytes(b"old")
-    (old / "rules_version.txt").write_text("3", encoding="utf-8")
+    (old / arena_trainer.SCHEMA_FILE).write_text("3", encoding="utf-8")
 
     run_logs = current / "run_logs"
     run_logs.mkdir()

@@ -53,12 +53,10 @@ def test_build_history_merges_filters_deduplicates_and_downsamples(tmp_path: Pat
 
     assert history is not None
     assert set(history) == {
-        "run_id", "behavior", "rules_version", "schema_version", "updated_unix",
-        "last_step", "series"
+        "run_id", "behavior", "schema_version", "updated_unix", "last_step", "series"
     }
     assert history["run_id"] == "warrior-s002"
     assert history["behavior"] == "Warrior"
-    assert history["rules_version"] == 4
     assert history["schema_version"] == 4
     assert history["last_step"] == 25
     series = by_tag(history)

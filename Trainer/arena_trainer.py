@@ -16,15 +16,12 @@ DEFAULT_ENVIRONMENT = Path("Build/Training/PersonalArenaTraining.exe")
 DEFAULT_RESULTS_DIRECTORY = Path("Trainer/runs")
 SCHEMA_VERSION = 4
 SCHEMA_FILE = "schema_version.txt"
-LEGACY_RULES_FILE = "rules_version.txt"
 
 
 def run_schema_version(run_dir: Path) -> int:
-    marker = run_dir / SCHEMA_FILE
-    if not marker.exists():
-        marker = run_dir / LEGACY_RULES_FILE
+    """Observation schema recorded for a run, or 1 when the marker is missing or unreadable."""
     try:
-        return int(marker.read_text(encoding="utf-8").strip())
+        return int((run_dir / SCHEMA_FILE).read_text(encoding="utf-8").strip())
     except (OSError, ValueError):
         return 1
 
