@@ -25,3 +25,5 @@ này (M0 scaffold, Unity project, Core M1) ghi ở `docs/STATUS.md`.
 | [T-018](T-018-champion-eval-behavior.md) | Champion/challenger (không ghi đè não tốt nhất), đánh giá tự động 100 seed trong dịch vụ train, telemetry hành vi (Core + SurvivorEval) | Codex | done | M4B | T-020 |
 | [T-020](T-020-viewer-best-brain-profile.md) | Trình xem: mục "Não giỏi nhất" (M4A đạt/chưa, Behavior Profile so với champion trước), phím `B` đổi não mới nhất ↔ giỏi nhất | Claude (PC) | done | M4B | T-018 |
 | [T-019](T-019-brain-upgrade-build-curriculum.md) | `brain_upgrade.py` + mô tả schema JSON (TRAIN tự nâng cấp não), não theo build ngẫu nhiên, curriculum ôn tập 70/20/10 | Codex | done | M4B | |
+| [T-021](T-021-m4c-survivor-content.md) | Core M4C: 4 vũ khí mới (giáo, rìu xoay, hào quang, sóng chấn), 4 phụ kiện, Spitter + đạn địch (khiên chặn), nam châm, rương — giữ nguyên schema v4 | Codex | doing | M4C | |
+| T-022 | Unity M4C: hình ảnh 4 vũ khí mới, Spitter + đạn, nam châm/rương, icon 8 món mới, đánh bóng HUD | Claude (PC) | todo (sau T-021) | M4C | |
