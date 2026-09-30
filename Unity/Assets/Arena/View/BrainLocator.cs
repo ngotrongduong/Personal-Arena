@@ -12,6 +12,12 @@ namespace PersonalArena.View
         /// <summary>Marker written by the trainer with the observation schema of a run.</summary>
         public const string SchemaFileName = "schema_version.txt";
 
+        /// <summary>Folder under Trainer/runs where the trainer keeps the best brains (not a training run).</summary>
+        public const string ChampionsDirectoryName = "champions";
+
+        /// <summary>File name of the current best brain inside champions/&lt;Behavior&gt;.</summary>
+        public const string ChampionFileName = "champion.brain";
+
         /// <summary>The only schema this viewer can drive (the survivor observation layout).</summary>
         public const int CurrentSchemaVersion = SurvivorObservation.SchemaVersion;
 
@@ -78,6 +84,11 @@ namespace PersonalArena.View
 
             for (int i = 0; i < runs.Length; i++)
             {
+                if (IsChampionsDirectory(runs[i]))
+                {
+                    continue;
+                }
+
                 bool currentSchema = RunSchemaVersion(runs[i]) == CurrentSchemaVersion;
                 if (currentSchemaOnly && !currentSchema)
                 {
@@ -214,7 +225,7 @@ namespace PersonalArena.View
             DateTime newestTime = DateTime.MinValue;
             for (int i = 0; i < runs.Length; i++)
             {
-                if (RunSchemaVersion(runs[i]) != CurrentSchemaVersion)
+                if (IsChampionsDirectory(runs[i]) || RunSchemaVersion(runs[i]) != CurrentSchemaVersion)
                 {
                     continue;
                 }
@@ -234,6 +245,32 @@ namespace PersonalArena.View
             }
 
             return newest;
+        }
+
+        /// <summary>champions/&lt;Behavior&gt; folder of the trainer's best brains, or null without a runs folder.</summary>
+        public static string ChampionDirectory(string runsDirectory, string behavior)
+        {
+            return string.IsNullOrEmpty(runsDirectory) || string.IsNullOrEmpty(behavior)
+                ? null
+                : Path.Combine(runsDirectory, ChampionsDirectoryName, behavior);
+        }
+
+        /// <summary>The current best brain for <paramref name="behavior"/> if the trainer has chosen one, else null.</summary>
+        public static string FindChampionBrain(string runsDirectory, string behavior)
+        {
+            string directory = ChampionDirectory(runsDirectory, behavior);
+            if (directory == null)
+            {
+                return null;
+            }
+
+            string path = Path.Combine(directory, ChampionFileName);
+            return File.Exists(path) ? path : null;
+        }
+
+        private static bool IsChampionsDirectory(string runDirectory)
+        {
+            return string.Equals(Path.GetFileName(runDirectory), ChampionsDirectoryName, StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>Run folder name for a brain path (…/runs/&lt;run&gt;/&lt;Behavior&gt;/latest.brain).</summary>
