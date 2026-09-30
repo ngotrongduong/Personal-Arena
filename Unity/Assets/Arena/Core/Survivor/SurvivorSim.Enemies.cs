@@ -106,6 +106,7 @@ namespace PersonalArena.Core.Survivor
             e.Hp = e.MaxHp; e.Damage = def.AttackDamage * damageTime * damageTier * (elite ? tuning.EliteDamageMul : 1f);
             e.KnockbackResist = elite ? MathF.Max(def.KnockbackResist, tuning.EliteMinKnockbackResist) : def.KnockbackResist;
             e.Elite = elite; e.IsBoss = boss; e.WindupRemaining = 0f; e.StunRemaining = 0f;
+            e.OrbitNextHitTime = 0f; e.LastShockwaveId = 0;
             e.RelocatedThisTick = false; e.Separated = false; enemyPreviousPositions[slot] = point;
             e.AttackCooldown = 0f; e.ContactCooldown = 0f; e.SummonCooldown = boss ? tuning.BossSummonIntervalSeconds : 0f;
             if (e.Radius > maxEnemyRadius) maxEnemyRadius = e.Radius;
@@ -177,6 +178,12 @@ namespace PersonalArena.Core.Survivor
                     }
                     else if (e.AttackCooldown <= 0f && toHero.LengthSquared <= (def.AttackRange + Hero.Radius) * (def.AttackRange + Hero.Radius) && InArc(e.Facing, toHero, def.AttackArcDegrees))
                     { e.WindupRemaining = def.WindupSeconds; }
+                    else if (def.AttackKind == SurvivorAttackKind.Ranged)
+                    {
+                        float distance = toHero.Length;
+                        if (distance > def.PreferredDistance + 1f) e.Position += moveDirection * def.MoveSpeed * FixedDeltaTime;
+                        else if (distance < def.PreferredDistance - 1f && distance > 1e-6f) e.Position -= toHero / distance * def.MoveSpeed * FixedDeltaTime;
+                    }
                     else e.Position += moveDirection * def.MoveSpeed * FixedDeltaTime;
                 }
                 if (IsEnded) return;
@@ -196,7 +203,15 @@ namespace PersonalArena.Core.Survivor
         private void ResolveSwing(SurvivorEnemy e, SurvivorEnemyDef def)
         {
             Vec2 toHero = Hero.Position - e.Position;
-            if (toHero.Length <= def.AttackRange + Hero.Radius && InArc(e.Facing, toHero, def.AttackArcDegrees)) DamageHero(e.Damage, e, false);
+            if (def.AttackKind == SurvivorAttackKind.Ranged)
+            {
+                Vec2 direction = toHero.Normalized();
+                if (direction.LengthSquared < 1e-8f) direction = Vec2.FromAngle(e.Facing);
+                float lifetime = def.ProjectileSpeed > 0f ? def.ProjectileRange / def.ProjectileSpeed : 0f;
+                SpawnEnemyProjectile(e.Position + direction * (e.Radius + 0.1f), direction * def.ProjectileSpeed,
+                    def.ProjectileRadius, e.Damage, lifetime, e.Id);
+            }
+            else if (toHero.Length <= def.AttackRange + Hero.Radius && InArc(e.Facing, toHero, def.AttackArcDegrees)) DamageHero(e.Damage, e, false);
             e.AttackCooldown = def.RecoverSeconds;
         }
 
@@ -295,20 +310,26 @@ namespace PersonalArena.Core.Survivor
                 AddEvent(SurvivorEventType.Parry, id: source.Id); return;
             }
             float multiplier = covered ? block.BlockDamageMultiplier : 1f;
-            float damage = MathF.Max(1f, raw * multiplier - stats.Armor);
-            damage = MathF.Min(damage, Hero.Hp); Hero.Hp -= damage; DamageTaken += damage;
-            float hpRatio = Hero.MaxHp > 0f ? Hero.Hp / Hero.MaxHp : 0f;
-            if (hpRatio < MinHpRatio) { MinHpRatio = hpRatio; MinHpTime = Time; }
-            AddEvent(SurvivorEventType.HeroDamaged, damage, damage / Hero.MaxHp, source.Id, Hero.Position);
+            bool killed = ApplyHeroDamage(raw * multiplier, source.Id);
             if (covered)
             {
                 AddEvent(SurvivorEventType.Blocked, id: source.Id);
                 if (!contact) { source.StunRemaining = block.BlockStaggerSeconds; PushEnemy(source, AwayFromHero(source), block.BlockPushback); }
             }
-            if (Hero.Hp <= 0f) KillHero(source, contact);
+            if (killed) KillHero(source, contact, false, source.Id);
         }
 
-        private void KillHero(SurvivorEnemy source, bool contact)
+        private bool ApplyHeroDamage(float raw, int sourceId)
+        {
+            float damage = MathF.Max(1f, raw - stats.Armor);
+            damage = MathF.Min(damage, Hero.Hp); Hero.Hp -= damage; DamageTaken += damage;
+            float hpRatio = Hero.MaxHp > 0f ? Hero.Hp / Hero.MaxHp : 0f;
+            if (hpRatio < MinHpRatio) { MinHpRatio = hpRatio; MinHpTime = Time; }
+            AddEvent(SurvivorEventType.HeroDamaged, damage, damage / Hero.MaxHp, sourceId, Hero.Position);
+            return Hero.Hp <= 0f;
+        }
+
+        private void KillHero(SurvivorEnemy source, bool contact, bool projectile, int sourceId)
         {
             if (IsEnded) return;
             Hero.Alive = false; EndReason = EndReason.Died;
@@ -316,10 +337,11 @@ namespace PersonalArena.Core.Survivor
             int touching = 0;
             for (int i = 0; i < enemyLimit; i++) if (enemies[i].Active && Vec2.Distance(enemies[i].Position, Hero.Position) <= Hero.Radius + enemies[i].Radius + margin) touching++;
             if (touching >= Config.Tuning.SurroundedCount) DeathCause = DeathCause.Surrounded;
-            else if (source.IsBoss) DeathCause = DeathCause.Boss;
-            else if (!contact && source.TypeIndex == BruteTypeIndex) DeathCause = DeathCause.Brute;
+            else if (projectile) DeathCause = DeathCause.Projectile;
+            else if (source != null && source.IsBoss) DeathCause = DeathCause.Boss;
+            else if (!contact && source != null && source.TypeIndex == BruteTypeIndex) DeathCause = DeathCause.Brute;
             else DeathCause = DeathCause.Contact;
-            AddEvent(SurvivorEventType.HeroDied, id: source.Id, point: Hero.Position);
+            AddEvent(SurvivorEventType.HeroDied, id: sourceId, point: Hero.Position);
         }
 
         /// <summary>Unit vector from the hero to the enemy, or the hero's facing when they coincide.</summary>

@@ -11,9 +11,11 @@ namespace PersonalArena.Core.Survivor
             for (int i = 0; i < inventory.WeaponCount && !IsEnded; i++)
             {
                 int index = inventory.WeaponAt(i);
-                if (weaponCooldowns[index] > 0f) continue;
                 ItemDef def = SurvivorCatalog.Get(index);
                 int level = inventory.Level(index);
+                if (def.Pattern == WeaponPattern.Orbit) { UpdateOrbitAxes(def, level); continue; }
+                if (def.Pattern == WeaponPattern.Shockwave) { UpdateShockwave(def, level); continue; }
+                if (weaponCooldowns[index] > 0f) continue;
                 if (def.Pattern == WeaponPattern.Sweep)
                 {
                     Vec2 facing = Vec2.FromAngle(Hero.Facing);
@@ -25,6 +27,17 @@ namespace PersonalArena.Core.Survivor
                 {
                     weaponCooldowns[index] = def.BaseCooldown * stats.CooldownMul;
                     AddEvent(SurvivorEventType.WeaponFired, id: index, point: throwDirection);
+                }
+                else if (def.Pattern == WeaponPattern.Thrust && ThrustSpears(def, level, out Vec2 thrustDirection, out int spearCount))
+                {
+                    weaponCooldowns[index] = def.BaseCooldown * stats.CooldownMul;
+                    AddEvent(SurvivorEventType.WeaponFired, extra: spearCount, id: index, point: thrustDirection);
+                }
+                else if (def.Pattern == WeaponPattern.Aura)
+                {
+                    TickAura(def, level);
+                    weaponCooldowns[index] = def.HitInterval * stats.CooldownMul;
+                    AddEvent(SurvivorEventType.WeaponFired, id: index);
                 }
             }
         }
@@ -212,6 +225,7 @@ namespace PersonalArena.Core.Survivor
             {
                 float gold = MathF.Floor(rng.Range(tuning.EliteGoldMin, tuning.EliteGoldMax)) * stats.TierGold * stats.GreedMul;
                 SpawnPickup(PickupKind.Gold, goldPoint, gold, true);
+                SpawnPickup(PickupKind.Chest, enemy.Position + Vec2.FromAngle(SurvivorCatalog.ChestDropAngle) * tuning.DropOffset, 0f, false);
             }
             else if (rng.NextFloat() < tuning.GoldChance * (1f + stats.Luck / 100f))
             {
@@ -219,6 +233,10 @@ namespace PersonalArena.Core.Survivor
                 SpawnPickup(PickupKind.Gold, goldPoint, gold, true);
             }
             if (rng.NextFloat() < tuning.MeatChance) SpawnPickup(PickupKind.Meat, enemy.Position + Vec2.FromAngle(tuning.MeatDropAngle) * tuning.DropOffset, tuning.MeatHeal, true);
+            if (!enemy.Elite && RollMagnetDrop())
+                SpawnPickup(PickupKind.Magnet, enemy.Position + Vec2.FromAngle(SurvivorCatalog.MagnetDropAngle) * tuning.DropOffset, 0f, false);
         }
+
+        private bool RollMagnetDrop() => rng.NextFloat() < SurvivorCatalog.MagnetChance;
     }
 }

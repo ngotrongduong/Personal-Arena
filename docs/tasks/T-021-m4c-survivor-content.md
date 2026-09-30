@@ -265,4 +265,47 @@ At least one focused test per behaviour:
 
 ## Report
 
-(Codex fills this in.)
+Implemented by Codex up to its usage limit; Claude verified the remainder and filled in this report.
+
+**Changed**
+- `SurvivorDefs.cs`: 8 new catalog rows (spear, orbit-axe, aura, shockwave, might-gauntlet,
+  hourglass, area-charm, magnet-charm), new `ItemDef` fields (`Duration`, `HitInterval`,
+  `AngularSpeedDegrees`, `CooldownPerLevel`, `Width`), weapon index constants, magnet/chest
+  constants, `ThrustAngleOffset`, `SurvivorAttackKind.Ranged`, Spitter def + projectile fields,
+  spawn weight column 4 = `0,0,0,1,2,2,3`, Warrior pools `{0..5}` / `{6..13}`.
+- `SurvivorSim.Content.cs` (new): spear capsule fan, orbit axes, aura ticks, expanding shockwave.
+- `SurvivorSim.EnemyProjectiles.cs` (new): pooled enemy projectiles (capacity 64), move after
+  `UpdateEnemies`, die on lifetime / map edge / obstacle, front-180° block → `Blocked`, otherwise
+  shared `ApplyHeroDamage` (armour applies, no parry, no stagger).
+- `SurvivorSim.Enemies.cs`: Spitter keeps a 6–8 m band, fires on `ResolveSwing`; `DamageHero`
+  split into `ApplyHeroDamage`; `KillHero` gains `DeathCause.Projectile`.
+- `SurvivorSim.Progression.cs`: magnet collect (attract all gems, `MagnetPicked`), chest open
+  (random owned non-max item +1, gold, `GoldCollected` + `ChestOpened`).
+- `SurvivorSim.Weapons.cs`: dispatch for the new patterns, elite chest drop, 0.2% magnet drop.
+- `SurvivorSim.cs`: projectile pool/reset, orbit cooldown frozen while axes are up, test hooks.
+- `SurvivorObservation.cs`: enemy projectiles on rays as solid kind 10 with approach speed.
+- `SurvivorEntities.cs`: `SurvivorEnemyProjectile`, per-enemy orbit hit time and shockwave id;
+  inventory storage sized to the catalog so test grants beyond 4 + 4 do not overflow.
+
+**Decisions on unspecified details**
+- Orbit volley size (radius, count) is fixed at emission; area changes apply to the next volley.
+- Aura emits `WeaponFired` each tick, even with no enemy in range (the view pulses).
+- A chest's level-up does not reset any weapon cooldown.
+- Enemy projectiles skip movement on the tick they spawn (like hero projectiles).
+- Reward config, behaviour tracker and evaluator unchanged.
+- Shockwave knockback points away from the wave centre (= where the hero stood when it fired).
+- The spear aims at the nearest enemy among those within reach.
+- The Spitter band is `PreferredDistance ± 1 m` (6–8 m).
+- `MagnetChance` and chest gold bounds are constants in `SurvivorCatalog` (`SurvivorConfig.cs`
+  was outside the allowed files).
+- `SurvivorInventory` storage is sized to the catalog; `WeaponCount` / `PassiveCount` are the only
+  valid bounds for `WeaponAt` / `PassiveAt`.
+- Chests share the 600-slot pickup pool like gold (a chest can be lost if the pool is full;
+  unreachable in practice because gems merge at 400).
+
+**Review follow-ups (Claude)**: orbit axe positions cached once per tick; perf and
+allocation tests also run with all 6 weapons at level 5 plus spitters; a real-combat
+determinism test compares full event streams; the chest reward test now checks the gold part.
+
+**Tests**: `dotnet test CoreTests -c Release` → 108 passed, 0 failed (new file
+`SurvivorM4CContentTests.cs`, old pool/offer tests updated). `survivor_v4.json` untouched.

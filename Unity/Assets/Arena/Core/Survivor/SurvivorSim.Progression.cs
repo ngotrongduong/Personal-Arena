@@ -57,7 +57,46 @@ namespace PersonalArena.Core.Survivor
                 if (p.Kind == PickupKind.Gem) { gemCount--; CollectXp(p.Value); }
                 else if (p.Kind == PickupKind.Gold) { Gold += p.Value; DropsCollected++; AddEvent(SurvivorEventType.GoldCollected, p.Value, point: p.Position); }
                 else if (p.Kind == PickupKind.Meat) { DropsCollected++; Heal(tuning.MeatHeal, true); }
+                else if (p.Kind == PickupKind.Magnet) CollectMagnet();
+                else if (p.Kind == PickupKind.Chest) OpenChest(p.Position);
             }
+        }
+
+        private void CollectMagnet()
+        {
+            int attracted = 0;
+            for (int i = 0; i < pickupLimit; i++)
+            {
+                SurvivorPickup pickup = pickups[i];
+                if (!pickup.Active || pickup.Kind != PickupKind.Gem) continue;
+                pickup.Attracted = true; attracted++;
+            }
+            AddEvent(SurvivorEventType.MagnetPicked, attracted);
+        }
+
+        private void OpenChest(Vec2 point)
+        {
+            int count = 0;
+            for (int i = 0; i < inventory.WeaponCount; i++)
+            {
+                int index = inventory.WeaponAt(i); ItemDef def = SurvivorCatalog.Get(index);
+                if (inventory.Level(index) < def.MaxLevel) candidates[count++] = index;
+            }
+            for (int i = 0; i < inventory.PassiveCount; i++)
+            {
+                int index = inventory.PassiveAt(i); ItemDef def = SurvivorCatalog.Get(index);
+                if (inventory.Level(index) < def.MaxLevel) candidates[count++] = index;
+            }
+            int upgraded = -1, newLevel = 0;
+            if (count > 0)
+            {
+                upgraded = candidates[rng.NextInt(count)]; newLevel = inventory.Level(upgraded) + 1;
+                inventory.Set(upgraded, newLevel); RecomputeStats(true);
+            }
+            float gold = MathF.Floor(rng.Range(SurvivorCatalog.ChestGoldMin, SurvivorCatalog.ChestGoldMax)) * stats.TierGold * stats.GreedMul;
+            Gold += gold;
+            AddEvent(SurvivorEventType.GoldCollected, gold, point: point);
+            AddEvent(SurvivorEventType.ChestOpened, gold, newLevel, upgraded, point);
         }
 
         private void CollectXp(float raw)

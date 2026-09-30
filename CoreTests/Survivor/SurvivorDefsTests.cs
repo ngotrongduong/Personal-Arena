@@ -15,8 +15,8 @@ namespace PersonalArena.Core.Tests.Survivor
         public void Catalog_IndicesAndPools()
         {
             SurvivorClassDef warrior = SurvivorDefaults.Warrior();
-            Assert.That(warrior.WeaponPool, Is.EqualTo(new[] { 0, 3 })); Assert.That(warrior.PassivePool, Is.EqualTo(new[] { 6, 7, 9, 12 }));
-            Assert.That(SurvivorCatalog.Get(0).Id, Is.EqualTo("sword-sweep")); Assert.That(SurvivorCatalog.Get(1), Is.Null); Assert.That(SurvivorCatalog.Get(61), Is.Null);
+            Assert.That(warrior.WeaponPool, Is.EqualTo(new[] { 0, 1, 2, 3, 4, 5 })); Assert.That(warrior.PassivePool, Is.EqualTo(new[] { 6, 7, 8, 9, 10, 11, 12, 13 }));
+            Assert.That(SurvivorCatalog.Get(0).Id, Is.EqualTo("sword-sweep")); Assert.That(SurvivorCatalog.Get(1).Id, Is.EqualTo("spear-thrust")); Assert.That(SurvivorCatalog.Get(61), Is.Null);
             Assert.That(SurvivorCatalog.Get(62).Kind, Is.EqualTo(ItemKind.Filler)); Assert.That(SurvivorCatalog.Get(63).Kind, Is.EqualTo(ItemKind.Filler));
         }
 
@@ -72,9 +72,12 @@ namespace PersonalArena.Core.Tests.Survivor
         {
             SurvivorClassDef warrior = SurvivorDefaults.Warrior();
             float[] baseline = Derived(new SurvivorSim(SurvivorTestHelpers.Config(), 1).DerivedStats);
-            int[] items = { SurvivorCatalog.IronHeartIndex, SurvivorCatalog.BoneArmorIndex, SurvivorCatalog.CritEyeIndex, SurvivorCatalog.WindBootsIndex };
-            int[] derivedIndex = { (int)StatId.MaxHp, (int)StatId.Armor, (int)StatId.Crit, (int)StatId.MoveSpeed };
-            float[] expected = { warrior.MaxHp * 0.1f * 2f, 2f, 0.04f * 2f, warrior.MoveSpeed * 0.08f * 2f };
+            int[] items = { SurvivorCatalog.IronHeartIndex, SurvivorCatalog.BoneArmorIndex, SurvivorCatalog.MightGauntletIndex, SurvivorCatalog.CritEyeIndex,
+                SurvivorCatalog.HourglassIndex, SurvivorCatalog.AreaCharmIndex, SurvivorCatalog.WindBootsIndex, SurvivorCatalog.MagnetCharmIndex };
+            int[] derivedIndex = { (int)StatId.MaxHp, (int)StatId.Armor, (int)StatId.Might, (int)StatId.Crit,
+                (int)StatId.Cooldown, (int)StatId.Area, (int)StatId.MoveSpeed, (int)StatId.Magnet };
+            float[] expected = { warrior.MaxHp * 0.1f * 2f, 2f, 0.08f * 2f, 0.04f * 2f,
+                -0.06f * 2f, 0.08f * 2f, warrior.MoveSpeed * 0.08f * 2f, warrior.PickupRadius * 0.25f * 2f };
             for (int n = 0; n < items.Length; n++)
             {
                 Assert.That(SurvivorCatalog.Get(items[n]).PerLevel, Is.EqualTo(SurvivorCatalog.PassivePerLevel(items[n])));

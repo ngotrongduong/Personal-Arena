@@ -18,13 +18,18 @@ namespace PersonalArena.Core.Tests.Survivor
         public void Offer_RespectsPools()
         {
             SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.Config(), 2); sim.GiveXpForTests(5f); sim.Step(default);
-            for (int i = 0; i < sim.OfferCount; i++) Assert.That(sim.GetOffer(i).CatalogIndex, Is.AnyOf(0, 3, 6, 7, 9, 12));
+            SurvivorClassDef warrior = SurvivorDefaults.Warrior();
+            for (int i = 0; i < sim.OfferCount; i++)
+            {
+                int index = sim.GetOffer(i).CatalogIndex;
+                Assert.That(System.Array.IndexOf(warrior.WeaponPool, index) >= 0 || System.Array.IndexOf(warrior.PassivePool, index) >= 0, Is.True, "offer " + index);
+            }
         }
 
         [Test]
         public void Offer_FillersWhenEverythingMaxed()
         {
-            SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.Config(), 3); foreach (int item in new[] { 0, 3, 6, 7, 9, 12 }) sim.GiveItemForTests(item, 5);
+            SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.Config(), 3); foreach (int item in new[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 }) sim.GiveItemForTests(item, 5);
             sim.GiveXpForTests(5f); sim.Step(default); Assert.That(sim.OfferCount, Is.EqualTo(2)); Assert.That(sim.GetOffer(0).CatalogIndex, Is.EqualTo(62)); Assert.That(sim.GetOffer(1).CatalogIndex, Is.EqualTo(63));
         }
 
@@ -40,6 +45,13 @@ namespace PersonalArena.Core.Tests.Survivor
         public void Pick_AppliesItem_AndResumes()
         {
             SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.Config(), 4); sim.GiveXpForTests(5f); sim.Step(default); int item = sim.GetOffer(0).CatalogIndex; sim.Step(new SurvivorInput(0, 0, 1)); Assert.That(sim.Inventory.Level(item), Is.EqualTo(1).Or.EqualTo(2)); Assert.That(sim.IsAwaitingPick, Is.False);
+        }
+
+        [Test]
+        public void Offer_FillersWhenFullSlotsAreMaxed()
+        {
+            SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.Config(), 4); foreach (int item in new[] { 0, 1, 2, 3, 6, 7, 8, 9 }) sim.GiveItemForTests(item, 5);
+            sim.GiveXpForTests(5f); sim.Step(default); Assert.That(sim.OfferCount, Is.EqualTo(2)); Assert.That(sim.GetOffer(0).CatalogIndex, Is.EqualTo(62)); Assert.That(sim.GetOffer(1).CatalogIndex, Is.EqualTo(63));
         }
 
         [Test]

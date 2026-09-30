@@ -28,6 +28,7 @@ namespace PersonalArena.Core.Survivor
         private readonly float[] solidDistances = new float[72];
         private readonly int[] solidKinds = new int[72];
         private readonly SurvivorEnemy[] solidEnemies = new SurvivorEnemy[72];
+        private readonly SurvivorEnemyProjectile[] solidEnemyProjectiles = new SurvivorEnemyProjectile[72];
         private readonly float[] pickupDistances = new float[72];
         private readonly int[] pickupKinds = new int[72];
         private readonly Vec2[] rayDirections = new Vec2[72];
@@ -99,7 +100,7 @@ namespace PersonalArena.Core.Survivor
             {
                 Vec2 direction = rayDirections[ray];
                 solidDistances[ray] = WallDistance(origin, direction, sim.Config.MapHalfSize);
-                solidKinds[ray] = 1; solidEnemies[ray] = null; pickupDistances[ray] = RayRange + 1f; pickupKinds[ray] = 0;
+                solidKinds[ray] = 1; solidEnemies[ray] = null; solidEnemyProjectiles[ray] = null; pickupDistances[ray] = RayRange + 1f; pickupKinds[ray] = 0;
             }
             SurvivorObstacle[] obstacles = sim.ObstaclePool;
             for (int i = 0; i < sim.ActiveObstacleCount; i++)
@@ -112,6 +113,12 @@ namespace PersonalArena.Core.Survivor
                 SurvivorEnemy enemy = enemies[i];
                 if (enemy.Active) { AccumulateSolid(origin, enemy.Position, enemy.Radius, 2 + enemy.TypeIndex, enemy); AccumulateEnemyDensity(sim, origin, enemy); }
             }
+            SurvivorEnemyProjectile[] enemyProjectiles = sim.EnemyProjectilePool;
+            for (int i = 0; i < sim.EnemyProjectileLimit; i++)
+            {
+                SurvivorEnemyProjectile projectile = enemyProjectiles[i];
+                if (projectile.Active) AccumulateProjectile(origin, projectile.Position, MathF.Max(projectile.Radius, 0.5f), projectile);
+            }
             SurvivorPickup[] pickups = sim.PickupPool;
             for (int i = 0; i < sim.PickupLimit; i++)
             {
@@ -122,6 +129,7 @@ namespace PersonalArena.Core.Survivor
             {
                 Vec2 direction = rayDirections[ray]; int offset = RaysOffset + ray * RayStride;
                 float solidDistance = solidDistances[ray]; SurvivorEnemy solidEnemy = solidEnemies[ray];
+                SurvivorEnemyProjectile solidProjectile = solidEnemyProjectiles[ray];
                 if (solidDistance > RayRange) { b[offset] = 1f; b[offset + 12] = 1f; }
                 else
                 {
@@ -131,6 +139,11 @@ namespace PersonalArena.Core.Survivor
                         b[offset + 13] = solidEnemy.Elite ? 1f : 0f; b[offset + 14] = solidEnemy.WindingUp ? 1f : 0f; b[offset + 15] = solidEnemy.StunRemaining > 0f ? 1f : 0f;
                         Vec2 towardHero = (origin - solidEnemy.Position).Normalized(); b[offset + 16] = Vec2.Dot(solidEnemy.Velocity - sim.Hero.Velocity, towardHero) / 10f;
                     }
+                    else if (solidProjectile != null)
+                    {
+                        Vec2 towardHero = (origin - solidProjectile.Position).Normalized();
+                        b[offset + 16] = Vec2.Dot(solidProjectile.Velocity - sim.Hero.Velocity, towardHero) / 10f;
+                    }
                     else b[offset + 16] = Vec2.Dot(sim.Hero.Velocity, direction) / 10f;
                 }
                 b[offset + 17 + pickupKinds[ray]] = 1f; b[offset + 24] = pickupDistances[ray] <= RayRange ? pickupDistances[ray] / RayRange : 1f;
@@ -139,15 +152,20 @@ namespace PersonalArena.Core.Survivor
 
         private void AccumulateSolid(Vec2 origin, Vec2 center, float radius, int kind, SurvivorEnemy enemy)
         {
-            ForCandidateRays(origin, center, radius, kind, enemy, false);
+            ForCandidateRays(origin, center, radius, kind, enemy, null, false);
+        }
+
+        private void AccumulateProjectile(Vec2 origin, Vec2 center, float radius, SurvivorEnemyProjectile projectile)
+        {
+            ForCandidateRays(origin, center, radius, 10, null, projectile, false);
         }
 
         private void AccumulatePickup(Vec2 origin, Vec2 center, float radius, int kind)
         {
-            ForCandidateRays(origin, center, radius, kind, null, true);
+            ForCandidateRays(origin, center, radius, kind, null, null, true);
         }
 
-        private void ForCandidateRays(Vec2 origin, Vec2 center, float radius, int kind, SurvivorEnemy enemy, bool pickup)
+        private void ForCandidateRays(Vec2 origin, Vec2 center, float radius, int kind, SurvivorEnemy enemy, SurvivorEnemyProjectile projectile, bool pickup)
         {
             Vec2 delta = center - origin; float distance = delta.Length;
             if (distance - radius > RayRange || distance < 1e-6f) return;
@@ -164,7 +182,10 @@ namespace PersonalArena.Core.Survivor
                 {
                     if (hit < pickupDistances[ray]) { pickupDistances[ray] = hit; pickupKinds[ray] = kind; }
                 }
-                else if (hit < solidDistances[ray]) { solidDistances[ray] = hit; solidKinds[ray] = kind; solidEnemies[ray] = enemy; }
+                else if (hit < solidDistances[ray])
+                {
+                    solidDistances[ray] = hit; solidKinds[ray] = kind; solidEnemies[ray] = enemy; solidEnemyProjectiles[ray] = projectile;
+                }
             }
         }
 
