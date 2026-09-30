@@ -114,6 +114,35 @@ namespace PersonalArena.View.Tests
             Assert.That(BrainLocator.FindNewestRunDirectory(root, "Mage"), Is.Null);
         }
 
+        [Test]
+        public void ChampionsFolder_IsNotATrainingRun()
+        {
+            string run = WriteBrain("warrior-s001", "Warrior", new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+            // Even a champions folder that looks like a newer current-schema run must be ignored.
+            WriteBrain(BrainLocator.ChampionsDirectoryName, "Warrior", new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc));
+            WriteRunFile(BrainLocator.ChampionsDirectoryName, "Warrior", "evaluations.jsonl",
+                new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc), Current);
+
+            Assert.That(BrainLocator.FindNewestBrain(root, "Warrior"), Is.EqualTo(run));
+            Assert.That(BrainLocator.FindNewestBrain(root, "Warrior", false), Is.EqualTo(run));
+            Assert.That(BrainLocator.FindNewestRunDirectory(root, "Warrior"),
+                Is.EqualTo(Path.Combine(root, "warrior-s001")));
+        }
+
+        [Test]
+        public void FindChampionBrain_ReturnsChampionFileOnlyWhenPresent()
+        {
+            Assert.That(BrainLocator.FindChampionBrain(root, "Warrior"), Is.Null);
+            Assert.That(BrainLocator.FindChampionBrain(null, "Warrior"), Is.Null);
+
+            string folder = Directory.CreateDirectory(BrainLocator.ChampionDirectory(root, "Warrior")).FullName;
+            string champion = Path.Combine(folder, BrainLocator.ChampionFileName);
+            File.WriteAllBytes(champion, new byte[] { 1 });
+
+            Assert.That(BrainLocator.FindChampionBrain(root, "Warrior"), Is.EqualTo(champion));
+            Assert.That(BrainLocator.FindChampionBrain(root, "Mage"), Is.Null);
+        }
+
         private string WriteBrain(string run, string behavior, DateTime writtenUtc,
             int schemaVersion = Current)
         {

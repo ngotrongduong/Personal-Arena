@@ -49,6 +49,23 @@ namespace PersonalArena.View
         public event Action TrainingPowerClicked;
 
         public TrainingHistoryPanel HistoryPanel => historyPanel;
+        public BehaviorProfilePanel ProfilePanel => profilePanel;
+
+        /// <summary>Opens or closes the training charts; only one full-screen panel is open at a time.</summary>
+        public void ToggleHistoryPanel()
+        {
+            EnsureBuilt();
+            profilePanel?.SetOpen(false);
+            historyPanel?.Toggle();
+        }
+
+        /// <summary>Opens or closes the AI profile; only one full-screen panel is open at a time.</summary>
+        public void ToggleProfilePanel()
+        {
+            EnsureBuilt();
+            historyPanel?.SetOpen(false);
+            profilePanel?.Toggle();
+        }
 
         /// <summary>Shows a run; call again after every reset (the HUD re-reads everything).</summary>
         public void Bind(SurvivorSim survivorSim, PickHighlight pickHighlight)

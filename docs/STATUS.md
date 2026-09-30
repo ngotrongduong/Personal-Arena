@@ -1,7 +1,7 @@
 # Trạng thái dự án
 
 > File này là "bộ nhớ" giữa các phiên. Đọc đầu tiên, cập nhật cuối cùng.
-> Cập nhật lần cuối: 2026-09-30 (phiên Claude, PC — M4A code xong, đang train `warrior-s001`).
+> Cập nhật lần cuối: 2026-09-30 chiều (phiên Claude, PC — M4B: T-018 + T-020 xong, đang train `warrior-s001`).
 
 ## Hướng đi
 
@@ -19,13 +19,20 @@
     bắn, phụ kiện, đồ nhặt, boss, quan sát schema v4 (2264), action 9/5/5, thưởng thứ bậc từ
     `SurvivorEvent`, `SurvivorEvaluator` + `Tools/SurvivorEval` (đánh giá 100 seed).
   - Trainer (T-015): `warrior_survivor_ppo.yaml` (curriculum độ dài trận 180 → 900 s),
-    `schema_version.txt` thay `rules_version`, `brain_upgrade.py`, run `warrior-sNNN`.
+    `schema_version.txt` thay `rules_version`, run `warrior-sNNN` (`brain_upgrade.py` để T-019).
   - Unity (T-016): `HeroAgent` 3 nhánh, trình xem Survivor (camera theo nhân vật, nghĩa địa
     KayKit Halloween, HUD EXP/cấp/đồng hồ/vàng/món đồ, bảng lên cấp tô sáng lựa chọn, màn kết trận).
   - T-017: **đã xoá hẳn đấu trường tròn cũ** (`ArenaSim`, quan sát 883, `ArenaPlay.unity`, các view
     cũ, config `<class>_ppo.yaml`). Mage/Archer chờ config Survivor riêng ở M7. Các mục lịch sử bên
     dưới nói về code cũ này.
   - Test: CoreTests 69/69, pytest 70/70, Unity EditMode 78/78.
+- **M4B đang làm (D-032):**
+  - T-018 (Codex, Claude review): `Trainer/champion.py` chấm checkpoint trên 100 seed, giữ não giỏi
+    nhất ở `runs/champions/Warrior/`. Dịch vụ train tự chấm mỗi 2M bước. `SurvivorBehaviorTracker`
+    đo phong cách đánh.
+  - T-020 (Claude): trình xem có phím `B` (não mới nhất ↔ giỏi nhất) và phím/nút `P` (**Hồ sơ AI**).
+  - Còn T-019 (`brain_upgrade.py` + schema JSON, build ngẫu nhiên, curriculum ôn tập 70/20/10).
+  - Test: CoreTests 80/80, pytest 82/82, EditMode 86/86.
 - **Lịch sử M0–M3:** BC từ demo đã bỏ (D-023: owner không chơi tay).
 - **Nhánh:** làm việc trên `develop` (nhánh tính năng → PR merge commit vào `develop`); `main`
   fast-forward theo `develop` khi ổn định.
@@ -96,7 +103,9 @@
 | M3: 4 loại zombie + đạn + Mage/Archer + icon skill | xong (D-024); đã thay bằng Survivor |
 | **Hướng mới: chế độ Survivor (kiểu Vampire Survivors)** | thiết kế xong (`docs/GDD.md`, D-026..D-030) |
 | M4A: Core, Trainer, Unity Survivor + dọn code cũ (T-014..T-017) | xong — test xanh, build xem và build train chạy |
-| M4A: train `warrior-s001` qua đánh giá 100 seed | đang làm — owner dừng êm ở 14.55M bước (reward ~4.1, sống ~165/180 s); bấm TRAIN THE AI để học tiếp |
+| M4A: train `warrior-s001` qua đánh giá 100 seed | đang làm — 19M bước, đã lên bài 360 s (sống ~268/360 s). Đánh giá 100 seed thử ở 17M: trung vị 10:32, P10 5:17 (cần 7:00), 1 lần chết sớm |
+| M4B: champion/challenger + Hồ sơ AI (T-018, T-020) | xong — dịch vụ đang chạy là code cũ; chấm tự động bắt đầu từ lần bấm TRAIN kế tiếp |
+| M4B: nâng cấp não + build ngẫu nhiên + ôn tập (T-019) | chưa làm |
 
 ## Việc tiếp theo (theo thứ tự)
 
@@ -106,13 +115,17 @@ Lộ trình mới M4A–M8 ở `docs/PLAN.md` (owner góp ý thiết kế → D-
 thưởng theo thứ bậc, nghiệm thu bằng đánh giá 100 seed). Đấu trường tròn luật v3 sẽ bị thay;
 `warrior-003` không cần train tiếp.
 
-1. Train `warrior-s001` (nút TRAIN THE AI học tiếp từ 14.55M) tới khi qua đánh giá 100 seed bằng
+0. **Khi owner đóng trình xem** (việc này cũng dừng train và lưu): build lại `Build/Watch`, vì bản
+   owner đang mở chưa có phím `B`/`P`. Khi build, trình xem phải đang đóng; nếu cần thử trong lúc
+   trình xem đang mở, build ra chỗ khác bằng `-watchBuildOutput <dir>`. Sau đó owner mở lại và bấm
+   TRAIN; dịch vụ mới sẽ tự chấm não mỗi 2M bước.
+1. Train `warrior-s001` (nút TRAIN THE AI) tới khi qua đánh giá 100 seed bằng
    `Tools/SurvivorEval`: trung vị ≥ 10:00, P10 ≥ 7:00, không chết trước 3:00.
    - Theo dõi: `Arena/Died`, `Arena/SurvivedSeconds`, `Environment/Lesson Number/run_seconds`.
    - AI nhặt ít EXP (~54 EXP, cấp ~3.7 mỗi trận 180 s dù giết ~195 quái). Nếu lên bài 360/600 s mà
      chết nhiều vì thiếu nâng cấp: tăng `PerLevelProgress` (hiện 0.05) nhưng vẫn giữ thứ bậc D-030.
    - Nếu kẹt ở bài 180 s lâu (reward không lên 5.0): xem lại ngưỡng curriculum.
-2. **M4B** (champion/challenger, Behavior Profile, nâng cấp não), **M4C** (đủ nội dung), rồi M5–M8.
+2. **T-019** (nâng cấp não, build ngẫu nhiên, ôn tập) để xong M4B, rồi **M4C** (đủ nội dung), rồi M5–M8.
 
 ## Cách làm trên PC (Claude)
 
@@ -137,6 +150,19 @@ thưởng theo thứ bậc, nghiệm thu bằng đánh giá 100 seed). Đấu tr
   trước khi phát hành để đảm bảo game không gọi mạng.
 
 ## Nhật ký phiên (mới nhất trên cùng)
+
+### 2026-09-30 chiều — Claude (PC): M4B T-018 + T-020
+- **T-018** (Codex viết, Claude review): champion/challenger, chấm 100 seed tự động mỗi 2M bước,
+  telemetry phong cách đánh.
+  - Sửa sau review: lỗi chấm không còn che thông báo train (tách ra `evaluation_message`).
+  - Chạy thử đầu-cuối trên bản sao checkpoint thật, mỗi lần chấm khoảng 7,6 phút:
+    - 16M: 682,9 điểm, thành não giỏi nhất đầu tiên;
+    - 17M: 730,2 điểm, thắng và thay não giỏi nhất.
+- **T-020** (Claude): phím `B` đổi não mới nhất ↔ giỏi nhất; phím/nút `P` mở màn **Hồ sơ AI**.
+  - Đã kiểm: EditMode 86/86; build thử ra thư mục scratch (owner đang mở trình xem nên không ghi đè
+    `Build/Watch`); đã xem ảnh chụp.
+- `warrior-s001` đang ở 19M bước: đã lên bài 360 s, sống ~268 s. Reward giảm xuống ~−2 là do trận
+  dài hơn, không phải AI kém đi.
 
 ### 2026-09-30 — Claude (PC): M4A code xong, train `warrior-s001`
 - T-014 (Core Survivor) và T-015 (Trainer) do Codex làm; Claude review, sửa lỗi review, merge vào

@@ -109,6 +109,7 @@ namespace PersonalArena.View
         private Text trainingGraphCaption;
         private readonly Image[] trainingBars = new Image[TrainingBarCount];
         private TrainingHistoryPanel historyPanel;
+        private BehaviorProfilePanel profilePanel;
 
         private void EnsureBuilt()
         {
@@ -493,10 +494,15 @@ namespace PersonalArena.View
                 barObject.SetActive(false);
             }
 
-            Button dataButton = CreateButton("Training Data Button", panel, new Color(0.36f, 0.25f, 0.62f, 1f), new Vector2(18f, -366f), new Vector2(394f, 40f),
-                18, out _, out Text dataLabel);
-            dataLabel.text = "DỮ LIỆU HUẤN LUYỆN  (biểu đồ)  G";
-            dataButton.onClick.AddListener(() => historyPanel?.Toggle());
+            Button dataButton = CreateButton("Training Data Button", panel, new Color(0.36f, 0.25f, 0.62f, 1f), new Vector2(18f, -366f), new Vector2(194f, 40f),
+                17, out _, out Text dataLabel);
+            dataLabel.text = "BIỂU ĐỒ HỌC  (G)";
+            dataButton.onClick.AddListener(ToggleHistoryPanel);
+
+            Button profileButton = CreateButton("Profile Button", panel, new Color(0.62f, 0.4f, 0.14f, 1f), new Vector2(218f, -366f), new Vector2(194f, 40f),
+                17, out _, out Text profileLabel);
+            profileLabel.text = "HỒ SƠ AI  (P)";
+            profileButton.onClick.AddListener(ToggleProfilePanel);
 
             historyPanel = GetComponent<TrainingHistoryPanel>();
             if (historyPanel == null)
@@ -504,6 +510,13 @@ namespace PersonalArena.View
                 historyPanel = gameObject.AddComponent<TrainingHistoryPanel>();
             }
             historyPanel.Build(canvasRoot, font);
+
+            profilePanel = GetComponent<BehaviorProfilePanel>();
+            if (profilePanel == null)
+            {
+                profilePanel = gameObject.AddComponent<BehaviorProfilePanel>();
+            }
+            profilePanel.Build(canvasRoot, font);
 
             trainingPanel.SetActive(false);
         }

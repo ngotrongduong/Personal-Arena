@@ -75,10 +75,22 @@ namespace PersonalArena.View
         private int powerIndex = DefaultPowerIndex;
         private bool restartWithNewPower;
         private TrainingHistoryPanel historyPanel;
+        private BehaviorProfilePanel profilePanel;
 
-        // Screenshot mode (-screenshot <png> [-quitAfterScreenshot]) used to check the build.
+        // B switches between the newest brain from training and the trainer's best brain (champion).
+        private const string WatchBestPreference = "WatchBestBrain";
+        private const float SwitchNoticeSeconds = 4f;
+        private bool watchBest;
+        private bool loadedIsChampion;
+        private ChampionRecord loadedChampion;
+        private long loadedStep;
+        private string switchNotice;
+        private float switchNoticeUntil;
+
+        // Screenshot mode (-screenshot <png> [-quitAfterScreenshot] [-showProfile]) used to check the build.
         private string screenshotPath;
         private bool quitAfterScreenshot;
+        private bool showProfile;
         private bool highlightShotTaken;
         private bool hordeShotTaken;
         private float quitAt = float.PositiveInfinity;
@@ -111,11 +123,14 @@ namespace PersonalArena.View
             }
             screenshotPath = CommandLineValue("-screenshot");
             quitAfterScreenshot = HasArgument("-quitAfterScreenshot");
+            showProfile = HasArgument("-showProfile");
+            watchBest = HasArgument("-best") || PlayerPrefs.GetInt(WatchBestPreference, 0) == 1;
 
             hud.SetHelpText(
                 "AI tự chơi - bạn chỉ cần xem\n" +
                 "Space tốc độ xem   T kiểu chọn   Esc tạm dừng\n" +
-                "R trận mới   G dữ liệu huấn luyện\n" +
+                "R trận mới   G biểu đồ học   P hồ sơ AI\n" +
+                "B đổi não mới nhất / giỏi nhất\n" +
                 "Lăn chuột: phóng to / thu nhỏ");
 
             if (!string.IsNullOrWhiteSpace(runsDirectory) && string.IsNullOrWhiteSpace(brainFile))
@@ -127,6 +142,12 @@ namespace PersonalArena.View
                 hud.ShowTrainingPanel(true);
                 historyPanel = hud.HistoryPanel;
                 historyPanel?.SetRunDirectory(BrainLocator.FindNewestRunDirectory(runsDirectory, BehaviorName));
+                profilePanel = hud.ProfilePanel;
+                profilePanel?.SetSource(runsDirectory, BehaviorName);
+                if (showProfile)
+                {
+                    profilePanel?.SetOpen(true);
+                }
                 PollTraining();
             }
 
@@ -159,6 +180,11 @@ namespace PersonalArena.View
         private void Update()
         {
             HandleKeys();
+            if (switchNotice != null && Time.unscaledTime >= switchNoticeUntil)
+            {
+                switchNotice = null;
+                RefreshInfo();
+            }
             if (Time.unscaledTime >= nextPoll)
             {
                 PollBrain();
@@ -329,9 +355,10 @@ namespace PersonalArena.View
                 return;
             }
 
-            // Esc first closes the training data screen; only a second press pauses.
+            // Esc first closes an open full-screen panel; only a second press pauses.
             bool historyHandlesEscape = historyPanel != null && (historyPanel.IsOpen || historyPanel.ConsumedEscapeThisFrame);
-            if (keyboard.escapeKey.wasPressedThisFrame && !historyHandlesEscape)
+            bool profileHandlesEscape = profilePanel != null && (profilePanel.IsOpen || profilePanel.ConsumedEscapeThisFrame);
+            if (keyboard.escapeKey.wasPressedThisFrame && !historyHandlesEscape && !profileHandlesEscape)
             {
                 paused = !paused;
                 accumulator = 0f;
@@ -353,16 +380,88 @@ namespace PersonalArena.View
 
             if (keyboard.gKey.wasPressedThisFrame && historyPanel != null)
             {
-                historyPanel.Toggle();
+                hud.ToggleHistoryPanel();
             }
+
+            if (keyboard.pKey.wasPressedThisFrame && profilePanel != null)
+            {
+                hud.ToggleProfilePanel();
+            }
+
+            if (keyboard.bKey.wasPressedThisFrame)
+            {
+                ToggleBestBrain();
+            }
+        }
+
+        /// <summary>Switches between the newest training brain and the champion, then starts a fresh run with it.</summary>
+        private void ToggleBestBrain()
+        {
+            if (!string.IsNullOrWhiteSpace(brainFile))
+            {
+                ShowSwitchNotice("Đang xem một bộ não cố định (-brain), không đổi được.");
+                return;
+            }
+
+            // Based on what is playing, not the saved choice: a saved "best" may have fallen back to newest.
+            bool wantBest = !loadedIsChampion;
+            if (wantBest && BrainLocator.FindChampionBrain(runsDirectory, BehaviorName) == null)
+            {
+                ShowSwitchNotice("Chưa có não giỏi nhất.\nNó xuất hiện sau 2 triệu bước huấn luyện.");
+                return;
+            }
+
+            watchBest = wantBest;
+            PlayerPrefs.SetInt(WatchBestPreference, watchBest ? 1 : 0);
+            PlayerPrefs.Save();
+            PollBrain();
+            if (watchBest && !loadedIsChampion)
+            {
+                // The champion file was rejected or unreadable; stay on the newest brain.
+                watchBest = false;
+                PlayerPrefs.SetInt(WatchBestPreference, 0);
+                PlayerPrefs.Save();
+                ShowSwitchNotice("Không nạp được não giỏi nhất.\nVẫn xem NÃO MỚI NHẤT.");
+                return;
+            }
+
+            ShowSwitchNotice(watchBest ? "Đang xem NÃO GIỎI NHẤT" : "Đang xem NÃO MỚI NHẤT");
+            if (sim != null && pilot.Brain != null)
+            {
+                RestartNow();
+            }
+        }
+
+        private void FollowChampionRun()
+        {
+            FollowRun(loadedChampion != null ? Path.Combine(runsDirectory, loadedChampion.run_id) : null);
+        }
+
+        /// <summary>Points the history panel at the watched brain's run, unless live training owns it.</summary>
+        private void FollowRun(string brainRun)
+        {
+            if ((training == null || !trainingSnapshot.IsActive) && brainRun != null && Directory.Exists(brainRun))
+            {
+                historyPanel?.SetRunDirectory(brainRun);
+            }
+        }
+
+        private void ShowSwitchNotice(string text)
+        {
+            switchNotice = text;
+            switchNoticeUntil = Time.unscaledTime + SwitchNoticeSeconds;
+            RefreshInfo();
         }
 
         private void PollBrain()
         {
             nextPoll = Time.unscaledTime + BrainPollSeconds;
+            string champion = string.IsNullOrWhiteSpace(brainFile) && watchBest
+                ? BrainLocator.FindChampionBrain(runsDirectory, BehaviorName)
+                : null;
             string path = !string.IsNullOrWhiteSpace(brainFile)
                 ? brainFile
-                : BrainLocator.FindNewestBrain(runsDirectory, BehaviorName);
+                : champion ?? BrainLocator.FindNewestBrain(runsDirectory, BehaviorName);
             if (string.IsNullOrEmpty(path) || !File.Exists(path))
             {
                 if (pilot.Brain == null)
@@ -394,6 +493,14 @@ namespace PersonalArena.View
             DateTime written = File.GetLastWriteTimeUtc(path);
             if (path == loadedPath && written == loadedWriteTime)
             {
+                // The trainer copies champion.brain before champion.json; catch up once the json matches.
+                if (loadedIsChampion && (loadedChampion == null || loadedChampion.step != loadedStep))
+                {
+                    loadedChampion = ChampionInfo.Load(runsDirectory, BehaviorName).Champion;
+                    FollowChampionRun();
+                    RefreshInfo();
+                }
+
                 return;
             }
 
@@ -420,10 +527,18 @@ namespace PersonalArena.View
                     pilot.Deterministic = deterministic;
                     loadedAt = DateTime.Now;
                     brainStatus = null;
-                    if (training == null || !trainingSnapshot.IsActive)
+                    loadedIsChampion = champion != null;
+                    loadedStep = brain.Step;
+                    loadedChampion = loadedIsChampion ? ChampionInfo.Load(runsDirectory, BehaviorName).Champion : null;
+                    if (loadedIsChampion)
                     {
-                        historyPanel?.SetRunDirectory(BrainLocator.RunDirectory(path));
+                        FollowChampionRun();
                     }
+                    else
+                    {
+                        FollowRun(BrainLocator.RunDirectory(path));
+                    }
+
                     Debug.Log("Loaded brain " + path + " (step " + brain.Step + ").");
                 }
             }
@@ -645,10 +760,21 @@ namespace PersonalArena.View
             }
             else
             {
-                text = "AI CHIẾN BINH   " + BrainLocator.RunName(loadedPath) +
-                    "\nĐã học " + brain.Step.ToString("N0", culture) + " bước" +
-                    "   (nạp lúc " + loadedAt.ToString("HH:mm", culture) + ")" +
-                    "\nTự cập nhật khi huấn luyện lưu não mới";
+                if (loadedIsChampion)
+                {
+                    text = "AI CHIẾN BINH   NÃO GIỎI NHẤT" +
+                        (loadedChampion != null ? "   " + loadedChampion.run_id : string.Empty) +
+                        "\nĐã học " + brain.Step.ToString("N0", culture) + " bước" +
+                        (loadedChampion != null ? (loadedChampion.passes_m4a ? "   đạt M4A" : "   chưa đạt M4A") : string.Empty) +
+                        "\nĐổi khi có não chấm điểm cao hơn   (B: não mới nhất)";
+                }
+                else
+                {
+                    text = "AI CHIẾN BINH   " + BrainLocator.RunName(loadedPath) +
+                        "\nĐã học " + brain.Step.ToString("N0", culture) + " bước" +
+                        "   (nạp lúc " + loadedAt.ToString("HH:mm", culture) + ")" +
+                        "\nNão mới nhất, tự cập nhật   (B: não giỏi nhất)";
+                }
                 if (!string.IsNullOrEmpty(brainStatus))
                 {
                     text += "\n" + brainStatus;
@@ -679,7 +805,7 @@ namespace PersonalArena.View
             }
 
             hud.SetInfoText(text);
-            hud.SetNotice(brain == null ? brainStatus : null);
+            hud.SetNotice(switchNotice ?? (brain == null ? brainStatus : null));
         }
 
         private void UpdateScreenshots()
@@ -698,6 +824,21 @@ namespace PersonalArena.View
             }
 
             float real = Time.realtimeSinceStartup;
+            if (showProfile)
+            {
+                // Profile check: one shot of the open AI profile, then (optionally) quit.
+                if (!highlightShotTaken && real > 6f)
+                {
+                    highlightShotTaken = true;
+                    Capture(screenshotPath);
+                    if (quitAfterScreenshot)
+                    {
+                        quitAt = Time.unscaledTime + 1.5f;
+                    }
+                }
+                return;
+            }
+
             // The level-up highlight over a grown horde; after a while any highlight will do.
             if (!highlightShotTaken && highlight.Current == PickHighlight.Phase.Highlight && highlight.Progress > 0.3f &&
                 (sim.Time >= 45f || real > 70f))

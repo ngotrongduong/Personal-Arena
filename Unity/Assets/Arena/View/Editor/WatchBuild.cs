@@ -40,10 +40,26 @@ namespace PersonalArena.View.Editor
             }
         }
 
+        private static string OutputOverride()
+        {
+            string[] args = Environment.GetCommandLineArgs();
+            for (int i = 0; i < args.Length - 1; i++)
+            {
+                if (string.Equals(args[i], "-watchBuildOutput", StringComparison.OrdinalIgnoreCase)
+                    && !string.IsNullOrWhiteSpace(args[i + 1]))
+                {
+                    return Path.GetFullPath(args[i + 1]);
+                }
+            }
+
+            return null;
+        }
+
         private static BuildResult BuildPlayer()
         {
             string repositoryRoot = Path.GetFullPath(Path.Combine(Application.dataPath, "..", ".."));
-            string outputDirectory = Path.Combine(repositoryRoot, "Build", "Watch");
+            // -watchBuildOutput <dir> builds a test copy elsewhere, e.g. while the owner has the viewer open.
+            string outputDirectory = OutputOverride() ?? Path.Combine(repositoryRoot, "Build", "Watch");
             Directory.CreateDirectory(outputDirectory);
 
             // Project-wide settings: a resizable window that keeps playing in the background, restored afterwards.
