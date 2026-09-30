@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using PersonalArena.Core;
+using PersonalArena.Core.Meta;
 using PersonalArena.Core.Survivor;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -12,7 +13,9 @@ namespace PersonalArena.View
     /// <summary>
     /// "Watch AI" mode of the survivor game: the newest Warrior brain plays 15-minute graveyard runs,
     /// new brains exported by training are hot-loaded, and each level-up shows which item the AI picked.
-    /// All rules run in <see cref="SurvivorSim"/>; this class only steps it and drives the views.
+    /// M5: every run uses the owner's build and tier (<see cref="ProfileRules.ToBuild"/>, applied at run start),
+    /// a run the brain played pays gold into the saved profile, and the character (C), Auto Farm (F) and
+    /// build comparison (V) panels edit the profile. All rules run in Core; this class only steps, saves and draws.
     /// </summary>
     public sealed class SurvivorWatchController : MonoBehaviour
     {
@@ -50,7 +53,9 @@ namespace PersonalArena.View
 
         private readonly SurvivorPilot pilot = new SurvivorPilot();
         private readonly PickHighlight highlight = new PickHighlight();
-        private readonly Queue<RunResult> recent = new Queue<RunResult>();
+        private readonly Queue<RecentRun> recent = new Queue<RecentRun>();
+        private readonly SpectatorLabeler labeler = new SpectatorLabeler();
+        private readonly RunChronicleRecorder chronicle = new RunChronicleRecorder();
         private readonly int[] offerItems = new int[PickHighlight.MaximumOffers];
         private readonly int[] offerLevels = new int[PickHighlight.MaximumOffers];
         private SurvivorSim sim;
@@ -77,6 +82,23 @@ namespace PersonalArena.View
         private TrainingHistoryPanel historyPanel;
         private BehaviorProfilePanel profilePanel;
 
+        // M5 economy: the saved profile, the build of the run on screen, and the meta panels.
+        private const float ProfileNoticeSeconds = 8f;
+        private const float FarmInfoRefreshSeconds = 1f;
+        private ProfileStore store;
+        private CharacterBuild runBuild;
+        private int runLoadout;
+        private string runLoadoutName;
+        private bool brainPlayedRun;
+        private byte[] loadedBrainBytes;
+        private string loadedBrainName;
+        private OwnerTraining startedOwner;
+        private CharacterPanel characterPanel;
+        private AutoFarmPanel farmPanel;
+        private LoadoutComparePanel comparePanel;
+        private float nextFarmInfoRefresh;
+        private float shortRunSeconds;
+
         // B switches between the newest brain from training and the trainer's best brain (champion).
         private const string WatchBestPreference = "WatchBestBrain";
         private const float SwitchNoticeSeconds = 4f;
@@ -87,12 +109,24 @@ namespace PersonalArena.View
         private string switchNotice;
         private float switchNoticeUntil;
 
-        // Screenshot mode (-screenshot <png> [-quitAfterScreenshot] [-showProfile]) used to check the build.
+        // Screenshot mode (-screenshot <png> [-quitAfterScreenshot] [-showProfile] [-openPanel character|farm|compare]
+        // [-farmRuns N] [-endShot] [-labelShot]) used to check the build. Pass -profile <scratch path> with it.
+        private const float PanelOpenSeconds = 6f;
+        private const float PanelShotSeconds = 8f;
+        private const float FarmShotSeconds = 14f;
         private string screenshotPath;
         private bool quitAfterScreenshot;
         private bool showProfile;
+        private string openPanel;
+        private int farmRuns = 10;
+        private bool endShot;
+        private bool labelShot;
+        private bool panelOpened;
         private bool highlightShotTaken;
         private bool hordeShotTaken;
+        private bool endShotTaken;
+        private bool labelShotTaken;
+        private float labelSeenSince = float.PositiveInfinity;
         private float quitAt = float.PositiveInfinity;
 
         public SurvivorSim Sim => sim;
@@ -124,14 +158,45 @@ namespace PersonalArena.View
             screenshotPath = CommandLineValue("-screenshot");
             quitAfterScreenshot = HasArgument("-quitAfterScreenshot");
             showProfile = HasArgument("-showProfile");
+            openPanel = CommandLineValue("-openPanel");
+            if (int.TryParse(CommandLineValue("-farmRuns"), NumberStyles.Integer, CultureInfo.InvariantCulture, out int requestedFarmRuns))
+            {
+                farmRuns = Mathf.Clamp(requestedFarmRuns, 1, 100);
+            }
+            endShot = HasArgument("-endShot");
+            labelShot = HasArgument("-labelShot");
             watchBest = HasArgument("-best") || PlayerPrefs.GetInt(WatchBestPreference, 0) == 1;
+
+            // Profile: -profile <folder or file> for checks and screenshots, else the owner's real profile.
+            string profileOverride = CommandLineValue("-profile");
+            store = ProfileStore.Create(profileOverride, Application.persistentDataPath,
+                Path.Combine(Application.temporaryCachePath, "profile-fallback"));
+            ShowProfileLoadNotice(store.Load());
+
+            // -runSeconds N (60..900) shortens runs so the end screen can be checked; only with a scratch -profile.
+            if (!string.IsNullOrWhiteSpace(profileOverride) &&
+                float.TryParse(CommandLineValue("-runSeconds"), NumberStyles.Float, CultureInfo.InvariantCulture, out float requestedRun))
+            {
+                shortRunSeconds = Mathf.Clamp(requestedRun, 60f, 900f);
+            }
 
             hud.SetHelpText(
                 "AI tự chơi - bạn chỉ cần xem\n" +
                 "Space tốc độ xem   T kiểu chọn   Esc tạm dừng\n" +
                 "R trận mới   G biểu đồ học   P hồ sơ AI\n" +
+                "C nhân vật   F farm vàng   V so sánh build\n" +
                 "B đổi não mới nhất / giỏi nhất\n" +
                 "Lăn chuột: phóng to / thu nhỏ");
+
+            characterPanel = hud.CharacterPanel;
+            farmPanel = hud.FarmPanel;
+            comparePanel = hud.ComparePanel;
+            characterPanel.Bind(store, IsBuildChangePending);
+            farmPanel.Bind(store, () => loadedBrainBytes, () => loadedBrainName);
+            comparePanel.Bind(store);
+            characterPanel.ProfileChanged += OnProfileChanged;
+            farmPanel.ProfileChanged += OnProfileChanged;
+            comparePanel.ProfileChanged += OnProfileChanged;
 
             if (!string.IsNullOrWhiteSpace(runsDirectory) && string.IsNullOrWhiteSpace(brainFile))
             {
@@ -151,10 +216,17 @@ namespace PersonalArena.View
                 PollTraining();
             }
 
-            sim = new SurvivorSim(new SurvivorConfig(), seed);
+            SurvivorConfig config = new SurvivorConfig { Build = NextRunBuild() };
+            if (shortRunSeconds > 0f)
+            {
+                config.RunSeconds = shortRunSeconds;
+            }
+
+            sim = new SurvivorSim(config, seed);
             followCamera.SetTarget(survivorRenderer);
             survivorRenderer.SetCamera(followCamera.ViewCamera);
             survivorRenderer.Bind(sim);
+            hud.BindHeroLabel(survivorRenderer, followCamera.ViewCamera);
             StartRun();
             PollBrain();
         }
@@ -166,15 +238,87 @@ namespace PersonalArena.View
                 hud.TrainingButtonClicked -= OnTrainingButton;
                 hud.TrainingPowerClicked -= OnPowerButton;
             }
+            if (characterPanel != null)
+            {
+                characterPanel.ProfileChanged -= OnProfileChanged;
+            }
+            if (farmPanel != null)
+            {
+                farmPanel.ProfileChanged -= OnProfileChanged;
+            }
+            if (comparePanel != null)
+            {
+                comparePanel.ProfileChanged -= OnProfileChanged;
+            }
         }
 
         private void OnApplicationQuit()
         {
+            // Auto Farm: cancel, wait up to 2 s, book the finished matches (the panel also does this itself).
+            farmPanel?.ShutDown();
+
             // The service also stops when this process exits; asking first saves a few seconds.
             if (training != null && startedTraining && trainingSnapshot.IsActive)
             {
                 training.RequestStop();
             }
+        }
+
+        /// <summary>The build of the next run: the active loadout and selected tier of the profile, fixed until the run ends.</summary>
+        private CharacterBuild NextRunBuild()
+        {
+            CharacterProfile warrior = store.Warrior;
+            runBuild = ProfileRules.ToBuild(warrior, store.Profile.SelectedTier);
+            runLoadout = warrior.ActiveLoadout;
+            runLoadoutName = MetaViewLogic.LoadoutName(warrior, runLoadout);
+            return runBuild.Clone();
+        }
+
+        /// <summary>True when the profile's build (loadout, points or tier) differs from the run on screen.</summary>
+        private bool IsBuildChangePending()
+        {
+            if (store == null || runBuild == null)
+            {
+                return false;
+            }
+
+            CharacterProfile warrior = store.Warrior;
+            return warrior.ActiveLoadout != runLoadout ||
+                !MetaViewLogic.SameBuild(runBuild, ProfileRules.ToBuild(warrior, store.Profile.SelectedTier));
+        }
+
+        private void OnProfileChanged()
+        {
+            RefreshInfo();
+            characterPanel?.Refresh();
+            comparePanel?.Refresh();
+            if (training != null)
+            {
+                PollTraining();
+            }
+        }
+
+        private void ShowProfileLoadNotice(ProfileLoadOutcome outcome)
+        {
+            string text;
+            switch (outcome)
+            {
+                case ProfileLoadOutcome.RecoveredFromBackup:
+                    text = "Hồ sơ bị hỏng nên đã dùng bản sao lưu gần nhất.";
+                    break;
+                case ProfileLoadOutcome.RecoveredNew:
+                    text = "Hồ sơ bị hỏng và không có bản sao lưu:\nđã tạo hồ sơ mới (bản hỏng vẫn được giữ lại).";
+                    break;
+                case ProfileLoadOutcome.ReadError:
+                    text = "Không đọc được hồ sơ (tệp đang bị khóa?).\nVàng kiếm được lần này sẽ không được lưu.";
+                    break;
+                default:
+                    return;
+            }
+
+            Debug.LogWarning("Profile " + store.ProfilePath + ": " + outcome);
+            switchNotice = text;
+            switchNoticeUntil = Time.unscaledTime + ProfileNoticeSeconds;
         }
 
         private void Update()
@@ -192,6 +336,11 @@ namespace PersonalArena.View
             if (training != null && Time.unscaledTime >= nextTrainingPoll)
             {
                 PollTraining();
+            }
+            if (farmPanel != null && farmPanel.IsFarming && Time.unscaledTime >= nextFarmInfoRefresh)
+            {
+                // The HUD's farm progress line.
+                RefreshInfo();
             }
             if (sim == null)
             {
@@ -212,10 +361,7 @@ namespace PersonalArena.View
                 hud.SetEndCountdown(EndScreenSeconds - endTimer);
                 if (endTimer >= EndScreenSeconds)
                 {
-                    seed++;
-                    sim.Reset(seed);
-                    survivorRenderer.ResetRun();
-                    StartRun();
+                    RestartNow();
                 }
                 return;
             }
@@ -258,6 +404,7 @@ namespace PersonalArena.View
             {
                 sim.Step(pilot.NextInput(sim));
                 survivorRenderer.SyncAfterStep();
+                ObserveStep();
                 accumulator -= step;
                 ticks++;
                 if (sim.IsAwaitingPick || sim.IsEnded)
@@ -272,7 +419,22 @@ namespace PersonalArena.View
                 accumulator %= step;
             }
 
+            if (sim.IsEnded)
+            {
+                // Book the run in the frame it ended so the end screen shows the reward and story at once.
+                RecordResultOnce();
+            }
+
             survivorRenderer.SetInterpolationAlpha(accumulator / step);
+        }
+
+        /// <summary>After every sim step (the pick step too): spectator label, chronicle, HUD tag.</summary>
+        private void ObserveStep()
+        {
+            brainPlayedRun = true;
+            labeler.Observe(sim, sim.LastStepSeconds);
+            chronicle.Observe(sim, labeler.Current);
+            hud.SetHeroLabel(labeler.Current);
         }
 
         /// <summary>Freezes the run and shows the offered cards; the AI picks once they have been visible for a moment.</summary>
@@ -314,6 +476,7 @@ namespace PersonalArena.View
             }
             sim.Step(new SurvivorInput(input.Move, input.Skill, pick));
             survivorRenderer.SyncAfterStep();
+            ObserveStep();
             if (!highlight.Choose(pick - 1))
             {
                 highlight.Clear();
@@ -327,15 +490,22 @@ namespace PersonalArena.View
             accumulator = 0f;
             endTimer = 0f;
             resultRecorded = false;
+            brainPlayedRun = false;
+            labeler.Reset();
+            chronicle.Reset();
             run++;
             hud.Bind(sim, highlight);
+            hud.SetHeroLabel(SpectatorLabel.None);
             hud.SetPaused(paused);
             RefreshInfo();
+            characterPanel?.Refresh();
         }
 
+        /// <summary>New run: the profile's current build and tier take effect here (never mid-run).</summary>
         private void RestartNow()
         {
             seed++;
+            sim.Config.Build = NextRunBuild();
             sim.Reset(seed);
             survivorRenderer.ResetRun();
             StartRun();
@@ -344,8 +514,9 @@ namespace PersonalArena.View
         private void HandleKeys()
         {
             Keyboard keyboard = Keyboard.current;
-            if (keyboard == null)
+            if (keyboard == null || MetaPanel.IsTypingInInputField())
             {
+                // No hotkey acts while a text field (loadout name) has the keyboard.
                 return;
             }
 
@@ -355,10 +526,23 @@ namespace PersonalArena.View
                 return;
             }
 
+            if (keyboard.cKey.wasPressedThisFrame)
+            {
+                hud.ToggleCharacterPanel();
+            }
+
+            if (keyboard.fKey.wasPressedThisFrame)
+            {
+                hud.ToggleFarmPanel();
+            }
+
+            if (keyboard.vKey.wasPressedThisFrame)
+            {
+                hud.ToggleComparePanel();
+            }
+
             // Esc first closes an open full-screen panel; only a second press pauses.
-            bool historyHandlesEscape = historyPanel != null && (historyPanel.IsOpen || historyPanel.ConsumedEscapeThisFrame);
-            bool profileHandlesEscape = profilePanel != null && (profilePanel.IsOpen || profilePanel.ConsumedEscapeThisFrame);
-            if (keyboard.escapeKey.wasPressedThisFrame && !historyHandlesEscape && !profileHandlesEscape)
+            if (keyboard.escapeKey.wasPressedThisFrame && !hud.PanelHandlesEscape())
             {
                 paused = !paused;
                 accumulator = 0f;
@@ -506,7 +690,8 @@ namespace PersonalArena.View
 
             try
             {
-                PolicyBrain brain = PolicyBrain.Load(File.ReadAllBytes(path));
+                byte[] bytes = File.ReadAllBytes(path);
+                PolicyBrain brain = PolicyBrain.Load(bytes);
                 string problem = SurvivorPilot.Validate(brain);
                 if (problem == null && brain.SelfTestError() > SelfTestTolerance)
                 {
@@ -525,6 +710,9 @@ namespace PersonalArena.View
                     bool deterministic = pilot.Deterministic;
                     pilot.SetBrain(brain);
                     pilot.Deterministic = deterministic;
+                    // Auto Farm builds its own brain instance from these bytes (never shares this one across threads).
+                    loadedBrainBytes = bytes;
+                    loadedBrainName = champion != null ? "não giỏi nhất" : BrainLocator.RunName(path);
                     loadedAt = DateTime.Now;
                     brainStatus = null;
                     loadedIsChampion = champion != null;
@@ -584,8 +772,14 @@ namespace PersonalArena.View
 
         private void StartTraining()
         {
-            trainingNotice = training.Start(System.Diagnostics.Process.GetCurrentProcess().Id, Powers[powerIndex], BehaviorName);
+            // The owner's build and tier (once the Warrior has a level or a tier above 1) and the training focus.
+            OwnerTraining owner = MetaViewLogic.OwnerTrainingFor(store.Profile);
+            trainingNotice = training.Start(System.Diagnostics.Process.GetCurrentProcess().Id, Powers[powerIndex], BehaviorName, owner);
             startedTraining = trainingNotice == null;
+            if (startedTraining)
+            {
+                startedOwner = owner;
+            }
             stopRequestedAt = float.NegativeInfinity;
         }
 
@@ -690,6 +884,11 @@ namespace PersonalArena.View
                     break;
             }
 
+            if (trainingSnapshot.State != TrainingState.Unavailable && trainingSnapshot.State != TrainingState.External)
+            {
+                text += "\n" + TrainingChoicesText(trainingSnapshot.State, status);
+            }
+
             if (restartWithNewPower)
             {
                 text = "Đổi sức mạnh sang " + Powers[powerIndex].Name + ":\nđang lưu tiến độ rồi chạy lại...";
@@ -707,6 +906,28 @@ namespace PersonalArena.View
                 ? "Điểm thưởng TB, bước 0 - " + FormatSteps(status.steps[status.steps.Length - 1]) + " (cao hơn = giỏi hơn)"
                 : "Biểu đồ điểm thưởng hiện khi bắt đầu huấn luyện";
             hud.SetTrainingGraph(rewards, caption);
+        }
+
+        /// <summary>
+        /// The build line of the training panel: what the running session learns (as reported by the service),
+        /// plus a note when the owner's choices changed since; otherwise what the next session will learn.
+        /// </summary>
+        private string TrainingChoicesText(TrainingState state, TrainingStatus status)
+        {
+            OwnerTraining current = MetaViewLogic.OwnerTrainingFor(store.Profile);
+            bool running = state == TrainingState.Starting || state == TrainingState.Training;
+            if (running && status != null)
+            {
+                string line = MetaViewLogic.TrainingBuildLine(status.owner_build, status.owner_tier, status.training_focus);
+                if (MetaViewLogic.TrainingChoicesDiffer(status.owner_build, status.owner_tier, status.training_focus, startedOwner, current))
+                {
+                    line += "\nThay đổi build/trọng tâm sẽ áp dụng ở lần HUẤN LUYỆN sau";
+                }
+
+                return line;
+            }
+
+            return MetaViewLogic.TrainingBuildLine(current.Points != null, current.Tier, current.FocusId);
         }
 
         private static string FormatDuration(float seconds)
@@ -735,10 +956,32 @@ namespace PersonalArena.View
             }
 
             resultRecorded = true;
-            recent.Enqueue(new RunResult(sim.Time, sim.Level, sim.Gold));
+            recent.Enqueue(new RecentRun(sim.Time, sim.Level, sim.Gold));
             while (recent.Count > RecentRunCount)
             {
                 recent.Dequeue();
+            }
+
+            chronicle.Finish(sim);
+            hud.SetEndStory(ChronicleText.Format(chronicle.Result));
+            hud.SetHeroLabel(SpectatorLabel.None);
+
+            if (brainPlayedRun)
+            {
+                // A watched run the brain played pays into the wallet (Farm = false), then saves and logs.
+                CharacterProfile warrior = store.Warrior;
+                RunReward reward = ProfileRules.RecordRun(store.Profile, warrior, runLoadout,
+                    MetaViewLogic.ToRunResult(sim, runBuild.Tier, false));
+                store.Save();
+                store.AppendEconomyLine(EconomyLog.Line(DateTime.UtcNow, EconomyLog.WatchMode, warrior.ClassId, runBuild.Tier,
+                    runLoadoutName, runBuild, MetaViewLogic.ToRunStats(sim, seed)));
+                hud.SetEndReward(MetaViewLogic.RewardText(reward), true);
+                characterPanel?.Refresh();
+                comparePanel?.Refresh();
+            }
+            else
+            {
+                hud.SetEndReward(MetaViewLogic.RewardText(null), false);
             }
 
             RefreshInfo();
@@ -788,7 +1031,7 @@ namespace PersonalArena.View
                 float time = 0f;
                 float level = 0f;
                 float gold = 0f;
-                foreach (RunResult result in recent)
+                foreach (RecentRun result in recent)
                 {
                     time += result.Seconds;
                     level += result.Level;
@@ -803,6 +1046,22 @@ namespace PersonalArena.View
             {
                 text += "\nTrung bình 10 trận gần nhất: chưa có trận nào xong";
             }
+
+            // M5: wallet, a build change waiting for the next run, and the Auto Farm progress.
+            if (store != null)
+            {
+                text += "\n" + MetaViewLogic.WalletText(store.Profile);
+                if (IsBuildChangePending())
+                {
+                    text += "\nThay đổi build: áp dụng từ trận sau";
+                }
+            }
+            string farmLine = farmPanel != null ? farmPanel.StatusLine : null;
+            if (!string.IsNullOrEmpty(farmLine))
+            {
+                text += "\n" + farmLine;
+            }
+            nextFarmInfoRefresh = Time.unscaledTime + FarmInfoRefreshSeconds;
 
             hud.SetInfoText(text);
             hud.SetNotice(switchNotice ?? (brain == null ? brainStatus : null));
@@ -824,6 +1083,12 @@ namespace PersonalArena.View
             }
 
             float real = Time.realtimeSinceStartup;
+            if (!string.IsNullOrEmpty(openPanel))
+            {
+                UpdatePanelScreenshot(real);
+                return;
+            }
+
             if (showProfile)
             {
                 // Profile check: one shot of the open AI profile, then (optionally) quit.
@@ -858,9 +1123,60 @@ namespace PersonalArena.View
                 Capture(screenshotPath);
             }
 
-            if (highlightShotTaken && hordeShotTaken && quitAfterScreenshot && float.IsPositiveInfinity(quitAt))
+            // -labelShot: the spectator tag above the hero, once it has been visible for a second.
+            bool labelVisible = labeler.Current != SpectatorLabel.None && !highlight.BlocksSim && !sim.IsEnded;
+            labelSeenSince = labelVisible ? Mathf.Min(labelSeenSince, real) : float.PositiveInfinity;
+            if (labelShot && !labelShotTaken && ((labelVisible && real - labelSeenSince >= 1f && sim.Time >= 20f) || real > 200f))
+            {
+                labelShotTaken = true;
+                Capture(SiblingPath(screenshotPath, "_label"));
+            }
+
+            // -endShot: the end screen with the reward and the run story.
+            if (endShot && !endShotTaken && sim.IsEnded && endTimer >= 1.5f)
+            {
+                endShotTaken = true;
+                Capture(SiblingPath(screenshotPath, "_end"));
+            }
+
+            bool done = highlightShotTaken && hordeShotTaken && (!labelShot || labelShotTaken) && (!endShot || endShotTaken);
+            if (done && quitAfterScreenshot && float.IsPositiveInfinity(quitAt))
             {
                 quitAt = Time.unscaledTime + 1.5f;
+            }
+        }
+
+        /// <summary>-openPanel character|farm|compare: open that panel (farm: start a session), capture it, then optionally quit.</summary>
+        private void UpdatePanelScreenshot(float real)
+        {
+            string panel = openPanel.Trim().ToLowerInvariant();
+            if (!panelOpened && real > PanelOpenSeconds)
+            {
+                panelOpened = true;
+                switch (panel)
+                {
+                    case "farm":
+                        hud.ToggleFarmPanel();
+                        farmPanel.StartFarm(farmRuns);
+                        break;
+                    case "compare":
+                        hud.ToggleComparePanel();
+                        break;
+                    default:
+                        hud.ToggleCharacterPanel();
+                        break;
+                }
+            }
+
+            float shotAt = panel == "farm" ? FarmShotSeconds : PanelShotSeconds;
+            if (panelOpened && !highlightShotTaken && real > shotAt)
+            {
+                highlightShotTaken = true;
+                Capture(screenshotPath);
+                if (quitAfterScreenshot)
+                {
+                    quitAt = Time.unscaledTime + 1.5f;
+                }
             }
         }
 
@@ -930,13 +1246,13 @@ namespace PersonalArena.View
             return null;
         }
 
-        private readonly struct RunResult
+        private readonly struct RecentRun
         {
             public readonly float Seconds;
             public readonly int Level;
             public readonly float Gold;
 
-            public RunResult(float seconds, int level, float gold)
+            public RecentRun(float seconds, int level, float gold)
             {
                 Seconds = seconds;
                 Level = level;

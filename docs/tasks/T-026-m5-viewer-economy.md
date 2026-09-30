@@ -1,7 +1,7 @@
 # T-026: M5 viewer — wallet, character build, tiers, Training Focus, Auto Farm, build comparison
 
 - **Owner:** Claude subagent (unity-integrator)
-- **Status:** todo
+- **Status:** done (orchestrator verified: EditMode 147/147, watch build, screenshots)
 - **Milestone:** M5
 - **Depends on:** T-023 (Core rules, merged), T-025 (training glue and `OwnerTraining`, merged)
 
@@ -152,4 +152,65 @@ and cancel; use the `FarmSession` test hook from T-023).
 
 ## Report
 
-(fill in)
+**Status: done.** The subagent's shell returned no output, so the orchestrator did the
+verification:
+
+- EditMode passes 147/147. The only fix needed was replacing `Is.AnyOf` (not in this NUnit) in
+  `ProfileStoreTests`.
+- The watch build succeeds, and the screenshots look right.
+- The Offense focus hint now mentions the kill reward (T-027, D-036).
+
+What was built (View only; Core, observation schema v4 (2264 floats) and the 9/5/5 action space
+are unchanged):
+
+- `View/Meta/ProfileStore.cs`: loads and saves `profile.json` atomically (tmp file, then
+  replace, keeping a `.bak`). A corrupt file falls back to the backup and keeps a
+  `profile.corrupt-*.json` copy; with no backup it starts a new profile. Also appends
+  `economy_log.csv` (header once). `-profile <folder or file>` overrides the location.
+- `View/Meta/MetaViewLogic.cs`: pure helpers.
+  - Sim to `RunResult` and `RunStats`.
+  - `OwnerTrainingFor`: the build is sent only when level ≥ 1 or tier > 1; the focus is always
+    sent.
+  - Build line, "choices differ" check, `SameBuild`, wallet text, reward text, number formats.
+- `View/Meta/ChronicleText.cs`: formats the Core chronicle into the Vietnamese "Câu chuyện trận
+  đấu" column, trimming by priority (the End line is always kept).
+- `View/Meta/AutoFarmRunner.cs`, `AutoFarmPanel.cs`:
+  - Auto Farm (F) runs its own brain instance on a below-normal thread. Runs are recorded
+    with Farm=true.
+  - Errors are shown in the panel.
+  - On quit it cancels, waits up to 2 s, then records the runs that finished.
+- `View/Meta/MetaPanel.cs`, `CharacterPanel.cs` (C), `LoadoutComparePanel.cs` (V): shared panel
+  base (blocks hotkeys while an InputField is focused), character/shop/loadout/tier/focus
+  panel, and the build compare screen.
+- `View/Survivor/SurvivorHud*.cs`:
+  - A wallet line and the hero spectator label, which fades in about 0.2 s.
+  - The end screen shows "+N vàng vào ví" and "Mở khóa bậc N!", plus the story column.
+  - Help text updated. Esc closes the open panel first.
+- `View/Survivor/SurvivorWatchController.cs`:
+  - Watch runs use `ToBuild(warrior, SelectedTier)`, applied at run start. Changes made
+    mid-run show "Thay đổi build: áp dụng từ trận sau".
+  - `SpectatorLabeler.Observe` runs after every step, including the pick step.
+    `SpectatorLabeler.Reset` and the chronicle reset run on every sim reset.
+  - `RecordRun` (Farm=false) runs once per run, only if the brain played it. It then saves
+    and writes an economy line with mode `watch`.
+  - TRAIN passes `OwnerTraining`. The training panel shows the build line and the note that
+    changes apply to the next training.
+  - Debug flags for screenshots: `-openPanel character|compare|farm`, `-farmRuns N`,
+    `-endShot`, `-labelShot`. `-runSeconds 60..900` works only together with `-profile`.
+
+EditMode tests added (30, in `View/Tests/Editor`): ProfileStoreTests 7, ChronicleTextTests 7,
+MetaViewLogicTests 11, AutoFarmRunnerTests 5. Results: all green (147/147 in the
+project).
+
+Verification scripts (subagent scratchpad `scratchpad\t026\`): `run-editmode.ps1`,
+`run-coretests.ps1`, `build-watch.ps1` (to `Build\WatchNext`), `shots.ps1`. `shots.ps1` uses a
+scratch profile and a copied brain, and writes `shots\watch_label.png`, `watch_end.png`,
+`watch720_end.png`, `character.png`, `compare.png` and `farm.png`.
+
+Known issues:
+
+- The HUD wallet uses its own line in the info block rather than being merged into the existing
+  top line.
+- If a farm run is still running when the 2 s quit timeout expires, it is dropped, not recorded.
+  Only finished runs are booked.
+- The screenshot flags are debug-only and not documented in the in-game help.

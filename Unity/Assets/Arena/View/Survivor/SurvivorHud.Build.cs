@@ -1,4 +1,5 @@
 using PersonalArena.Core;
+using PersonalArena.Core.Survivor;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
@@ -111,6 +112,29 @@ namespace PersonalArena.View
         private TrainingHistoryPanel historyPanel;
         private BehaviorProfilePanel profilePanel;
 
+        // Right column: info (wallet included), the M5 buttons, then the training panel.
+        private const float InfoHeight = 236f;
+        private const float MetaButtonsTop = -288f;
+        private const float TrainingTop = -360f;
+
+        // M5: floating spectator tag above the hero, end-screen reward and story, out-of-run panels.
+        private const float HeroLabelHeight = 2.7f;
+        private const float HeroLabelFadeSeconds = 0.2f;
+        private RectTransform heroLabel;
+        private CanvasGroup heroLabelGroup;
+        private Text heroLabelText;
+        private Image heroLabelAccent;
+        private SurvivorRenderer labelSource;
+        private Camera labelCamera;
+        private SpectatorLabel wantedLabel;
+        private SpectatorLabel shownLabel;
+        private float labelAlpha;
+        private Text endReward;
+        private Text endStory;
+        private CharacterPanel characterPanel;
+        private AutoFarmPanel farmPanel;
+        private LoadoutComparePanel comparePanel;
+
         private void EnsureBuilt()
         {
             if (built)
@@ -132,12 +156,89 @@ namespace PersonalArena.View
             canvasObject.AddComponent<GraphicRaycaster>();
             canvasRoot = canvasObject.transform;
 
+            BuildHeroLabel();
             BuildTop();
             BuildVitals();
             BuildSkills();
             BuildSidePanels();
+            BuildMetaButtons();
             BuildOffer();
             BuildEnd();
+            BuildMetaPanels();
+        }
+
+        /// <summary>The spectator tag; built first so every other HUD element draws over it.</summary>
+        private void BuildHeroLabel()
+        {
+            RectTransform tag = CreatePanel("Hero Label", canvasRoot, new Color(0.03f, 0.035f, 0.06f, 0.82f));
+            SetRect(tag, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(172f, 38f), new Vector2(0.5f, 0f));
+            heroLabel = tag;
+            heroLabelGroup = tag.gameObject.AddComponent<CanvasGroup>();
+            heroLabelGroup.interactable = false;
+            heroLabelGroup.blocksRaycasts = false;
+            heroLabelGroup.alpha = 0f;
+
+            RectTransform accent = CreateSliced("Accent", tag, Color.white);
+            accent.anchorMin = new Vector2(0f, 0f);
+            accent.anchorMax = new Vector2(1f, 0f);
+            accent.pivot = new Vector2(0.5f, 0f);
+            accent.anchoredPosition = new Vector2(0f, 3f);
+            accent.sizeDelta = new Vector2(-20f, 3f);
+            heroLabelAccent = accent.GetComponent<Image>();
+
+            heroLabelText = CreateText("Label", tag, 20, TextAnchor.MiddleCenter, Color.white);
+            heroLabelText.fontStyle = FontStyle.Bold;
+            Outline outline = heroLabelText.gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color(0f, 0f, 0f, 0.85f);
+            outline.effectDistance = new Vector2(1.5f, -1.5f);
+            SetStretch(heroLabelText.rectTransform, 4f, 4f, 0f, 4f);
+            tag.gameObject.SetActive(false);
+        }
+
+        /// <summary>NHÂN VẬT / FARM VÀNG / SO SÁNH BUILD buttons under the info panel (always shown).</summary>
+        private void BuildMetaButtons()
+        {
+            RectTransform panel = CreatePanel("M5 Buttons", canvasRoot, PanelColor);
+            SetRect(panel, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20f, MetaButtonsTop), new Vector2(430f, 60f), new Vector2(1f, 1f));
+
+            Button character = CreateButton("Character Button", panel, new Color(0.2f, 0.42f, 0.72f, 1f), new Vector2(18f, -8f), new Vector2(118f, 44f),
+                14, out _, out Text characterLabel);
+            characterLabel.text = "NHÂN VẬT\n(C)";
+            character.onClick.AddListener(ToggleCharacterPanel);
+
+            Button farm = CreateButton("Farm Button", panel, new Color(0.62f, 0.48f, 0.12f, 1f), new Vector2(142f, -8f), new Vector2(118f, 44f),
+                14, out _, out Text farmLabel);
+            farmLabel.text = "FARM VÀNG\n(F)";
+            farm.onClick.AddListener(ToggleFarmPanel);
+
+            Button compare = CreateButton("Compare Button", panel, new Color(0.2f, 0.5f, 0.48f, 1f), new Vector2(266f, -8f), new Vector2(146f, 44f),
+                14, out _, out Text compareLabel);
+            compareLabel.text = "SO SÁNH BUILD\n(V)";
+            compare.onClick.AddListener(ToggleComparePanel);
+        }
+
+        private void BuildMetaPanels()
+        {
+            characterPanel = GetComponent<CharacterPanel>();
+            if (characterPanel == null)
+            {
+                characterPanel = gameObject.AddComponent<CharacterPanel>();
+            }
+            characterPanel.Build(canvasRoot, font);
+
+            farmPanel = GetComponent<AutoFarmPanel>();
+            if (farmPanel == null)
+            {
+                farmPanel = gameObject.AddComponent<AutoFarmPanel>();
+            }
+            farmPanel.Build(canvasRoot, font);
+
+            comparePanel = GetComponent<LoadoutComparePanel>();
+            if (comparePanel == null)
+            {
+                comparePanel = gameObject.AddComponent<LoadoutComparePanel>();
+            }
+            comparePanel.Build(canvasRoot, font);
         }
 
         private void BuildTop()
@@ -319,9 +420,10 @@ namespace PersonalArena.View
             helpText.lineSpacing = 1.1f;
 
             RectTransform info = CreatePanel("Info", canvasRoot, PanelColor);
-            SetRect(info, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20f, -40f), new Vector2(430f, 190f), new Vector2(1f, 1f));
-            infoText = CreateText("Info Text", info, 16, TextAnchor.UpperLeft, new Color(0.9f, 0.93f, 0.97f));
+            SetRect(info, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20f, -40f), new Vector2(430f, InfoHeight), new Vector2(1f, 1f));
+            infoText = CreateText("Info Text", info, 15, TextAnchor.UpperLeft, new Color(0.9f, 0.93f, 0.97f));
             infoText.lineSpacing = 1.1f;
+            infoText.horizontalOverflow = HorizontalWrapMode.Wrap;
             SetStretch(infoText.rectTransform, 18f, 14f, 12f, 10f);
 
             RectTransform pause = CreatePanel("Paused", canvasRoot, new Color(0.03f, 0.03f, 0.05f, 0.8f));
@@ -428,24 +530,49 @@ namespace PersonalArena.View
 
         private void BuildEnd()
         {
-            RectTransform end = CreatePanel("End Panel", canvasRoot, new Color(0.035f, 0.035f, 0.06f, 0.94f));
-            SetRect(end, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -10f), new Vector2(620f, 540f), new Vector2(0.5f, 0.5f));
+            // Two columns: the run (stats, reward, items) on the left, "Câu chuyện trận đấu" on the right.
+            // 1000 wide keeps it between the left and right HUD columns at 16:9 (1920×1080 and 1280×720).
+            const float leftCenter = -250f;
+            const float rightCenter = 250f;
+            const float columnWidth = 460f;
+            RectTransform end = CreatePanel("End Panel", canvasRoot, new Color(0.035f, 0.035f, 0.06f, 0.95f));
+            SetRect(end, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -10f), new Vector2(1000f, 590f), new Vector2(0.5f, 0.5f));
             endPanel = end.gameObject;
             RectTransform accent = CreatePanel("Accent", end, new Color(1f, 0.8f, 0.4f, 0.8f));
             SetRect(accent, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -84f), new Vector2(340f, 3f), new Vector2(0.5f, 1f));
             endTitle = CreateText("Title", end, 40, TextAnchor.UpperCenter, GoldText);
             endTitle.fontStyle = FontStyle.Bold;
-            SetRect(endTitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -26f), new Vector2(600f, 52f), new Vector2(0.5f, 1f));
+            SetRect(endTitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -26f), new Vector2(960f, 52f), new Vector2(0.5f, 1f));
             endCause = CreateText("Cause", end, 20, TextAnchor.UpperCenter, new Color(1f, 0.7f, 0.65f));
-            SetRect(endCause.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -96f), new Vector2(600f, 26f), new Vector2(0.5f, 1f));
+            SetRect(endCause.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -96f), new Vector2(960f, 26f), new Vector2(0.5f, 1f));
+
             endStats = CreateText("Stats", end, 26, TextAnchor.UpperCenter, Color.white);
             endStats.lineSpacing = 1.15f;
-            SetRect(endStats.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -134f), new Vector2(600f, 150f), new Vector2(0.5f, 1f));
+            SetRect(endStats.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(leftCenter, -136f), new Vector2(columnWidth, 150f), new Vector2(0.5f, 1f));
+            endReward = CreateText("Reward", end, 22, TextAnchor.UpperCenter, GoldText);
+            endReward.fontStyle = FontStyle.Bold;
+            endReward.lineSpacing = 1.1f;
+            AddShadow(endReward);
+            SetRect(endReward.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(leftCenter, -292f), new Vector2(columnWidth, 60f), new Vector2(0.5f, 1f));
             endItems = CreateText("Items", end, 18, TextAnchor.UpperCenter, new Color(0.8f, 0.85f, 0.95f));
             endItems.lineSpacing = 1.15f;
-            SetRect(endItems.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -310f), new Vector2(600f, 150f), new Vector2(0.5f, 1f));
+            SetRect(endItems.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(leftCenter, -364f), new Vector2(columnWidth, 150f), new Vector2(0.5f, 1f));
+
+            RectTransform divider = CreateSliced("Divider", end, new Color(1f, 1f, 1f, 0.08f));
+            SetRect(divider, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -132f), new Vector2(2f, 390f), new Vector2(0.5f, 1f));
+
+            Text storyTitle = CreateText("Story Title", end, 21, TextAnchor.UpperLeft, GoldText);
+            storyTitle.text = "Câu chuyện trận đấu";
+            storyTitle.fontStyle = FontStyle.Bold;
+            SetRect(storyTitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(rightCenter, -136f), new Vector2(columnWidth - 20f, 30f), new Vector2(0.5f, 1f));
+            endStory = CreateText("Story", end, 17, TextAnchor.UpperLeft, new Color(0.88f, 0.9f, 0.96f));
+            endStory.horizontalOverflow = HorizontalWrapMode.Wrap;
+            endStory.lineSpacing = 1.12f;
+            endStory.text = ChronicleText.EmptyText;
+            SetRect(endStory.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(rightCenter, -174f), new Vector2(columnWidth - 20f, 340f), new Vector2(0.5f, 1f));
+
             endFooter = CreateText("Footer", end, 18, TextAnchor.LowerCenter, new Color(0.65f, 0.7f, 0.82f));
-            SetRect(endFooter.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 18f), new Vector2(600f, 26f), new Vector2(0.5f, 0f));
+            SetRect(endFooter.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 18f), new Vector2(960f, 26f), new Vector2(0.5f, 0f));
             endPanel.SetActive(false);
         }
 
@@ -458,7 +585,7 @@ namespace PersonalArena.View
             }
 
             RectTransform panel = CreatePanel("Training", canvasRoot, PanelColor);
-            SetRect(panel, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20f, -242f), new Vector2(430f, 420f), new Vector2(1f, 1f));
+            SetRect(panel, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20f, TrainingTop), new Vector2(430f, 460f), new Vector2(1f, 1f));
             trainingPanel = panel.gameObject;
 
             Text title = CreateText("Title", panel, 20, TextAnchor.UpperLeft, GoldText);
@@ -475,14 +602,16 @@ namespace PersonalArena.View
             powerLabel.fontStyle = FontStyle.Normal;
             powerButton.onClick.AddListener(() => TrainingPowerClicked?.Invoke());
 
-            trainingText = CreateText("Status", panel, 16, TextAnchor.UpperLeft, new Color(0.9f, 0.93f, 0.97f));
-            SetRect(trainingText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -152f), new Vector2(394f, 116f), new Vector2(0f, 1f));
+            // Room for the status plus the M5 build/focus line (and the "applies next TRAIN" note).
+            trainingText = CreateText("Status", panel, 15, TextAnchor.UpperLeft, new Color(0.9f, 0.93f, 0.97f));
+            trainingText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            SetRect(trainingText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -150f), new Vector2(394f, 156f), new Vector2(0f, 1f));
 
             trainingGraphCaption = CreateText("Graph Caption", panel, 14, TextAnchor.UpperLeft, new Color(0.7f, 0.76f, 0.84f));
-            SetRect(trainingGraphCaption.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -270f), new Vector2(394f, 20f), new Vector2(0f, 1f));
+            SetRect(trainingGraphCaption.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -310f), new Vector2(394f, 20f), new Vector2(0f, 1f));
 
             RectTransform graph = CreatePanel("Reward Graph", panel, new Color(0.08f, 0.09f, 0.13f, 1f));
-            SetRect(graph, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -292f), new Vector2(394f, TrainingGraphHeight), new Vector2(0f, 1f));
+            SetRect(graph, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -332f), new Vector2(394f, TrainingGraphHeight), new Vector2(0f, 1f));
             float slot = 394f / TrainingBarCount;
             for (int i = 0; i < TrainingBarCount; i++)
             {
@@ -494,12 +623,12 @@ namespace PersonalArena.View
                 barObject.SetActive(false);
             }
 
-            Button dataButton = CreateButton("Training Data Button", panel, new Color(0.36f, 0.25f, 0.62f, 1f), new Vector2(18f, -366f), new Vector2(194f, 40f),
+            Button dataButton = CreateButton("Training Data Button", panel, new Color(0.36f, 0.25f, 0.62f, 1f), new Vector2(18f, -406f), new Vector2(194f, 40f),
                 17, out _, out Text dataLabel);
             dataLabel.text = "BIỂU ĐỒ HỌC  (G)";
             dataButton.onClick.AddListener(ToggleHistoryPanel);
 
-            Button profileButton = CreateButton("Profile Button", panel, new Color(0.62f, 0.4f, 0.14f, 1f), new Vector2(218f, -366f), new Vector2(194f, 40f),
+            Button profileButton = CreateButton("Profile Button", panel, new Color(0.62f, 0.4f, 0.14f, 1f), new Vector2(218f, -406f), new Vector2(194f, 40f),
                 17, out _, out Text profileLabel);
             profileLabel.text = "HỒ SƠ AI  (P)";
             profileButton.onClick.AddListener(ToggleProfilePanel);
