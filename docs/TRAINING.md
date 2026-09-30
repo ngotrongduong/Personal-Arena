@@ -33,6 +33,13 @@ Env (Windows)**. Hoặc headless (không mở Editor):
 
 Từ gốc repo (`C:\PersonalArena`, nơi có `.venv-ml`):
 
+> **Python gốc của `.venv-ml` phải nằm ở thư mục thật**, hiện là `C:\PersonalArena\.venv-python310`
+> (gitignore bởi `.venv*/`), khai báo ở dòng `home` của `.venv-ml\pyvenv.cfg`.
+> - Đừng cài Python bằng `uv` từ trong app Claude desktop. App này là gói MSIX, nên mọi thứ ghi vào
+>   `AppData\Roaming` chỉ nằm trong thư mục ảo của app.
+> - Khi đó, trình xem mở từ Desktop không thấy Python. Nút TRAIN THE AI báo "closed right away
+>   (code 103)" (mã 103 của trình khởi chạy venv nghĩa là "No Python"), và bộ xuất não cũng chết theo.
+
 ```powershell
 # Wrapper: 4 process, time-scale 20, no-graphics, config warrior_survivor_ppo.yaml, ra Trainer/runs/
 & .venv-ml\Scripts\python.exe Trainer\arena_trainer.py --run-id warrior-s002
