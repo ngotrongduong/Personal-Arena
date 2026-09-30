@@ -11,7 +11,7 @@ namespace PersonalArena.View
     public sealed class ArenaEffects : MonoBehaviour
     {
         private const int SlashPool = 6;
-        private const int LabelPool = 24;
+        private const int LabelPool = 48;
         private const int MaxGhosts = 14;
 
         private readonly List<SlashFx> slashes = new List<SlashFx>();

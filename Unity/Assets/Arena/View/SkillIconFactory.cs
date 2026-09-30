@@ -51,7 +51,13 @@ namespace PersonalArena.View
 
         public static Sprite IconFor(SkillDef skill, int index)
         {
-            string key = KeyFor(skill, index);
+            return IconForKey(KeyFor(skill, index), ColorFor(skill, index));
+        }
+
+        /// <summary>Icon for any glyph key in <see cref="GlyphFolder"/> (e.g. a survivor item id) on a badge of <paramref name="theme"/>.</summary>
+        public static Sprite IconForKey(string key, Color theme)
+        {
+            key = key ?? string.Empty;
             if (Cache.TryGetValue(key, out Sprite cached) && cached != null)
             {
                 return cached;
@@ -63,7 +69,7 @@ namespace PersonalArena.View
                 wrapMode = TextureWrapMode.Clamp,
                 filterMode = FilterMode.Bilinear
             };
-            texture.SetPixels32(DrawPixels(key, ColorFor(skill, index)));
+            texture.SetPixels32(DrawPixels(key, theme));
             texture.Apply(false, true);
             Sprite sprite = Sprite.Create(texture, new Rect(0f, 0f, Size, Size), new Vector2(0.5f, 0.5f), 100f, 0,
                 SpriteMeshType.FullRect);

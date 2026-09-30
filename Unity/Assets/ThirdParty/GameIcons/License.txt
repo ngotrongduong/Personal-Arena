@@ -20,3 +20,11 @@ Resources/SkillIcons/arrow            high-shot             Lorc
 Resources/SkillIcons/piercing-arrow   supersonic-arrow      Lorc
 Resources/SkillIcons/leap-back        return-arrow          Lorc
 Resources/SkillIcons/concussive-arrow charged-arrow         Lorc
+Resources/SkillIcons/sword-sweep      spinning-sword        Lorc
+Resources/SkillIcons/thrown-hammer    hammer-drop           Lorc
+Resources/SkillIcons/iron-heart       heart-organ           Lorc
+Resources/SkillIcons/bone-armor       ribcage               Lorc
+Resources/SkillIcons/crit-eye         archery-target        Lorc
+Resources/SkillIcons/wind-boots       wingfoot              Lorc
+Resources/SkillIcons/bonus-gold       two-coins             Delapouite
+Resources/SkillIcons/bonus-heal       heart-bottle          Lorc
