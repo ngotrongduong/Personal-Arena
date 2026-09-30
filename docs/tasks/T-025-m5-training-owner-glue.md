@@ -1,7 +1,7 @@
 # T-025: M5 Unity training glue — owner build, tier and Training Focus reach the agents
 
 - **Owner:** Claude
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M5
 - **Parallel OK with:** T-026 only after T-023 is merged (T-026 uses `TrainingServiceClient` too;
   T-025 lands first)
@@ -72,4 +72,23 @@ the chosen Training Focus. Observation schema v4 and the action space do not cha
 
 ## Report
 
-(Claude fills this in.)
+Done (Claude, 2026-09-30).
+
+- `OwnerTrainingArgs.Parse` reads the three arguments exactly as `arena_trainer.py` emits them
+  (16 comma-separated ints, tier only with a build, lowercase focus id); never throws, clamps with
+  warnings. `TrainingArenaHost` logs one line with what it applied.
+- **Owner share is rolled first** in `SurvivorEnvFactory.CreateEpisode`: `own_build_share` 0.7 means
+  ~70 % of *all* episodes use the owner's jittered build; the remaining ~30 % are split by the
+  review / hard shares as before (with review 0.2, hard 0.1: 6 % review, 3 % hard, 21 % random).
+  The reviewer caught that rolling it inside the New slice gave only 49–56 %. Without an owner build
+  no extra random number is drawn, so the random-build sequence is unchanged.
+- Jitter: 0–2 moves of one point between used stats, total / caps / tier kept, reserved slots 0,
+  deterministic per episode seed.
+- Focus: `HeroAgent.Configure(..., focus)` rebuilds the reward config right away (`ApplyFocus`)
+  instead of an `OnEpisodeBegin` guard — same result, covered by `HeroAgentFocusTests` (Gold, then
+  back to Balanced). `ForFocus(Balanced)` equals the old defaults.
+- `OwnerTraining.Arguments` only sends a 16-value build (clamped to caps, reserved slots 0) and a
+  known focus id, so a bad caller can never make `train_service.py` exit with code 2.
+- New stat `Arena/Episode/SurvivedOwn`. Observation (2264) and actions (9/5/5) unchanged.
+- Unity EditMode tests green in batchmode; `Build/TrainingNext` rebuilt (installed by the service on
+  its next start; the running `warrior-s001` was not touched).

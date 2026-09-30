@@ -57,7 +57,7 @@ namespace PersonalArena.ML.Tests
         public void ReviewEpisodeIsTheBlankTierOneBaseline()
         {
             SurvivorEpisode episode = SurvivorEnvFactory.CreateEpisode(
-                new Rng(11), 4f, 9f, 50f, 1f, 1f, 0f, new CharacterBuild { Tier = 8 });
+                new Rng(11), 4f, 9f, 50f, 0f, 1f, 0f, new CharacterBuild { Tier = 8 });
 
             Assert.AreEqual(SurvivorEpisodeKind.Review, episode.Kind);
             Assert.AreEqual(1, episode.Build.Tier);
@@ -196,6 +196,34 @@ namespace PersonalArena.ML.Tests
             }
 
             Assert.That(owner, Is.InRange(1300, 1500));
+        }
+
+        [Test]
+        public void OwnBuildShareCountsAllEpisodesWithReviewAndHard()
+        {
+            var own = new CharacterBuild { Tier = 3 };
+            own.Points[2] = 5;
+            var rng = new Rng(321);
+            int owner = 0;
+            int review = 0;
+            int hard = 0;
+            int random = 0;
+            for (int i = 0; i < 4000; i++)
+            {
+                switch (SurvivorEnvFactory.CreateEpisode(rng, 1f, 1f, 10f, 0.7f, 0.2f, 0.1f, own).Kind)
+                {
+                    case SurvivorEpisodeKind.Own: owner++; break;
+                    case SurvivorEpisodeKind.Review: review++; break;
+                    case SurvivorEpisodeKind.Hard: hard++; break;
+                    default: random++; break;
+                }
+            }
+
+            // Owner first (70 %), then the other 30 % split 20/10/70: review 6 %, hard 3 %, random 21 %.
+            Assert.That(owner, Is.InRange(2640, 2960));
+            Assert.That(review, Is.InRange(160, 320));
+            Assert.That(hard, Is.InRange(60, 180));
+            Assert.That(random, Is.InRange(700, 980));
         }
 
         private static int MovedPoints(CharacterBuild before, CharacterBuild after)

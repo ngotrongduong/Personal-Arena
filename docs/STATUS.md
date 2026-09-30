@@ -145,8 +145,13 @@ thưởng theo thứ bậc, nghiệm thu bằng đánh giá 100 seed). Đấu tr
 3. M5 đang làm song song khi owner train (2026-09-30):
    - T-024 (Trainer) xong: dịch vụ train nhận `--owner-build/--owner-tier/--training-focus`.
      Quyết định D-035: não của nhân vật chính là `warrior-s001`.
-   - T-023 (Core) do một subagent Claude làm, vì Codex hết lượt.
-   - T-025 (Unity) chưa bắt đầu.
+   - T-023 (Core) xong: Training Focus, modifier bậc 2–10, nguồn vàng, nhãn khán giả, câu chuyện
+     trận, profile + luật kinh tế, Farm tự động (`FarmSession`), log kinh tế. Bậc 1 giữ y hệt code cũ
+     (golden test).
+   - T-025 (Unity ML) xong: bản train đọc build/bậc/trọng tâm của owner; ~70% trận dùng build owner
+     (lệch ≤ 2 điểm). `Build/TrainingNext` đã build — dịch vụ tự cài ở lần TRAIN sau.
+   - T-026 (trình xem M5: ví, menu Nhân vật C, Farm F, so sánh build V, nhãn, câu chuyện trận) đang
+     làm.
 
 ## Cách làm trên PC (Claude)
 

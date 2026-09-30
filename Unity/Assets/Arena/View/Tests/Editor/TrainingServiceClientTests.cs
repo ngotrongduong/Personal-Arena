@@ -216,6 +216,23 @@ namespace PersonalArena.View.Tests
                 Is.EqualTo(" --training-focus survival"));
         }
 
+        [Test]
+        public void OwnerTrainingArguments_ClampsPointsAndDropsBadInput()
+        {
+            var owner = new OwnerTraining
+            {
+                // MaxHp cap 20, Armor cap 10, reserved slot 13 must be 0.
+                Points = new[] { 99, -3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0 },
+                Tier = 2,
+                FocusId = "gold --evil",
+            };
+
+            Assert.That(OwnerTraining.Arguments(owner), Is.EqualTo(
+                " --owner-build 20,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 --owner-tier 2"));
+            Assert.That(OwnerTraining.Arguments(new OwnerTraining { Points = new int[5], FocusId = "boss" }),
+                Is.EqualTo(" --training-focus boss"));
+        }
+
         private static TrainingState Classify(TrainingStatus status, DateTime? newestLog = null, DateTime? launched = null)
         {
             return TrainingServiceClient.Classify(status, NowUnix, newestLog, Now, launched);

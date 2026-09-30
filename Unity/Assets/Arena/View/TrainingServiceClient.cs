@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using PersonalArena.Core.Survivor;
 using UnityEngine;
 
 namespace PersonalArena.View
@@ -128,7 +129,11 @@ namespace PersonalArena.View
         /// <summary>Training Focus id ("balanced", "gold", ...), or null to leave the default.</summary>
         public string FocusId;
 
-        /// <summary>Command-line arguments for Trainer/train_service.py (leading space, or empty).</summary>
+        /// <summary>
+        /// Command-line arguments for Trainer/train_service.py (leading space, or empty). The service rejects
+        /// bad values, so a build that is not <see cref="StatInfo.SlotCount"/> long is left out, every point
+        /// is clamped to its stat cap (reserved slots to 0) and an unknown focus id is left out.
+        /// </summary>
         public static string Arguments(OwnerTraining owner)
         {
             if (owner == null)
@@ -137,14 +142,20 @@ namespace PersonalArena.View
             }
 
             System.Text.StringBuilder builder = new System.Text.StringBuilder();
-            if (owner.Points != null)
+            if (owner.Points != null && owner.Points.Length == StatInfo.SlotCount)
             {
-                builder.Append(" --owner-build ").Append(string.Join(",", owner.Points))
+                int[] points = new int[StatInfo.SlotCount];
+                for (int i = 0; i < points.Length; i++)
+                {
+                    int cap = i < StatInfo.UsedCount ? StatInfo.Cap((StatId)i) : 0;
+                    points[i] = Math.Max(0, Math.Min(cap, owner.Points[i]));
+                }
+                builder.Append(" --owner-build ").Append(string.Join(",", points))
                     .Append(" --owner-tier ").Append(Math.Max(1, Math.Min(10, owner.Tier)));
             }
-            if (!string.IsNullOrWhiteSpace(owner.FocusId))
+            if (TrainingFocusInfo.TryParse(owner.FocusId, out TrainingFocus focus))
             {
-                builder.Append(" --training-focus ").Append(owner.FocusId.Trim().ToLowerInvariant());
+                builder.Append(" --training-focus ").Append(TrainingFocusInfo.Id(focus));
             }
             return builder.ToString();
         }

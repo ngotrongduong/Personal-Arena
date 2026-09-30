@@ -60,23 +60,15 @@ namespace PersonalArena.ML
         public static CharacterBuild CreateBuild(Rng rng, float tierMin, float tierMax, float buildLevelMax,
             float ownBuildShare, CharacterBuild ownBuild)
         {
-            return CreateBuild(rng, tierMin, tierMax, buildLevelMax, ownBuildShare, ownBuild, out _);
-        }
-
-        private static CharacterBuild CreateBuild(Rng rng, float tierMin, float tierMax, float buildLevelMax,
-            float ownBuildShare, CharacterBuild ownBuild, out bool usedOwnBuild)
-        {
             if (rng == null)
             {
                 throw new ArgumentNullException(nameof(rng));
             }
 
-            usedOwnBuild = false;
             int low = Tier(tierMin);
             int high = Math.Max(low, Tier(tierMax));
             if (ownBuild != null && ownBuildShare > 0f && rng.NextFloat() < ownBuildShare)
             {
-                usedOwnBuild = true;
                 return Jitter(rng, ownBuild);
             }
 
@@ -95,6 +87,8 @@ namespace PersonalArena.ML
         /// </summary>
         public static CharacterBuild Jitter(Rng rng, CharacterBuild ownBuild)
         {
+            if (rng == null) throw new ArgumentNullException(nameof(rng));
+            if (ownBuild == null) throw new ArgumentNullException(nameof(ownBuild));
             CharacterBuild build = ownBuild.Clone();
             int moves = rng.NextInt(MaximumJitterMoves + 1);
             for (int move = 0; move < moves; move++)
@@ -142,6 +136,11 @@ namespace PersonalArena.ML
             return -1;
         }
 
+        /// <summary>
+        /// The owner's build is rolled first, so <paramref name="ownBuildShare"/> is its share of all episodes
+        /// (D-029: ~70 % owner, the rest split into review / hard / new random builds). Without an owner build
+        /// no extra random number is drawn, so the random-build sequence is unchanged.
+        /// </summary>
         public static SurvivorEpisode CreateEpisode(Rng rng, float tierMin, float tierMax,
             float buildLevelMax, float ownBuildShare, float reviewShare, float hardShare,
             CharacterBuild ownBuild)
@@ -149,6 +148,12 @@ namespace PersonalArena.ML
             if (rng == null)
             {
                 throw new ArgumentNullException(nameof(rng));
+            }
+
+            float ownShare = ownBuild == null ? 0f : Share(ownBuildShare);
+            if (ownShare > 0f && rng.NextFloat() < ownShare)
+            {
+                return new SurvivorEpisode { Kind = SurvivorEpisodeKind.Own, Build = Jitter(rng, ownBuild) };
             }
 
             float review = Share(reviewShare);
@@ -163,7 +168,7 @@ namespace PersonalArena.ML
 
             if (total <= 0f)
             {
-                return NewEpisode(rng, tierMin, tierMax, buildLevelMax, ownBuildShare, ownBuild);
+                return NewEpisode(rng, tierMin, tierMax, buildLevelMax);
             }
 
             float roll = rng.NextFloat();
@@ -187,17 +192,15 @@ namespace PersonalArena.ML
                 };
             }
 
-            return NewEpisode(rng, tierMin, tierMax, buildLevelMax, ownBuildShare, ownBuild);
+            return NewEpisode(rng, tierMin, tierMax, buildLevelMax);
         }
 
-        private static SurvivorEpisode NewEpisode(Rng rng, float tierMin, float tierMax, float buildLevelMax,
-            float ownBuildShare, CharacterBuild ownBuild)
+        private static SurvivorEpisode NewEpisode(Rng rng, float tierMin, float tierMax, float buildLevelMax)
         {
-            CharacterBuild build = CreateBuild(rng, tierMin, tierMax, buildLevelMax, ownBuildShare, ownBuild, out bool own);
             return new SurvivorEpisode
             {
-                Kind = own ? SurvivorEpisodeKind.Own : SurvivorEpisodeKind.New,
-                Build = build
+                Kind = SurvivorEpisodeKind.New,
+                Build = CreateBuild(rng, tierMin, tierMax, buildLevelMax, 0f, null)
             };
         }
 
