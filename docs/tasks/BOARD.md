@@ -27,6 +27,6 @@ này (M0 scaffold, Unity project, Core M1) ghi ở `docs/STATUS.md`.
 | [T-019](T-019-brain-upgrade-build-curriculum.md) | `brain_upgrade.py` + mô tả schema JSON (TRAIN tự nâng cấp não), não theo build ngẫu nhiên, curriculum ôn tập 70/20/10 | Codex | done | M4B | |
 | [T-021](T-021-m4c-survivor-content.md) | Core M4C: 4 vũ khí mới (giáo, rìu xoay, hào quang, sóng chấn), 4 phụ kiện, Spitter + đạn địch (khiên chặn), nam châm, rương — giữ nguyên schema v4 | Codex + Claude | done (D-034) | M4C | |
 | T-022 | Unity M4C: hình ảnh 4 vũ khí mới, Spitter + đạn, nam châm/rương, icon 8 món mới, đánh bóng HUD | Claude (PC) | done (D-034) | M4C | |
-| [T-023](T-023-m5-core-economy.md) | Core M5: Training Focus, modifier bậc 2–10, nguồn vàng, nhãn khán giả, dữ liệu "câu chuyện" trận, profile + luật kinh tế (mua cấp, điểm, 5 loadout, mở bậc), Farm tự động, log kinh tế | Codex | doing | M5 | T-024 |
-| T-024 | Trainer M5: `train_service` nhận build/bậc/trọng tâm của owner, bật `own_build_share` 0,7, truyền xuống Unity qua `--env-args` | Claude (PC) | doing | M5 | T-023 |
+| [T-023](T-023-m5-core-economy.md) | Core M5: Training Focus, modifier bậc 2–10, nguồn vàng, nhãn khán giả, dữ liệu "câu chuyện" trận, profile + luật kinh tế (mua cấp, điểm, 5 loadout, mở bậc), Farm tự động, log kinh tế | Claude subagent (Codex hết lượt) | doing | M5 | T-024 |
+| [T-024](T-024-m5-trainer-owner-build.md) | Trainer M5: `train_service` nhận build/bậc/trọng tâm của owner, bật `own_build_share` 0,7, truyền xuống Unity qua `--env-args` | Claude (PC) | done (D-035) | M5 | T-023 |
 | T-025 | Unity M5: nối build owner + trọng tâm vào `HeroAgent`, menu Nhân vật / loadout / bậc / Farm / so sánh loadout, ví vàng, nhãn khán giả, câu chuyện sau trận, `profile.json` | Claude (PC) | todo | M5 | |

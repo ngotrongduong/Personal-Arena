@@ -19,6 +19,53 @@ SCHEMA_VERSION = 4
 SCHEMA_FILE = "schema_version.txt"
 SCHEMAS_DIR = Path(__file__).resolve().parent / "schemas"
 
+# M5: the owner's build and Training Focus, passed through to the Unity environment.
+STAT_SLOTS = 16
+MAX_STAT_POINTS = 20
+TRAINING_FOCUSES = ("balanced", "survival", "gold", "boss", "offense")
+OWNER_BUILD_SHARE = 0.7
+
+
+def owner_build(value: str) -> str:
+    """argparse type: 16 comma-separated stat point counts (0..20), returned normalised."""
+    parts = [part.strip() for part in value.split(",")]
+    if len(parts) != STAT_SLOTS:
+        raise argparse.ArgumentTypeError(f"owner build needs {STAT_SLOTS} values, got {len(parts)}")
+    try:
+        points = [int(part) for part in parts]
+    except ValueError:
+        raise argparse.ArgumentTypeError("owner build values must be integers") from None
+    if any(point < 0 or point > MAX_STAT_POINTS for point in points):
+        raise argparse.ArgumentTypeError(f"owner build values must be within 0..{MAX_STAT_POINTS}")
+    return ",".join(str(point) for point in points)
+
+
+def owner_tier(value: str) -> int:
+    try:
+        tier = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError("owner tier must be an integer") from None
+    if tier < 1 or tier > 10:
+        raise argparse.ArgumentTypeError("owner tier must be within 1..10")
+    return tier
+
+
+def training_focus(value: str) -> str:
+    focus = value.strip().lower()
+    if focus not in TRAINING_FOCUSES:
+        raise argparse.ArgumentTypeError(f"training focus must be one of {', '.join(TRAINING_FOCUSES)}")
+    return focus
+
+
+def add_owner_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--owner-build",
+        type=owner_build,
+        help="The owner's stat points (16 comma-separated counts); mixed into 70%% of episodes.",
+    )
+    parser.add_argument("--owner-tier", type=owner_tier, help="Difficulty tier of the owner's build (1..10).")
+    parser.add_argument("--training-focus", type=training_focus, help="Reward weighting (default: balanced).")
+
 
 def run_schema_version(run_dir: Path) -> int:
     """Observation schema recorded for a run, or 1 when the marker is missing or unreadable."""
@@ -133,6 +180,7 @@ def create_parser() -> argparse.ArgumentParser:
         choices=("cpu", "cuda"),
         help="Force the PyTorch device (default: ML-Agents picks the GPU when it can).",
     )
+    add_owner_arguments(parser)
 
     graphics = parser.add_mutually_exclusive_group()
     graphics.add_argument(
@@ -216,6 +264,11 @@ def build_command(args: argparse.Namespace, root: Path | None = None) -> list[st
         environment_arguments.extend(("--arena-agents", str(args.arena_agents)))
     if getattr(args, "hero_class", None):
         environment_arguments.extend(("--hero-class", args.hero_class))
+    if getattr(args, "owner_build", None):
+        environment_arguments.extend(("--owner-build", args.owner_build))
+        environment_arguments.extend(("--owner-tier", str(getattr(args, "owner_tier", None) or 1)))
+    if getattr(args, "training_focus", None):
+        environment_arguments.extend(("--training-focus", args.training_focus))
     if environment_arguments:
         # --env-args takes the rest of the command line, so it must come last.
         command.append("--env-args")

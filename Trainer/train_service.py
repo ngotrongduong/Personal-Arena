@@ -328,18 +328,41 @@ def configured_max_steps(config: dict, behavior: str) -> int:
     return int(float(config["behaviors"][behavior].get("max_steps", 500000)))
 
 
-def effective_config(config_path: Path, behavior: str, last_step: int, output: Path) -> tuple[Path, int]:
-    """Return the config to train with and its max_steps, extending the budget when it is used up."""
+def environment_overrides(args: argparse.Namespace) -> dict[str, float]:
+    """Constant environment parameters the owner's choices set (M5): train on their build."""
+    if getattr(args, "owner_build", None):
+        return {"own_build_share": arena_trainer.OWNER_BUILD_SHARE}
+    return {}
+
+
+def effective_config(config_path: Path, behavior: str, last_step: int, output: Path,
+                     overrides: dict[str, float] | None = None) -> tuple[Path, int]:
+    """Return the config to train with and its max_steps, extending the budget when it is used up
+    and applying the owner's constant environment parameters."""
     import yaml  # PyYAML ships with mlagents.
 
     config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     max_steps = configured_max_steps(config, behavior)
-    if last_step < max_steps * EXTEND_FRACTION:
+    changed = False
+    if last_step >= max_steps * EXTEND_FRACTION:
+        max_steps = last_step + max_steps
+        config["behaviors"][behavior]["max_steps"] = max_steps
+        changed = True
+    for name, value in (overrides or {}).items():
+        parameters = config.setdefault("environment_parameters", {}) or {}
+        config["environment_parameters"] = parameters
+        if isinstance(parameters.get(name), dict):
+            # A curriculum here would be replaced by a constant, and --resume would then restore a
+            # lesson number that no longer exists.
+            raise ValueError(f"environment parameter {name!r} is a curriculum; it cannot be overridden")
+        if parameters.get(name) != value:
+            parameters[name] = value
+            changed = True
+    if not changed:
         return config_path, max_steps
-    extended = last_step + max_steps
-    config["behaviors"][behavior]["max_steps"] = extended
+    config["behaviors"][behavior]["max_steps"] = max_steps  # "3.0e7" in YAML is a string.
     output.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
-    return output, extended
+    return output, max_steps
 
 
 def process_alive(pid: int) -> bool:
@@ -499,6 +522,11 @@ class TrainingService:
             "last_eval_won": last_eval_won,
             "evaluating": evaluating,
             "evaluation_message": evaluation_message,
+            "training_focus": getattr(self.args, "training_focus", None) or "balanced",
+            "owner_build": bool(getattr(self.args, "owner_build", None)),
+            # The tier only reaches Unity together with a build (0 = no owner build).
+            "owner_tier": (getattr(self.args, "owner_tier", None) or 1)
+            if getattr(self.args, "owner_build", None) else 0,
         }
 
     def publish(self, state: str, message: str = "") -> None:
@@ -616,6 +644,11 @@ class TrainingService:
         if self.args.arena_agents:
             arguments.extend(("--arena-agents", str(self.args.arena_agents)))
         arguments.extend(("--hero-class", self.behavior.lower()))
+        if getattr(self.args, "owner_build", None):
+            arguments.extend(("--owner-build", self.args.owner_build))
+            arguments.extend(("--owner-tier", str(getattr(self.args, "owner_tier", None) or 1)))
+        if getattr(self.args, "training_focus", None):
+            arguments.extend(("--training-focus", self.args.training_focus))
         parsed = arena_trainer.create_parser().parse_args(arguments)
         return arena_trainer.build_command(parsed, self.root)
 
@@ -694,6 +727,10 @@ class TrainingService:
         starting_message = plan.message or "Loading the training arenas..."
         if plan.message:
             self.log(plan.message)
+        if getattr(self.args, "owner_build", None) or getattr(self.args, "training_focus", None):
+            self.log(f"owner settings: build {getattr(self.args, 'owner_build', None) or 'random'}, "
+                     f"tier {getattr(self.args, 'owner_tier', None) or 1}, "
+                     f"focus {getattr(self.args, 'training_focus', None) or 'balanced'}")
         self.publish("starting", starting_message)
 
         restarts = 0
@@ -701,7 +738,8 @@ class TrainingService:
         while True:
             config_path = arena_trainer.resolve_path(self.args.config, self.root)
             config, self.max_steps = effective_config(
-                config_path, self.behavior, plan.last_step, self.runs_dir / f"{plan.run_id}.service.yaml"
+                config_path, self.behavior, plan.last_step, self.runs_dir / f"{plan.run_id}.service.yaml",
+                environment_overrides(self.args),
             )
             command = self.trainer_command(plan, config)
             missing = [path for path in (command[0], command[command.index("--env") + 1]) if not Path(path).is_file()]
@@ -836,6 +874,7 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument("--base-port", type=int, default=5005)
     parser.add_argument("--parent-pid", type=int, default=0, help="Stop when this process exits.")
     parser.add_argument("--torch-device", choices=("cpu", "cuda"), help="Force the PyTorch device.")
+    arena_trainer.add_owner_arguments(parser)
     return parser
 
 

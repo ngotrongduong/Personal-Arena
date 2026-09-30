@@ -142,6 +142,11 @@ thưởng theo thứ bậc, nghiệm thu bằng đánh giá 100 seed). Đấu tr
 2. Nghiệm thu M4C = qua đánh giá 100 seed trên bản có nội dung mới. Rồi M5 (kinh tế và build).
    Nợ nhỏ còn lại của T-021 ghi ở phần Report của `docs/tasks/T-021-m4c-survivor-content.md`
    (N2, N3, N5, N6 — rương có thể mất khi pool đồ nhặt đầy).
+3. M5 đang làm song song khi owner train (2026-09-30):
+   - T-024 (Trainer) xong: dịch vụ train nhận `--owner-build/--owner-tier/--training-focus`.
+     Quyết định D-035: não của nhân vật chính là `warrior-s001`.
+   - T-023 (Core) do một subagent Claude làm, vì Codex hết lượt.
+   - T-025 (Unity) chưa bắt đầu.
 
 ## Cách làm trên PC (Claude)
 

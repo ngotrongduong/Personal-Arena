@@ -124,6 +124,49 @@ def test_build_command_puts_all_environment_arguments_after_one_final_marker(
         assert "--env-args" not in command
 
 
+OWNER_BUILD = "5,0,2,0,3,0,0,0,0,0,0,0,0,0,0,20"
+
+
+def test_build_command_passes_the_owner_build_tier_and_focus_to_unity(tmp_path: Path):
+    command = arena_trainer.build_command(
+        parse("--run-id", "warrior-001", "--resume", "--hero-class", "warrior",
+              "--owner-build", " 5, 0,2,0,3,0,0,0,0,0,0,0,0,0,0,20", "--owner-tier", "4",
+              "--training-focus", "Gold"),
+        tmp_path,
+    )
+
+    marker = command.index("--env-args")
+    assert command[marker + 1:] == [
+        "--hero-class", "warrior", "--owner-build", OWNER_BUILD, "--owner-tier", "4",
+        "--training-focus", "gold",
+    ]
+
+
+def test_build_command_defaults_the_owner_tier_to_one(tmp_path: Path):
+    command = arena_trainer.build_command(
+        parse("--run-id", "warrior-001", "--owner-build", OWNER_BUILD), tmp_path
+    )
+
+    assert command[-4:] == ["--owner-build", OWNER_BUILD, "--owner-tier", "1"]
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        ["--owner-build", "1,2,3"],
+        ["--owner-build", ",".join(["0"] * 15 + ["21"])],
+        ["--owner-build", ",".join(["0"] * 15 + ["-1"])],
+        ["--owner-build", ",".join(["0"] * 15 + ["x"])],
+        ["--owner-tier", "0"],
+        ["--owner-tier", "11"],
+        ["--training-focus", "speed"],
+    ],
+)
+def test_owner_arguments_reject_invalid_values(arguments: list[str]):
+    with pytest.raises(SystemExit):
+        parse("--run-id", "warrior-001", *arguments)
+
+
 def test_schema_version_defaults_to_one_and_round_trips_current_version(tmp_path: Path):
     run_dir = tmp_path / "warrior-s001"
 

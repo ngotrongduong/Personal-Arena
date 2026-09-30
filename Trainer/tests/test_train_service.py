@@ -384,6 +384,123 @@ def test_effective_config_extends_a_used_up_budget(tmp_path: Path):
     assert written["environment_parameters"]["arena_size"] == 20.0
 
 
+OWNER_BUILD = "5,0,2,0,3,0,0,0,0,0,0,0,0,0,0,20"
+
+
+def test_effective_config_trains_on_the_owner_build_without_extending(tmp_path: Path):
+    import yaml
+
+    config = tmp_path / "warrior.yaml"
+    write_config(config)
+    args = train_service.create_parser().parse_args(["--results-dir", str(tmp_path), "--owner-build", OWNER_BUILD])
+
+    path, max_steps = train_service.effective_config(
+        config, "Warrior", 1_000_000, tmp_path / "out.yaml", train_service.environment_overrides(args)
+    )
+
+    assert path == tmp_path / "out.yaml"
+    assert max_steps == 30_000_000
+    written = yaml.safe_load(path.read_text(encoding="utf-8"))
+    assert written["environment_parameters"]["own_build_share"] == arena_trainer.OWNER_BUILD_SHARE
+    assert written["environment_parameters"]["arena_size"] == 20.0
+    assert written["behaviors"]["Warrior"]["max_steps"] == 30_000_000
+
+
+def test_effective_config_overrides_and_extends_together(tmp_path: Path):
+    import yaml
+
+    config = tmp_path / "warrior.yaml"
+    write_config(config)
+
+    path, max_steps = train_service.effective_config(
+        config, "Warrior", 29_990_000, tmp_path / "out.yaml", {"own_build_share": 0.7}
+    )
+
+    written = yaml.safe_load(path.read_text(encoding="utf-8"))
+    assert max_steps == 59_990_000
+    assert written["behaviors"]["Warrior"]["max_steps"] == 59_990_000
+    assert written["environment_parameters"]["own_build_share"] == 0.7
+
+
+def test_no_owner_build_means_no_environment_overrides(tmp_path: Path):
+    args = train_service.create_parser().parse_args(["--results-dir", str(tmp_path), "--training-focus", "boss"])
+
+    assert train_service.environment_overrides(args) == {}
+
+
+def test_trainer_command_passes_the_owner_settings(tmp_path: Path):
+    args = train_service.create_parser().parse_args([
+        "--results-dir", str(tmp_path), "--owner-build", OWNER_BUILD, "--owner-tier", "3",
+        "--training-focus", "survival",
+    ])
+    service = train_service.TrainingService(args)
+
+    command = service.trainer_command(train_service.RunPlan("warrior-s001", "resume", 5), tmp_path / "c.yaml")
+
+    assert command[-9:] == [
+        "--env-args", "--hero-class", "warrior", "--owner-build", OWNER_BUILD, "--owner-tier", "3",
+        "--training-focus", "survival",
+    ]
+    status = service.status("training")
+    assert (status["owner_build"], status["owner_tier"], status["training_focus"]) == (True, 3, "survival")
+
+
+def test_status_defaults_to_a_balanced_focus_without_an_owner_build(tmp_path: Path):
+    args = train_service.create_parser().parse_args(["--results-dir", str(tmp_path)])
+    status = train_service.TrainingService(args).status("training")
+
+    assert (status["owner_build"], status["owner_tier"], status["training_focus"]) == (False, 0, "balanced")
+
+
+def test_trainer_command_defaults_the_owner_tier_to_one(tmp_path: Path):
+    args = train_service.create_parser().parse_args(["--results-dir", str(tmp_path), "--owner-build", OWNER_BUILD])
+    service = train_service.TrainingService(args)
+
+    command = service.trainer_command(train_service.RunPlan("warrior-s001", "resume", 5), tmp_path / "c.yaml")
+
+    assert command[-4:] == ["--owner-build", OWNER_BUILD, "--owner-tier", "1"]
+
+
+def test_trainer_command_passes_a_focus_without_a_build(tmp_path: Path):
+    args = train_service.create_parser().parse_args(["--results-dir", str(tmp_path), "--training-focus", "gold"])
+    service = train_service.TrainingService(args)
+
+    command = service.trainer_command(train_service.RunPlan("warrior-s001", "resume", 5), tmp_path / "c.yaml")
+
+    assert command[-5:] == ["--env-args", "--hero-class", "warrior", "--training-focus", "gold"]
+    assert "--owner-build" not in command
+
+
+def test_effective_config_skips_writing_an_override_that_is_already_set(tmp_path: Path):
+    import yaml
+
+    config = tmp_path / "warrior.yaml"
+    write_config(config)
+    data = yaml.safe_load(config.read_text(encoding="utf-8"))
+    data["environment_parameters"]["own_build_share"] = 0.7
+    config.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+
+    path, _ = train_service.effective_config(
+        config, "Warrior", 1_000_000, tmp_path / "out.yaml", {"own_build_share": 0.7}
+    )
+
+    assert path == config
+    assert not (tmp_path / "out.yaml").exists()
+
+
+def test_effective_config_refuses_to_override_a_curriculum(tmp_path: Path):
+    import yaml
+
+    config = tmp_path / "warrior.yaml"
+    write_config(config)
+    data = yaml.safe_load(config.read_text(encoding="utf-8"))
+    data["environment_parameters"]["own_build_share"] = {"curriculum": [{"name": "a", "value": 0.0}]}
+    config.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+
+    with pytest.raises(ValueError):
+        train_service.effective_config(config, "Warrior", 1_000_000, tmp_path / "out.yaml", {"own_build_share": 0.7})
+
+
 def test_trainer_command_resumes_with_service_settings(tmp_path: Path):
     args = train_service.create_parser().parse_args(["--results-dir", str(tmp_path), "--base-port", "5105"])
     service = train_service.TrainingService(args)
