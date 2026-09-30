@@ -131,6 +131,159 @@ namespace PersonalArena.Core.Tests.Survivor
             SurvivorSim contact = NewLethal(4); SurvivorEnemy c = contact.SpawnEnemyForTests(0, new Vec2(1, 0)); contact.DamageHeroForTests(1000f, c); Assert.That(contact.DeathCause, Is.EqualTo(DeathCause.Contact));
         }
 
+        [Test]
+        public void Won_BossKilledWhileLethalDamageSameTick_StaysWon()
+        {
+            SurvivorSim sim = BossAndLethalWalker(bossHp: 1f);
+            sim.Step(default);
+            Assert.That(sim.EndReason, Is.EqualTo(EndReason.Won)); Assert.That(sim.Hero.Alive, Is.True); Assert.That(sim.DeathCause, Is.EqualTo(DeathCause.None));
+            Assert.That(sim.Events, Has.None.Matches<SurvivorEvent>(e => e.Type == SurvivorEventType.HeroDied || e.Type == SurvivorEventType.HeroDamaged || e.Type == SurvivorEventType.EnemySpawned));
+            SurvivorRewardConfig rewards = new SurvivorRewardConfig();
+            Assert.That(new SurvivorRewardCalculator(rewards).Compute(sim.Events, sim.LastStepSeconds), Is.GreaterThanOrEqualTo(rewards.Win));
+            sim.Step(default); Assert.That(sim.Events, Is.Empty); Assert.That(sim.EndReason, Is.EqualTo(EndReason.Won));
+            // Control: without the kill the same walker is lethal on that tick.
+            SurvivorSim control = BossAndLethalWalker(bossHp: float.MaxValue);
+            control.Step(default); Assert.That(control.EndReason, Is.EqualTo(EndReason.Died));
+        }
+
+        [Test]
+        public void BossSpawn_PoolFull_RetriesEachTick_ThenSpawns()
+        {
+            SurvivorSim sim = FullPool(21);
+            sim.SetTimeForTests(899.99f); SurvivorTestHelpers.Step(sim, 2);
+            Assert.That(sim.BossAlive, Is.False); Assert.That(sim.IsEnded, Is.False);
+            SurvivorTestHelpers.Step(sim, 3); Assert.That(sim.BossAlive, Is.False);
+            sim.DamageEnemyForTests(FindEnemy(sim, false, false), 1e6f); sim.Step(default);
+            Assert.That(sim.BossAlive, Is.True);
+        }
+
+        [Test]
+        public void BossSpawn_NeverPossible_EndsExpired()
+        {
+            SurvivorSim sim = FullPool(22);
+            sim.SetTimeForTests(899.99f); SurvivorTestHelpers.Step(sim, 2); sim.SetTimeForTests(1019.99f); SurvivorTestHelpers.Step(sim, 2);
+            Assert.That(sim.BossAlive, Is.False); Assert.That(sim.EndReason, Is.EqualTo(EndReason.Expired));
+        }
+
+        [Test]
+        public void Knockback_BackArcSweep_PushesEnemyAwayFromHero()
+        {
+            SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.Config(), 2); sim.SetHeroInvulnerableForTests(); sim.GiveItemForTests(0, 5);
+            sim.SetHeroStateForTests(Vec2.Zero, Vec2.Zero, 0f);
+            SurvivorEnemy rear = sim.SpawnEnemyForTests(2, new Vec2(-2f, 0f)); sim.Step(default);
+            Assert.That(rear.Hp, Is.LessThan(rear.MaxHp));
+            // Pushed 0.5 x (1 - 0.6) = 0.2 m along -x, then walks 1.6/60 m back toward the hero.
+            Assert.That(rear.Position.X, Is.LessThan(-2.1f)); Assert.That(MathF.Abs(rear.Position.Y), Is.LessThan(0.01f));
+        }
+
+        [Test]
+        public void Knockback_Hammer_PushesAlongFlight()
+        {
+            SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.Config(), 3); sim.SetHeroInvulnerableForTests(); sim.GiveItemForTests(3, 1);
+            SurvivorEnemy target = sim.SpawnEnemyForTests(0, new Vec2(0f, 6f)); target.StunRemaining = 10f;
+            for (int tick = 0; tick < 60 && target.Hp >= target.MaxHp; tick++) sim.Step(default);
+            Assert.That(target.Hp, Is.LessThan(target.MaxHp));
+            Assert.That(target.Position.Y, Is.GreaterThan(6.4f)); Assert.That(MathF.Abs(target.Position.X), Is.LessThan(0.01f));
+        }
+
+        [Test]
+        public void Hammer_PierceOne_HitsExactlyTwoEnemies()
+        {
+            SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.Config(), 6); sim.SetHeroInvulnerableForTests(); sim.GiveItemForTests(3, 1);
+            SurvivorEnemy first = sim.SpawnEnemyForTests(2, new Vec2(6f, 0f)); SurvivorEnemy second = sim.SpawnEnemyForTests(2, new Vec2(7.5f, 0f)); SurvivorEnemy third = sim.SpawnEnemyForTests(2, new Vec2(9f, 0f));
+            int thrown = 0; System.Collections.Generic.HashSet<int> hit = new System.Collections.Generic.HashSet<int>();
+            for (int tick = 0; tick < 60; tick++)
+            {
+                sim.Step(default);
+                for (int i = 0; i < sim.Events.Count; i++)
+                {
+                    SurvivorEvent e = sim.Events[i];
+                    if (e.Type == SurvivorEventType.WeaponFired && e.Id == 3) thrown++;
+                    if (e.Type == SurvivorEventType.DamageDealt) hit.Add(e.Id);
+                }
+            }
+            Assert.That(thrown, Is.EqualTo(1)); Assert.That(hit, Is.EquivalentTo(new[] { first.Id, second.Id })); Assert.That(third.Hp, Is.EqualTo(third.MaxHp));
+        }
+
+        [Test]
+        public void Hammer_WeaponFiredPoint_IsThrowDirection()
+        {
+            SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.Config(), 7); sim.SetHeroInvulnerableForTests(); sim.GiveItemForTests(3, 1);
+            sim.SpawnEnemyForTests(0, new Vec2(0f, 6f)); sim.Step(default);
+            SurvivorEvent fired = default; bool found = false;
+            for (int i = 0; i < sim.Events.Count; i++) if (sim.Events[i].Type == SurvivorEventType.WeaponFired && sim.Events[i].Id == 3) { fired = sim.Events[i]; found = true; }
+            Assert.That(found, Is.True); Assert.That(fired.Point.X, Is.EqualTo(0f).Within(1e-4f)); Assert.That(fired.Point.Y, Is.EqualTo(1f).Within(1e-4f));
+        }
+
+        [Test]
+        public void Crit_RollBetweenChanceAndDouble_CritsOnlyWhenStunned()
+        {
+            // Seed whose first roll r satisfies p <= r < 2p: a normal hit must not crit, a stunned hit must.
+            float p = new SurvivorSim(SurvivorTestHelpers.Config(), 0).DerivedStats.CritChance;
+            int seed = -1;
+            for (int candidate = 1; candidate < 100000 && seed < 0; candidate++) { float r = new Rng(candidate).NextFloat(); if (r >= p && r < p * 2f) seed = candidate; }
+            Assert.That(seed, Is.GreaterThan(0));
+            SurvivorSim normal = new SurvivorSim(SurvivorTestHelpers.Config(), seed); SurvivorEnemy a = normal.SpawnEnemyForTests(2, new Vec2(3, 0));
+            normal.DamageEnemyForTests(a, 10f); Assert.That(a.MaxHp - a.Hp, Is.EqualTo(10f).Within(1e-4f));
+            Assert.That(normal.Events, Has.None.Matches<SurvivorEvent>(e => e.Type == SurvivorEventType.Crit));
+            SurvivorSim stunned = new SurvivorSim(SurvivorTestHelpers.Config(), seed); SurvivorEnemy b = stunned.SpawnEnemyForTests(2, new Vec2(3, 0)); b.StunRemaining = 1f;
+            stunned.DamageEnemyForTests(b, 10f); Assert.That(b.MaxHp - b.Hp, Is.EqualTo(15f).Within(1e-4f));
+            Assert.That(stunned.Events, Has.Some.Matches<SurvivorEvent>(e => e.Type == SurvivorEventType.Crit));
+        }
+
+        [Test]
+        public void Separation_HeroAndElite_UsesMaxEnemyRadius_VelocityIsActualMotion()
+        {
+            SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.Config(), 3); sim.SetHeroInvulnerableForTests(); sim.SetEnemiesInvulnerableForTests();
+            sim.SetHeroStateForTests(new Vec2(0.7f, 0f), Vec2.Zero, 0f);
+            SurvivorEnemy elite = sim.SpawnEnemyForTests(2, new Vec2(2.2f, 0f), true); elite.StunRemaining = 10f;
+            float needed = sim.Hero.Radius + elite.Radius;
+            Assert.That(needed, Is.GreaterThan(1.5f));
+            sim.Step(default);
+            Assert.That(Vec2.Distance(sim.Hero.Position, elite.Position), Is.GreaterThanOrEqualTo(needed - 1e-3f));
+            Assert.That(sim.Hero.Position.X, Is.LessThan(0.7f));
+            Assert.That(sim.Hero.Velocity.X, Is.EqualTo((sim.Hero.Position.X - 0.7f) / SurvivorSim.FixedDeltaTime).Within(1e-3f));
+        }
+
+        [Test]
+        public void Separation_EnemiesReclampedToMap()
+        {
+            SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.Config(), 3); sim.SetHeroInvulnerableForTests(); sim.SetEnemiesInvulnerableForTests();
+            sim.SetHeroStateForTests(new Vec2(44f, 0f), Vec2.Zero, 0f); // within relocation distance of both brutes
+            SurvivorEnemy outer = sim.SpawnEnemyForTests(2, new Vec2(49.3f, 0f)); SurvivorEnemy inner = sim.SpawnEnemyForTests(2, new Vec2(48.5f, 0f));
+            outer.StunRemaining = 10f; inner.StunRemaining = 10f;
+            sim.Step(default);
+            Assert.That(outer.Position.X, Is.LessThanOrEqualTo(50f - outer.Radius + 1e-4f)); Assert.That(inner.Position.X, Is.LessThan(48.5f));
+        }
+
+        [Test]
+        public void LastSkill_OnlyAppliedSkills()
+        {
+            SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.Config(), 3);
+            sim.Step(new SurvivorInput(0, 1, 0)); Assert.That(sim.LastSkill, Is.EqualTo(1));
+            sim.Step(new SurvivorInput(0, 1, 0)); Assert.That(sim.LastSkill, Is.EqualTo(0), "kick on cooldown is not applied");
+            sim.Step(new SurvivorInput(0, 4, 0)); Assert.That(sim.LastSkill, Is.EqualTo(0), "empty slot is masked");
+            sim.Step(new SurvivorInput(0, 2, 0)); sim.Step(new SurvivorInput(0, 2, 0)); Assert.That(sim.LastSkill, Is.EqualTo(2), "held block counts");
+            sim.Step(default); Assert.That(sim.LastSkill, Is.EqualTo(0));
+        }
+
+        private static SurvivorSim BossAndLethalWalker(float bossHp)
+        {
+            SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.Config(), 11); sim.SetTimeForTests(950f);
+            sim.SetHeroStateForTests(Vec2.Zero, Vec2.Zero, 0f); sim.SetHeroHpForTests(1f);
+            SurvivorEnemy boss = sim.SpawnEnemyForTests(4, new Vec2(3f, 0f)); boss.Hp = MathF.Min(boss.MaxHp, bossHp);
+            sim.SpawnEnemyForTests(0, new Vec2(-0.9f, 0f));
+            return sim;
+        }
+
+        private static SurvivorSim FullPool(int seed)
+        {
+            SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.Config(), seed); sim.SetHeroInvulnerableForTests();
+            for (int i = 0; i < SurvivorSim.EnemyCapacity; i++) Assert.That(sim.SpawnEnemyForTests(0, Vec2.FromAngle(i * 2.399963f) * (30f + i % 15)), Is.Not.Null);
+            Assert.That(sim.SpawnEnemyForTests(0, new Vec2(40f, 0f)), Is.Null);
+            return sim;
+        }
+
         private static SurvivorSim NewLethal(int seed) { SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.Config(), seed); sim.SetHeroHpForTests(1f); return sim; }
         private static SurvivorEnemy FindEnemy(SurvivorSim sim, bool elite, bool boss) { for (int i = 0; i < sim.Enemies.Count; i++) if (sim.Enemies[i].Active && sim.Enemies[i].Elite == elite && sim.Enemies[i].IsBoss == boss) return sim.Enemies[i]; return null; }
         private static int ActiveProjectiles(SurvivorSim sim) { int count = 0; for (int i = 0; i < sim.Projectiles.Count; i++) if (sim.Projectiles[i].Active) count++; return count; }

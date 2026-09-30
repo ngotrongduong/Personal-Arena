@@ -12,6 +12,14 @@ namespace PersonalArena.Core.Survivor
         public const int PickupCapacity = 600;
         public const int GemCapacity = 400;
         public const int ObstacleCapacity = 64;
+        private const int BlockSlot = 1;
+        private const int DashSlot = 2;
+        private const int BossTypeIndex = 4;
+        private const int BruteTypeIndex = 2;
+        /// <summary>Cell size of the obstacle lookup grid (m).</summary>
+        private const float ObstacleCellSize = 4f;
+        /// <summary>Bodies up to this radius use the obstacle grid; larger ones scan every obstacle.</summary>
+        private const float ObstacleGridBodyRadius = 2f;
 
         private readonly SurvivorEnemy[] enemies = CreateEnemies();
         private readonly SurvivorProjectile[] projectiles = CreateProjectiles();
@@ -27,16 +35,28 @@ namespace PersonalArena.Core.Survivor
         private readonly bool[] skillMask = new bool[SurvivorInput.SkillBranchSize];
         private readonly bool[] pickMask = new bool[SurvivorInput.PickBranchSize];
         private readonly float[] weaponCooldowns = new float[SurvivorCatalog.CatalogSize];
-        private readonly int[] hammerTargetIds = new int[3];
+        private readonly int[] hammerTargetIds = new int[8];
+        private readonly int[] enemyScratch = new int[EnemyCapacity];
         private readonly Vec2[] enemyPreviousPositions = new Vec2[EnemyCapacity];
         private Rng rng;
         private SpatialHash spatialHash;
+        private int[] obstacleCellStart = Array.Empty<int>();
+        private int[] obstacleCellFill = Array.Empty<int>();
+        private int[] obstacleCellItems = Array.Empty<int>();
+        private int obstacleGridSide;
         private float spawnAccumulator;
         private int nextEnemyId;
         private int nextProjectileId;
         private int pendingLevelUps;
         private int nextEliteIndex;
         private bool bossSpawned;
+        private SurvivorEnemy bossEnemy;
+        private int aliveEnemyCount;
+        private int aliveNormalCount;
+        /// <summary>Largest radius of any enemy spawned this run; only grows until Reset.</summary>
+        private float maxEnemyRadius;
+        /// <summary>Total knockback distance since the last spatial hash rebuild (widens hash queries).</summary>
+        private float hashDrift;
         private int activeObstacleCount;
         private int enemyLimit;
         private int projectileLimit;
@@ -86,11 +106,12 @@ namespace PersonalArena.Core.Survivor
         public IReadOnlyList<SurvivorObstacle> Obstacles => obstacles;
         public IReadOnlyList<SurvivorEvent> Events => events;
         public int LastMove { get; private set; }
+        /// <summary>Skill branch value that was actually applied last tick (0 when none, masked or failed).</summary>
         public int LastSkill { get; private set; }
         public float LastStepSeconds { get; private set; }
         public bool BossAlive => BossEnemy != null;
-        public SurvivorEnemy BossEnemy { get { for (int i = 0; i < enemyLimit; i++) if (enemies[i].Active && enemies[i].IsBoss) return enemies[i]; return null; } }
-        public int AliveEnemyCount { get { int count = 0; for (int i = 0; i < enemyLimit; i++) if (enemies[i].Active) count++; return count; } }
+        public SurvivorEnemy BossEnemy => bossEnemy != null && bossEnemy.Active ? bossEnemy : null;
+        public int AliveEnemyCount => aliveEnemyCount;
         internal SurvivorEnemy[] EnemyPool => enemies;
         internal SurvivorPickup[] PickupPool => pickups;
         internal SurvivorObstacle[] ObstaclePool => obstacles;
@@ -112,6 +133,7 @@ namespace PersonalArena.Core.Survivor
                 spatialHash = new SpatialHash(Config.MapHalfSize, EnemyCapacity);
             ClearPools();
             GenerateObstacles();
+            BuildObstacleGrid();
             inventory.Clear();
             inventory.Set(Config.ClassDef.StartingWeapon, 1);
             Array.Clear(weaponCooldowns, 0, weaponCooldowns.Length);
@@ -122,6 +144,7 @@ namespace PersonalArena.Core.Survivor
             EndReason = EndReason.None; DeathCause = DeathCause.None; OfferCount = 0;
             pendingLevelUps = 0; spawnAccumulator = 0f; nextEnemyId = 1; nextProjectileId = 1;
             nextEliteIndex = 0; bossSpawned = false; LastMove = 0; LastSkill = 0; LastStepSeconds = 0f;
+            bossEnemy = null; aliveEnemyCount = 0; aliveNormalCount = 0; maxEnemyRadius = 0f; hashDrift = 0f;
             Hero.Position = Vec2.Zero; Hero.Velocity = Vec2.Zero; Hero.Facing = 0f;
             Hero.MaxEnergy = Config.ClassDef.MaxEnergy; Hero.Energy = Hero.MaxEnergy;
             Hero.Radius = Config.ClassDef.Radius; Hero.Alive = true; Hero.Blocking = false;
@@ -131,6 +154,10 @@ namespace PersonalArena.Core.Survivor
             events.Clear();
         }
 
+        /// <summary>
+        /// Advances one fixed tick. Once the run ends (won, died, time up, expired) the remaining
+        /// phases of the tick are skipped, so no hero damage, death or spawn can follow the end event.
+        /// </summary>
         public void Step(SurvivorInput input)
         {
             events.Clear(); LastStepSeconds = 0f;
@@ -143,8 +170,8 @@ namespace PersonalArena.Core.Survivor
 
             LastStepSeconds = FixedDeltaTime;
             CaptureEnemyPositions();
+            Vec2 heroStart = Hero.Position;
             LastMove = input.Move >= 0 && input.Move < SurvivorInput.MoveBranchSize ? input.Move : 0;
-            LastSkill = input.Skill >= 0 && input.Skill < SurvivorInput.SkillBranchSize ? input.Skill : 0;
             Time += FixedDeltaTime;
             TickCooldowns();
             UpdateFacing();
@@ -152,10 +179,11 @@ namespace PersonalArena.Core.Survivor
             MoveHero(input.Move);
             SpawnScheduledEnemies();
             FireWeapons();
-            UpdateProjectiles();
-            UpdateEnemies();
-            ResolveBodyCollisions();
+            if (!IsEnded) UpdateProjectiles();
+            if (!IsEnded) UpdateEnemies();
+            if (!IsEnded) ResolveBodyCollisions();
             FinalizeEnemyVelocities();
+            Hero.Velocity = (Hero.Position - heroStart) / FixedDeltaTime;
             if (IsEnded) return;
             UpdatePickups();
             Regenerate();
@@ -172,6 +200,7 @@ namespace PersonalArena.Core.Survivor
 
         private void ApplySkill(SurvivorInput input)
         {
+            LastSkill = 0;
             SurvivorActionMask.WriteMask(this, moveMask, skillMask, pickMask);
             int selected = input.Skill;
             if (selected < 0 || selected >= skillMask.Length || !skillMask[selected])
@@ -183,6 +212,7 @@ namespace PersonalArena.Core.Survivor
             if (selected == 0) { Hero.Blocking = false; return; }
             int slot = selected - 1;
             SkillDef skill = Config.ClassDef.ActiveSkills[slot];
+            LastSkill = selected;
             if (skill.Kind == SkillKind.Block)
             {
                 if (!Hero.Blocking)
@@ -212,13 +242,17 @@ namespace PersonalArena.Core.Survivor
             AddEvent(SurvivorEventType.SkillUsed, slot, hits);
         }
 
+        /// <summary>
+        /// Moves the hero. Velocity set here is provisional (used by relocation this tick);
+        /// <see cref="Step"/> replaces it with the actual motion after body separation.
+        /// </summary>
         private void MoveHero(int move)
         {
             if (Hero.StunRemaining > 0f) { Hero.Velocity = Vec2.Zero; return; }
             Vec2 old = Hero.Position;
             if (Hero.Dashing)
             {
-                SkillDef dash = Config.ClassDef.ActiveSkills[2];
+                SkillDef dash = Config.ClassDef.ActiveSkills[DashSlot];
                 float distance = MathF.Min(Hero.DashRemaining, dash.DashSpeed * FixedDeltaTime);
                 Hero.Position += Hero.DashDirection * distance;
                 Hero.DashRemaining -= distance;
@@ -226,7 +260,7 @@ namespace PersonalArena.Core.Survivor
             }
             else
             {
-                Vec2 target = MoveDirection(move) * stats.MoveSpeed * (Hero.Blocking ? Config.ClassDef.ActiveSkills[1].BlockMoveMultiplier : 1f);
+                Vec2 target = MoveDirection(move) * stats.MoveSpeed * (Hero.Blocking ? Config.ClassDef.ActiveSkills[BlockSlot].BlockMoveMultiplier : 1f);
                 Vec2 delta = target - Hero.Velocity;
                 float maxChange = Config.ClassDef.Acceleration * FixedDeltaTime;
                 if (delta.Length > maxChange) delta = delta.Normalized() * maxChange;
@@ -242,7 +276,7 @@ namespace PersonalArena.Core.Survivor
         private void UpdateFacing()
         {
             Vec2 direction = Vec2.Zero;
-            float best = 144f;
+            float best = Config.Tuning.FacingRange * Config.Tuning.FacingRange;
             for (int i = 0; i < enemyLimit; i++)
             {
                 if (!enemies[i].Active) continue;
@@ -251,7 +285,7 @@ namespace PersonalArena.Core.Survivor
             }
             if (direction.LengthSquared < 0.001f && Hero.Velocity.LengthSquared > 0.001f) direction = Hero.Velocity;
             if (direction.LengthSquared < 0.001f) return;
-            Hero.Facing = TurnToward(Hero.Facing, direction.Angle(), 720f * MathF.PI / 180f * FixedDeltaTime);
+            Hero.Facing = TurnToward(Hero.Facing, direction.Angle(), Config.Tuning.HeroTurnRateDegPerSec * MathF.PI / 180f * FixedDeltaTime);
         }
 
         private void Regenerate()
@@ -265,15 +299,15 @@ namespace PersonalArena.Core.Survivor
 
         private void CheckRunEnd()
         {
-            if (Config.RunSeconds < 900f && Time >= Config.RunSeconds)
+            float bossTime = Config.Tuning.BossSpawnSeconds;
+            if (Config.RunSeconds < bossTime && Time >= Config.RunSeconds)
             {
                 EndReason = EndReason.TimeUp; AddEvent(SurvivorEventType.RunTimeUp); return;
             }
-            if (Config.RunSeconds >= 900f && !bossSpawned && Time >= 900f)
-            {
-                SpawnBoss();
-            }
-            if (bossSpawned && BossAlive && Time >= Config.BossExpireSeconds)
+            if (Config.RunSeconds < bossTime) return;
+            // A failed boss spawn (enemy pool full) is retried every tick until the expiry time.
+            if (!bossSpawned && Time >= bossTime) SpawnBoss();
+            if (Time >= Config.BossExpireSeconds && (BossAlive || !bossSpawned))
             {
                 EndReason = EndReason.Expired; AddEvent(SurvivorEventType.RunExpired);
             }
@@ -283,32 +317,37 @@ namespace PersonalArena.Core.Survivor
         {
             float oldMax = Hero.MaxHp;
             CharacterBuild b = Config.Build;
-            stats.MaxHp = Config.ClassDef.MaxHp * (1f + 0.1f * inventory.Level(6) + 0.05f * b.Points[(int)StatId.MaxHp]);
-            stats.Armor = Config.ClassDef.Armor + inventory.Level(7) + 0.5f * b.Points[(int)StatId.Armor];
-            stats.Regen = Config.ClassDef.Regen + 0.1f * b.Points[(int)StatId.Regen];
-            stats.Might = 1f + 0.08f * inventory.Level(8) + 0.03f * b.Points[(int)StatId.Might];
-            stats.CritChance = MathF.Min(1f, Config.ClassDef.CritChance + 0.04f * inventory.Level(9) + 0.02f * b.Points[(int)StatId.Crit]);
-            stats.CritDamage = Config.ClassDef.CritDamage + 0.1f * b.Points[(int)StatId.CritDamage];
-            stats.CooldownMul = MathF.Max(0.4f, 1f - 0.06f * inventory.Level(10) - 0.02f * b.Points[(int)StatId.Cooldown]);
-            stats.AreaMul = 1f + 0.08f * inventory.Level(11) + 0.03f * b.Points[(int)StatId.Area];
-            stats.MoveSpeed = Config.ClassDef.MoveSpeed * (1f + 0.08f * inventory.Level(12) + 0.02f * b.Points[(int)StatId.MoveSpeed]);
-            stats.PickupRadius = Config.ClassDef.PickupRadius * (1f + 0.25f * inventory.Level(13) + 0.1f * b.Points[(int)StatId.Magnet]);
-            stats.Luck = 5f * b.Points[(int)StatId.Luck];
-            stats.GreedMul = 1f + 0.05f * b.Points[(int)StatId.Greed];
-            stats.GrowthMul = 1f + 0.03f * b.Points[(int)StatId.Growth];
+            SurvivorClassDef c = Config.ClassDef;
+            stats.MaxHp = c.MaxHp * (1f + Passive(SurvivorCatalog.IronHeartIndex) + Point(b, StatId.MaxHp));
+            stats.Armor = c.Armor + Passive(SurvivorCatalog.BoneArmorIndex) + Point(b, StatId.Armor);
+            stats.Regen = c.Regen + Point(b, StatId.Regen);
+            stats.Might = 1f + Passive(SurvivorCatalog.MightGauntletIndex) + Point(b, StatId.Might);
+            stats.CritChance = MathF.Min(1f, c.CritChance + Passive(SurvivorCatalog.CritEyeIndex) + Point(b, StatId.Crit));
+            stats.CritDamage = c.CritDamage + Point(b, StatId.CritDamage);
+            // Hourglass lowers the cooldown multiplier; the Cooldown stat's per-point value is already negative.
+            stats.CooldownMul = MathF.Max(0.4f, 1f - Passive(SurvivorCatalog.HourglassIndex) + Point(b, StatId.Cooldown));
+            stats.AreaMul = 1f + Passive(SurvivorCatalog.AreaCharmIndex) + Point(b, StatId.Area);
+            stats.MoveSpeed = c.MoveSpeed * (1f + Passive(SurvivorCatalog.WindBootsIndex) + Point(b, StatId.MoveSpeed));
+            stats.PickupRadius = c.PickupRadius * (1f + Passive(SurvivorCatalog.MagnetCharmIndex) + Point(b, StatId.Magnet));
+            stats.Luck = Point(b, StatId.Luck);
+            stats.GreedMul = 1f + Point(b, StatId.Greed);
+            stats.GrowthMul = 1f + Point(b, StatId.Growth);
             stats.TierGold = 1f + 0.5f * (b.Tier - 1);
             Hero.MaxHp = stats.MaxHp;
             if (preserveHpGain && stats.MaxHp > oldMax) Hero.Hp += stats.MaxHp - oldMax;
             Hero.Hp = MathF.Min(Hero.Hp, Hero.MaxHp);
         }
 
+        private float Passive(int index) => SurvivorCatalog.PassivePerLevel(index) * inventory.Level(index);
+        private static float Point(CharacterBuild build, StatId stat) => StatInfo.PerPoint(stat) * build.Points[(int)stat];
+
         private void ClearPools()
         {
-            for (int i = 0; i < enemies.Length; i++) enemies[i].Active = false;
+            for (int i = 0; i < enemies.Length; i++) { enemies[i].Active = false; enemies[i].Separated = false; }
             for (int i = 0; i < projectiles.Length; i++) projectiles[i].Active = false;
             for (int i = 0; i < pickups.Length; i++) pickups[i].Active = false;
             for (int i = 0; i < obstacles.Length; i++) obstacles[i].Active = false;
-            activeObstacleCount = 0;
+            activeObstacleCount = 0; gemCount = 0;
             enemyLimit = 0; projectileLimit = 0; pickupLimit = 0;
             testInvulnerable = false;
             testEnemiesInvulnerable = false;
@@ -318,7 +357,7 @@ namespace PersonalArena.Core.Survivor
         private void GenerateObstacles()
         {
             int made = 0;
-            for (int attempt = 0; attempt < Config.ObstacleCount * 64 && made < Config.ObstacleCount; attempt++)
+            for (int attempt = 0; attempt < Config.ObstacleCount * Config.Tuning.ObstacleAttemptsPerObstacle && made < Config.ObstacleCount; attempt++)
             {
                 float radius = rng.Range(Config.ObstacleRadiusMin, Config.ObstacleRadiusMax);
                 Vec2 point = new Vec2(rng.Range(-Config.MapHalfSize + radius, Config.MapHalfSize - radius), rng.Range(-Config.MapHalfSize + radius, Config.MapHalfSize - radius));
@@ -331,19 +370,116 @@ namespace PersonalArena.Core.Survivor
             activeObstacleCount = made;
         }
 
+        /// <summary>
+        /// Builds per-cell obstacle lists (ascending obstacle index). An obstacle is listed in every cell
+        /// whose square lies within its radius + <see cref="ObstacleGridBodyRadius"/>, so any body of radius
+        /// up to that bound that overlaps the obstacle is in a cell that lists it. Allocates only in Reset.
+        /// </summary>
+        private void BuildObstacleGrid()
+        {
+            int side = Math.Max(1, (int)MathF.Ceiling(Config.MapHalfSize * 2f / ObstacleCellSize));
+            int cells = side * side;
+            obstacleGridSide = side;
+            if (obstacleCellStart.Length < cells + 1) { obstacleCellStart = new int[cells + 1]; obstacleCellFill = new int[cells]; }
+            Array.Clear(obstacleCellStart, 0, cells + 1);
+            for (int pass = 0; pass < 2; pass++)
+            {
+                for (int i = 0; i < activeObstacleCount; i++)
+                {
+                    float reach = obstacles[i].Radius + ObstacleGridBodyRadius + 0.01f;
+                    Vec2 center = obstacles[i].Position;
+                    int minX = ObstacleCellCoord(center.X - reach), maxX = ObstacleCellCoord(center.X + reach);
+                    int minY = ObstacleCellCoord(center.Y - reach), maxY = ObstacleCellCoord(center.Y + reach);
+                    for (int y = minY; y <= maxY; y++)
+                    {
+                        for (int x = minX; x <= maxX; x++)
+                        {
+                            int cell = y * side + x;
+                            if (pass == 0) obstacleCellStart[cell + 1]++;
+                            else obstacleCellItems[obstacleCellFill[cell]++] = i;
+                        }
+                    }
+                }
+                if (pass == 0)
+                {
+                    for (int cell = 0; cell < cells; cell++) obstacleCellStart[cell + 1] += obstacleCellStart[cell];
+                    if (obstacleCellItems.Length < obstacleCellStart[cells]) obstacleCellItems = new int[obstacleCellStart[cells]];
+                    Array.Copy(obstacleCellStart, obstacleCellFill, cells);
+                }
+            }
+        }
+
+        private int ObstacleCellCoord(float coordinate)
+        {
+            int value = (int)MathF.Floor((coordinate + Config.MapHalfSize) / ObstacleCellSize);
+            return value < 0 ? 0 : value >= obstacleGridSide ? obstacleGridSide - 1 : value;
+        }
+
+        private int ObstacleCell(Vec2 point) => ObstacleCellCoord(point.Y) * obstacleGridSide + ObstacleCellCoord(point.X);
+
+        /// <summary>
+        /// Clamps a body inside the map and pushes it out of obstacles, in obstacle index order.
+        /// Same result as scanning every obstacle: until the first push the point cannot overlap an
+        /// obstacle outside its cell list, and after a push the remaining obstacles are scanned in full.
+        /// </summary>
         private void ClampAndPushOut(ref Vec2 point, float radius)
         {
             float limit = Config.MapHalfSize - radius;
             point = new Vec2(MathF.Max(-limit, MathF.Min(limit, point.X)), MathF.Max(-limit, MathF.Min(limit, point.Y)));
-            for (int i = 0; i < activeObstacleCount; i++)
+            if (activeObstacleCount == 0) return;
+            if (radius > ObstacleGridBodyRadius) { PushOutFrom(ref point, radius, 0); return; }
+            int cell = ObstacleCell(point);
+            int end = obstacleCellStart[cell + 1];
+            for (int n = obstacleCellStart[cell]; n < end; n++)
             {
-                if (!obstacles[i].Active) continue;
-                Vec2 delta = point - obstacles[i].Position;
-                float needed = radius + obstacles[i].Radius;
-                if (delta.LengthSquared >= needed * needed) continue;
-                Vec2 direction = delta.LengthSquared > 1e-8f ? delta.Normalized() : Vec2.FromAngle((i + 1) * 1.618f);
-                point = obstacles[i].Position + direction * needed;
+                int i = obstacleCellItems[n];
+                if (PushOut(ref point, radius, i)) { PushOutFrom(ref point, radius, i + 1); return; }
             }
+        }
+
+        private void PushOutFrom(ref Vec2 point, float radius, int first)
+        {
+            for (int i = first; i < activeObstacleCount; i++) PushOut(ref point, radius, i);
+        }
+
+        private bool PushOut(ref Vec2 point, float radius, int i)
+        {
+            SurvivorObstacle obstacle = obstacles[i];
+            if (!obstacle.Active) return false;
+            Vec2 delta = point - obstacle.Position;
+            float needed = radius + obstacle.Radius;
+            if (delta.LengthSquared >= needed * needed) return false;
+            Vec2 direction = delta.LengthSquared > 1e-8f ? delta.Normalized() : Vec2.FromAngle((i + 1) * 1.618f);
+            point = obstacle.Position + direction * needed;
+            return true;
+        }
+
+        /// <summary>True when a disc at <paramref name="point"/> comes closer than <paramref name="clearance"/> to an obstacle's edge.</summary>
+        private bool OverlapsObstacle(Vec2 point, float clearance)
+        {
+            if (activeObstacleCount == 0) return false;
+            if (clearance > ObstacleGridBodyRadius)
+            {
+                for (int i = 0; i < activeObstacleCount; i++) if (Blocks(i, point, clearance)) return true;
+                return false;
+            }
+            int cell = ObstacleCell(point);
+            int end = obstacleCellStart[cell + 1];
+            for (int n = obstacleCellStart[cell]; n < end; n++) if (Blocks(obstacleCellItems[n], point, clearance)) return true;
+            return false;
+        }
+
+        private bool Blocks(int i, Vec2 point, float clearance)
+        {
+            if (!obstacles[i].Active) return false;
+            float needed = obstacles[i].Radius + clearance;
+            return (point - obstacles[i].Position).LengthSquared < needed * needed;
+        }
+
+        private void RebuildHash()
+        {
+            spatialHash.Rebuild(enemies, enemyLimit);
+            hashDrift = 0f;
         }
 
         private static Vec2 MoveDirection(int move) => move <= 0 || move >= 9 ? Vec2.Zero : Vec2.FromAngle((move - 1) * MathF.PI / 4f);
@@ -364,8 +500,8 @@ namespace PersonalArena.Core.Survivor
         internal void SetHeroInvulnerableForTests() { testInvulnerable = true; }
         internal void SetEnemiesInvulnerableForTests() { testEnemiesInvulnerable = true; }
         internal void DisablePickupCollectionForTests() { testDisablePickupCollection = true; }
-        internal SurvivorEnemy SpawnEnemyForTests(int type, Vec2 position, bool elite = false) => SpawnEnemy(type, position, elite, type == 4);
-        internal void DamageEnemyForTests(SurvivorEnemy enemy, float damage) => DamageEnemy(enemy, damage, 0f);
+        internal SurvivorEnemy SpawnEnemyForTests(int type, Vec2 position, bool elite = false) => SpawnEnemy(type, position, elite, type == BossTypeIndex);
+        internal void DamageEnemyForTests(SurvivorEnemy enemy, float damage) => DamageEnemy(enemy, damage, 0f, Vec2.Zero);
         internal void GiveXpForTests(float xp) => CollectXp(xp);
         internal void SetXpForTests(float xp) { Xp = xp; }
         internal void SpawnGemForTests(Vec2 point, float value) => SpawnGem(point, value);
@@ -375,6 +511,7 @@ namespace PersonalArena.Core.Survivor
         internal void SetEnemyVelocityForTests(SurvivorEnemy enemy, Vec2 velocity) { enemy.Velocity = velocity; }
         internal void DamageHeroForTests(float raw, SurvivorEnemy source, bool contact = true) => DamageHero(raw, source, contact);
         internal SurvivorPickup SpawnPickupForTests(PickupKind kind, Vec2 point, float value) => SpawnPickup(kind, point, value, false);
+        internal float WeaponCooldownForTests(int index) => weaponCooldowns[index];
 
         private void CaptureEnemyPositions()
         {

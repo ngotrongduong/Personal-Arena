@@ -45,14 +45,18 @@ namespace PersonalArena.Core.Survivor
         {
             if (sim == null) throw new ArgumentNullException(nameof(sim));
             if (brain == null) return default;
-            if (ticksUntilDecision <= 0 || sim.IsAwaitingPick)
+            bool awaitingPick = sim.IsAwaitingPick;
+            if (ticksUntilDecision <= 0 || awaitingPick)
             {
                 writer.Write(sim, observation); SurvivorActionMask.WriteMask(sim, moveMask, skillMask, pickMask); brain.Evaluate(observation, logits);
                 Rng sampler = Deterministic ? null : rng;
                 int move = PolicyBrain.ChooseAction(logits, 0, SurvivorInput.MoveBranchSize, moveMask, sampler);
                 int skill = PolicyBrain.ChooseAction(logits, SurvivorInput.MoveBranchSize, SurvivorInput.SkillBranchSize, skillMask, sampler);
                 int pick = PolicyBrain.ChooseAction(logits, SurvivorInput.MoveBranchSize + SurvivorInput.SkillBranchSize, SurvivorInput.PickBranchSize, pickMask, sampler);
-                current = new SurvivorInput(move, skill, pick); ticksUntilDecision = DecisionPeriod;
+                current = new SurvivorInput(move, skill, pick);
+                // A pick decision is made on a paused tick, so the first unpaused tick decides afresh.
+                if (awaitingPick) { ticksUntilDecision = 0; return current; }
+                ticksUntilDecision = DecisionPeriod;
             }
             ticksUntilDecision--; return current;
         }

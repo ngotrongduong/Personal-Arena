@@ -63,6 +63,7 @@ namespace PersonalArena.Core.Survivor
         internal float ContactCooldown;
         internal float SummonCooldown;
         internal bool RelocatedThisTick;
+        internal bool Separated;
     }
 
     public sealed class SurvivorProjectile

@@ -46,5 +46,63 @@ namespace PersonalArena.Core.Tests.Survivor
                 Assert.That(changed.Config.Build.Level, Is.EqualTo(1));
             }
         }
+
+        [Test]
+        public void StatPoint_ChangesExactlyItsOwnDerivedStat()
+        {
+            SurvivorClassDef warrior = SurvivorDefaults.Warrior();
+            float[] baseline = Derived(new SurvivorSim(SurvivorTestHelpers.Config(), 1).DerivedStats);
+            for (int stat = 0; stat < StatInfo.UsedCount; stat++)
+            {
+                SurvivorConfig config = SurvivorTestHelpers.Config(); config.Build.Points[stat] = 1;
+                float[] changed = Derived(new SurvivorSim(config, 1).DerivedStats);
+                // Derived() lists the stats in StatId order, so stat k must move only entry k.
+                float perPoint = StatInfo.PerPoint((StatId)stat);
+                float scale = (StatId)stat switch { StatId.MaxHp => warrior.MaxHp, StatId.MoveSpeed => warrior.MoveSpeed, StatId.Magnet => warrior.PickupRadius, _ => 1f };
+                for (int k = 0; k < changed.Length; k++)
+                {
+                    if (k == stat) Assert.That(changed[k] - baseline[k], Is.EqualTo(perPoint * scale).Within(1e-4f), ((StatId)stat).ToString());
+                    else Assert.That(changed[k], Is.EqualTo(baseline[k]), ((StatId)stat) + " also moved derived stat " + k);
+                }
+            }
+        }
+
+        [Test]
+        public void PassiveLevel_ChangesExactlyItsOwnDerivedStat()
+        {
+            SurvivorClassDef warrior = SurvivorDefaults.Warrior();
+            float[] baseline = Derived(new SurvivorSim(SurvivorTestHelpers.Config(), 1).DerivedStats);
+            int[] items = { SurvivorCatalog.IronHeartIndex, SurvivorCatalog.BoneArmorIndex, SurvivorCatalog.CritEyeIndex, SurvivorCatalog.WindBootsIndex };
+            int[] derivedIndex = { (int)StatId.MaxHp, (int)StatId.Armor, (int)StatId.Crit, (int)StatId.MoveSpeed };
+            float[] expected = { warrior.MaxHp * 0.1f * 2f, 2f, 0.04f * 2f, warrior.MoveSpeed * 0.08f * 2f };
+            for (int n = 0; n < items.Length; n++)
+            {
+                Assert.That(SurvivorCatalog.Get(items[n]).PerLevel, Is.EqualTo(SurvivorCatalog.PassivePerLevel(items[n])));
+                SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.Config(), 1); sim.GiveItemForTests(items[n], 2);
+                float[] changed = Derived(sim.DerivedStats);
+                for (int k = 0; k < changed.Length; k++)
+                {
+                    if (k == derivedIndex[n]) Assert.That(changed[k] - baseline[k], Is.EqualTo(expected[n]).Within(1e-4f), "item " + items[n]);
+                    else Assert.That(changed[k], Is.EqualTo(baseline[k]), "item " + items[n] + " also moved derived stat " + k);
+                }
+            }
+        }
+
+        [Test]
+        public void Tuning_DefaultsValidate_AndRejectBadValues()
+        {
+            Assert.DoesNotThrow(() => new SurvivorConfig().Validate());
+            SurvivorConfig negative = new SurvivorConfig(); negative.Tuning.GoldChance = -0.1f;
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => negative.Validate());
+            SurvivorConfig ring = new SurvivorConfig(); ring.Tuning.SpawnRingMin = 30f;
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => ring.Validate());
+        }
+
+        // Same order as StatId (MaxHp..Growth), then TierGold.
+        private static float[] Derived(SurvivorDerivedStats s) => new[]
+        {
+            s.MaxHp, s.Armor, s.Regen, s.Might, s.CritChance, s.CritDamage, s.CooldownMul, s.AreaMul,
+            s.MoveSpeed, s.PickupRadius, s.Luck, s.GreedMul, s.GrowthMul, s.TierGold
+        };
     }
 }

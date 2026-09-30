@@ -22,6 +22,26 @@ namespace PersonalArena.Core.Tests.Survivor
         }
 
         [Test]
+        public void Pilot_DecidesAfreshAfterPick()
+        {
+            SurvivorPilot pilot = new SurvivorPilot(SurvivorTestHelpers.Brain(favouredMove: 3, favouredPick: 1), 7) { Deterministic = true };
+            SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.Config(), 7); sim.GiveXpForTests(5f); sim.Step(default);
+            Assert.That(sim.IsAwaitingPick, Is.True);
+            SurvivorInput pickInput = pilot.NextInput(sim);
+            Assert.That(pickInput.Move, Is.EqualTo(0), "movement is masked while paused"); Assert.That(pickInput.Pick, Is.EqualTo(1));
+            sim.Step(pickInput); Assert.That(sim.IsAwaitingPick, Is.False);
+            SurvivorInput next = pilot.NextInput(sim);
+            Assert.That(next.Move, Is.EqualTo(3), "stale paused-tick input must not be replayed"); Assert.That(next.Pick, Is.EqualTo(0));
+            for (int i = 1; i < SurvivorPilot.DecisionPeriod; i++) { sim.Step(next); Assert.That(pilot.NextInput(sim).Move, Is.EqualTo(3)); }
+        }
+
+        [Test]
+        public void Evaluator_PilotSeedIsSalted()
+        {
+            Assert.That(SurvivorEvaluator.PilotSeedSalt, Is.EqualTo(0x5EED5EED));
+        }
+
+        [Test]
         public void Determinism_TwoSimsSameSeed()
         {
             SurvivorSim a = new SurvivorSim(SurvivorTestHelpers.Config(), 99); SurvivorSim b = new SurvivorSim(SurvivorTestHelpers.Config(), 99);

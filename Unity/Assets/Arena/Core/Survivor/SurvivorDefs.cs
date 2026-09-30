@@ -22,9 +22,27 @@ namespace PersonalArena.Core.Survivor
         public int MaxLevel { get; init; } = 5;
         public float BaseDamage { get; init; }
         public float DamagePerLevel { get; init; }
+        /// <summary>Sweep: arc radius at level 1. Thrown: how far a target may be (m).</summary>
         public float BaseRange { get; init; }
         public float BaseCooldown { get; init; }
         public float Knockback { get; init; }
+        /// <summary>Sweep range growth per level above 1 (fraction of <see cref="BaseRange"/>).</summary>
+        public float RangePerLevel { get; init; }
+        /// <summary>Total arc width of an arc weapon (degrees).</summary>
+        public float ArcDegrees { get; init; }
+        /// <summary>Level from which the sweep also hits behind the hero (0 = never).</summary>
+        public int BackArcLevel { get; init; }
+        public float ProjectileSpeed { get; init; }
+        /// <summary>Projectile radius before the hero's area multiplier.</summary>
+        public float ProjectileRadius { get; init; }
+        /// <summary>Distance a projectile flies before it expires (lifetime = range / speed).</summary>
+        public float ProjectileRange { get; init; }
+        /// <summary>Extra enemies a projectile may hit after the first.</summary>
+        public int Pierce { get; init; }
+        /// <summary>Projectiles per volley, indexed by level − 1.</summary>
+        public IReadOnlyList<int> CountByLevel { get; init; } = Array.Empty<int>();
+        /// <summary>Passive: effect per level (see <see cref="SurvivorCatalog.PassivePerLevel"/>).</summary>
+        public float PerLevel { get; init; }
     }
 
     public static class SurvivorCatalog
@@ -33,12 +51,34 @@ namespace PersonalArena.Core.Survivor
         public const int MaxWeapons = 4;
         public const int MaxPassives = 4;
 
-        private static readonly ItemDef Sweep = Weapon(0, "sword-sweep", "Kiếm quét", WeaponPattern.Sweep, 20f, 8f, 2.5f, 1.2f);
-        private static readonly ItemDef Hammer = Weapon(3, "thrown-hammer", "Búa ném", WeaponPattern.Thrown, 25f, 7f, 10f, 1.5f);
-        private static readonly ItemDef IronHeart = Passive(6, "iron-heart", "Tim sắt");
-        private static readonly ItemDef BoneArmor = Passive(7, "bone-armor", "Giáp xương");
-        private static readonly ItemDef CritEye = Passive(9, "crit-eye", "Mắt chí mạng");
-        private static readonly ItemDef WindBoots = Passive(12, "wind-boots", "Ủng gió");
+        public const int IronHeartIndex = 6;
+        public const int BoneArmorIndex = 7;
+        public const int MightGauntletIndex = 8;
+        public const int CritEyeIndex = 9;
+        public const int HourglassIndex = 10;
+        public const int AreaCharmIndex = 11;
+        public const int WindBootsIndex = 12;
+        public const int MagnetCharmIndex = 13;
+        public const int BonusGoldIndex = 62;
+        public const int BonusHealIndex = 63;
+
+        private static readonly ItemDef Sweep = new ItemDef
+        {
+            CatalogIndex = 0, Id = "sword-sweep", Name = "Kiếm quét", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Sweep,
+            BaseDamage = 20f, DamagePerLevel = 8f, BaseRange = 2.5f, BaseCooldown = 1.2f, Knockback = 0.5f,
+            RangePerLevel = 0.1f, ArcDegrees = 120f, BackArcLevel = 5
+        };
+        private static readonly ItemDef Hammer = new ItemDef
+        {
+            CatalogIndex = 3, Id = "thrown-hammer", Name = "Búa ném", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Thrown,
+            BaseDamage = 25f, DamagePerLevel = 7f, BaseRange = 10f, BaseCooldown = 1.5f, Knockback = 0.5f,
+            ProjectileSpeed = 12f, ProjectileRadius = 0.4f, ProjectileRange = 12f, Pierce = 1,
+            CountByLevel = Array.AsReadOnly(new[] { 1, 2, 2, 3, 3 })
+        };
+        private static readonly ItemDef IronHeart = Passive(IronHeartIndex, "iron-heart", "Tim sắt");
+        private static readonly ItemDef BoneArmor = Passive(BoneArmorIndex, "bone-armor", "Giáp xương");
+        private static readonly ItemDef CritEye = Passive(CritEyeIndex, "crit-eye", "Mắt chí mạng");
+        private static readonly ItemDef WindBoots = Passive(WindBootsIndex, "wind-boots", "Ủng gió");
         private static readonly ItemDef BonusGold = Filler(62, "bonus-gold", "+25 vàng");
         private static readonly ItemDef BonusHeal = Filler(63, "bonus-heal", "Hồi 30 máu");
 
@@ -58,19 +98,30 @@ namespace PersonalArena.Core.Survivor
             };
         }
 
-        private static ItemDef Weapon(int index, string id, string name, WeaponPattern pattern,
-            float damage, float damagePerLevel, float range, float cooldown)
+        /// <summary>
+        /// Effect per level of a passive row (reserved rows included, so the derived-stat formulas
+        /// already cover them): iron-heart +10% max HP, bone-armor +1 armor, might-gauntlet +8% damage,
+        /// crit-eye +4% crit chance, hourglass −6% cooldown (returned positive), area-charm +8% area,
+        /// wind-boots +8% move speed, magnet-charm +25% pickup radius. 0 for other rows.
+        /// </summary>
+        public static float PassivePerLevel(int index)
         {
-            return new ItemDef
+            return index switch
             {
-                CatalogIndex = index, Id = id, Name = name, Kind = ItemKind.Weapon,
-                Pattern = pattern, BaseDamage = damage, DamagePerLevel = damagePerLevel,
-                BaseRange = range, BaseCooldown = cooldown, Knockback = 0.5f
+                IronHeartIndex => 0.1f,
+                BoneArmorIndex => 1f,
+                MightGauntletIndex => 0.08f,
+                CritEyeIndex => 0.04f,
+                HourglassIndex => 0.06f,
+                AreaCharmIndex => 0.08f,
+                WindBootsIndex => 0.08f,
+                MagnetCharmIndex => 0.25f,
+                _ => 0f
             };
         }
 
         private static ItemDef Passive(int index, string id, string name) =>
-            new ItemDef { CatalogIndex = index, Id = id, Name = name, Kind = ItemKind.Passive };
+            new ItemDef { CatalogIndex = index, Id = id, Name = name, Kind = ItemKind.Passive, PerLevel = PassivePerLevel(index) };
 
         private static ItemDef Filler(int index, string id, string name) =>
             new ItemDef { CatalogIndex = index, Id = id, Name = name, Kind = ItemKind.Filler, MaxLevel = 0 };
