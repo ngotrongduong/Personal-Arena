@@ -1,12 +1,14 @@
 using System;
 using System.IO;
 using NUnit.Framework;
-using PersonalArena.Core;
+using PersonalArena.Core.Survivor;
 
 namespace PersonalArena.View.Tests
 {
     public sealed class BrainLocatorTests
     {
+        private const int Current = SurvivorObservation.SchemaVersion;
+
         private string root;
 
         [SetUp]
@@ -23,6 +25,13 @@ namespace PersonalArena.View.Tests
             {
                 Directory.Delete(root, true);
             }
+        }
+
+        [Test]
+        public void CurrentSchema_IsTheSurvivorObservationSchema()
+        {
+            Assert.That(BrainLocator.CurrentSchemaVersion, Is.EqualTo(4));
+            Assert.That(BrainLocator.SchemaFileName, Is.EqualTo("schema_version.txt"));
         }
 
         [Test]
@@ -50,24 +59,25 @@ namespace PersonalArena.View.Tests
         }
 
         [Test]
-        public void RunRulesVersion_DefaultsToOneForMissingOrBadFiles()
+        public void RunSchemaVersion_DefaultsToOneForMissingOrBadFiles()
         {
             string run = Directory.CreateDirectory(Path.Combine(root, "warrior-001")).FullName;
 
-            Assert.That(BrainLocator.RunRulesVersion(run), Is.EqualTo(1));
-            File.WriteAllText(Path.Combine(run, BrainLocator.RulesFileName), "not a number");
-            Assert.That(BrainLocator.RunRulesVersion(run), Is.EqualTo(1));
-            File.WriteAllText(Path.Combine(run, BrainLocator.RulesFileName), ArenaSim.RulesVersion.ToString());
-            Assert.That(BrainLocator.RunRulesVersion(run), Is.EqualTo(ArenaSim.RulesVersion));
+            Assert.That(BrainLocator.RunSchemaVersion(run), Is.EqualTo(1));
+            Assert.That(BrainLocator.RunSchemaVersion(null), Is.EqualTo(1));
+            File.WriteAllText(Path.Combine(run, BrainLocator.SchemaFileName), "not a number");
+            Assert.That(BrainLocator.RunSchemaVersion(run), Is.EqualTo(1));
+            File.WriteAllText(Path.Combine(run, BrainLocator.SchemaFileName), Current + "\n");
+            Assert.That(BrainLocator.RunSchemaVersion(run), Is.EqualTo(Current));
         }
 
         [Test]
-        public void FindNewestBrain_SkipsNewerBrainFromOldRules()
+        public void FindNewestBrain_SkipsNewerBrainFromOtherSchema()
         {
-            string current = WriteBrain("warrior-002", "Warrior",
+            string current = WriteBrain("survivor-001", "Warrior",
                 new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
-            string old = WriteBrain("warrior-001", "Warrior",
-                new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc), 1);
+            string old = WriteBrain("warrior-002", "Warrior",
+                new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc), 3);
 
             Assert.That(BrainLocator.FindNewestBrain(root, "Warrior"), Is.EqualTo(current));
             Assert.That(BrainLocator.FindNewestBrain(root, "Warrior", false), Is.EqualTo(current));
@@ -80,14 +90,23 @@ namespace PersonalArena.View.Tests
         }
 
         [Test]
-        public void FindNewestRunDirectory_UsesNewestFileFromCurrentRulesRun()
+        public void FindNewestBrain_SkipsFutureSchema()
+        {
+            WriteBrain("survivor-next", "Warrior", new DateTime(2026, 5, 1, 0, 0, 0, DateTimeKind.Utc), Current + 1);
+            string current = WriteBrain("survivor-001", "Warrior", new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+
+            Assert.That(BrainLocator.FindNewestBrain(root, "Warrior"), Is.EqualTo(current));
+        }
+
+        [Test]
+        public void FindNewestRunDirectory_UsesNewestFileFromCurrentSchemaRun()
         {
             string older = WriteRunFile("warrior-001", "Warrior", "events.old",
-                new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), ArenaSim.RulesVersion);
+                new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), Current);
             string newer = WriteRunFile("warrior-002", "Warrior", "events.new",
-                new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc), ArenaSim.RulesVersion);
+                new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc), Current);
             WriteRunFile("warrior-legacy", "Warrior", "events.legacy",
-                new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc), 1);
+                new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc), 3);
 
             Assert.That(BrainLocator.FindNewestRunDirectory(root, "Warrior"),
                 Is.EqualTo(Directory.GetParent(Directory.GetParent(newer).FullName).FullName));
@@ -96,11 +115,11 @@ namespace PersonalArena.View.Tests
         }
 
         private string WriteBrain(string run, string behavior, DateTime writtenUtc,
-            int rulesVersion = ArenaSim.RulesVersion)
+            int schemaVersion = Current)
         {
             string folder = Directory.CreateDirectory(Path.Combine(root, run, behavior)).FullName;
-            File.WriteAllText(Path.Combine(Directory.GetParent(folder).FullName, BrainLocator.RulesFileName),
-                rulesVersion.ToString());
+            File.WriteAllText(Path.Combine(Directory.GetParent(folder).FullName, BrainLocator.SchemaFileName),
+                schemaVersion.ToString());
             string path = Path.Combine(folder, BrainLocator.LatestFileName);
             File.WriteAllBytes(path, new byte[] { 1 });
             File.SetLastWriteTimeUtc(path, writtenUtc);
@@ -108,11 +127,11 @@ namespace PersonalArena.View.Tests
         }
 
         private string WriteRunFile(string run, string behavior, string fileName, DateTime writtenUtc,
-            int rulesVersion)
+            int schemaVersion)
         {
             string folder = Directory.CreateDirectory(Path.Combine(root, run, behavior)).FullName;
-            File.WriteAllText(Path.Combine(Directory.GetParent(folder).FullName, BrainLocator.RulesFileName),
-                rulesVersion.ToString());
+            File.WriteAllText(Path.Combine(Directory.GetParent(folder).FullName, BrainLocator.SchemaFileName),
+                schemaVersion.ToString());
             string path = Path.Combine(folder, fileName);
             File.WriteAllText(path, "event");
             File.SetLastWriteTimeUtc(path, writtenUtc);

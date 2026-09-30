@@ -45,7 +45,7 @@ namespace PersonalArena.View.Editor
                 // KayKit rangers hold the bow in the left hand.
                 Hero("archer", "Ranger", null, "bow", 1f)
             };
-            // Indexed by ZombieTypeDef.TypeIndex: walker, runner, brute, spitter.
+            // Indexed by zombie type: walker, runner, brute, spitter.
             art.Walkers = new[]
             {
                 Walker("Skeleton_Minion", "Skeleton_Blade", null, 1f, false),

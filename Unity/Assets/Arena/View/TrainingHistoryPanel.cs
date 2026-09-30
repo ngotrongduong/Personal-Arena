@@ -217,13 +217,13 @@ namespace PersonalArena.View
                     "Arena/Kills", null, new Color(1f, 0.58f, 0.22f), false),
                 new ChartDefinition("Seconds survived", "Higher = the AI stays alive longer",
                     "Arena/SurvivedSeconds", null, new Color(0.3f, 0.65f, 1f), false),
-                new ChartDefinition("Fell into the abyss", "Lower = better footwork near the edge",
-                    "Arena/Fell", null, new Color(1f, 0.34f, 0.34f), true),
-                new ChartDefinition("Zombies knocked into the abyss", "Kicks that throw zombies off the edge",
-                    "Arena/RingOuts", null, new Color(0.72f, 0.45f, 1f), false),
-                new ChartDefinition("Difficulty level (zombies in training)",
-                    "Goes up as the AI passes each lesson", "Arena/ZombieCount",
-                    "Environment/Lesson Number/zombie_count", new Color(1f, 0.83f, 0.28f), false)
+                new ChartDefinition("Died before the timer", "Lower = the AI dies less often",
+                    "Arena/Died", null, new Color(1f, 0.34f, 0.34f), true),
+                new ChartDefinition("Level reached per round", "Higher = more EXP collected and upgrades picked",
+                    "Arena/Level", null, new Color(0.72f, 0.45f, 1f), false),
+                new ChartDefinition("Round length in training (seconds)",
+                    "Goes up as the AI passes each lesson", "Arena/RunSeconds",
+                    "Environment/Lesson Number/run_seconds", new Color(1f, 0.83f, 0.28f), false)
             };
 
             const float columnGap = 18f;

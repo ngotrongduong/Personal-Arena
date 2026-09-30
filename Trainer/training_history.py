@@ -43,7 +43,7 @@ def _newest_run_dir(runs_dir: Path, behavior: str) -> Path | None:
     candidates = [
         path
         for path in candidates
-        if arena_trainer.run_rules_version(path) == arena_trainer.RULES_VERSION
+        if arena_trainer.run_schema_version(path) == arena_trainer.SCHEMA_VERSION
     ]
     if not candidates:
         return None
@@ -93,7 +93,7 @@ def discover_behaviors(runs_dir: Path, run_id: str | None = None) -> list[str]:
         if (
             not run_dir.is_dir()
             or run_dir.name == "run_logs"
-            or arena_trainer.run_rules_version(run_dir) != arena_trainer.RULES_VERSION
+            or arena_trainer.run_schema_version(run_dir) != arena_trainer.SCHEMA_VERSION
         ):
             continue
         for behavior_dir in run_dir.iterdir():
@@ -139,7 +139,7 @@ def build_history(run_dir: Path, behavior: str, max_points: int = 240) -> dict |
     return {
         "run_id": run_dir.name,
         "behavior": behavior,
-        "rules_version": arena_trainer.run_rules_version(run_dir),
+        "schema_version": arena_trainer.run_schema_version(run_dir),
         "updated_unix": time.time(),
         "last_step": last_step,
         "series": series,

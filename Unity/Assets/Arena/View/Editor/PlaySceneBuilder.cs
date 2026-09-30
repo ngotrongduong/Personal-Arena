@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -12,27 +11,15 @@ namespace PersonalArena.View.Editor
     public static class PlaySceneBuilder
     {
         private const string SceneFolder = "Assets/Scenes";
-        private const string ScenePath = SceneFolder + "/ArenaPlay.unity";
         public const string WatchScenePath = SceneFolder + "/ArenaWatch.unity";
-
-        [MenuItem("Personal Arena/Build Play Scene")]
-        public static void Build()
-        {
-            Run(() =>
-            {
-                BuildScene(ScenePath, typeof(KeyboardArenaController));
-                SetFirstBuildScene(ScenePath);
-                Debug.Log("Built Personal Arena play scene at " + ScenePath);
-            });
-        }
 
         [MenuItem("Personal Arena/Build Watch AI Scene")]
         public static void BuildWatch()
         {
             Run(() =>
             {
-                BuildScene(WatchScenePath, typeof(AiArenaController));
-                Debug.Log("Built Personal Arena watch-AI scene at " + WatchScenePath);
+                BuildSurvivorScene(WatchScenePath);
+                Debug.Log("Built Personal Arena watch-AI (survivor) scene at " + WatchScenePath);
             });
         }
 
@@ -58,59 +45,75 @@ namespace PersonalArena.View.Editor
             }
         }
 
-        internal static void BuildScene(string scenePath, Type controllerType)
+        /// <summary>Builds the survivor "Watch AI" scene: moonlit graveyard, follow camera, renderer, HUD and controller.</summary>
+        internal static void BuildSurvivorScene(string scenePath)
         {
             EnsureSceneFolder();
             KayKitArtSetBuilder.EnsureArtSet();
+            SurvivorArtSetBuilder.EnsureArtSet();
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             // Load after NewScene: opening a scene unloads unused assets, which would drop an earlier reference.
             ArenaArtSet artSet = AssetDatabase.LoadAssetAtPath<ArenaArtSet>(KayKitArtSetBuilder.AssetPath);
+            SurvivorArtSet survivorArt = AssetDatabase.LoadAssetAtPath<SurvivorArtSet>(SurvivorArtSetBuilder.AssetPath);
+            if (artSet == null || survivorArt == null)
+            {
+                throw new InvalidOperationException("Survivor art sets are missing.");
+            }
 
-            // Moody floating-arena light: a cool moon-like key plus flat ambient; braziers add warm pools at runtime.
-            // ArenaStage retunes the fog every frame from the camera distance so the abyss always fades to violet.
+            // Moonlit graveyard: cool key light, bluish ambient and a dark violet fog that hides the map edge.
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.28f, 0.28f, 0.4f);
+            RenderSettings.ambientLight = new Color(0.32f, 0.33f, 0.46f);
+            // No daylight skybox: its reflections would grey out the dark night ground and props.
+            RenderSettings.skybox = null;
+            RenderSettings.defaultReflectionMode = UnityEngine.Rendering.DefaultReflectionMode.Skybox;
+            RenderSettings.reflectionIntensity = 0.25f;
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
-            RenderSettings.fogColor = new Color(0.05f, 0.035f, 0.08f);
-            RenderSettings.fogStartDistance = 40f;
-            RenderSettings.fogEndDistance = 75f;
-            GameObject lightObject = new GameObject("Directional Light");
+            RenderSettings.fogColor = new Color(0.06f, 0.05f, 0.1f);
+            RenderSettings.fogStartDistance = 34f;
+            RenderSettings.fogEndDistance = 80f;
+            GameObject lightObject = new GameObject("Moon Light");
             Light light = lightObject.AddComponent<Light>();
             light.type = LightType.Directional;
-            light.color = new Color(0.8f, 0.84f, 1f);
-            light.intensity = 0.75f;
+            light.color = new Color(0.78f, 0.84f, 1f);
+            light.intensity = 0.85f;
             light.shadows = LightShadows.Soft;
-            light.shadowStrength = 0.75f;
-            lightObject.transform.rotation = Quaternion.Euler(52f, -28f, 0f);
+            light.shadowStrength = 0.7f;
+            lightObject.transform.rotation = Quaternion.Euler(50f, -32f, 0f);
+
+            GameObject survivorObject = new GameObject("Survivor");
+            SurvivorRenderer survivorRenderer = survivorObject.AddComponent<SurvivorRenderer>();
+            SerializedObject rendererObject = new SerializedObject(survivorRenderer);
+            rendererObject.FindProperty("artSet").objectReferenceValue = artSet;
+            rendererObject.FindProperty("survivorArt").objectReferenceValue = survivorArt;
+            rendererObject.ApplyModifiedPropertiesWithoutUndo();
+            SurvivorHud hud = survivorObject.AddComponent<SurvivorHud>();
+            SurvivorWatchController controller = survivorObject.AddComponent<SurvivorWatchController>();
 
             GameObject cameraObject = new GameObject("Main Camera");
             cameraObject.tag = "MainCamera";
             Camera camera = cameraObject.AddComponent<Camera>();
             camera.depth = 0f;
             cameraObject.AddComponent<AudioListener>();
-            cameraObject.AddComponent<TopDownCamera>();
+            SurvivorCamera followCamera = cameraObject.AddComponent<SurvivorCamera>();
+            SerializedObject cameraSettings = new SerializedObject(followCamera);
+            cameraSettings.FindProperty("target").objectReferenceValue = survivorRenderer;
+            cameraSettings.ApplyModifiedPropertiesWithoutUndo();
+
+            SerializedObject controllerObject = new SerializedObject(controller);
+            controllerObject.FindProperty("survivorRenderer").objectReferenceValue = survivorRenderer;
+            controllerObject.FindProperty("hud").objectReferenceValue = hud;
+            controllerObject.FindProperty("followCamera").objectReferenceValue = followCamera;
+            controllerObject.ApplyModifiedPropertiesWithoutUndo();
 
             GameObject eventSystemObject = new GameObject("EventSystem");
             eventSystemObject.AddComponent<EventSystem>();
             eventSystemObject.AddComponent<InputSystemUIInputModule>();
 
-            GameObject arenaObject = new GameObject("Arena");
-            ArenaRenderer arenaRenderer = arenaObject.AddComponent<ArenaRenderer>();
-            SerializedObject rendererObject = new SerializedObject(arenaRenderer);
-            rendererObject.FindProperty("artSet").objectReferenceValue = artSet;
-            rendererObject.ApplyModifiedPropertiesWithoutUndo();
-            if (artSet == null || new SerializedObject(arenaRenderer).FindProperty("artSet").objectReferenceValue == null)
-            {
-                throw new InvalidOperationException("Arena art set was not assigned to the renderer.");
-            }
-            arenaObject.AddComponent<ArenaHud>();
-            arenaObject.AddComponent(controllerType);
-
             EditorSceneManager.SaveScene(scene, scenePath);
             EnsureAlwaysIncludedShader("Standard");
             EnsureAlwaysIncludedShader(FxAssets.ShaderName);
-            Selection.activeGameObject = arenaObject;
+            Selection.activeGameObject = survivorObject;
             AssetDatabase.SaveAssets();
         }
 
@@ -147,23 +150,6 @@ namespace PersonalArena.View.Editor
             shaders.InsertArrayElementAtIndex(index);
             shaders.GetArrayElementAtIndex(index).objectReferenceValue = shader;
             graphicsSettings.ApplyModifiedProperties();
-        }
-
-        private static void SetFirstBuildScene(string path)
-        {
-            EditorBuildSettingsScene[] existing = EditorBuildSettings.scenes;
-            List<EditorBuildSettingsScene> scenes = new List<EditorBuildSettingsScene>(existing.Length + 1)
-            {
-                new EditorBuildSettingsScene(path, true)
-            };
-            for (int i = 0; i < existing.Length; i++)
-            {
-                if (!string.Equals(existing[i].path, path, StringComparison.OrdinalIgnoreCase))
-                {
-                    scenes.Add(existing[i]);
-                }
-            }
-            EditorBuildSettings.scenes = scenes.ToArray();
         }
     }
 }

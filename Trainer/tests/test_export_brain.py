@@ -7,17 +7,24 @@ import pytest
 from Trainer import arena_trainer, export_brain
 
 
-def actor_state(obs: int = 6, hidden: int = 4, branches=(9, 3, 5), seed: int = 0) -> dict:
+def actor_state(
+    obs: int = 6,
+    hidden: int = 4,
+    branches=(9, 3, 5),
+    layers: int = 2,
+    seed: int = 0,
+) -> dict:
     rng = np.random.default_rng(seed)
     state = {
         "version_number": np.array([3.0]),
         "memory_size_vector": np.array([0.0]),
         "discrete_act_size_vector": np.array([list(branches)], dtype=np.float32),
-        "network_body._body_endoder.seq_layers.0.weight": rng.normal(size=(hidden, obs)),
-        "network_body._body_endoder.seq_layers.0.bias": rng.normal(size=hidden),
-        "network_body._body_endoder.seq_layers.2.weight": rng.normal(size=(hidden, hidden)),
-        "network_body._body_endoder.seq_layers.2.bias": rng.normal(size=hidden),
     }
+    for layer in range(layers):
+        prefix = f"network_body._body_endoder.seq_layers.{layer * 2}"
+        inputs = obs if layer == 0 else hidden
+        state[prefix + ".weight"] = rng.normal(size=(hidden, inputs))
+        state[prefix + ".bias"] = rng.normal(size=hidden)
     for index, size in enumerate(branches):
         prefix = f"action_model._discrete_distribution.branches.{index}"
         state[prefix + ".weight"] = rng.normal(size=(size, hidden))
@@ -100,6 +107,36 @@ def test_encode_brain_layout_matches_policy_brain_reader():
     assert offset + 4 * 17 == len(payload)
 
 
+def test_encode_survivor_network_header_has_three_layers_and_three_branches():
+    body, branches = export_brain.extract_actor_layers(
+        actor_state(obs=2264, hidden=512, branches=(9, 5, 5), layers=3)
+    )
+    payload = export_brain.encode_brain("Warrior", 1_000_000, body, branches)
+
+    name_length = struct.unpack_from("<i", payload, 8)[0]
+    offset = 12 + name_length
+    step, inputs = struct.unpack_from("<qi", payload, offset)
+    offset += 12
+    (layer_count,) = struct.unpack_from("<i", payload, offset)
+    offset += 4
+    layer_sizes = []
+    for _ in range(layer_count):
+        layer_inputs, layer_outputs = struct.unpack_from("<ii", payload, offset)
+        layer_sizes.append((layer_inputs, layer_outputs))
+        offset += 8 + 4 * (layer_inputs * layer_outputs + layer_outputs)
+    (branch_count,) = struct.unpack_from("<i", payload, offset)
+    offset += 4
+    branch_sizes = []
+    for _ in range(branch_count):
+        branch_inputs, branch_outputs = struct.unpack_from("<ii", payload, offset)
+        branch_sizes.append(branch_outputs)
+        offset += 8 + 4 * (branch_inputs * branch_outputs + branch_outputs)
+
+    assert (step, inputs) == (1_000_000, 2264)
+    assert layer_sizes == [(2264, 512), (512, 512), (512, 512)]
+    assert branch_sizes == [9, 5, 5]
+
+
 def test_newest_behavior_dir_and_checkpoint_order(tmp_path: Path):
     old = tmp_path / "run-a" / "Warrior"
     new = tmp_path / "run-b" / "Warrior"
@@ -109,6 +146,8 @@ def test_newest_behavior_dir_and_checkpoint_order(tmp_path: Path):
     (new / "Warrior-1000.pt").write_bytes(b"x")
     (new / "Warrior-20000.pt").write_bytes(b"x")
     (new / "checkpoint.pt").write_bytes(b"x")
+    arena_trainer.write_schema_version(old.parent)
+    arena_trainer.write_schema_version(new.parent)
     import os
 
     os.utime(old / "Warrior-500.pt", (1, 1))
@@ -118,7 +157,7 @@ def test_newest_behavior_dir_and_checkpoint_order(tmp_path: Path):
     assert export_brain.newest_behavior_dir(tmp_path, "Mage") is None
 
 
-def test_newest_behavior_dir_prefers_current_rules_before_checkpoint_time(tmp_path: Path):
+def test_newest_behavior_dir_prefers_current_schema_before_checkpoint_time(tmp_path: Path):
     old = tmp_path / "warrior-001" / "Warrior"
     current = tmp_path / "warrior-002" / "Warrior"
     old.mkdir(parents=True)
@@ -127,17 +166,17 @@ def test_newest_behavior_dir_prefers_current_rules_before_checkpoint_time(tmp_pa
     current_checkpoint = current / "Warrior-100.pt"
     old_checkpoint.write_bytes(b"old")
     current_checkpoint.write_bytes(b"current")
-    arena_trainer.write_rules_version(current.parent)
+    arena_trainer.write_schema_version(current.parent)
     import os
 
     os.utime(current_checkpoint, (1, 1))
     os.utime(old_checkpoint, (2, 2))
 
     assert export_brain.newest_behavior_dir(tmp_path, "Warrior") == current
-    assert export_brain.newest_behavior_dir(tmp_path, "Warrior", rules_version=1) == old
+    assert export_brain.newest_behavior_dir(tmp_path, "Warrior", schema_version=1) == old
 
 
-def test_discover_behaviors_finds_current_rules_and_ignores_old_or_non_behavior_folders(
+def test_discover_behaviors_finds_current_schema_and_ignores_old_or_non_behavior_folders(
     tmp_path: Path,
 ):
     current = tmp_path / "mixed-001"
@@ -146,12 +185,12 @@ def test_discover_behaviors_finds_current_rules_and_ignores_old_or_non_behavior_
         behavior_dir = current / behavior
         behavior_dir.mkdir(parents=True)
         (behavior_dir / f"{behavior}-100.pt").write_bytes(b"current")
-    arena_trainer.write_rules_version(current)
+    arena_trainer.write_schema_version(current)
 
     old_behavior = old / "Archer"
     old_behavior.mkdir(parents=True)
     (old_behavior / "Archer-200.pt").write_bytes(b"old")
-    (old / arena_trainer.RULES_FILE).write_text("2", encoding="utf-8")
+    (old / arena_trainer.SCHEMA_FILE).write_text("3", encoding="utf-8")
 
     run_logs = current / "run_logs"
     run_logs.mkdir()

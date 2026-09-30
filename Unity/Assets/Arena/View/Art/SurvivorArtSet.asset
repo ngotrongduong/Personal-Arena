@@ -1,0 +1,71 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4f0a8e2d61b47e9a3b5c7d9e1f20a36, type: 3}
+  m_Name: SurvivorArtSet
+  m_EditorClassIdentifier: PersonalArena.View::PersonalArena.View.SurvivorArtSet
+  Graves:
+  - {fileID: 919132149155446097, guid: 24d55eec9d9aeeb4fbc363ea19b3d719, type: 3}
+  - {fileID: 919132149155446097, guid: 36473666c5758624ead6c209f53f8b7e, type: 3}
+  - {fileID: 919132149155446097, guid: 37ffe5b74526b3d49bbf325354c4bce8, type: 3}
+  - {fileID: 919132149155446097, guid: ebb7957772a3b294091e9b382ebdb91b, type: 3}
+  - {fileID: 919132149155446097, guid: 29c0682f1a1c13d40a8030804ac9f728, type: 3}
+  - {fileID: 919132149155446097, guid: 2fe09cb9ba2b43e49a22d71e8571c90b, type: 3}
+  Trees:
+  - {fileID: 919132149155446097, guid: 33fffe03ce9e4e9419e776db928620d8, type: 3}
+  - {fileID: 919132149155446097, guid: a24e1b4976a246b46b7881feee070888, type: 3}
+  - {fileID: 919132149155446097, guid: 26daa3bd6b235cd4c83842a320587f7e, type: 3}
+  - {fileID: 919132149155446097, guid: ebb185c6da156fb46a0251b64dae0bd3, type: 3}
+  Rocks:
+  - {fileID: 919132149155446097, guid: 16f0e97d05a60684da21bd6a14d8c1a4, type: 3}
+  - {fileID: 919132149155446097, guid: f7fdbc415c0da04499c182f6f7218139, type: 3}
+  Fence: {fileID: 919132149155446097, guid: ffdeee6a39c6b2643af9342384fea61a, type: 3}
+  FencePillar: {fileID: 919132149155446097, guid: 5a26f8c696e6b6140a92eaa8c19a153d, type: 3}
+  FenceBroken: {fileID: 919132149155446097, guid: d0d96ac91caf4a84bb66438e21abfa44, type: 3}
+  OuterTrees:
+  - {fileID: 919132149155446097, guid: 3ae642f983126904b95aea8da6f8edce, type: 3}
+  - {fileID: 919132149155446097, guid: e91b9ed16a6561e438ea2b6dc3b45dff, type: 3}
+  - {fileID: 919132149155446097, guid: ffdc363dac0f299468a657402010dcd2, type: 3}
+  - {fileID: 919132149155446097, guid: 144ffe1f7eb69a74fabe1d7a06c3dfc3, type: 3}
+  - {fileID: 919132149155446097, guid: 33fffe03ce9e4e9419e776db928620d8, type: 3}
+  - {fileID: 919132149155446097, guid: a24e1b4976a246b46b7881feee070888, type: 3}
+  Decor:
+  - {fileID: 919132149155446097, guid: 718927b04c6a1e148b8d8508b656886f, type: 3}
+  - {fileID: 919132149155446097, guid: 458022b4e04c12d4d8319c4ae673b7f6, type: 3}
+  - {fileID: 919132149155446097, guid: 75394c83af70bf5468b9e92ca04efe47, type: 3}
+  - {fileID: 919132149155446097, guid: f3f1ef89121f1ed4ba3ebef7403d5b38, type: 3}
+  - {fileID: 919132149155446097, guid: dda8a0e0e20e27e40891b20c8c4c4793, type: 3}
+  - {fileID: 919132149155446097, guid: fc6e56b038a94224e8dcda92da1d05be, type: 3}
+  - {fileID: 919132149155446097, guid: f74ef3c3a347cbb41974b09fa3d00f84, type: 3}
+  - {fileID: 919132149155446097, guid: a37ce8ec2bc79844c9257514530f16d8, type: 3}
+  - {fileID: 919132149155446097, guid: 5e2886aaa86b1fb4b9f7b9a132db3c39, type: 3}
+  SmallDecor:
+  - {fileID: 919132149155446097, guid: ea4aba4843929e0489ba069897ebf686, type: 3}
+  - {fileID: 919132149155446097, guid: 60d29067d1614e64ba217606d62ac967, type: 3}
+  - {fileID: 919132149155446097, guid: 807d2dac38484ac47b8e60afb86c8ad3, type: 3}
+  - {fileID: 919132149155446097, guid: 6f49abe41fe6ae34fb5f45667b1dc48d, type: 3}
+  - {fileID: 919132149155446097, guid: 262d2317cda9c1e42bd01f5c0e45b792, type: 3}
+  - {fileID: 919132149155446097, guid: 1fd2a2b49aca00b4a85ae09338a1103e, type: 3}
+  - {fileID: 919132149155446097, guid: 0a4b24f4498df364c906aa08d5991043, type: 3}
+  - {fileID: 919132149155446097, guid: a3d1d31595a131144aa0415a7f2d2db0, type: 3}
+  - {fileID: 919132149155446097, guid: 1ad844ea53297ef4b9ab6b772ccda705, type: 3}
+  - {fileID: 919132149155446097, guid: cc86641418f741e4baeca6f9dd16755d, type: 3}
+  GroundPatches:
+  - {fileID: 919132149155446097, guid: e761e7d98fe10ef4e838ffda80375be8, type: 3}
+  - {fileID: 919132149155446097, guid: 432c883bf6af11e40b1d3174729fd288, type: 3}
+  - {fileID: 919132149155446097, guid: b597b34042b62314e949e63c4ed3cd4c, type: 3}
+  HalloweenTexture: {fileID: 2800000, guid: 313d6e8f24579db43b9721d80bb0295e, type: 3}
+  Chest: {fileID: 919132149155446097, guid: 9b65bb4fa9988564886eabbf6f8026d2, type: 3}
+  HammerProp: {fileID: 0}
+  BossBody: {fileID: 919132149155446097, guid: 3c6226aba9a44ee46a2a1c1c564ae368, type: 3}
+  BossMainHand: {fileID: 919132149155446097, guid: 9833496efa3ba4d4a9d695b050a28d2a, type: 3}
+  BossOffHand: {fileID: 919132149155446097, guid: 73b7fb6a8c605f54ab0ca462aa9f6d5a, type: 3}
+  BossScale: 2.6

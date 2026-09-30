@@ -16,7 +16,7 @@ namespace PersonalArena.View.Editor
         {
             try
             {
-                PlaySceneBuilder.BuildScene(PlaySceneBuilder.WatchScenePath, typeof(AiArenaController));
+                PlaySceneBuilder.BuildSurvivorScene(PlaySceneBuilder.WatchScenePath);
                 BuildResult result = BuildPlayer();
                 if (Application.isBatchMode)
                 {

@@ -3,10 +3,11 @@
 Nguồn chung cho skill `/mlagents-training` (Claude) và `train-and-report` (Codex).
 
 Môi trường: mỗi process Unity chạy **16 arena độc lập** (headless, đổi bằng `--arena-agents`).
-Mỗi agent chạy sim Core 60 Hz của riêng nó và ra quyết định mỗi 5 tick (12 Hz), action 9/3/5,
-quan sát 883 (luật v3, D-024). Một bản build training dùng cho cả 3 class: tham số env
-`--hero-class warrior|mage|archer` → behavior `Warrior` / `Mage` / `Archer`, mỗi class một não
-và một config (`Trainer/config/<class>_ppo.yaml`).
+Mỗi agent chạy một trận Survivor (`SurvivorSim`, D-026) 60 Hz của riêng nó và ra quyết định mỗi
+5 tick (12 Hz). Lúc đang có bảng lên cấp thì quyết định mỗi tick. Action 3 nhánh 9/5/5 (di chuyển,
+skill chủ động, chọn nâng cấp); quan sát schema v4 = 2264 số, có chừa chỗ trống (D-027).
+Hiện chỉ Warrior được train (behavior `Warrior`, config `Trainer/config/warrior_survivor_ppo.yaml`).
+Mage/Archer có config Survivor riêng ở M7; service từ chối rõ ràng nếu được yêu cầu train chúng.
 
 ## 1. Build môi trường
 
@@ -33,32 +34,33 @@ Env (Windows)**. Hoặc headless (không mở Editor):
 Từ gốc repo (`C:\PersonalArena`, nơi có `.venv-ml`):
 
 ```powershell
-# Wrapper: 4 process, time-scale 20, no-graphics, config warrior_ppo.yaml, ra Trainer/runs/
-& .venv-ml\Scripts\python.exe Trainer\arena_trainer.py --run-id warrior-001
-& .venv-ml\Scripts\python.exe Trainer\arena_trainer.py --run-id warrior-001 --dry-run   # chỉ in lệnh
-& .venv-ml\Scripts\python.exe Trainer\arena_trainer.py --run-id warrior-001 --resume
-& .venv-ml\Scripts\python.exe Trainer\arena_trainer.py --run-id warrior-ft --initialize-from warrior-001
+# Wrapper: 4 process, time-scale 20, no-graphics, config warrior_survivor_ppo.yaml, ra Trainer/runs/
+& .venv-ml\Scripts\python.exe Trainer\arena_trainer.py --run-id warrior-s002
+& .venv-ml\Scripts\python.exe Trainer\arena_trainer.py --run-id warrior-s002 --dry-run   # chỉ in lệnh
+& .venv-ml\Scripts\python.exe Trainer\arena_trainer.py --run-id warrior-s002 --resume
+& .venv-ml\Scripts\python.exe Trainer\arena_trainer.py --run-id warrior-ft --initialize-from warrior-s001
 # Gọi thẳng mlagents-learn (vd. smoke test 1 process):
-& .venv-ml\Scripts\mlagents-learn.exe Trainer/config/warrior_ppo.yaml --run-id smoke `
+& .venv-ml\Scripts\mlagents-learn.exe Trainer/config/warrior_survivor_ppo.yaml --run-id smoke `
   --env Build/Training/PersonalArenaTraining.exe --num-envs 1 --time-scale 20 --no-graphics `
   --results-dir Trainer/runs
 & .venv-ml\Scripts\tensorboard.exe --logdir Trainer/runs
 ```
 
-- Class khác: `arena_trainer.py --hero-class mage --run-id mage-001` (tự dùng `mage_ppo.yaml`);
-  service: `train_service.py --behavior Mage`.
-- Kết quả ở `Trainer/runs/<run-id>/` (không commit). Model: `Trainer/runs/<run-id>/<Behavior>.onnx`.
-- Đặt tên run: `<class>-<3 số>` và ghi 1 dòng vào bảng "Nhật ký run" bên dưới.
-- Config:
-  - `warrior_ppo.yaml` / `mage_ppo.yaml` / `archer_ppo.yaml` (cùng curriculum, khác tên behavior):
-    `zombie_count` 1→2→4→8→16 (ngưỡng reward 15/25/40/70), rồi thêm dần loại zombie:
-    `runner_weight` 0→0.5 (ngưỡng 150), `brute_weight` 0→0.35 (170), `spitter_weight` 0→0.35 (190).
-    Walker luôn có trọng số 1. Arena cố định 28 m (sàn tròn bán kính 14, D-022).
-  - `warrior_ppo_randomized.yaml`: giữ 4 bài đầu, bài cuối random `arena_size` 14–32 và
-    `hp_mult` / `damage_mult` / `speed_mult` 0.8–1.25.
-- Ngưỡng curriculum (tối thiểu 1000 episode mỗi bài) là **ước lượng**: chỉnh sau run thật.
-- Environment parameters mà `HeroAgent` đọc: `zombie_count`, `arena_size`, `hp_mult`,
-  `damage_mult`, `speed_mult`, `runner_weight`, `brute_weight`, `spitter_weight`.
+- Kết quả ở `Trainer/runs/<run-id>/` (không commit). Mỗi run ghi `schema_version.txt`.
+- Đặt tên run Survivor: `<class>-s<3 số>` và ghi 1 dòng vào bảng "Nhật ký run" bên dưới.
+- Config `warrior_survivor_ppo.yaml`:
+  - MLP 3 × 512, `normalize: false`, batch 4096, buffer 81920, lr 3e-4, beta 5e-3, gamma 0.995.
+  - Curriculum `run_seconds` 180 → 360 → 600 → 900 (ngưỡng reward 5.0 / 6.5 / 8.5, tối thiểu 200
+    episode mỗi bài). Ngưỡng là **ước lượng** từ bảng thưởng; chỉnh sau run thật.
+- Environment parameters mà `HeroAgent` đọc:
+  - `run_seconds`: độ dài trận;
+  - `tier_min` / `tier_max`: bậc độ khó random trong khoảng;
+  - `build_level_max`: điểm chỉ số rải ngẫu nhiên tối đa (0 = build trắng);
+  - `own_build_share`: tỉ lệ trận dùng build thật của owner (M5).
+- Thưởng (`SurvivorRewardConfig`): thắng +10, hết giờ +5, chết −5, sống +0.01/s, −1 cho mỗi lượng
+  máu bằng MaxHp bị mất, +0.05 mỗi cấp, +0.001 mỗi vàng, +2 × tỉ lệ máu boss bị trừ.
+- Nâng cấp não khi schema quan sát đổi: `Trainer/brain_upgrade.py` (D-027). Schema giữ nguyên thì
+  service học tiếp từ checkpoint.
 
 ## 3. Đọc kết quả (TensorBoard)
 
@@ -67,17 +69,21 @@ Từ gốc repo (`C:\PersonalArena`, nơi có `.venv-ml`):
 | `Environment/Cumulative Reward` | tăng dần | phẳng: reward quá thưa hoặc sai dấu → chạy test dấu reward |
 | `Policy/Entropy` | giảm chậm | sụp nhanh về 0: tăng `beta`; không giảm: reward nhiễu |
 | `Environment/Episode Length` | tăng (sống lâu hơn) | |
-| `Environment/Lesson` (curriculum) | lên dần 0→4 | kẹt: hạ `threshold` hoặc tăng `min_lesson_length` |
+| `Environment/Lesson` (curriculum) | lên dần 0→3 | kẹt: hạ `threshold` hoặc tăng `min_lesson_length` |
 | `Losses/Value Loss` | giảm rồi ổn định | tăng mãi: `normalize: true`, giảm `learning_rate` |
-| `Arena/*` (kill, sống sót, backstab, parry…) | tăng | ghi bởi `EpisodeStats` trong `HeroAgent` |
+| `Arena/SurvivedSeconds`, `Arena/Level`, `Arena/Kills`, `Arena/Gold` | tăng | ghi bởi `SurvivorEpisodeStats` |
+| `Arena/Died`, `Arena/Catastrophic` (chết trước 180 s) | giảm | |
+
+Nghiệm thu M4A (D-030) dùng `Tools/SurvivorEval` chạy não đã xuất trên 100 seed: trung vị sống
+≥ 600 s, P10 ≥ 420 s, không trận nào chết trước 180 s.
 
 ## 4. Xem AI chơi trực tiếp (trong lúc train)
 
 ### Nút "TRAIN THE AI" (cách chính, D-020)
 
 - Mở `Xem-AI.cmd`. Bảng **TRAINING** ở góc phải: bấm **TRAIN THE AI** → AI train ngầm liên tục
-  (tiếp tục run mới nhất trong `Trainer/runs`, chưa có thì tạo `warrior-001`). Bảng hiện bước,
-  mean reward, số zombie đang tập, thời gian phiên và biểu đồ reward từ bước 0.
+  (tiếp tục run mới nhất trong `Trainer/runs`, chưa có thì tạo `warrior-s001`). Bảng hiện bước,
+  mean reward, bài curriculum đang tập, thời gian phiên và biểu đồ reward từ bước 0.
 - **STOP TRAINING** → lưu checkpoint rồi dừng (có thể mất tới ~1 phút, hiện "SAVING..."). Đóng
   cửa sổ game cũng dừng và lưu y như vậy.
 - Nhân vật trong trình xem tự đổi sang não mới mỗi lần training lưu (~500k bước).
@@ -86,7 +92,7 @@ Từ gốc repo (`C:\PersonalArena`, nơi có `.venv-ml`):
 - Chạy service không cần game: `.venv-ml\Scripts\python.exe Trainer\train_service.py`
   (dừng: tạo file `Trainer/runs/training_service.stop`).
 - **Đừng kill cứng** mlagents: checkpoint `.pt` vẫn còn nhưng tiến độ curriculum
-  (`run_logs/training_status.json`) chỉ được lưu khi dừng êm → lần sau quay lại bài 1 zombie.
+  (`run_logs/training_status.json`) chỉ được lưu khi dừng êm → lần sau quay lại bài đầu tiên.
 - **Nút Power** (dưới nút train, D-021): bấm để đổi mức LIGHT / NORMAL / FAST / MAX = số game ẩn
   × số warrior mỗi game (xem bảng đo bên dưới). Đổi lúc đang train → service lưu, dừng êm rồi tự
   chạy lại với mức mới. Mức được nhớ giữa các lần mở. "View speed x1/x2/x4" (`Space`) chỉ là tốc
@@ -119,21 +125,16 @@ kinh nghiệm mỗi giây. Luật chơi chạy theo tick cố định nên time-
   checkpoint `.pt` mới nhất thành `Trainer/runs/<run>/<Behavior>/latest.brain`) và mở trình xem
   `Build/Watch/PersonalArenaWatch.exe`. Trình xem tìm `latest.brain` mới nhất, nạp lại mỗi khi
   training lưu não mới (~500k bước, ~8 phút). Đóng cửa sổ thì exporter cũng tắt.
-- Phím: `1`–`6` số zombie 1/2/4/8/16/32, `Space` tốc độ x1/x2/x4, `T` chọn hành động
-  deterministic/sampled, `R` ván mới, `Esc` tạm dừng. Hết ván tự chơi lại sau 3 s.
-- Class và loại zombie (D-024): phím `H` hoặc nút góc phải trên đổi class (Warrior / Mage /
-  Archer, nạp não mới nhất của class đó; nút TRAIN train đúng class đang xem). Phím `M` hoặc nút
-  đổi kiểu trộn zombie (Chỉ Walker / Tất cả / Nhiều Runner / Nhiều Brute / Nhiều Spitter). Tham số
-  exe để chụp ảnh: `-class mage -mix 1` (`-mix` 0–4 theo thứ tự trên).
-- Camera (D-022): kéo chuột trái/phải = xoay, lăn chuột hoặc `+`/`-` = zoom, `Q`/`E` = xoay
-  ngang, chuột giữa hoặc `Shift`+kéo = dời, `C` = đổi chế độ (toàn sân / theo warrior / tự do),
-  `Home` = về góc mặc định.
-- Nút **TRAINING DATA** (cuối bảng TRAINING) hoặc phím `G` mở màn hình 6 đồ thị: reward, zombie giết mỗi ván,
-  số giây sống, tỉ lệ rơi vực, số zombie bị hất xuống vực, độ khó curriculum. Dữ liệu đọc từ
-  `Trainer/runs/<run>/training_history.json` (service ghi từ TensorBoard), tự cập nhật mỗi 5 s.
-  `Esc`, `G` hoặc nút X để đóng.
-- Não luật cũ (`rules_version.txt` khác `ArenaSim.RulesVersion`) không được nạp; khi chỉ còn não
-  cũ, bảng góc phải nhắc bấm TRAIN THE AI.
+- Trình xem Survivor (T-016): camera đi theo Warrior trên bản đồ nghĩa địa; HUD có thanh EXP,
+  cấp, đồng hồ, vàng, icon món đồ; bảng lên cấp tô sáng món AI chọn; màn kết trận.
+- Phím: `Space` tốc độ xem, `T` chọn hành động deterministic/sampled, `R` trận mới, `Esc` tạm dừng.
+  Hết trận tự chơi trận mới.
+- Nút **TRAINING DATA** (cuối bảng TRAINING) hoặc phím `G` mở màn hình 6 đồ thị: reward, zombie
+  giết mỗi trận, số giây sống, tỉ lệ chết trước giờ, cấp đạt được, độ dài trận đang tập
+  (curriculum). Dữ liệu đọc từ `Trainer/runs/<run>/training_history.json` (service ghi từ
+  TensorBoard), tự cập nhật mỗi 5 s. `Esc`, `G` hoặc nút X để đóng.
+- Não có `schema_version.txt` khác schema hiện tại (hoặc không có file này = schema 1) không được
+  nạp; khi chỉ còn não cũ, bảng góc phải nhắc bấm TRAIN THE AI.
 - Build trình xem: **Personal Arena > Build Watch AI Viewer (Windows)**, hoặc headless
   `-batchmode -quit -executeMethod PersonalArena.View.Editor.WatchBuild.BuildWindows`.
 - Xuất tay: `python Trainer/export_brain.py --checkpoint <file.pt> --output <file.brain>`.
@@ -145,7 +146,8 @@ kinh nghiệm mỗi giây. Luật chơi chạy theo tick cố định nên time-
 ## 5. Bài học từ video Pezzza
 
 - Kiểm tra **dấu** mọi reward term (agent không bao giờ dùng giáo vì phạt nhầm).
-- Curriculum số zombie 1→2→4→8→16; chỉ lên cấp khi reward ổn định.
+- Curriculum tăng dần (trước đây số zombie 1→2→4→8→16, nay độ dài trận 3→6→10→15 phút); chỉ
+  lên bài khi reward ổn định.
 - Quyết định 12 Hz; video dùng ~92 tia 360°, mình dùng 72 (D-013).
 
 ## 6. Nhật ký run
@@ -158,3 +160,4 @@ kinh nghiệm mỗi giây. Luật chơi chạy theo tick cố định nên time-
 | mage-001 | 2026-09-30 | **luật v3 (D-024)**, mage_ppo.yaml, 4 env × 64 (MAX), time-scale 20 | 657k (smoke) | Reward ~0 → 10.9 ở 600k, còn 1 zombie | Chỉ kiểm tra class chạy được; train tiếp bằng nút |
 | archer-001 | 2026-09-30 | luật v3, archer_ppo.yaml, 4 env × 64 (MAX), time-scale 20 | 1.14M (smoke) | Reward 32.9 ở 1.08M, lên 2 zombie | Như trên |
 | warrior-003 | 2026-09-30 | luật v3, warrior_ppo.yaml, 4 env × 64 (MAX), time-scale 20 | đang chạy (1.41M lúc 00:40) | Reward 19.5 ở 1.4M, 2 zombie Walker | Run mới do đổi `rules_version.txt`; owner dừng bằng nút STOP |
+| warrior-s001 | 2026-09-30 | **Survivor (D-026), schema v4**, warrior_survivor_ppo.yaml, 4 env × 16, time-scale 20 | đang chạy (12.4M) | Ở 12.4M: sống ~156/180 s, chết 46% trận, reward ~1.1, vẫn bài 1 (180 s) | ~4M bước/giờ. Sửa luật giữa chừng (học tiếp cùng schema) |

@@ -79,7 +79,7 @@ def make_checkpoint(
     run_id: str,
     step: int,
     resumable: bool = True,
-    rules_version: int | None = arena_trainer.RULES_VERSION,
+    schema_version: int | None = arena_trainer.SCHEMA_VERSION,
     behavior: str = "Warrior",
 ) -> None:
     behavior_dir = runs / run_id / behavior
@@ -87,61 +87,75 @@ def make_checkpoint(
     (behavior_dir / f"{behavior}-{step}.pt").write_bytes(b"x")
     if resumable:
         (behavior_dir / "checkpoint.pt").write_bytes(b"x")
-    if rules_version is not None:
-        (behavior_dir.parent / arena_trainer.RULES_FILE).write_text(str(rules_version), encoding="utf-8")
+    if schema_version is not None:
+        (behavior_dir.parent / arena_trainer.SCHEMA_FILE).write_text(
+            str(schema_version), encoding="utf-8"
+        )
 
 
-def test_plan_run_starts_warrior_001_when_nothing_exists(tmp_path: Path):
+def test_plan_run_starts_warrior_s001_when_nothing_exists(tmp_path: Path):
     plan = train_service.plan_run(tmp_path, "Warrior")
 
-    assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-001", "new", 0)
+    assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-s001", "new", 0)
 
 
-def test_plan_run_starts_mage_001_when_nothing_exists(tmp_path: Path):
+def test_plan_run_starts_mage_s001_when_nothing_exists(tmp_path: Path):
     plan = train_service.plan_run(tmp_path, "Mage")
 
-    assert (plan.run_id, plan.mode, plan.last_step) == ("mage-001", "new", 0)
+    assert (plan.run_id, plan.mode, plan.last_step) == ("mage-s001", "new", 0)
 
 
 def test_plan_run_resumes_the_newest_run(tmp_path: Path):
-    make_checkpoint(tmp_path, "warrior-001", 7499948)
+    make_checkpoint(tmp_path, "warrior-s001", 7499948)
 
     plan = train_service.plan_run(tmp_path, "Warrior")
 
-    assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-001", "resume", 7499948)
+    assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-s001", "resume", 7499948)
 
 
-def test_plan_run_starts_after_the_highest_number_when_only_old_rules_exist(tmp_path: Path):
-    make_checkpoint(tmp_path, "warrior-001", 100, rules_version=None)
-    (tmp_path / "warrior-009").mkdir()
-    (tmp_path / "warrior-1000").mkdir()
+def test_plan_run_numbers_only_survivor_runs(tmp_path: Path):
+    make_checkpoint(tmp_path, "warrior-s001", 100, resumable=False)
+    (tmp_path / "warrior-s002").mkdir()
+    (tmp_path / "warrior-011").mkdir()
+    (tmp_path / "warrior-s1000").mkdir()
     (tmp_path / "warrior-other").mkdir()
 
     plan = train_service.plan_run(tmp_path, "Warrior")
 
-    assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-010", "new", 0)
+    assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-s003", "new", 0)
 
 
-def test_plan_run_does_not_resume_a_v2_warrior_run_under_rules_v3(tmp_path: Path):
-    make_checkpoint(tmp_path, "warrior-002", 100, rules_version=2)
+@pytest.mark.parametrize("schema_version", [None, 3])
+def test_plan_run_does_not_resume_an_unmarked_or_older_schema_run(
+    tmp_path: Path, schema_version: int | None
+):
+    make_checkpoint(tmp_path, "warrior-011", 100, schema_version=schema_version)
 
     plan = train_service.plan_run(tmp_path, "Warrior")
 
-    assert arena_trainer.RULES_VERSION == 3
-    assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-003", "new", 0)
+    assert arena_trainer.SCHEMA_VERSION == 4
+    assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-s001", "new", 0)
 
 
-def test_plan_run_uses_the_newest_current_rules_run(tmp_path: Path):
-    make_checkpoint(tmp_path, "warrior-001", 200, rules_version=1)
-    make_checkpoint(tmp_path, "warrior-002", 100)
+def test_plan_run_uses_the_newest_current_schema_run(tmp_path: Path):
+    make_checkpoint(tmp_path, "warrior-s001", 200, schema_version=3)
+    make_checkpoint(tmp_path, "warrior-s002", 100)
     import os
 
-    os.utime(tmp_path / "warrior-002" / "Warrior" / "Warrior-100.pt", (1, 1))
-    os.utime(tmp_path / "warrior-001" / "Warrior" / "Warrior-200.pt", (2, 2))
+    os.utime(tmp_path / "warrior-s002" / "Warrior" / "Warrior-100.pt", (1, 1))
+    os.utime(tmp_path / "warrior-s001" / "Warrior" / "Warrior-200.pt", (2, 2))
 
     plan = train_service.plan_run(tmp_path, "Warrior")
 
-    assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-002", "resume", 100)
+    assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-s002", "resume", 100)
+
+
+def test_plan_run_does_not_resume_an_explicit_incompatible_run(tmp_path: Path):
+    make_checkpoint(tmp_path, "warrior-011", 100, schema_version=3)
+
+    plan = train_service.plan_run(tmp_path, "Warrior", "warrior-011")
+
+    assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-s001", "new", 0)
 
 
 def test_plan_run_forces_a_folder_without_checkpoint(tmp_path: Path):
@@ -162,7 +176,7 @@ def write_config(path: Path) -> None:
 
 @pytest.mark.parametrize(
     ("mode", "initial_marker", "expected_marker"),
-    [("new", None, "3"), ("force", "1", "3"), ("resume", "7", "7")],
+    [("new", None, "4"), ("force", "1", "4"), ("resume", "4", "4")],
 )
 def test_service_marks_new_and_forced_runs_without_overwriting_resumed_runs(
     tmp_path: Path, mode: str, initial_marker: str | None, expected_marker: str
@@ -170,7 +184,7 @@ def test_service_marks_new_and_forced_runs_without_overwriting_resumed_runs(
     config = tmp_path / "warrior.yaml"
     write_config(config)
     runs = tmp_path / "runs"
-    run_id = f"warrior-{mode}"
+    run_id = f"warrior-s{mode}"
     run_dir = runs / run_id
     if mode == "force":
         run_dir.mkdir(parents=True)
@@ -178,7 +192,7 @@ def test_service_marks_new_and_forced_runs_without_overwriting_resumed_runs(
         make_checkpoint(runs, run_id, 100)
     if initial_marker is not None:
         run_dir.mkdir(parents=True, exist_ok=True)
-        (run_dir / arena_trainer.RULES_FILE).write_text(initial_marker, encoding="utf-8")
+        (run_dir / arena_trainer.SCHEMA_FILE).write_text(initial_marker, encoding="utf-8")
 
     fake_exe = tmp_path / "fake.exe"
     fake_exe.write_bytes(b"")
@@ -189,7 +203,7 @@ def test_service_marks_new_and_forced_runs_without_overwriting_resumed_runs(
     seen_markers: list[str] = []
     service.trainer_command = lambda plan, path: [str(fake_exe), "--env", str(fake_exe)]
     service._train = lambda command, tail: (
-        seen_markers.append((run_dir / arena_trainer.RULES_FILE).read_text(encoding="utf-8")) or 0,
+        seen_markers.append((run_dir / arena_trainer.SCHEMA_FILE).read_text(encoding="utf-8")) or 0,
         True,
         1.0,
     )
@@ -199,7 +213,7 @@ def test_service_marks_new_and_forced_runs_without_overwriting_resumed_runs(
     assert service.run() == 0
 
     assert seen_markers == [expected_marker]
-    assert (run_dir / arena_trainer.RULES_FILE).read_text(encoding="utf-8") == expected_marker
+    assert (run_dir / arena_trainer.SCHEMA_FILE).read_text(encoding="utf-8") == expected_marker
 
 
 def test_effective_config_keeps_the_original_budget(tmp_path: Path):
@@ -232,15 +246,25 @@ def test_trainer_command_resumes_with_service_settings(tmp_path: Path):
     args = train_service.create_parser().parse_args(["--results-dir", str(tmp_path), "--base-port", "5105"])
     service = train_service.TrainingService(args)
 
-    command = service.trainer_command(train_service.RunPlan("warrior-001", "resume", 5), tmp_path / "c.yaml")
+    command = service.trainer_command(train_service.RunPlan("warrior-s001", "resume", 5), tmp_path / "c.yaml")
 
     assert command[1] == str((tmp_path / "c.yaml").resolve())
-    assert command[command.index("--run-id") + 1] == "warrior-001"
+    assert command[command.index("--run-id") + 1] == "warrior-s001"
     assert command[command.index("--base-port") + 1] == "5105"
     assert command[command.index("--results-dir") + 1] == str(tmp_path.resolve())
     assert command[command.index("--time-scale") + 1] == "20.0"
     assert "--resume" in command
     assert command[-3:] == ["--env-args", "--hero-class", "warrior"]
+
+
+def test_trainer_command_forces_new_runs_because_the_schema_marker_made_the_folder(tmp_path: Path):
+    args = train_service.create_parser().parse_args(["--results-dir", str(tmp_path)])
+    service = train_service.TrainingService(args)
+
+    command = service.trainer_command(train_service.RunPlan("warrior-s001", "new", 0), tmp_path / "c.yaml")
+
+    assert "--force" in command
+    assert "--resume" not in command
 
 
 def test_trainer_command_uses_the_viewer_power_setting(tmp_path: Path):
@@ -249,7 +273,7 @@ def test_trainer_command_uses_the_viewer_power_setting(tmp_path: Path):
     )
     service = train_service.TrainingService(args)
 
-    command = service.trainer_command(train_service.RunPlan("warrior-001", "resume", 5), tmp_path / "c.yaml")
+    command = service.trainer_command(train_service.RunPlan("warrior-s001", "resume", 5), tmp_path / "c.yaml")
 
     assert command[command.index("--num-envs") + 1] == "8"
     assert command[command.index("--time-scale") + 1] == "30.0"
@@ -263,14 +287,14 @@ def test_trainer_command_uses_the_viewer_power_setting(tmp_path: Path):
 def test_status_payload_matches_the_viewer_fields(tmp_path: Path):
     args = train_service.create_parser().parse_args(["--results-dir", str(tmp_path)])
     service = train_service.TrainingService(args, clock=lambda: 100.0)
-    service.run_id = "warrior-001"
+    service.run_id = "warrior-s001"
     service.progress.feed(summary(60000, 4.5))
 
     service.publish("training", "The AI is training.")
 
     status = json.loads((tmp_path / train_service.STATUS_NAME).read_text(encoding="utf-8"))
     assert status["state"] == "training"
-    assert status["run_id"] == "warrior-001"
+    assert status["run_id"] == "warrior-s001"
     assert status["step"] == 60000
     assert status["has_reward"] is True
     assert status["mean_reward"] == 4.5
@@ -285,9 +309,9 @@ def test_status_payload_matches_the_viewer_fields(tmp_path: Path):
 @pytest.mark.parametrize(
     ("behavior", "expected", "config"),
     [
-        ("warrior", "Warrior", "warrior_ppo.yaml"),
-        ("MAGE", "Mage", "mage_ppo.yaml"),
-        ("Archer", "Archer", "archer_ppo.yaml"),
+        ("warrior", "Warrior", "warrior_survivor_ppo.yaml"),
+        ("MAGE", "Mage", "mage_survivor_ppo.yaml"),
+        ("Archer", "Archer", "archer_survivor_ppo.yaml"),
     ],
 )
 def test_parser_normalizes_behavior_and_chooses_its_default_config(
@@ -297,6 +321,47 @@ def test_parser_normalizes_behavior_and_chooses_its_default_config(
 
     assert args.behavior == expected
     assert Path(args.config) == Path("Trainer/config") / config
+
+
+def test_only_the_warrior_has_a_survivor_config_for_now():
+    root = arena_trainer.repository_root()
+
+    assert (root / train_service.default_config("Warrior")).is_file()
+    for behavior in train_service.FUTURE_BEHAVIORS:
+        assert not (root / train_service.default_config(behavior)).exists()
+
+
+@pytest.mark.parametrize("behavior", ["Mage", "Archer"])
+def test_mage_and_archer_report_a_clear_error_without_a_run_folder(
+    tmp_path: Path, capsys, behavior: str
+):
+    args = train_service.create_parser().parse_args(
+        ["--behavior", behavior, "--results-dir", str(tmp_path)]
+    )
+
+    assert train_service.TrainingService(args).run() == 2
+
+    status = read_status(tmp_path)
+    assert status["state"] == "error"
+    assert status["behavior"] == behavior
+    assert "arrives in M7" in status["message"]
+    assert "Only the Warrior can train" in status["message"]
+    assert "arrives in M7" in capsys.readouterr().err
+    assert not (tmp_path / train_service.ERROR_LOG_NAME).exists()
+    assert not (tmp_path / f"{behavior.lower()}-s001").exists()
+
+
+def test_a_missing_custom_config_is_reported_by_name(tmp_path: Path):
+    args = train_service.create_parser().parse_args(
+        ["--results-dir", str(tmp_path), "--config", str(tmp_path / "gone.yaml")]
+    )
+
+    assert train_service.TrainingService(args).run() == 2
+
+    status = read_status(tmp_path)
+    assert status["state"] == "error"
+    assert status["message"] == "Trainer config not found: gone.yaml."
+    assert list(tmp_path.glob("warrior-s*")) == []
 
 
 def test_a_second_service_cannot_take_the_lock(tmp_path: Path):
@@ -355,7 +420,7 @@ def scripted_service(tmp_path: Path, monkeypatch, outcomes: list[tuple[int, bool
     config = tmp_path / "warrior.yaml"
     write_config(config)
     runs = tmp_path / "runs"
-    make_checkpoint(runs, "warrior-001", 100)
+    make_checkpoint(runs, "warrior-s001", 100)
     fake_exe = tmp_path / "fake.exe"
     fake_exe.write_bytes(b"")
     monkeypatch.setattr(train_service, "RETRY_DELAY", 0.0)
@@ -393,7 +458,7 @@ def test_a_crashed_trainer_is_resumed_and_falls_back_to_the_cpu(tmp_path: Path, 
 
     assert devices == [None, None, "cpu"]
     assert read_status(runs)["state"] == "stopped"
-    log = (runs / "warrior-001.log").read_text(encoding="utf-8")
+    log = (runs / "warrior-s001.log").read_text(encoding="utf-8")
     assert "0xC0000409" in log
     assert "restarting from the last checkpoint (attempt 1 of 5)" in log
     assert "training on the CPU" in log
@@ -428,7 +493,7 @@ def test_service_writes_history_once_when_the_session_ends(tmp_path: Path, monke
 
     assert service.run() == 0
 
-    assert written == [runs / "warrior-001"]
+    assert written == [runs / "warrior-s001"]
 
 
 def test_stop_during_a_restart_wait_saves_and_stops(tmp_path: Path, monkeypatch):

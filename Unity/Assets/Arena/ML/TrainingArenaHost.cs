@@ -1,5 +1,5 @@
 using System;
-using PersonalArena.Core;
+using PersonalArena.Core.Survivor;
 using Unity.MLAgents;
 using Unity.MLAgents.Policies;
 using UnityEngine;
@@ -17,7 +17,7 @@ namespace PersonalArena.ML
 
         private void Awake()
         {
-            Time.fixedDeltaTime = ArenaSim.FixedDeltaTime;
+            Time.fixedDeltaTime = SurvivorSim.FixedDeltaTime;
             Application.targetFrameRate = -1;
 
             int count = CommandLineAgentCount(agentCount);
@@ -71,12 +71,12 @@ namespace PersonalArena.ML
                 if (string.Equals(args[i], "--hero-class", StringComparison.OrdinalIgnoreCase))
                 {
                     string value = args[i + 1].Trim().ToLowerInvariant();
-                    if (ClassRegistry.IsKnown(value))
+                    if (ClassRegistry.HasSurvivorKit(value))
                     {
                         return value;
                     }
 
-                    Debug.LogWarning($"Unknown --hero-class '{value}', training {fallback}.");
+                    Debug.LogWarning($"--hero-class '{value}' has no Survivor kit yet (arrives in M7), training {fallback}.");
                 }
             }
 

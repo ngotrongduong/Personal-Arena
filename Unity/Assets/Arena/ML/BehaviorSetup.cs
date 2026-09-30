@@ -1,5 +1,5 @@
 using System;
-using PersonalArena.Core;
+using PersonalArena.Core.Survivor;
 using Unity.MLAgents.Actuators;
 using Unity.MLAgents.Policies;
 
@@ -15,14 +15,13 @@ namespace PersonalArena.ML
                 throw new ArgumentNullException(nameof(behavior));
             }
 
-            ObservationBuilder observations = new ObservationBuilder();
             behavior.BehaviorName = ClassRegistry.BehaviorName(heroClassId);
-            behavior.BrainParameters.VectorObservationSize = observations.Size;
+            behavior.BrainParameters.VectorObservationSize = SurvivorObservation.Size;
             behavior.BrainParameters.NumStackedVectorObservations = 1;
             behavior.BrainParameters.ActionSpec = ActionSpec.MakeDiscrete(
-                HeroInput.MoveBranchSize,
-                HeroInput.TurnBranchSize,
-                HeroInput.SkillBranchSize);
+                SurvivorInput.MoveBranchSize,
+                SurvivorInput.SkillBranchSize,
+                SurvivorInput.PickBranchSize);
             behavior.BehaviorType = BehaviorType.Default;
         }
     }

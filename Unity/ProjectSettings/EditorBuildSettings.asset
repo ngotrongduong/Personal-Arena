@@ -6,8 +6,8 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/ArenaPlay.unity
-    guid: 6f9036d525f1b0b498930e8e1713c807
+    path: Assets/Scenes/ArenaWatch.unity
+    guid: 7296bb2e04bef8f4fb30f1a3d22eabb9
   m_configObjects:
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}
   m_UseUCBPForAssetBundles: 0

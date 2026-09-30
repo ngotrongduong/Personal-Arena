@@ -189,9 +189,9 @@ def checkpoints(behavior_dir: Path) -> list[tuple[int, Path]]:
 
 
 def discover_behaviors(
-    runs_dir: Path, rules_version: int = arena_trainer.RULES_VERSION
+    runs_dir: Path, schema_version: int = arena_trainer.SCHEMA_VERSION
 ) -> list[str]:
-    """Find checkpoint-bearing behavior folders from runs using the requested rules."""
+    """Find checkpoint-bearing behavior folders from runs using the requested schema."""
     found = set()
     if not runs_dir.is_dir():
         return []
@@ -199,7 +199,7 @@ def discover_behaviors(
         if (
             not run_dir.is_dir()
             or run_dir.name == "run_logs"
-            or arena_trainer.run_rules_version(run_dir) != rules_version
+            or arena_trainer.run_schema_version(run_dir) != schema_version
         ):
             continue
         for behavior_dir in run_dir.iterdir():
@@ -218,20 +218,16 @@ def selected_behaviors(runs_dir: Path, behavior: str) -> list[str]:
 
 
 def newest_behavior_dir(
-    runs_dir: Path, behavior: str, rules_version: int | None = None
+    runs_dir: Path,
+    behavior: str,
+    schema_version: int | None = arena_trainer.SCHEMA_VERSION,
 ) -> Path | None:
     candidates = [path for path in runs_dir.glob(f"*/{behavior}") if path.is_dir() and checkpoints(path)]
-    if rules_version is None:
-        current = [
+    if schema_version is not None:
+        candidates = [
             path
             for path in candidates
-            if arena_trainer.run_rules_version(path.parent) == arena_trainer.RULES_VERSION
-        ]
-        if current:
-            candidates = current
-    else:
-        candidates = [
-            path for path in candidates if arena_trainer.run_rules_version(path.parent) == rules_version
+            if arena_trainer.run_schema_version(path.parent) == schema_version
         ]
     if not candidates:
         return None
@@ -240,7 +236,7 @@ def newest_behavior_dir(
 
 def export_newest(runs_dir: Path, behavior: str, exported: dict[Path, int], log=print) -> Path | None:
     behavior_dir = newest_behavior_dir(
-        runs_dir, behavior, rules_version=arena_trainer.RULES_VERSION
+        runs_dir, behavior, schema_version=arena_trainer.SCHEMA_VERSION
     )
     if behavior_dir is None:
         return None
@@ -263,7 +259,7 @@ def export_newest(runs_dir: Path, behavior: str, exported: dict[Path, int], log=
 def write_newest_history(runs_dir: Path, behavior: str, log=print) -> Path | None:
     try:
         behavior_dir = newest_behavior_dir(
-            runs_dir, behavior, rules_version=arena_trainer.RULES_VERSION
+            runs_dir, behavior, schema_version=arena_trainer.SCHEMA_VERSION
         )
         if behavior_dir is None:
             return None
