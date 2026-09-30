@@ -11,6 +11,7 @@ namespace PersonalArena.Core.Survivor
         public float ObstacleClearRadius = 6f;
         public float RunSeconds = 900f;
         public float BossExpireSeconds = 1020f;
+        public int OpeningRing;
         public CharacterBuild Build = new CharacterBuild();
         public SurvivorClassDef ClassDef = SurvivorDefaults.Warrior();
         public SurvivorRewardConfig Rewards = new SurvivorRewardConfig();
@@ -27,6 +28,7 @@ namespace PersonalArena.Core.Survivor
             if (!Finite(ObstacleClearRadius) || ObstacleClearRadius < 0f) throw new ArgumentOutOfRangeException(nameof(ObstacleClearRadius));
             if (!Finite(RunSeconds) || RunSeconds < 60f || RunSeconds > 900f) throw new ArgumentOutOfRangeException(nameof(RunSeconds));
             if (!Finite(BossExpireSeconds) || BossExpireSeconds < 900f) throw new ArgumentOutOfRangeException(nameof(BossExpireSeconds));
+            if (OpeningRing < 0 || OpeningRing > SurvivorSim.EnemyCapacity) throw new ArgumentOutOfRangeException(nameof(OpeningRing));
             if (Build == null || ClassDef == null || Rewards == null) throw new ArgumentNullException();
             Build.Validate();
             Rewards.Validate();

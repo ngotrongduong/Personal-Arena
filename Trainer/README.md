@@ -18,14 +18,31 @@ Only the Warrior trains in Survivor mode for now. Mage and Archer get their own 
 M7; until then the training service reports that clearly instead of starting a run.
 
 Each run records `schema_version.txt`; a run without it counts as schema 1. Training resumes a
-checkpoint when its observation schema matches the current schema; a new schema starts a new run. Balance or rules changes that leave the
-schema unchanged continue the same run. M4B adds a checkpoint upgrade path between schemas.
+checkpoint when its observation schema matches the current schema. Balance or rules changes that
+leave the schema unchanged continue the same run.
 
 The Warrior Survivor config uses a 3-by-512 PPO network with game-normalized observations. Its
 reward curriculum advances the episode limit from 3 to 6 to 10 to 15 minutes only after the
 smoothed mean reward shows that most agents survive the current lesson.
 
 How to train and read results: `docs/TRAINING.md`.
+
+## Khi game đổi quan sát (schema)
+
+Khi thêm quan sát hoặc action, tạo `schemas/survivor_v<N+1>.json` mô tả layout mới. Schema mới chỉ
+được **tăng thuần**: có thể chèn/thêm segment hoặc field, tăng `repeat`, thêm action branch hoặc tăng
+kích thước branch; không được xoá, đổi tên hay đổi thứ tự phần cũ. Các field/segment khớp nhau bằng
+tên. Việc dùng một slot `reserved_<k>` đã có không cần tăng schema.
+
+Khi owner bấm TRAIN mà chưa có run đúng schema, training service tự tìm checkpoint schema cũ mới
+nhất, nâng cấp sang run kế tiếp và học tiếp ở cùng số bước. Có thể chạy thủ công:
+
+```text
+python -m Trainer.brain_upgrade --source warrior-s001 --new-run warrior-s002
+```
+
+Các tuỳ chọn `--runs-dir`, `--behavior`, `--old-version` và `--new-version` dùng khi đường dẫn,
+behavior hoặc phiên bản không phải mặc định.
 
 ## Champion evaluation
 

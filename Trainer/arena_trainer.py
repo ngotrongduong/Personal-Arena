@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -16,6 +17,7 @@ DEFAULT_ENVIRONMENT = Path("Build/Training/PersonalArenaTraining.exe")
 DEFAULT_RESULTS_DIRECTORY = Path("Trainer/runs")
 SCHEMA_VERSION = 4
 SCHEMA_FILE = "schema_version.txt"
+SCHEMAS_DIR = Path(__file__).resolve().parent / "schemas"
 
 
 def run_schema_version(run_dir: Path) -> int:
@@ -26,9 +28,76 @@ def run_schema_version(run_dir: Path) -> int:
         return 1
 
 
-def write_schema_version(run_dir: Path) -> None:
+def write_schema_version(run_dir: Path, version: int = SCHEMA_VERSION) -> None:
     run_dir.mkdir(parents=True, exist_ok=True)
-    (run_dir / SCHEMA_FILE).write_text(str(SCHEMA_VERSION), encoding="utf-8")
+    (run_dir / SCHEMA_FILE).write_text(str(version), encoding="utf-8")
+
+
+def schema_path(version: int) -> Path:
+    return SCHEMAS_DIR / f"survivor_v{version}.json"
+
+
+def observation_size(schema: dict) -> int:
+    try:
+        return sum(
+            segment["repeat"] * len(segment["fields"])
+            for segment in schema["observation"]
+        )
+    except (KeyError, TypeError):
+        raise ValueError("schema observation has an invalid shape") from None
+
+
+def load_schema(version: int) -> dict:
+    path = schema_path(version)
+    try:
+        schema = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise ValueError(f"cannot load schema v{version}: {error}") from error
+
+    if schema.get("schema_version") != version:
+        raise ValueError(f"schema version does not match {path.name}")
+    observation = schema.get("observation")
+    actions = schema.get("actions")
+    if not isinstance(observation, list) or not observation:
+        raise ValueError("schema needs observation segments")
+    if not isinstance(actions, list) or not actions:
+        raise ValueError("schema needs action branches")
+
+    segment_names: set[str] = set()
+    for segment in observation:
+        name = segment.get("name") if isinstance(segment, dict) else None
+        repeat = segment.get("repeat") if isinstance(segment, dict) else None
+        fields = segment.get("fields") if isinstance(segment, dict) else None
+        if not isinstance(name, str) or not name or name in segment_names:
+            raise ValueError("observation segment names must be unique and non-empty")
+        if not isinstance(repeat, int) or isinstance(repeat, bool) or repeat <= 0:
+            raise ValueError(f"segment {name} has a non-positive repeat")
+        if (
+            not isinstance(fields, list)
+            or not fields
+            or any(not isinstance(field, str) or not field for field in fields)
+            or len(set(fields)) != len(fields)
+        ):
+            raise ValueError(f"segment {name} fields must be unique and non-empty")
+        segment_names.add(name)
+
+    action_names: set[str] = set()
+    for action in actions:
+        name = action.get("name") if isinstance(action, dict) else None
+        size = action.get("size") if isinstance(action, dict) else None
+        if not isinstance(name, str) or not name or name in action_names:
+            raise ValueError("action branch names must be unique and non-empty")
+        if not isinstance(size, int) or isinstance(size, bool) or size <= 0:
+            raise ValueError(f"action branch {name} has a non-positive size")
+        action_names.add(name)
+
+    total = observation_size(schema)
+    if total <= 0 or schema.get("observation_size", total) != total:
+        raise ValueError("schema observation total is inconsistent")
+    action_total = sum(action["size"] for action in actions)
+    if schema.get("action_size", action_total) != action_total:
+        raise ValueError("schema action total is inconsistent")
+    return schema
 
 
 def repository_root() -> Path:

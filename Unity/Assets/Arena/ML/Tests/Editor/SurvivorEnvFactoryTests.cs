@@ -25,6 +25,66 @@ namespace PersonalArena.ML.Tests
         }
 
         [Test]
+        public void ZeroReviewSharesPreserveTheOldBuildRngSequence()
+        {
+            CharacterBuild expected = SurvivorEnvFactory.CreateBuild(new Rng(37), 2f, 6f, 20f, 0f, null);
+
+            SurvivorEpisode episode = SurvivorEnvFactory.CreateEpisode(
+                new Rng(37), 2f, 6f, 20f, 0f, 0f, 0f, null);
+
+            Assert.AreEqual(SurvivorEpisodeKind.New, episode.Kind);
+            Assert.AreEqual(expected.Tier, episode.Build.Tier);
+            Assert.AreEqual(expected.Level, episode.Build.Level);
+            for (int i = 0; i < expected.Points.Length; i++)
+            {
+                Assert.AreEqual(expected.Points[i], episode.Build.Points[i]);
+            }
+        }
+
+        [Test]
+        public void HardEpisodeRaisesTierAndStartsSurrounded()
+        {
+            SurvivorEpisode episode = SurvivorEnvFactory.CreateEpisode(
+                new Rng(11), 1f, 6f, 25f, 0f, 0f, 1f, null);
+
+            Assert.AreEqual(SurvivorEpisodeKind.Hard, episode.Kind);
+            Assert.AreEqual(7, episode.Build.Tier);
+            Assert.LessOrEqual(episode.Build.Level, 25);
+            Assert.AreEqual(16, episode.OpeningRing);
+        }
+
+        [Test]
+        public void ReviewEpisodeIsTheBlankTierOneBaseline()
+        {
+            SurvivorEpisode episode = SurvivorEnvFactory.CreateEpisode(
+                new Rng(11), 4f, 9f, 50f, 1f, 1f, 0f, new CharacterBuild { Tier = 8 });
+
+            Assert.AreEqual(SurvivorEpisodeKind.Review, episode.Kind);
+            Assert.AreEqual(1, episode.Build.Tier);
+            Assert.AreEqual(0, episode.Build.Level);
+            Assert.AreEqual(0, episode.OpeningRing);
+        }
+
+        [Test]
+        public void EpisodeSharesAreClampedAndScaled()
+        {
+            var rng = new Rng(91);
+            int hard = 0;
+            int review = 0;
+            for (int i = 0; i < 1000; i++)
+            {
+                SurvivorEpisode episode = SurvivorEnvFactory.CreateEpisode(
+                    rng, 1f, 1f, 0f, 0f, 5f, 5f, null);
+                if (episode.Kind == SurvivorEpisodeKind.Hard) hard++;
+                if (episode.Kind == SurvivorEpisodeKind.Review) review++;
+                Assert.AreNotEqual(SurvivorEpisodeKind.New, episode.Kind);
+            }
+
+            Assert.Greater(hard, 400);
+            Assert.Greater(review, 400);
+        }
+
+        [Test]
         public void TiersAreClampedAndOrdered()
         {
             CharacterBuild build = SurvivorEnvFactory.CreateBuild(new Rng(3), 14f, 2f, 0f, 0f, null);

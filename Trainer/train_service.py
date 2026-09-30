@@ -34,7 +34,7 @@ from typing import Callable, Iterable, TextIO
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from Trainer import arena_trainer, export_brain  # noqa: E402
+from Trainer import arena_trainer, brain_upgrade, export_brain  # noqa: E402
 from Trainer import champion  # noqa: E402
 
 STATUS_NAME = "training_service.json"
@@ -163,9 +163,11 @@ class RunPlan:
     run_id: str
     mode: str  # "resume", "force" or "new"
     last_step: int
+    message: str = ""
 
 
 def plan_run(runs_dir: Path, behavior: str, requested: str | None = None) -> RunPlan:
+    message = ""
     if requested:
         run_id = next_run_id(runs_dir, behavior) if requested == champion.CHAMPIONS_DIR else requested
         requested_dir = runs_dir / run_id
@@ -181,6 +183,7 @@ def plan_run(runs_dir: Path, behavior: str, requested: str | None = None) -> Run
             for path in runs_dir.glob(f"*/{behavior}")
             if path.is_dir()
             and path.parent.name != champion.CHAMPIONS_DIR
+            and not path.parent.name.startswith(".")
             and (path / "checkpoint.pt").is_file()
             and export_brain.checkpoints(path)
             and arena_trainer.run_schema_version(path.parent)
@@ -197,7 +200,70 @@ def plan_run(runs_dir: Path, behavior: str, requested: str | None = None) -> Run
             if resumable
             else None
         )
-        run_id = newest.parent.name if newest is not None else next_run_id(runs_dir, behavior)
+        if newest is not None:
+            run_id = newest.parent.name
+        else:
+            run_id = next_run_id(runs_dir, behavior)
+            older = [
+                path
+                for path in runs_dir.glob(f"*/{behavior}")
+                if path.is_dir()
+                and path.parent.name != champion.CHAMPIONS_DIR
+                and not path.parent.name.startswith(".")
+                and (path / "checkpoint.pt").is_file()
+                and export_brain.checkpoints(path)
+                and arena_trainer.run_schema_version(path.parent) < arena_trainer.SCHEMA_VERSION
+            ]
+            older.sort(
+                key=lambda path: max(
+                    checkpoint.stat().st_mtime
+                    for _, checkpoint in export_brain.checkpoints(path)
+                ),
+                reverse=True,
+            )
+            current_schema = arena_trainer.schema_path(arena_trainer.SCHEMA_VERSION)
+            upgrade_source = next(
+                (
+                    path
+                    for path in older
+                    if current_schema.is_file()
+                    and arena_trainer.schema_path(
+                        arena_trainer.run_schema_version(path.parent)
+                    ).is_file()
+                ),
+                None,
+            )
+            if upgrade_source is not None:
+                old_version = arena_trainer.run_schema_version(upgrade_source.parent)
+                source_step = export_brain.checkpoints(upgrade_source)[-1][0]
+                try:
+                    brain_upgrade.upgrade_run(
+                        runs_dir,
+                        upgrade_source.parent.name,
+                        behavior,
+                        run_id,
+                        old_version,
+                        arena_trainer.SCHEMA_VERSION,
+                    )
+                except Exception as error:  # upgrade_run wraps its own errors; stay safe anyway
+                    message = f"Không thể nâng cấp não AI ({error}); bắt đầu học lại từ đầu."
+                else:
+                    message = (
+                        "Não AI được nâng cấp lên luật mới "
+                        f"(schema v{old_version} → v{arena_trainer.SCHEMA_VERSION}) "
+                        f"và học tiếp từ bước {source_step}."
+                    )
+            elif older:
+                old_version = arena_trainer.run_schema_version(older[0].parent)
+                missing = []
+                if not arena_trainer.schema_path(old_version).is_file():
+                    missing.append(f"schema v{old_version}")
+                if not current_schema.is_file():
+                    missing.append(f"schema v{arena_trainer.SCHEMA_VERSION}")
+                message = (
+                    "Không thể nâng cấp não AI vì thiếu " + " và ".join(missing)
+                    + "; bắt đầu học lại từ đầu."
+                )
 
     run_dir = runs_dir / run_id
     behavior_dir = run_dir / behavior
@@ -212,7 +278,7 @@ def plan_run(runs_dir: Path, behavior: str, requested: str | None = None) -> Run
         mode = "force"
     else:
         mode = "new"
-    return RunPlan(run_id, mode, last_step)
+    return RunPlan(run_id, mode, last_step, message)
 
 
 def next_run_id(runs_dir: Path, behavior: str) -> str:
@@ -591,7 +657,10 @@ class TrainingService:
         if tail.partial:
             self.progress.feed(tail.partial)
         self.log_file = log_path.open("a", encoding="utf-8")
-        self.publish("starting", "Loading the training arenas...")
+        starting_message = plan.message or "Loading the training arenas..."
+        if plan.message:
+            self.log(plan.message)
+        self.publish("starting", starting_message)
 
         restarts = 0
         crashes = 0

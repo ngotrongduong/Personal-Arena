@@ -152,6 +152,7 @@ namespace PersonalArena.Core.Survivor
             Array.Clear(Hero.SkillCooldowns, 0, Hero.SkillCooldowns.Length);
             RecomputeStats(false); Hero.Hp = Hero.MaxHp;
             events.Clear();
+            SpawnOpeningRing();
         }
 
         /// <summary>

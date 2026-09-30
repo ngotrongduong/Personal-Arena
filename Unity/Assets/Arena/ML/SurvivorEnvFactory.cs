@@ -4,6 +4,15 @@ using PersonalArena.Core.Survivor;
 
 namespace PersonalArena.ML
 {
+    public enum SurvivorEpisodeKind { New, Review, Hard }
+
+    public sealed class SurvivorEpisode
+    {
+        public SurvivorEpisodeKind Kind;
+        public CharacterBuild Build;
+        public int OpeningRing;
+    }
+
     /// <summary>Turns trainer environment parameters into per-episode Survivor settings.</summary>
     public static class SurvivorEnvFactory
     {
@@ -70,6 +79,62 @@ namespace PersonalArena.ML
             return BuildRandomizer.Random(rng, level, low, high);
         }
 
+        public static SurvivorEpisode CreateEpisode(Rng rng, float tierMin, float tierMax,
+            float buildLevelMax, float ownBuildShare, float reviewShare, float hardShare,
+            CharacterBuild ownBuild)
+        {
+            if (rng == null)
+            {
+                throw new ArgumentNullException(nameof(rng));
+            }
+
+            float review = Share(reviewShare);
+            float hard = Share(hardShare);
+            float total = review + hard;
+            if (total > 1f)
+            {
+                review /= total;
+                hard /= total;
+                total = 1f;
+            }
+
+            if (total <= 0f)
+            {
+                return new SurvivorEpisode
+                {
+                    Kind = SurvivorEpisodeKind.New,
+                    Build = CreateBuild(rng, tierMin, tierMax, buildLevelMax, ownBuildShare, ownBuild)
+                };
+            }
+
+            float roll = rng.NextFloat();
+            if (roll < hard)
+            {
+                int tier = Tier(tierMax + 1f);
+                return new SurvivorEpisode
+                {
+                    Kind = SurvivorEpisodeKind.Hard,
+                    Build = BuildRandomizer.Random(rng, BuildLevel(buildLevelMax), tier, tier),
+                    OpeningRing = 16
+                };
+            }
+
+            if (roll < hard + review)
+            {
+                return new SurvivorEpisode
+                {
+                    Kind = SurvivorEpisodeKind.Review,
+                    Build = new CharacterBuild { Tier = 1 }
+                };
+            }
+
+            return new SurvivorEpisode
+            {
+                Kind = SurvivorEpisodeKind.New,
+                Build = CreateBuild(rng, tierMin, tierMax, buildLevelMax, ownBuildShare, ownBuild)
+            };
+        }
+
         public static SurvivorClassDef CreateClass(string classId)
         {
             if (!string.Equals(classId, ClassRegistry.WarriorId, StringComparison.OrdinalIgnoreCase))
@@ -78,6 +143,12 @@ namespace PersonalArena.ML
             }
 
             return SurvivorDefaults.Warrior();
+        }
+
+        private static float Share(float value)
+        {
+            if (float.IsNaN(value)) return 0f;
+            return Math.Max(0f, Math.Min(1f, value));
         }
     }
 }
