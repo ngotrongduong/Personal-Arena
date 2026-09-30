@@ -209,7 +209,8 @@ Dùng 4 loại zombie của M3, nhưng chỉnh số liệu hợp với kiểu "�
 ### 3.2 Cấp nhân vật và điểm chỉ số
 
 - Mỗi nhân vật có **cấp** (khác cấp trong trận). Lên cấp bằng vàng. Giá = ⌊100 × 1,25^cấp hiện tại⌋:
-  cấp 0→1 giá 100, cấp 9→10 khoảng 745, cấp 19→20 khoảng 6.939.
+  cấp 0→1 giá 100, cấp 9→10 khoảng 745, cấp 19→20 khoảng 6.939. Giá bão hòa ở giới hạn số nguyên
+  (khoảng cấp 170), thực tế không ai tới được.
 - Mỗi cấp cho **1 điểm chỉ số**. Người chơi cộng điểm vào 13 chỉ số dưới đây.
 - **Tẩy điểm** miễn phí, để thử build thoải mái.
 
@@ -247,13 +248,17 @@ Dùng 4 loại zombie của M3, nhưng chỉnh số liệu hợp với kiểu "�
 Trước khi bấm TRAIN, owner chọn **trọng tâm huấn luyện**. Mỗi trọng tâm là một bộ hệ số thưởng khác nhau
 (vẫn giữ thứ bậc ở mục 4.3, chỉ đổi độ nặng):
 
-| Trọng tâm | Ý nghĩa |
-|---|---|
-| Cân bằng | Mặc định |
-| Sống sót | Phạt mất máu nặng hơn |
-| Vàng | Thưởng vàng cao hơn |
-| Boss | Thưởng gây sát thương lên boss cao hơn |
-| Tấn công | Thưởng tiến độ EXP cao hơn, chấp nhận mất máu |
+| Trọng tâm | Ý nghĩa | Hệ số đổi so với Cân bằng (chốt ở T-023) |
+|---|---|---|
+| Cân bằng | Mặc định | Thắng 10, hết giờ 5, chết −5, sống 0,01/s, mất máu 1/máu tối đa, EXP 0,05, vàng 0,001, boss 2 |
+| Sống sót | Phạt mất máu nặng hơn | mất máu 1,6; chết −6; vàng 0,0005 |
+| Vàng | Thưởng vàng cao hơn | vàng 0,003 |
+| Boss | Thưởng gây sát thương lên boss cao hơn | boss 5 |
+| Tấn công | Thưởng tiến độ EXP cao hơn, chấp nhận mất máu | EXP 0,1; mất máu 0,7 |
+
+- Khi owner bấm TRAIN: khoảng **70% trận huấn luyện** dùng loadout đang chọn của owner ở bậc đã chọn
+  (lệch nhẹ tối đa 2 điểm để não không học thuộc một build), 30% còn lại là ôn tập / trận khó / build
+  ngẫu nhiên. Owner cấp 0 ở bậc 1 thì vẫn học build ngẫu nhiên hoàn toàn.
 
 ### 3.5 Bậc độ khó
 
@@ -279,8 +284,10 @@ Modifier khởi điểm (cộng dồn, chốt ở M5):
 | 6 | Brute xuất hiện sớm từ phút 1 |
 | 7 | Tinh anh gấp đôi |
 | 8 | Quái hồi máu chậm khi không bị đánh |
-| 9 | Boss có đòn gọi thêm Runner |
-| 10 | **Nightmare:** tất cả những điều trên, quái chết để lại vũng độc ngắn |
+| 9 | Boss gọi quân nhanh gấp đôi |
+| 10 | **Ác mộng (Nightmare):** tất cả modifier trên, quái nhanh hơn 10%, tinh anh thêm 50% máu |
+
+(Bậc 1 giữ y hệt luật M4C — có golden test trong CoreTests.)
 
 ### 3.6 Class và nhân vật
 
