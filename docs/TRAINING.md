@@ -25,6 +25,9 @@ Env (Windows)**. Hoặc headless (không mở Editor):
 
 - Kết quả: `Build/Training/PersonalArenaTraining.exe` (không commit). `-buildPath <thư mục>`
   để đổi chỗ ra.
+- Đang train thì exe bị khóa: build ra `-buildPath Build/TrainingNext`. Lần bấm TRAIN kế tiếp,
+  `train_service` tự tráo `Build/TrainingNext` vào `Build/Training` trước khi chạy mlagents
+  (lỗi thì giữ bản cũ và ghi vào log của run).
 - Bản build chỉ chứa `Assets/Scenes/Training.unity`; tool không đổi `EditorBuildSettings`.
 - Lúc chạy, `--arena-agents N` đổi số agent mỗi process (mặc định 16).
 - **Luôn có `-quit`** với `-executeMethod` đồng bộ, nếu không Unity treo mãi sau khi xong.
@@ -59,15 +62,26 @@ Từ gốc repo (`C:\PersonalArena`, nơi có `.venv-ml`):
   - MLP 3 × 512, `normalize: false`, batch 4096, buffer 81920, lr 3e-4, beta 5e-3, gamma 0.995.
   - Curriculum `run_seconds` 180 → 360 → 600 → 900 (ngưỡng reward 5.0 / 6.5 / 8.5, tối thiểu 200
     episode mỗi bài). Ngưỡng là **ước lượng** từ bảng thưởng; chỉnh sau run thật.
+  - Curriculum theo **tiến độ** (T-019, D-033), tính trên `max_steps` 1e8 gốc:
+    - `build_level_max`: 0 tới 22%, 10 tới 30%, 25 tới 40%, sau đó 50;
+    - `tier_max`: 1 tới 45%, 3 tới 60%, 6 tới 75%, sau đó 10.
 - Environment parameters mà `HeroAgent` đọc:
   - `run_seconds`: độ dài trận;
   - `tier_min` / `tier_max`: bậc độ khó random trong khoảng;
   - `build_level_max`: điểm chỉ số rải ngẫu nhiên tối đa (0 = build trắng);
+  - `review_share` (0,2) / `hard_share` (0 tới 30% tiến độ, sau đó 0,1): tỉ lệ trận **ôn tập**
+    (bậc 1, build trắng) và trận
+    **khó** (bậc +1, build ngẫu nhiên, mở đầu bằng vòng 16 quái quanh nhân vật); còn lại là trận
+    mới. Thống kê `Arena/Episode/Survived<New|Review|Hard>`;
   - `own_build_share`: tỉ lệ trận dùng build thật của owner (M5).
 - Thưởng (`SurvivorRewardConfig`): thắng +10, hết giờ +5, chết −5, sống +0.01/s, −1 cho mỗi lượng
   máu bằng MaxHp bị mất, +0.05 mỗi cấp, +0.001 mỗi vàng, +2 × tỉ lệ máu boss bị trừ.
-- Nâng cấp não khi schema quan sát đổi: `Trainer/brain_upgrade.py` (D-027). Schema giữ nguyên thì
-  service học tiếp từ checkpoint.
+- Nâng cấp não khi schema quan sát đổi: `Trainer/brain_upgrade.py` (D-027, D-033). Schema mô tả
+  bằng `Trainer/schemas/survivor_v<N>.json`; bản mới chỉ được **thêm** (không xoá, không đổi chỗ).
+  Khi bấm TRAIN mà run mới nhất có schema cũ hơn, service tự nâng cấp sang run mới: đầu vào mới
+  trọng số 0, hành động mới khởi tạo nhỏ, bỏ trạng thái Adam, giữ `global_step`. Não sau nâng cấp
+  cho đầu ra y hệt não cũ với quan sát cũ (test Python + C#). Schema giữ nguyên thì service học tiếp
+  từ checkpoint.
 
 ## 3. Đọc kết quả (TensorBoard)
 

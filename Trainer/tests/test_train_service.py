@@ -7,6 +7,14 @@ import pytest
 
 from Trainer import arena_trainer, train_service
 
+_install_staged_build = train_service.install_staged_build
+
+
+@pytest.fixture(autouse=True)
+def no_real_build_swap(monkeypatch):
+    # Service tests run against the real repository root; never touch its Build folder.
+    monkeypatch.setattr(train_service, "install_staged_build", lambda root: "")
+
 
 def summary(step: int, reward: float | None) -> str:
     if reward is None:
@@ -708,3 +716,46 @@ def test_a_service_error_is_written_where_the_viewer_can_show_it(tmp_path: Path,
     assert status["state"] == "error"
     assert "disk on fire" in status["message"]
     assert "disk on fire" in (tmp_path / train_service.ERROR_LOG_NAME).read_text(encoding="utf-8")
+
+
+def _write_build(folder: Path, marker: str) -> None:
+    folder.mkdir(parents=True)
+    (folder / "PersonalArenaTraining.exe").write_text(marker, encoding="utf-8")
+
+
+def test_install_staged_build_swaps_in_new_build(tmp_path: Path):
+    _write_build(tmp_path / "Build" / "Training", "old")
+    _write_build(tmp_path / "Build" / "TrainingNext", "new")
+
+    message = _install_staged_build(tmp_path)
+
+    assert "installed" in message
+    assert (tmp_path / "Build" / "Training" / "PersonalArenaTraining.exe").read_text(encoding="utf-8") == "new"
+    assert not (tmp_path / "Build" / "TrainingNext").exists()
+    assert not (tmp_path / "Build" / ".Training.old").exists()
+
+
+def test_install_staged_build_without_staged_build_does_nothing(tmp_path: Path):
+    _write_build(tmp_path / "Build" / "Training", "old")
+
+    assert _install_staged_build(tmp_path) == ""
+    assert (tmp_path / "Build" / "Training" / "PersonalArenaTraining.exe").read_text(encoding="utf-8") == "old"
+
+
+def test_install_staged_build_keeps_current_build_on_error(tmp_path: Path, monkeypatch):
+    _write_build(tmp_path / "Build" / "Training", "old")
+    _write_build(tmp_path / "Build" / "TrainingNext", "new")
+    real_rename = Path.rename
+
+    def rename(self, target):
+        if self.name == "TrainingNext":
+            raise PermissionError("locked")
+        return real_rename(self, target)
+
+    monkeypatch.setattr(Path, "rename", rename)
+
+    message = _install_staged_build(tmp_path)
+
+    assert "could not install" in message
+    assert (tmp_path / "Build" / "Training" / "PersonalArenaTraining.exe").read_text(encoding="utf-8") == "old"
+    assert (tmp_path / "Build" / "TrainingNext" / "PersonalArenaTraining.exe").is_file()

@@ -23,6 +23,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import signal
 import subprocess
 import sys
@@ -279,6 +280,36 @@ def plan_run(runs_dir: Path, behavior: str, requested: str | None = None) -> Run
     else:
         mode = "new"
     return RunPlan(run_id, mode, last_step, message)
+
+
+def install_staged_build(root: Path) -> str:
+    """Swap ``Build/TrainingNext`` (built while training was running) into ``Build/Training``.
+
+    The training player is locked while ML-Agents runs, so a new build is staged next to it
+    and installed here, before the trainer starts. Returns a log message ("" when nothing was
+    staged). On any error the current build stays in place.
+    """
+    build_dir = root / "Build"
+    staged = build_dir / "TrainingNext"
+    if not (staged / arena_trainer.DEFAULT_ENVIRONMENT.name).is_file():
+        return ""
+    target = build_dir / "Training"
+    previous = build_dir / ".Training.old"
+    try:
+        if previous.exists():
+            shutil.rmtree(previous)
+        if target.exists():
+            target.rename(previous)
+        try:
+            staged.rename(target)
+        except OSError:
+            if previous.exists() and not target.exists():
+                previous.rename(target)
+            raise
+    except OSError as error:
+        return f"could not install the staged training build ({error}); using the current one"
+    shutil.rmtree(previous, ignore_errors=True)
+    return "installed the new training build from Build/TrainingNext"
 
 
 def next_run_id(runs_dir: Path, behavior: str) -> str:
@@ -657,6 +688,9 @@ class TrainingService:
         if tail.partial:
             self.progress.feed(tail.partial)
         self.log_file = log_path.open("a", encoding="utf-8")
+        build_message = install_staged_build(self.root)
+        if build_message:
+            self.log(build_message)
         starting_message = plan.message or "Loading the training arenas..."
         if plan.message:
             self.log(plan.message)
