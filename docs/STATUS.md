@@ -96,7 +96,7 @@
 | M3: 4 loại zombie + đạn + Mage/Archer + icon skill | xong (D-024); đã thay bằng Survivor |
 | **Hướng mới: chế độ Survivor (kiểu Vampire Survivors)** | thiết kế xong (`docs/GDD.md`, D-026..D-030) |
 | M4A: Core, Trainer, Unity Survivor + dọn code cũ (T-014..T-017) | xong — test xanh, build xem và build train chạy |
-| M4A: train `warrior-s001` qua đánh giá 100 seed | đang train (13.45M bước: sống ~165/180 s, chết 33%) |
+| M4A: train `warrior-s001` qua đánh giá 100 seed | đang làm — owner dừng êm ở 14.55M bước (reward ~4.1, sống ~165/180 s); bấm TRAIN THE AI để học tiếp |
 
 ## Việc tiếp theo (theo thứ tự)
 
@@ -106,7 +106,7 @@ Lộ trình mới M4A–M8 ở `docs/PLAN.md` (owner góp ý thiết kế → D-
 thưởng theo thứ bậc, nghiệm thu bằng đánh giá 100 seed). Đấu trường tròn luật v3 sẽ bị thay;
 `warrior-003` không cần train tiếp.
 
-1. Train `warrior-s001` (dịch vụ nút TRAIN đang chạy) tới khi qua đánh giá 100 seed bằng
+1. Train `warrior-s001` (nút TRAIN THE AI học tiếp từ 14.55M) tới khi qua đánh giá 100 seed bằng
    `Tools/SurvivorEval`: trung vị ≥ 10:00, P10 ≥ 7:00, không chết trước 3:00.
    - Theo dõi: `Arena/Died`, `Arena/SurvivedSeconds`, `Environment/Lesson Number/run_seconds`.
    - AI nhặt ít EXP (~54 EXP, cấp ~3.7 mỗi trận 180 s dù giết ~195 quái). Nếu lên bài 360/600 s mà
@@ -150,7 +150,9 @@ thưởng theo thứ bậc, nghiệm thu bằng đánh giá 100 seed). Đấu tr
 - Cập nhật AGENTS.md §6, `docs/TRAINING.md`, RESOURCES, agent `core-sim-engineer` theo Survivor.
 - Test: CoreTests 69, pytest 70, EditMode 78 — xanh. `WatchBuild` và `SurvivorEval` build được.
 - `warrior-s001` ở 13.45M bước: reward −5.5 → 2.3, chết 100% → 33%, sống 44 → 165/180 s, vẫn bài
-  180 s (cần reward 5.0).
+  180 s (cần reward 5.0). Tới 14.55M reward lên ~4.1; owner dừng êm từ trình xem lúc 11:52.
+- CI: CoreTests chạy bản Release (bản Debug chậm hơn ngân sách hiệu năng). `develop` và `main` đã
+  gồm M4A; các worktree/nhánh Codex đã merge đều đã xoá.
 
 ### 2026-09-30 — Claude (PC): hướng mới Survivor
 - Owner muốn game thành kiểu Vampire Survivors: bắt đầu với 1 Warrior, AI tự học đánh, nhặt EXP, chọn
