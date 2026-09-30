@@ -88,6 +88,7 @@ namespace PersonalArena.ML
                 return;
             }
 
+            bool wasAwaitingPick = Sim.IsAwaitingPick;
             ActionSegment<int> discrete = actions.DiscreteActions;
             Sim.Step(SurvivorActionMapper.FromBranches(
                 discrete[SurvivorActionMapper.MoveBranch],
@@ -99,10 +100,11 @@ namespace PersonalArena.ML
             {
                 FinishEpisode();
             }
-            else if (Sim.IsAwaitingPick)
+            else if (Sim.IsAwaitingPick || wasAwaitingPick)
             {
-                // The run is paused on a level-up offer: decide on the next academy step
-                // instead of repeating a stale no-op pick for the rest of the decision period.
+                // Paused on a level-up offer: decide on the next academy step instead of
+                // repeating a stale no-op pick. Right after a pick, decide again too, so the
+                // move and skill chosen while paused are not replayed for the rest of the period.
                 RequestDecision();
             }
         }
