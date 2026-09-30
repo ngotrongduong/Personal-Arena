@@ -15,6 +15,7 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from Trainer import arena_trainer  # noqa: E402
+from Trainer.champion import CHAMPIONS_DIR  # noqa: E402
 
 HISTORY_NAME = "training_history.json"
 EVENT_PATTERN = "events.out.tfevents.*"
@@ -37,7 +38,7 @@ def _newest_run_dir(runs_dir: Path, behavior: str) -> Path | None:
     candidates = [
         path.parent.parent
         for path in runs_dir.glob(f"*/{behavior}/{EVENT_PATTERN}")
-        if path.is_file()
+        if path.is_file() and path.parent.parent.name != CHAMPIONS_DIR
     ]
     candidates = list(dict.fromkeys(candidates))
     candidates = [
@@ -92,7 +93,7 @@ def discover_behaviors(runs_dir: Path, run_id: str | None = None) -> list[str]:
     for run_dir in run_dirs:
         if (
             not run_dir.is_dir()
-            or run_dir.name == "run_logs"
+            or run_dir.name in ("run_logs", CHAMPIONS_DIR)
             or arena_trainer.run_schema_version(run_dir) != arena_trainer.SCHEMA_VERSION
         ):
             continue

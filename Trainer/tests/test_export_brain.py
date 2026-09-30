@@ -201,3 +201,13 @@ def test_discover_behaviors_finds_current_schema_and_ignores_old_or_non_behavior
 
     assert export_brain.discover_behaviors(tmp_path) == ["Mage", "Warrior"]
     assert export_brain.export_newest(tmp_path, "Archer", {}) is None
+
+
+def test_scanners_ignore_champions_directory(tmp_path: Path):
+    fake = tmp_path / "champions" / "Warrior"
+    fake.mkdir(parents=True)
+    (fake / "Warrior-999.pt").write_bytes(b"not a run")
+    arena_trainer.write_schema_version(fake.parent)
+
+    assert export_brain.discover_behaviors(tmp_path) == []
+    assert export_brain.newest_behavior_dir(tmp_path, "Warrior") is None

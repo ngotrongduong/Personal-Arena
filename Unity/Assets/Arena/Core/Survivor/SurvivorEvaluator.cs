@@ -22,6 +22,7 @@ namespace PersonalArena.Core.Survivor
         public float MinHpTime { get; set; }
         public int[] SkillUses { get; set; } = new int[4];
         public int[] FinalItemLevels { get; set; } = new int[SurvivorCatalog.CatalogSize];
+        public SurvivorBehaviorStats Behavior { get; set; } = new SurvivorBehaviorStats();
     }
 
     public sealed class SurvivorEvalSummary
@@ -39,6 +40,7 @@ namespace PersonalArena.Core.Survivor
         public float MeanLevel { get; set; }
         public Dictionary<EndReason, int> EndReasonCounts { get; set; } = new Dictionary<EndReason, int>();
         public Dictionary<DeathCause, int> DeathCauseCounts { get; set; } = new Dictionary<DeathCause, int>();
+        public SurvivorBehaviorStats Behavior { get; set; } = new SurvivorBehaviorStats();
     }
 
     public sealed class SurvivorEvaluator
@@ -50,13 +52,15 @@ namespace PersonalArena.Core.Survivor
         {
             string problem = SurvivorPilot.Validate(brain); if (problem != null) throw new ArgumentException(problem, nameof(brain));
             SurvivorSim sim = new SurvivorSim(config, seed); SurvivorPilot pilot = new SurvivorPilot(brain, seed ^ PilotSeedSalt) { Deterministic = deterministic };
-            while (!sim.IsEnded) sim.Step(pilot.NextInput(sim));
+            SurvivorBehaviorTracker tracker = new SurvivorBehaviorTracker(); tracker.Reset(sim);
+            while (!sim.IsEnded) { sim.Step(pilot.NextInput(sim)); tracker.Observe(sim); }
             SurvivorRunStats result = new SurvivorRunStats
             {
                 Seed = seed, SurvivedSeconds = sim.Time, EndReason = sim.EndReason, DeathCause = sim.DeathCause,
                 Level = sim.Level, Kills = sim.Kills, EliteKills = sim.EliteKills, Gold = sim.Gold,
                 TotalXp = sim.TotalXp, DamageTaken = sim.DamageTaken, DamageDealt = sim.DamageDealtTotal,
-                BossDamageFraction = sim.BossDamageFraction, MinHpRatio = sim.MinHpRatio, MinHpTime = sim.MinHpTime
+                BossDamageFraction = sim.BossDamageFraction, MinHpRatio = sim.MinHpRatio, MinHpTime = sim.MinHpTime,
+                Behavior = tracker.Finish(sim)
             };
             Array.Copy(sim.SkillUses, result.SkillUses, 4);
             for (int i = 0; i < result.FinalItemLevels.Length; i++) result.FinalItemLevels[i] = sim.Inventory.Level(i);
@@ -82,9 +86,37 @@ namespace PersonalArena.Core.Survivor
             summary.P10SurvivedSeconds = times[Math.Max(0, (int)Math.Ceiling(0.1 * times.Length) - 1)]; summary.MeanSurvivedSeconds = (float)(totalSeconds / runs.Count);
             summary.WinRate = (float)wins / runs.Count; double minutes = totalSeconds / 60.0;
             if (minutes > 0) { summary.GoldPerMinute = (float)(gold / minutes); summary.XpPerMinute = (float)(xp / minutes); summary.DamageTakenPerMinute = (float)(damage / minutes); }
-            summary.MeanBossDamageFraction = (float)(boss / runs.Count); summary.MeanLevel = (float)(levels / runs.Count); return summary;
+            summary.MeanBossDamageFraction = (float)(boss / runs.Count); summary.MeanLevel = (float)(levels / runs.Count);
+            summary.Behavior = SummarizeBehavior(runs); return summary;
         }
 
         public bool PassesM4A(SurvivorEvalSummary summary) => summary != null && summary.MedianSurvivedSeconds >= 600f && summary.P10SurvivedSeconds >= 420f && summary.CatastrophicCount == 0;
+
+        private static SurvivorBehaviorStats SummarizeBehavior(IReadOnlyList<SurvivorRunStats> runs)
+        {
+            SurvivorBehaviorStats result = new SurvivorBehaviorStats();
+            double aggression = 0, caution = 0, greed = 0, exploration = 0, crowd = 0, boss = 0, discipline = 0, range = 0, distance = 0;
+            int aggressionCount = 0, cautionCount = 0, greedCount = 0, explorationCount = 0, crowdCount = 0, bossCount = 0, disciplineCount = 0, rangeCount = 0, distanceCount = 0;
+            for (int i = 0; i < runs.Count; i++)
+            {
+                SurvivorBehaviorStats b = runs[i].Behavior;
+                if (b == null) continue;
+                AddMetric(b.Aggression, ref aggression, ref aggressionCount); AddMetric(b.Caution, ref caution, ref cautionCount);
+                AddMetric(b.Greed, ref greed, ref greedCount); AddMetric(b.Exploration, ref exploration, ref explorationCount);
+                AddMetric(b.CrowdControl, ref crowd, ref crowdCount); AddMetric(b.BossHunting, ref boss, ref bossCount);
+                AddMetric(b.SkillDiscipline, ref discipline, ref disciplineCount); AddMetric(b.PreferredRange, ref range, ref rangeCount);
+                AddMetric(b.KeepDistance, ref distance, ref distanceCount);
+                result.KickUses += b.KickUses; result.BlockUses += b.BlockUses; result.DashUses += b.DashUses;
+                result.EffectiveKicks += b.EffectiveKicks; result.EffectiveBlocks += b.EffectiveBlocks; result.EffectiveDashes += b.EffectiveDashes;
+            }
+            result.Aggression = MeanMetric(aggression, aggressionCount); result.Caution = MeanMetric(caution, cautionCount);
+            result.Greed = MeanMetric(greed, greedCount); result.Exploration = MeanMetric(exploration, explorationCount);
+            result.CrowdControl = MeanMetric(crowd, crowdCount); result.BossHunting = MeanMetric(boss, bossCount);
+            result.SkillDiscipline = MeanMetric(discipline, disciplineCount); result.PreferredRange = MeanMetric(range, rangeCount);
+            result.KeepDistance = MeanMetric(distance, distanceCount); return result;
+        }
+
+        private static void AddMetric(float value, ref double total, ref int count) { if (value >= 0f) { total += value; count++; } }
+        private static float MeanMetric(double total, int count) => count > 0 ? (float)(total / count) : -1f;
     }
 }
