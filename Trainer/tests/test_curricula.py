@@ -47,9 +47,38 @@ def test_survivor_config_parses_with_mlagents_and_has_reward_curriculum():
 
     for name, expected in {
         "tier_min": 1.0,
-        "tier_max": 1.0,
-        "build_level_max": 0.0,
         "own_build_share": 0.0,
+        "review_share": 0.2,
     }.items():
         constant = options.environment_parameters[name].curriculum[0]
         assert constant.value.value == expected
+
+    build_lessons = options.environment_parameters["build_level_max"].curriculum
+    assert [lesson.name for lesson in build_lessons] == ["blank", "light", "medium", "full"]
+    assert [lesson.value.value for lesson in build_lessons] == [0.0, 10.0, 25.0, 50.0]
+    assert [lesson.completion_criteria.threshold for lesson in build_lessons[:-1]] == [
+        0.22, 0.30, 0.40
+    ]
+
+    tier_lessons = options.environment_parameters["tier_max"].curriculum
+    assert [lesson.name for lesson in tier_lessons] == ["tier-1", "tier-3", "tier-6", "tier-10"]
+    assert [lesson.value.value for lesson in tier_lessons] == [1.0, 3.0, 6.0, 10.0]
+    assert [lesson.completion_criteria.threshold for lesson in tier_lessons[:-1]] == [
+        0.45, 0.60, 0.75
+    ]
+
+    hard_lessons = options.environment_parameters["hard_share"].curriculum
+    assert [lesson.name for lesson in hard_lessons] == ["hard-off", "hard-on"]
+    assert [lesson.value.value for lesson in hard_lessons] == [0.0, 0.1]
+    assert hard_lessons[0].completion_criteria.threshold == 0.30
+
+    for curriculum in (build_lessons, tier_lessons, hard_lessons):
+        assert all(
+            lesson.completion_criteria is not None
+            and lesson.completion_criteria.measure
+            == CompletionCriteriaSettings.MeasureType.PROGRESS
+            and lesson.completion_criteria.min_lesson_length == 200
+            and lesson.completion_criteria.behavior == "Warrior"
+            for lesson in curriculum[:-1]
+        )
+        assert curriculum[-1].completion_criteria is None

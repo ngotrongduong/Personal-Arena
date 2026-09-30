@@ -160,6 +160,130 @@ def test_plan_run_uses_the_newest_current_schema_run(tmp_path: Path):
     assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-s002", "resume", 100)
 
 
+def write_fake_schema(directory: Path, version: int) -> None:
+    schema = {
+        "schema_version": version,
+        "observation": [{"name": "self", "repeat": 1, "fields": ["value"]}],
+        "actions": [{"name": "move", "size": 1}],
+    }
+    (directory / f"survivor_v{version}.json").write_text(json.dumps(schema), encoding="utf-8")
+
+
+def test_plan_run_upgrades_the_newest_older_schema(tmp_path: Path, monkeypatch):
+    schema_dir = tmp_path / "schemas"
+    schema_dir.mkdir()
+    write_fake_schema(schema_dir, 4)
+    write_fake_schema(schema_dir, 5)
+    monkeypatch.setattr(arena_trainer, "SCHEMAS_DIR", schema_dir)
+    monkeypatch.setattr(arena_trainer, "SCHEMA_VERSION", 5)
+    make_checkpoint(tmp_path, "warrior-s001", 800, schema_version=4)
+    calls = []
+
+    def fake_upgrade(runs_dir, source_run, behavior, new_run, old_version, new_version):
+        calls.append((source_run, behavior, new_run, old_version, new_version))
+        make_checkpoint(runs_dir, new_run, 800, schema_version=5, behavior=behavior)
+        return runs_dir / new_run / behavior
+
+    monkeypatch.setattr(train_service.brain_upgrade, "upgrade_run", fake_upgrade)
+
+    plan = train_service.plan_run(tmp_path, "Warrior")
+
+    assert calls == [("warrior-s001", "Warrior", "warrior-s002", 4, 5)]
+    assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-s002", "resume", 800)
+    assert plan.message == (
+        "Não AI được nâng cấp lên luật mới (schema v4 → v5) "
+        "và học tiếp từ bước 800."
+    )
+
+
+def test_plan_run_missing_old_schema_falls_back_to_new(tmp_path: Path, monkeypatch):
+    schema_dir = tmp_path / "schemas"
+    schema_dir.mkdir()
+    write_fake_schema(schema_dir, 5)
+    monkeypatch.setattr(arena_trainer, "SCHEMAS_DIR", schema_dir)
+    monkeypatch.setattr(arena_trainer, "SCHEMA_VERSION", 5)
+    make_checkpoint(tmp_path, "warrior-s001", 800, schema_version=4)
+
+    plan = train_service.plan_run(tmp_path, "Warrior")
+
+    assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-s002", "new", 0)
+    assert "thiếu schema v4" in plan.message
+    assert "học lại từ đầu" in plan.message
+
+
+def test_plan_run_failed_upgrade_falls_back_to_new(tmp_path: Path, monkeypatch):
+    schema_dir = tmp_path / "schemas"
+    schema_dir.mkdir()
+    write_fake_schema(schema_dir, 4)
+    write_fake_schema(schema_dir, 5)
+    monkeypatch.setattr(arena_trainer, "SCHEMAS_DIR", schema_dir)
+    monkeypatch.setattr(arena_trainer, "SCHEMA_VERSION", 5)
+    make_checkpoint(tmp_path, "warrior-s001", 800, schema_version=4)
+
+    def failing_upgrade(*_args, **_kwargs):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(train_service.brain_upgrade, "upgrade_run", failing_upgrade)
+
+    plan = train_service.plan_run(tmp_path, "Warrior")
+
+    assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-s002", "new", 0)
+    assert "Không thể nâng cấp" in plan.message
+    assert "disk full" in plan.message
+
+
+def test_plan_run_ignores_hidden_partial_runs(tmp_path: Path):
+    make_checkpoint(tmp_path, ".warrior-s002.partial", 900)
+
+    plan = train_service.plan_run(tmp_path, "Warrior")
+
+    assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-s001", "new", 0)
+
+
+def test_plan_run_current_schema_wins_without_upgrade(tmp_path: Path, monkeypatch):
+    schema_dir = tmp_path / "schemas"
+    schema_dir.mkdir()
+    write_fake_schema(schema_dir, 4)
+    write_fake_schema(schema_dir, 5)
+    monkeypatch.setattr(arena_trainer, "SCHEMAS_DIR", schema_dir)
+    monkeypatch.setattr(arena_trainer, "SCHEMA_VERSION", 5)
+    make_checkpoint(tmp_path, "warrior-s001", 900, schema_version=4)
+    make_checkpoint(tmp_path, "warrior-s002", 100, schema_version=5)
+
+    def unexpected(*_args, **_kwargs):
+        raise AssertionError("upgrade should not run")
+
+    monkeypatch.setattr(train_service.brain_upgrade, "upgrade_run", unexpected)
+
+    plan = train_service.plan_run(tmp_path, "Warrior")
+
+    assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-s002", "resume", 100)
+    assert plan.message == ""
+
+
+def test_plan_run_never_upgrades_from_champions(tmp_path: Path, monkeypatch):
+    schema_dir = tmp_path / "schemas"
+    schema_dir.mkdir()
+    write_fake_schema(schema_dir, 4)
+    write_fake_schema(schema_dir, 5)
+    monkeypatch.setattr(arena_trainer, "SCHEMAS_DIR", schema_dir)
+    monkeypatch.setattr(arena_trainer, "SCHEMA_VERSION", 5)
+    fake = tmp_path / "champions" / "Warrior"
+    fake.mkdir(parents=True)
+    (fake / "checkpoint.pt").write_bytes(b"x")
+    (fake / "Warrior-999.pt").write_bytes(b"x")
+    arena_trainer.write_schema_version(fake.parent, 4)
+
+    def unexpected(*_args, **_kwargs):
+        raise AssertionError("champion must not be an upgrade source")
+
+    monkeypatch.setattr(train_service.brain_upgrade, "upgrade_run", unexpected)
+
+    plan = train_service.plan_run(tmp_path, "Warrior")
+
+    assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-s001", "new", 0)
+
+
 def test_plan_run_does_not_resume_an_explicit_incompatible_run(tmp_path: Path):
     make_checkpoint(tmp_path, "warrior-011", 100, schema_version=3)
 

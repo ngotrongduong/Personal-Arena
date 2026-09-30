@@ -57,7 +57,71 @@ environment_parameters:
         value: 600.0
       - name: full-run
         value: 900.0
+  # Build and tier unlock by progress, not reward: harder episodes must not stall
+  # run_seconds lessons, while tier-1 blank-build champion evaluation remains the gate.
   tier_min: 1.0
-  tier_max: 1.0
-  build_level_max: 0.0
+  tier_max:
+    curriculum:
+      - name: tier-1
+        completion_criteria:
+          measure: progress
+          behavior: Warrior
+          min_lesson_length: 200
+          threshold: 0.45
+        value: 1.0
+      - name: tier-3
+        completion_criteria:
+          measure: progress
+          behavior: Warrior
+          min_lesson_length: 200
+          threshold: 0.60
+        value: 3.0
+      - name: tier-6
+        completion_criteria:
+          measure: progress
+          behavior: Warrior
+          min_lesson_length: 200
+          threshold: 0.75
+        value: 6.0
+      - name: tier-10
+        value: 10.0
+  build_level_max:
+    curriculum:
+      - name: blank
+        completion_criteria:
+          measure: progress
+          behavior: Warrior
+          min_lesson_length: 200
+          threshold: 0.22
+        value: 0.0
+      - name: light
+        completion_criteria:
+          measure: progress
+          behavior: Warrior
+          min_lesson_length: 200
+          threshold: 0.30
+        value: 10.0
+      - name: medium
+        completion_criteria:
+          measure: progress
+          behavior: Warrior
+          min_lesson_length: 200
+          threshold: 0.40
+        value: 25.0
+      - name: full
+        value: 50.0
   own_build_share: 0.0
+  review_share: 0.2
+  # Hard episodes (tier +1, opening ring) join the same reward buffer that gates run_seconds,
+  # so they stay off until random builds are already in play.
+  hard_share:
+    curriculum:
+      - name: hard-off
+        completion_criteria:
+          measure: progress
+          behavior: Warrior
+          min_lesson_length: 200
+          threshold: 0.30
+        value: 0.0
+      - name: hard-on
+        value: 0.1

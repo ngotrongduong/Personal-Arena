@@ -5,6 +5,24 @@ namespace PersonalArena.Core.Survivor
 {
     public sealed partial class SurvivorSim
     {
+        private void SpawnOpeningRing()
+        {
+            int count = Config.OpeningRing;
+            if (count <= 0) return;
+            const float distance = 6f;
+            float bodyRadius = SpawnRadius(0, false);
+            float edge = Config.MapHalfSize - bodyRadius;
+            float clearance = bodyRadius + Config.Tuning.SpawnObstacleMargin;
+            float step = MathF.PI * 2f / count;
+            for (int i = 0; i < count; i++)
+            {
+                Vec2 point = Hero.Position + Vec2.FromAngle(i * step) * distance;
+                if (MathF.Abs(point.X) > edge || MathF.Abs(point.Y) > edge) continue;
+                if (OverlapsObstacle(point, clearance)) continue;
+                SpawnEnemy(0, point, false, false);
+            }
+        }
+
         /// <summary>
         /// Spawns scheduled enemies. The accumulator is drained by 1 per pending spawn even when the
         /// max-alive cap blocks it, so spawns are dropped (not banked) while the cap is reached.

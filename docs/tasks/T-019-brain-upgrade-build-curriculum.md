@@ -301,4 +301,66 @@ Tests in `test_train_service.py` (all on `tmp_path`, with fake schema files thro
 
 ## Report
 
-(Codex fills this in.)
+### Đã thay đổi
+
+- Thêm mô tả schema v4 đầy đủ ở `Trainer/schemas/survivor_v4.json` và helper đọc/kiểm tra
+  schema trong `arena_trainer.py`; thêm test C# đối chiếu JSON với hằng số Core.
+- Thêm `Trainer/brain_upgrade.py`: ánh xạ tăng thuần theo tên, mở rộng input actor/critic,
+  mở rộng/thêm action head, bỏ Adam cũ, giữ `global_step`, sao chép curriculum an toàn và CLI
+  nâng cấp thủ công. Training service tự nâng run schema cũ mới nhất rồi resume; nếu thiếu schema
+  hoặc nâng cấp thất bại thì tạo run mới và báo lý do bằng tiếng Việt.
+- Thêm test numpy/torch, test nâng cả run không sửa source, fixture `.brain` dùng chung Python/C#,
+  và round-trip ML-Agents thật. Fixture gồm `old.brain`, `new.brain`, `map.json` dưới
+  `CoreTests/Fixtures/brain_upgrade/`; chỉ sinh lại khi `PA_REGEN_FIXTURES=1`.
+- Thêm episode `New/Review/Hard`, build ngẫu nhiên theo tiến độ, tỷ lệ 70/20/10, hard opening ring
+  16 quái; `HeroAgent` ghi riêng thời gian sống của ba loại episode. Core thêm `OpeningRing`, sinh
+  vòng quái walker bán kính 6 m không dùng RNG và có test đếm/bán kính/determinism.
+- Cập nhật `warrior_survivor_ppo.yaml`, test curriculum và README hướng dẫn đổi schema/nâng não.
+
+### Xác minh
+
+- `C:\PersonalArena\.venv-ml\Scripts\python -m pytest Trainer`: **93 passed** (chạy với
+  `--basetemp` trong worktree vì sandbox không cho pytest dùng `%TEMP%`; chỉ có warning deprecation
+  từ ML-Agents/NumPy).
+- `dotnet test CoreTests --no-restore`: **85 passed, 0 failed**, build 0 warning. Lệnh
+  `dotnet test CoreTests` nguyên dạng đã được thử nhưng sandbox chặn kết nối restore tới NuGet
+  (`NU1301`); dùng assets/package cache sẵn để chạy đúng build và test.
+- Đã đọc checkpoint thật `warrior-s001` (không ghi vào `Trainer/runs`) và xác nhận nâng trong bộ
+  nhớ giữ shape `[512, 2264]`, action `9/5/5`, đồng thời bỏ Adam cũ.
+- Unity EditMode test đã viết để Claude chạy sau merge; Codex không chạy Unity theo phân công.
+
+### API ML-Agents round-trip
+
+Test tạo `TorchPolicy` + `TorchPPOOptimizer` thật (ML-Agents 1.1.0), đăng ký cả hai vào
+`TorchModelSaver`, lưu bằng `TorchModelSaver.save_checkpoint`, nâng file `.pt`, rồi tạo policy và
+optimizer kích thước mới và nạp bằng `TorchModelSaver.initialize_or_load`. Test kiểm tra
+`load_state_dict(strict=False)` của `Policy` và critic không có missing/unexpected key, logits cũ
+khớp trong `1e-6`, optimizer Adam mới được tạo vì checkpoint nâng cấp không còn
+`Optimizer:value_optimizer`, và `TorchPPOOptimizer.update` chạy thành công một bước.
+
+### Quyết định ở chỗ spec không nói rõ
+
+- JSON có thêm tổng `observation_size` và `action_size` để loader kiểm tra tính nhất quán; đây chỉ
+  là metadata, layout vẫn đúng định dạng segment/action đã chỉ định.
+- “Tăng thuần” cho phép chèn phần mới nhưng yêu cầu tên segment/field/action cũ giữ nguyên thứ tự
+  tương đối; đổi thứ tự bị từ chối giống xoá/đổi tên.
+- Opening ring bỏ một vị trí nếu toàn bộ thân walker (radius + obstacle margin), không chỉ tâm,
+  chồng vật cản; với `OpeningRing = 0` không chạy thêm nhánh RNG hay spawn nào.
+- Khi có nhiều run schema cũ, service chọn run mới nhất có đủ cả file schema nguồn và đích; nếu
+  không run cũ nào đủ schema thì bắt đầu từ zero và nêu file schema bị thiếu.
+
+### Sửa sau review (Claude)
+
+- `upgrade_run` đọc và nâng xong mọi thứ (kể cả `training_status.json`) trước khi ghi, ghi vào
+  thư mục tạm `.<run>.partial` rồi `os.replace`; lỗi bất kỳ được gói thành `UpgradeError` và
+  không để lại run dở. Service bắt mọi lỗi nâng cấp (tạo run mới + báo lý do) và bỏ qua thư mục
+  bắt đầu bằng `.`. Test mới: status bị cắt / checkpoint hỏng không để lại thư mục, lỗi nâng cấp
+  rơi về run mới, thư mục `.partial` không bị resume.
+- Kiểm tra "checkpoint là dict" chạy trước khi dò LSTM/normalizer.
+- Đổi tên trường tia `solid_obstacle` → `solid_wall_or_obstacle` (kind 1 gồm cả tường bản đồ);
+  tên v4 không đổi được sau khi có v5.
+- `hard_share` thành curriculum theo tiến độ: 0 tới 30%, sau đó 0,1 — trận khó chung bộ đệm
+  reward với curriculum `run_seconds`, không được làm kẹt bài 6 phút của `warrior-s001`.
+- Test round-trip: kiểm key trên một mạng riêng, để chính loader của mlagents phải nạp đúng
+  (logits + critic khớp, Adam rỗng).
+- `HeroAgent` dùng chuỗi hằng cho `Arena/Episode/Survived<Kind>`.

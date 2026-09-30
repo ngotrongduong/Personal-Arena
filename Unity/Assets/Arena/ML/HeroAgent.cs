@@ -26,6 +26,7 @@ namespace PersonalArena.ML
         private readonly bool[] pickMask = new bool[SurvivorInput.PickBranchSize];
         private readonly List<KeyValuePair<string, float>> stats = new List<KeyValuePair<string, float>>();
         private SurvivorRewardCalculator rewardCalculator;
+        private SurvivorEpisodeKind episodeKind;
         private int episodeCounter;
 
         public SurvivorSim Sim { get; private set; }
@@ -57,13 +58,18 @@ namespace PersonalArena.ML
             EnvironmentParameters parameters = Academy.Instance.EnvironmentParameters;
             Config.RunSeconds = SurvivorEnvFactory.RunSeconds(
                 parameters.GetWithDefault("run_seconds", SurvivorEnvFactory.DefaultRunSeconds));
-            Config.Build = SurvivorEnvFactory.CreateBuild(
+            SurvivorEpisode episode = SurvivorEnvFactory.CreateEpisode(
                 new Rng(seed ^ BuildSeedSalt),
                 parameters.GetWithDefault("tier_min", 1f),
                 parameters.GetWithDefault("tier_max", 1f),
                 parameters.GetWithDefault("build_level_max", 0f),
                 parameters.GetWithDefault("own_build_share", 0f),
+                parameters.GetWithDefault("review_share", 0f),
+                parameters.GetWithDefault("hard_share", 0f),
                 OwnBuild);
+            episodeKind = episode.Kind;
+            Config.Build = episode.Build;
+            Config.OpeningRing = episode.OpeningRing;
 
             if (Sim == null)
             {
@@ -170,9 +176,20 @@ namespace PersonalArena.ML
             {
                 recorder.Add(stats[i].Key, stats[i].Value);
             }
+            recorder.Add(SurvivedStatKey(episodeKind), Sim.Time);
 
             EpisodeEnded?.Invoke(this);
             EndEpisode();
+        }
+
+        private static string SurvivedStatKey(SurvivorEpisodeKind kind)
+        {
+            switch (kind)
+            {
+                case SurvivorEpisodeKind.Review: return "Arena/Episode/SurvivedReview";
+                case SurvivorEpisodeKind.Hard: return "Arena/Episode/SurvivedHard";
+                default: return "Arena/Episode/SurvivedNew";
+            }
         }
     }
 }

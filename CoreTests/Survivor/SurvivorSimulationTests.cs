@@ -7,6 +7,55 @@ namespace PersonalArena.Core.Tests.Survivor
     public sealed class SurvivorSimulationTests
     {
         [Test]
+        public void OpeningRing_SpawnsWeakEnemiesEvenlyAtSixMetres()
+        {
+            SurvivorConfig config = SurvivorTestHelpers.Config(3);
+            config.OpeningRing = 16;
+
+            SurvivorSim sim = new SurvivorSim(config, 17);
+
+            Assert.That(sim.AliveEnemyCount, Is.EqualTo(16));
+            for (int i = 0; i < sim.Enemies.Count; i++)
+            {
+                SurvivorEnemy enemy = sim.Enemies[i];
+                if (!enemy.Active) continue;
+                Assert.That(enemy.TypeIndex, Is.Zero);
+                Assert.That(Vec2.Distance(enemy.Position, sim.Hero.Position), Is.EqualTo(6f).Within(1e-4f));
+                Assert.That(enemy.MaxHp, Is.EqualTo(15f * 1.7f).Within(1e-4f));
+            }
+        }
+
+        [Test]
+        public void OpeningRing_ZeroLeavesResetEmpty()
+        {
+            SurvivorConfig config = SurvivorTestHelpers.Config();
+            config.OpeningRing = 0;
+
+            SurvivorSim sim = new SurvivorSim(config, 17);
+
+            Assert.That(sim.AliveEnemyCount, Is.Zero);
+        }
+
+        [Test]
+        public void OpeningRing_SameSeedProducesTheSameReset()
+        {
+            SurvivorConfig firstConfig = new SurvivorConfig { OpeningRing = 16, ObstacleCount = 40 };
+            SurvivorConfig secondConfig = new SurvivorConfig { OpeningRing = 16, ObstacleCount = 40 };
+            SurvivorSim first = new SurvivorSim(firstConfig, 2026);
+            SurvivorSim second = new SurvivorSim(secondConfig, 2026);
+
+            Assert.That(second.AliveEnemyCount, Is.EqualTo(first.AliveEnemyCount));
+            for (int i = 0; i < first.Enemies.Count; i++)
+            {
+                Assert.That(second.Enemies[i].Active, Is.EqualTo(first.Enemies[i].Active));
+                if (!first.Enemies[i].Active) continue;
+                Assert.That(second.Enemies[i].Position.X, Is.EqualTo(first.Enemies[i].Position.X));
+                Assert.That(second.Enemies[i].Position.Y, Is.EqualTo(first.Enemies[i].Position.Y));
+                Assert.That(second.Enemies[i].Hp, Is.EqualTo(first.Enemies[i].Hp));
+            }
+        }
+
+        [Test]
         public void Spawn_FirstMinuteOnlyWalkers_AndRespectsMax()
         {
             SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.Config(), 10); sim.SetHeroInvulnerableForTests();
