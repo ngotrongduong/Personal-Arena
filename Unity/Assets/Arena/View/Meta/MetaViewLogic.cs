@@ -352,7 +352,7 @@ namespace PersonalArena.View
                 case TrainingFocus.Survival: return "AI bị phạt nặng hơn khi mất máu, chơi an toàn hơn";
                 case TrainingFocus.Gold: return "AI được thưởng nhiều hơn khi nhặt vàng";
                 case TrainingFocus.Boss: return "AI được thưởng nhiều hơn khi gây sát thương lên Trùm";
-                case TrainingFocus.Offense: return "AI được thưởng nhiều hơn khi hạ quái và lên cấp nhanh, chấp nhận mất máu";
+                case TrainingFocus.Offense: return "AI được thưởng thêm khi hạ quái và lên cấp, chấp nhận mất máu";
                 default: return "Phần thưởng mặc định, không nghiêng về mục tiêu nào";
             }
         }

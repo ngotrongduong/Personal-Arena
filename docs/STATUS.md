@@ -1,7 +1,7 @@
 # Trạng thái dự án
 
 > File này là "bộ nhớ" giữa các phiên. Đọc đầu tiên, cập nhật cuối cùng.
-> Cập nhật lần cuối: 2026-09-30 tối (phiên Claude, PC — M4C code xong: T-021, T-022; `warrior-s001` đang train 26.8M bước).
+> Cập nhật lần cuối: 2026-09-30 khuya (phiên Claude, PC — M5 code xong: T-023..T-027; `warrior-s001` đang train ~57M bước).
 
 ## Hướng đi
 
@@ -120,6 +120,7 @@
 | M4B: champion/challenger + Hồ sơ AI (T-018, T-020) | xong |
 | M4B: nâng cấp não + build ngẫu nhiên + ôn tập (T-019) | xong — có hiệu lực từ lần bấm TRAIN kế tiếp (tự tráo `Build/TrainingNext`) |
 | M4C: đủ nội dung (6 vũ khí, 8 phụ kiện, đồ nhặt, rương, spitter, HUD) | code xong (T-021, T-022) — chờ train trên bản mới và qua đánh giá 100 seed |
+| M5: kinh tế và build (T-023..T-026) + thưởng hạ quái (T-027, D-036) | code xong — chờ nghiệm thu: đổi build → TRAIN → AI đổi lối đánh |
 
 ## Việc tiếp theo (theo thứ tự)
 
@@ -150,8 +151,16 @@ thưởng theo thứ bậc, nghiệm thu bằng đánh giá 100 seed). Đấu tr
      (golden test).
    - T-025 (Unity ML) xong: bản train đọc build/bậc/trọng tâm của owner; ~70% trận dùng build owner
      (lệch ≤ 2 điểm). `Build/TrainingNext` đã build — dịch vụ tự cài ở lần TRAIN sau.
-   - T-026 (trình xem M5: ví, menu Nhân vật C, Farm F, so sánh build V, nhãn, câu chuyện trận) đang
-     làm.
+   - T-027 xong (D-036): owner thấy AI lùi và bỏ chạy thay vì tiến lên giết quái → thêm thưởng hạ
+     quái trực tiếp (`PerKill` 0,004, `PerEliteKill` 0,1), vẫn giữ thứ bậc D-030.
+   - T-026 xong: trình xem có ví vàng, menu Nhân vật (`C`: mua cấp, 5 bộ điểm, bậc, trọng tâm),
+     Farm tự động (`F`), so sánh build (`V`), nhãn khán giả trên đầu nhân vật, câu chuyện trận ở màn
+     kết. Profile ở `%USERPROFILE%\AppData\LocalLow\ngotrongduong\Personal Arena\profile.json`
+     (`Application.persistentDataPath`, có `.bak` và `economy_log.csv` cạnh bên).
+   - Bản xem mới được build ra `Build/WatchNext` khi owner đang mở trình xem; `Xem-AI.cmd`
+     (`Trainer/watch_ai.ps1`) tự tráo nó vào `Build/Watch` ở lần mở sau.
+   - Nghiệm thu M5: owner cộng điểm/đổi trọng tâm → bấm TRAIN → Hồ sơ AI (`P`) cho thấy lối đánh
+     đổi, điểm hồi phục nhanh. Theo dõi `economy_log.csv` để cân bằng giá cấp và vàng.
 
 ## Cách làm trên PC (Claude)
 
@@ -177,6 +186,13 @@ thưởng theo thứ bậc, nghiệm thu bằng đánh giá 100 seed). Đấu tr
   trước khi phát hành để đảm bảo game không gọi mạng.
 
 ## Nhật ký phiên (mới nhất trên cùng)
+
+### 2026-09-30 khuya — Claude (PC): M5 T-023..T-027
+- T-023 (Core kinh tế), T-024 (Trainer build owner, D-035), T-025 (Unity ML đọc build owner) đã merge.
+- T-027 (D-036): owner báo AI chỉ lùi và chạy → thêm thưởng hạ quái; `Build/TrainingNext` đã build lại.
+- T-026 (subagent viết, Claude kiểm): ví, menu C/F/V, nhãn khán giả, câu chuyện trận. Sửa 1 lỗi biên
+  dịch test (`Is.AnyOf`). Ảnh chụp bản build: nhãn "THẢ DIỀU", màn kết trận có câu chuyện, 3 nút C/F/V.
+- Test: CoreTests 201/201, EditMode 147/147.
 
 ### 2026-09-30 tối — Claude (PC): M4C T-021 + T-022
 - **T-021** (Codex viết tới lúc hết hạn mức, Claude làm nốt + subagent reviewer duyệt): nội dung M4C
