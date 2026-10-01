@@ -23,7 +23,7 @@
   - Unity (T-016): `HeroAgent` 3 nhánh, trình xem Survivor (camera theo nhân vật, nghĩa địa
     KayKit Halloween, HUD EXP/cấp/đồng hồ/vàng/món đồ, bảng lên cấp tô sáng lựa chọn, màn kết trận).
   - T-017: **đã xoá hẳn đấu trường tròn cũ** (`ArenaSim`, quan sát 883, `ArenaPlay.unity`, các view
-    cũ, config `<class>_ppo.yaml`). Mage/Archer chờ config Survivor riêng ở M7. Các mục lịch sử bên
+    cũ, config `<class>_ppo.yaml`). Mage/Archer có config Survivor riêng từ M7. Các mục lịch sử bên
     dưới nói về code cũ này.
   - Test: CoreTests 69/69, pytest 70/70, Unity EditMode 78/78.
 - **M4B code xong (D-032, D-033):**
