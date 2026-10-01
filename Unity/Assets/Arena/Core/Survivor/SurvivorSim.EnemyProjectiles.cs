@@ -36,7 +36,7 @@ namespace PersonalArena.Core.Survivor
                 float hitRadius = Hero.Radius + projectile.Radius;
                 if ((projectile.Position - Hero.Position).LengthSquared > hitRadius * hitRadius) continue;
                 projectile.Active = false;
-                bool blocked = Hero.Blocking && InArc(Hero.Facing, projectile.Position - Hero.Position, 180f);
+                bool blocked = BlockCovers(projectile.Position);
                 if (blocked)
                 {
                     AddEvent(SurvivorEventType.Blocked, id: projectile.SourceId);

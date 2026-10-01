@@ -22,6 +22,14 @@ namespace PersonalArena.ML
 
             int count = CommandLineAgentCount(agentCount);
             string classId = CommandLineHeroClass(ClassRegistry.WarriorId);
+            if (classId == null)
+            {
+                // Never train a Warrior inside another class's run: quit so the trainer sees the failure.
+                Application.Quit(2);
+                enabled = false;
+                return;
+            }
+
             OwnerTrainingArgs owner = OwnerTrainingArgs.Parse(Environment.GetCommandLineArgs());
             foreach (string warning in owner.Warnings)
             {
@@ -84,7 +92,8 @@ namespace PersonalArena.ML
                         return value;
                     }
 
-                    Debug.LogWarning($"--hero-class '{value}' has no Survivor kit yet (arrives in M7), training {fallback}.");
+                    Debug.LogError($"--hero-class '{value}' is not a known hero class; refusing to train.");
+                    return null;
                 }
             }
 

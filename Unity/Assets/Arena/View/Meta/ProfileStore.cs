@@ -83,6 +83,12 @@ namespace PersonalArena.View
         /// <summary>The Warrior of the profile (Sanitize guarantees it exists).</summary>
         public CharacterProfile Warrior => ProfileRules.FindCharacter(Profile, ProfileRules.WarriorId);
 
+        /// <summary>M7: the selected class's character (watched, trained, farmed and edited); the Warrior as a fallback.</summary>
+        public CharacterProfile Selected => ClassViewLogic.SelectedCharacter(Profile);
+
+        /// <summary>M7: the selected class id ("warrior" when unset).</summary>
+        public string SelectedClassId => ClassViewLogic.SelectedClassId(Profile);
+
         public ProfileLoadOutcome LastLoad { get; private set; } = ProfileLoadOutcome.New;
 
         /// <summary>Where the last corrupt profile was kept, or null.</summary>

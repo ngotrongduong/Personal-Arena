@@ -43,9 +43,8 @@ namespace PersonalArena.Core.Survivor
             }
             SpawnPhase phase = SurvivorDefaults.PhaseAt(Time);
             if (phase == null) return;
-            float scale = 1f + tuning.SpawnPerTier * (Config.Build.Tier - 1);
-            if (Has(TierModifier.DenserSpawns)) scale *= tuning.DenserSpawnsMul;
-            int max = Math.Min(EnemyCapacity - tuning.SummonReserve, (int)MathF.Floor(phase.MaxAlive * scale));
+            float scale = SpawnScale();
+            int max = NormalAliveCap(phase, scale);
             spawnAccumulator += phase.SpawnsPerSecond * scale * FixedDeltaTime;
             while (spawnAccumulator >= 1f)
             {
@@ -54,6 +53,21 @@ namespace PersonalArena.Core.Survivor
                 int type = WeightedType(phase);
                 if (TrySpawnPoint(tuning.SpawnAttempts, false, SpawnRadius(type, false), out Vec2 point)) SpawnEnemy(type, point, false, false);
             }
+        }
+
+        private float SpawnScale()
+        {
+            SurvivorTuning tuning = Config.Tuning;
+            float scale = 1f + tuning.SpawnPerTier * (Config.Build.Tier - 1);
+            if (Has(TierModifier.DenserSpawns)) scale *= tuning.DenserSpawnsMul;
+            return scale;
+        }
+
+        /// <summary>Most normal (non-boss) enemies alive at once: the phase cap, never eating the boss summon reserve.</summary>
+        private int NormalAliveCap(SpawnPhase phase, float scale)
+        {
+            int poolCap = EnemyCapacity - Config.Tuning.SummonReserve;
+            return phase == null ? poolCap : Math.Min(poolCap, (int)MathF.Floor(phase.MaxAlive * scale));
         }
 
         private int WeightedType(SpawnPhase phase)
@@ -108,7 +122,8 @@ namespace PersonalArena.Core.Survivor
         {
             SpawnPhase phase = SurvivorDefaults.PhaseAt(MathF.Min(Time, Config.Tuning.BossSpawnSeconds - 0.1f));
             int best = 0;
-            for (int i = 1; i < phase.Weights.Count; i++) if (phase.Weights[i] >= phase.Weights[best]) best = i;
+            int eliteTypes = Math.Min(phase.Weights.Count, SurvivorDefaults.EliteTypeCount);
+            for (int i = 1; i < eliteTypes; i++) if (phase.Weights[i] >= phase.Weights[best]) best = i;
             float radius = SpawnRadius(best, true);
             if (!TrySpawnPoint(Config.Tuning.EliteSpawnAttempts, false, radius, out Vec2 point)) point = NearestValidRingPoint(radius);
             SpawnEnemy(best, point, true, false);
@@ -149,7 +164,7 @@ namespace PersonalArena.Core.Survivor
             e.Elite = elite; e.IsBoss = boss; e.WindupRemaining = 0f; e.StunRemaining = 0f;
             e.OrbitNextHitTime = 0f; e.LastShockwaveId = 0; e.LastHitTime = Time;
             e.RelocatedThisTick = false; e.Separated = false; enemyPreviousPositions[slot] = point;
-            e.AttackCooldown = 0f; e.ContactCooldown = 0f; e.SummonCooldown = boss ? EffectiveBossSummonInterval : 0f;
+            e.AttackCooldown = 0f; e.ContactCooldown = 0f; e.SummonCooldown = boss ? EffectiveBossSummonInterval : def.SummonInterval;
             if (e.Radius > maxEnemyRadius) maxEnemyRadius = e.Radius;
             if (boss) { bossEnemy = e; bossSpawned = true; } else aliveNormalCount++;
             aliveEnemyCount++;
@@ -235,11 +250,26 @@ namespace PersonalArena.Core.Survivor
                 if (e.IsBoss)
                 {
                     e.SummonCooldown -= FixedDeltaTime;
-                    if (e.SummonCooldown <= 0f) { SummonBossWalkers(e); e.SummonCooldown += EffectiveBossSummonInterval; }
+                    if (e.SummonCooldown <= 0f) { SummonWalkers(e, tuning.BossSummonCount, tuning.BossSummonRadius); e.SummonCooldown += EffectiveBossSummonInterval; }
                 }
-                Vec2 corrected = e.Position;
-                ClampAndPushOut(ref corrected, e.Radius);
-                e.Position = corrected;
+                else if (def.SummonCount > 0 && e.Active)
+                {
+                    e.SummonCooldown -= FixedDeltaTime;
+                    if (e.SummonCooldown <= 0f)
+                    {
+                        // Summons obey the phase cap and leave the boss reserve free.
+                        int room = NormalAliveCap(SurvivorDefaults.PhaseAt(MathF.Min(Time, tuning.BossSpawnSeconds - 0.1f)), SpawnScale()) - aliveNormalCount;
+                        int count = Math.Min(def.SummonCount, room);
+                        if (count > 0)
+                        {
+                            SummonWalkers(e, count, SummonerRingRadius);
+                            AddEvent(SurvivorEventType.EnemySummoned, count, id: e.Id, point: e.Position);
+                        }
+                        e.SummonCooldown += def.SummonInterval;
+                    }
+                }
+                if (!e.Active) continue;
+                CorrectEnemyPosition(e);
                 if (!e.IsBoss && (e.Position - Hero.Position).LengthSquared > relocationSquared && TrySpawnPoint(tuning.SpawnAttempts, true, e.Radius, out Vec2 relocated))
                 { e.Position = relocated; e.RelocatedThisTick = true; }
             }
@@ -248,6 +278,7 @@ namespace PersonalArena.Core.Survivor
         private void ResolveSwing(SurvivorEnemy e, SurvivorEnemyDef def)
         {
             Vec2 toHero = Hero.Position - e.Position;
+            if (def.AttackKind == SurvivorAttackKind.Explode) { ExplodeEnemy(e, def); return; }
             if (def.AttackKind == SurvivorAttackKind.Ranged)
             {
                 Vec2 direction = toHero.Normalized();
@@ -260,12 +291,44 @@ namespace PersonalArena.Core.Survivor
             e.AttackCooldown = def.RecoverSeconds;
         }
 
-        private void SummonBossWalkers(SurvivorEnemy boss)
+        /// <summary>Distance from a non-boss summoner at which its walkers appear.</summary>
+        private const float SummonerRingRadius = 1.5f;
+
+        private void SummonWalkers(SurvivorEnemy summoner, int count, float radius)
         {
-            SurvivorTuning tuning = Config.Tuning;
-            float step = MathF.PI * 2f / Math.Max(1, tuning.BossSummonCount);
-            for (int i = 0; i < tuning.BossSummonCount; i++) SpawnEnemy(0, boss.Position + Vec2.FromAngle(i * step) * tuning.BossSummonRadius, false, false);
+            float step = MathF.PI * 2f / Math.Max(1, count);
+            for (int i = 0; i < count; i++) SpawnEnemy(0, summoner.Position + Vec2.FromAngle(i * step) * radius, false, false);
         }
+
+        /// <summary>
+        /// An exploder's fuse ran out: it dies without drops or kill credit and hurts the hero when the
+        /// hero is inside the blast. A block that covers the exploder softens it; it cannot be parried.
+        /// </summary>
+        private void ExplodeEnemy(SurvivorEnemy e, SurvivorEnemyDef def)
+        {
+            e.Active = false; aliveEnemyCount--; aliveNormalCount--;
+            AddEvent(SurvivorEventType.EnemyExploded, def.ExplodeRadius, id: e.Id, point: e.Position);
+            float reach = def.ExplodeRadius + Hero.Radius;
+            if ((Hero.Position - e.Position).LengthSquared <= reach * reach) DamageHero(e.Damage, e, false, true);
+        }
+
+        /// <summary>Map clamp plus obstacle push-out; ghosts float through obstacles, so they only get the clamp.</summary>
+        private void CorrectEnemyPosition(SurvivorEnemy e)
+        {
+            Vec2 corrected = e.Position;
+            if (SurvivorDefaults.EnemyDef(e.TypeIndex).IgnoresObstacles)
+            {
+                float limit = Config.MapHalfSize - e.Radius;
+                corrected = new Vec2(MathF.Max(-limit, MathF.Min(limit, corrected.X)), MathF.Max(-limit, MathF.Min(limit, corrected.Y)));
+            }
+            else ClampAndPushOut(ref corrected, e.Radius);
+            e.Position = corrected;
+        }
+
+        /// <summary>True when the hero's held block faces <paramref name="sourcePoint"/> (or covers every direction).</summary>
+        private bool BlockCovers(Vec2 sourcePoint) =>
+            Hero.Blocking && Hero.BlockSkill != null
+            && (Hero.BlockSkill.BlockAllDirections || InArc(Hero.Facing, sourcePoint - Hero.Position, 180f));
 
         private void ResolveBodyCollisions()
         {
@@ -309,7 +372,7 @@ namespace PersonalArena.Core.Survivor
                 if (!e.Separated) continue;
                 e.Separated = false;
                 if (!e.Active) continue;
-                Vec2 corrected = e.Position; ClampAndPushOut(ref corrected, e.Radius); e.Position = corrected;
+                CorrectEnemyPosition(e);
             }
         }
 
@@ -339,16 +402,17 @@ namespace PersonalArena.Core.Survivor
             Hero.Position += direction * overlap * (e.Mass / total);
             e.Position -= direction * overlap * (Config.ClassDef.Mass / total);
             Vec2 heroPoint = Hero.Position; ClampAndPushOut(ref heroPoint, Hero.Radius); Hero.Position = heroPoint;
-            Vec2 enemyPoint = e.Position; ClampAndPushOut(ref enemyPoint, e.Radius); e.Position = enemyPoint;
+            CorrectEnemyPosition(e);
         }
 
-        private void DamageHero(float raw, SurvivorEnemy source, bool contact)
+        private void DamageHero(float raw, SurvivorEnemy source, bool contact, bool explosion = false)
         {
             if (IsEnded || !Hero.Alive || source == null) return;
             if (testInvulnerable) return;
-            SkillDef block = Config.ClassDef.ActiveSkills[BlockSlot];
-            bool covered = Hero.Blocking && InArc(Hero.Facing, source.Position - Hero.Position, 180f);
-            if (covered && !contact && Time - Hero.BlockStarted <= block.ParryWindowSeconds)
+            SkillDef block = Hero.BlockSkill;
+            bool covered = BlockCovers(source.Position);
+            bool swing = !contact && !explosion;
+            if (covered && swing && Time - Hero.BlockStarted <= block.ParryWindowSeconds)
             {
                 source.StunRemaining = block.StunSeconds;
                 PushEnemy(source, AwayFromHero(source), block.BlockPushback);
@@ -356,13 +420,13 @@ namespace PersonalArena.Core.Survivor
             }
             float multiplier = covered ? block.BlockDamageMultiplier : 1f;
             bool killed = ApplyHeroDamage(raw * multiplier, source.Id);
-            LastHitCause = source.IsBoss ? DeathCause.Boss : !contact && source.TypeIndex == BruteTypeIndex ? DeathCause.Brute : DeathCause.Contact;
+            LastHitCause = explosion ? DeathCause.Explosion : source.IsBoss ? DeathCause.Boss : swing && source.TypeIndex == BruteTypeIndex ? DeathCause.Brute : DeathCause.Contact;
             if (covered)
             {
                 AddEvent(SurvivorEventType.Blocked, id: source.Id);
-                if (!contact) { source.StunRemaining = block.BlockStaggerSeconds; PushEnemy(source, AwayFromHero(source), block.BlockPushback); }
+                if (swing) { source.StunRemaining = block.BlockStaggerSeconds; PushEnemy(source, AwayFromHero(source), block.BlockPushback); }
             }
-            if (killed) KillHero(source, contact, false, source.Id);
+            if (killed) KillHero(source, contact, false, source.Id, explosion);
         }
 
         private bool ApplyHeroDamage(float raw, int sourceId)
@@ -375,7 +439,7 @@ namespace PersonalArena.Core.Survivor
             return Hero.Hp <= 0f;
         }
 
-        private void KillHero(SurvivorEnemy source, bool contact, bool projectile, int sourceId)
+        private void KillHero(SurvivorEnemy source, bool contact, bool projectile, int sourceId, bool explosion = false)
         {
             if (IsEnded) return;
             Hero.Alive = false; EndReason = EndReason.Died;
@@ -383,6 +447,7 @@ namespace PersonalArena.Core.Survivor
             int touching = 0;
             for (int i = 0; i < enemyLimit; i++) if (enemies[i].Active && Vec2.Distance(enemies[i].Position, Hero.Position) <= Hero.Radius + enemies[i].Radius + margin) touching++;
             if (touching >= Config.Tuning.SurroundedCount) DeathCause = DeathCause.Surrounded;
+            else if (explosion) DeathCause = DeathCause.Explosion;
             else if (projectile) DeathCause = DeathCause.Projectile;
             else if (source != null && source.IsBoss) DeathCause = DeathCause.Boss;
             else if (!contact && source != null && source.TypeIndex == BruteTypeIndex) DeathCause = DeathCause.Brute;
@@ -404,7 +469,7 @@ namespace PersonalArena.Core.Survivor
             float moved = distance * (1f - e.KnockbackResist);
             if (moved <= 0f) return;
             e.Position += direction * moved;
-            Vec2 corrected = e.Position; ClampAndPushOut(ref corrected, e.Radius); e.Position = corrected;
+            CorrectEnemyPosition(e);
             hashDrift += moved;
         }
 

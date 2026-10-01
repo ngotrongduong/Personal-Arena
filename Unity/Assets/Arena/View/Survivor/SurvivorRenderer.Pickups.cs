@@ -38,6 +38,14 @@ namespace PersonalArena.View
         private Transform hammerRoot;
         private Material hammerHandleMaterial;
         private Material hammerHeadMaterial;
+        private Material boltMaterial;
+        private Material boltGlowMaterial;
+        private Material fireballMaterial;
+        private Material fireballGlowMaterial;
+        private Material arrowShaftMaterial;
+        private Material arrowHeadMaterial;
+        private Material powerShotMaterial;
+        private readonly Gradient[] projectileTrails = new Gradient[ProjectileLookCount * 2];
         private float spinClock;
 
         private sealed class PickupView
@@ -56,11 +64,17 @@ namespace PersonalArena.View
             public float Phase;
         }
 
+        private const int ProjectileLookCount = 5;
+
         private sealed class HammerView
         {
             public Transform Root;
             public Transform Spinner;
             public TrailRenderer Trail;
+            public readonly GameObject[] Models = new GameObject[ProjectileLookCount];
+            public Renderer[] Renderers;
+            public ProjectileLook Look = ProjectileLook.Hammer;
+            public bool Evolved;
             public int Id = -1;
             public Vector3 Previous;
             public Vector3 Current;
@@ -340,6 +354,15 @@ namespace PersonalArena.View
             hammerRoot = CreateChild("Hammers", actorsRoot);
             hammerHandleMaterial = Own(CreateStandard("Hammer Handle", new Color(0.45f, 0.28f, 0.14f), 0.2f));
             hammerHeadMaterial = Own(CreateEmissive("Hammer Head", new Color(0.62f, 0.64f, 0.7f), new Color(0.12f, 0.1f, 0.06f), 0.75f, 0.8f));
+            boltMaterial = Own(CreateEmissive("Magic Bolt", new Color(0.45f, 0.65f, 1f), new Color(0.7f, 1.1f, 2.4f), 0.8f, 0f));
+            boltGlowMaterial = Own(FxAssets.Create("Magic Bolt Glow", FxAssets.RadialGlow, true));
+            boltGlowMaterial.color = new Color(0.45f, 0.7f, 1f, 0.7f);
+            fireballMaterial = Own(CreateEmissive("Fireball", new Color(1f, 0.55f, 0.15f), new Color(2.4f, 1f, 0.2f), 0.6f, 0f));
+            fireballGlowMaterial = Own(FxAssets.Create("Fireball Glow", FxAssets.RadialGlow, true));
+            fireballGlowMaterial.color = new Color(1f, 0.45f, 0.12f, 0.8f);
+            arrowShaftMaterial = Own(CreateStandard("Arrow Shaft", new Color(0.55f, 0.4f, 0.24f), 0.2f));
+            arrowHeadMaterial = Own(CreateEmissive("Arrow Head", new Color(0.78f, 0.8f, 0.85f), new Color(0.1f, 0.1f, 0.12f), 0.85f, 0.85f));
+            powerShotMaterial = Own(CreateEmissive("Power Shot", new Color(1f, 0.82f, 0.3f), new Color(1.6f, 1.1f, 0.3f), 0.85f, 0.6f));
             for (int i = 0; i < HammerPrewarm; i++)
             {
                 hammerViews[i] = CreateHammerView();
@@ -349,34 +372,163 @@ namespace PersonalArena.View
         private HammerView CreateHammerView()
         {
             HammerView view = new HammerView();
-            GameObject root = new GameObject("Hammer");
+            GameObject root = new GameObject("Projectile");
             root.transform.SetParent(hammerRoot, false);
             view.Root = root.transform;
             view.Spinner = CreateChild("Spinner", view.Root);
+            view.Trail = effects.CreateTrail(view.Root, 0f, new Color(1f, 0.7f, 0.35f, 0.5f), 0.4f, 0.16f);
+            EnsureProjectileModel(view, ProjectileLook.Hammer);
+            root.SetActive(false);
+            return view;
+        }
 
-            if (survivorArt != null && survivorArt.HammerProp != null)
+        /// <summary>Builds (once per view) the model of a projectile look under the spinner, inactive.</summary>
+        private GameObject EnsureProjectileModel(HammerView view, ProjectileLook look)
+        {
+            int index = (int)look;
+            if (view.Models[index] != null)
             {
-                GameObject prop = Instantiate(survivorArt.HammerProp, view.Spinner, false);
-                prop.name = survivorArt.HammerProp.name;
+                return view.Models[index];
             }
-            else
+
+            Transform model = CreateChild(look.ToString(), view.Spinner);
+            switch (look)
             {
-                GameObject handle = CreatePrimitive("Handle", PrimitiveType.Cylinder, view.Spinner, hammerHandleMaterial);
-                handle.transform.localPosition = new Vector3(0f, -0.12f, 0f);
-                handle.transform.localScale = new Vector3(0.09f, 0.34f, 0.09f);
-                GameObject head = CreatePrimitive("Head", PrimitiveType.Cube, view.Spinner, hammerHeadMaterial);
-                head.transform.localPosition = new Vector3(0f, 0.26f, 0f);
-                head.transform.localScale = new Vector3(0.46f, 0.26f, 0.26f);
+                case ProjectileLook.MagicBolt:
+                {
+                    GameObject core = CreatePrimitive("Core", PrimitiveType.Sphere, model, boltMaterial);
+                    core.transform.localScale = new Vector3(0.28f, 0.28f, 0.5f);
+                    Transform glow = CreateFlatQuad("Glow", model, boltGlowMaterial);
+                    glow.localScale = new Vector3(1.1f, 1f, 1.4f);
+                    break;
+                }
+                case ProjectileLook.Fireball:
+                {
+                    GameObject core = CreatePrimitive("Core", PrimitiveType.Sphere, model, fireballMaterial);
+                    core.transform.localScale = Vector3.one * 0.6f;
+                    Transform glow = CreateFlatQuad("Glow", model, fireballGlowMaterial);
+                    glow.localScale = new Vector3(2.2f, 1f, 2.2f);
+                    break;
+                }
+                case ProjectileLook.Arrow:
+                case ProjectileLook.PowerShot:
+                {
+                    bool power = look == ProjectileLook.PowerShot;
+                    float length = power ? 1.5f : 0.8f;
+                    float thickness = power ? 0.08f : 0.05f;
+                    GameObject shaft = CreatePrimitive("Shaft", PrimitiveType.Cube, model, power ? powerShotMaterial : arrowShaftMaterial);
+                    shaft.transform.localScale = new Vector3(thickness, thickness, length);
+                    GameObject head = CreatePrimitive("Head", PrimitiveType.Cube, model, power ? powerShotMaterial : arrowHeadMaterial);
+                    head.transform.localPosition = new Vector3(0f, 0f, length * 0.5f + 0.05f);
+                    head.transform.localRotation = Quaternion.Euler(0f, 45f, 0f);
+                    head.transform.localScale = new Vector3(thickness * 2.6f, thickness, thickness * 2.6f);
+                    GameObject fletching = CreatePrimitive("Fletching", PrimitiveType.Cube, model, power ? powerShotMaterial : arrowHeadMaterial);
+                    fletching.transform.localPosition = new Vector3(0f, 0f, -length * 0.42f);
+                    fletching.transform.localScale = new Vector3(thickness * 3f, thickness * 0.4f, length * 0.16f);
+                    if (power)
+                    {
+                        Transform glow = CreateFlatQuad("Glow", model, boltGlowMaterial);
+                        glow.localScale = new Vector3(0.8f, 1f, 2.4f);
+                    }
+                    break;
+                }
+                default:
+                    if (survivorArt != null && survivorArt.HammerProp != null)
+                    {
+                        GameObject prop = Instantiate(survivorArt.HammerProp, model, false);
+                        prop.name = survivorArt.HammerProp.name;
+                    }
+                    else
+                    {
+                        GameObject handle = CreatePrimitive("Handle", PrimitiveType.Cylinder, model, hammerHandleMaterial);
+                        handle.transform.localPosition = new Vector3(0f, -0.12f, 0f);
+                        handle.transform.localScale = new Vector3(0.09f, 0.34f, 0.09f);
+                        GameObject head = CreatePrimitive("Head", PrimitiveType.Cube, model, hammerHeadMaterial);
+                        head.transform.localPosition = new Vector3(0f, 0.26f, 0f);
+                        head.transform.localScale = new Vector3(0.46f, 0.26f, 0.26f);
+                    }
+                    break;
             }
-            Renderer[] renderers = view.Spinner.GetComponentsInChildren<Renderer>(true);
+
+            Renderer[] renderers = model.GetComponentsInChildren<Renderer>(true);
             for (int i = 0; i < renderers.Length; i++)
             {
                 renderers[i].shadowCastingMode = ShadowCastingMode.Off;
             }
+            model.gameObject.SetActive(look == view.Look);
+            view.Models[index] = model.gameObject;
+            return model.gameObject;
+        }
 
-            view.Trail = effects.CreateTrail(view.Root, 0f, new Color(1f, 0.7f, 0.35f, 0.5f), 0.4f, 0.16f);
-            root.SetActive(false);
-            return view;
+        /// <summary>Shows the model of <paramref name="look"/> (gold and larger for an evolved weapon) and recolours the trail.</summary>
+        private void SetProjectileLook(HammerView view, ProjectileLook look, bool evolved)
+        {
+            if (view.Look == look && view.Evolved == evolved && view.Renderers != null)
+            {
+                return;
+            }
+            GameObject shown = EnsureProjectileModel(view, look);
+            for (int i = 0; i < view.Models.Length; i++)
+            {
+                if (view.Models[i] != null)
+                {
+                    view.Models[i].SetActive(view.Models[i] == shown);
+                }
+            }
+            view.Look = look;
+            view.Evolved = evolved;
+            view.Renderers = shown.GetComponentsInChildren<Renderer>(true);
+            view.Spinner.localScale = Vector3.one * (evolved ? SurvivorViewLogic.EvolutionScale : 1f);
+            view.Spinner.localRotation = Quaternion.identity;
+            SetRendererTint(view.Renderers, EvolvedTint, evolved);
+
+            int key = (int)look * 2 + (evolved ? 1 : 0);
+            if (projectileTrails[key] == null)
+            {
+                Color color = ProjectileTrailColor(look);
+                if (evolved)
+                {
+                    color = Color.Lerp(color, SurvivorViewLogic.EvolutionGold, 0.7f);
+                }
+                projectileTrails[key] = TrailGradient(color);
+            }
+            view.Trail.colorGradient = projectileTrails[key];
+            float scale = evolved ? SurvivorViewLogic.EvolutionScale : 1f;
+            switch (look)
+            {
+                case ProjectileLook.Fireball:
+                    view.Trail.widthMultiplier = 0.75f * scale;
+                    view.Trail.time = 0.22f;
+                    break;
+                case ProjectileLook.PowerShot:
+                    view.Trail.widthMultiplier = 0.4f * scale;
+                    view.Trail.time = 0.4f;
+                    break;
+                case ProjectileLook.Arrow:
+                    view.Trail.widthMultiplier = 0.16f * scale;
+                    view.Trail.time = 0.12f;
+                    break;
+                case ProjectileLook.MagicBolt:
+                    view.Trail.widthMultiplier = 0.35f * scale;
+                    view.Trail.time = 0.16f;
+                    break;
+                default:
+                    view.Trail.widthMultiplier = 0.4f * scale;
+                    view.Trail.time = 0.16f;
+                    break;
+            }
+        }
+
+        private static Color ProjectileTrailColor(ProjectileLook look)
+        {
+            switch (look)
+            {
+                case ProjectileLook.MagicBolt: return new Color(0.45f, 0.7f, 1f, 0.6f);
+                case ProjectileLook.Fireball: return new Color(1f, 0.45f, 0.12f, 0.75f);
+                case ProjectileLook.Arrow: return new Color(0.85f, 0.9f, 0.8f, 0.45f);
+                case ProjectileLook.PowerShot: return new Color(1f, 0.85f, 0.35f, 0.7f);
+                default: return new Color(1f, 0.7f, 0.35f, 0.5f);
+            }
         }
 
         private void HideAllHammers()
@@ -436,6 +588,8 @@ namespace PersonalArena.View
                 if (view.Id != projectile.Id)
                 {
                     view.Id = projectile.Id;
+                    ProjectileLook look = SurvivorViewLogic.ProjectileLookOf(projectile.SourceIndex, sim.Config.ClassDef);
+                    SetProjectileLook(view, look, projectile.SourceIndex >= 0 && SurvivorViewLogic.IsEvolution(projectile.SourceIndex));
                     view.Previous = position;
                     view.Current = position;
                     view.Root.localPosition = position;
@@ -463,7 +617,11 @@ namespace PersonalArena.View
                 }
                 Vector3 position = Vector3.LerpUnclamped(view.Previous, view.Current, interpolationAlpha);
                 view.Root.SetPositionAndRotation(position, Quaternion.LookRotation(view.Direction, Vector3.up));
-                view.Spinner.localRotation = Quaternion.Euler(spin, 0f, 0f);
+                // Hammers tumble; bolts, fireballs and arrows fly straight along their direction.
+                if (view.Look == ProjectileLook.Hammer)
+                {
+                    view.Spinner.localRotation = Quaternion.Euler(spin, 0f, 0f);
+                }
             }
         }
 

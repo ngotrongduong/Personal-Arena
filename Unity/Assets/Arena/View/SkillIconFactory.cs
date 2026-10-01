@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using PersonalArena.Core;
+using PersonalArena.Core.Survivor;
 using UnityEngine;
 
 namespace PersonalArena.View
@@ -19,6 +20,7 @@ namespace PersonalArena.View
         private const int Supersample = 4;
         private static readonly string[] SlotDefaults = { "spear-strike", "kick", "shield-block", "dash" };
         private static readonly Dictionary<string, Sprite> Cache = new Dictionary<string, Sprite>();
+        private static readonly Color GoldFrame = new Color(1f, 0.82f, 0.3f);
 
         /// <summary>Skill ids with a shipped glyph, one row of four slots per class: warrior, mage, archer.</summary>
         public static readonly IReadOnlyList<IReadOnlyList<string>> ClassSkillIds = new IReadOnlyList<string>[]
@@ -53,6 +55,9 @@ namespace PersonalArena.View
                 case "piercing-arrow": return new Color(1f, 0.85f, 0.35f);
                 case "leap-back": return new Color(0.4f, 0.92f, 0.72f);
                 case "concussive-arrow": return new Color(1f, 0.55f, 0.35f);
+                case "frost-burst": return new Color(0.6f, 0.9f, 1f);
+                case "power-shot": return new Color(1f, 0.82f, 0.35f);
+                case "roll-back": return new Color(0.4f, 0.92f, 0.72f);
                 default: return new Color(0.8f, 0.82f, 0.9f);
             }
         }
@@ -62,32 +67,97 @@ namespace PersonalArena.View
             return IconForKey(KeyFor(skill, index), ColorFor(skill, index));
         }
 
+        /// <summary>
+        /// Shipped glyph used when <paramref name="key"/> has no PNG of its own (M7 skills and class weapons whose
+        /// game-icons.net glyph is not in the project yet); null when there is no alias.
+        /// </summary>
+        public static string GlyphAlias(string key)
+        {
+            switch (key)
+            {
+                case "frost-burst": return "frost-nova";
+                case "power-shot": return "piercing-arrow";
+                case "roll-back": return "leap-back";
+                case "magic-bolt": return "blink";
+                case "fire-orb": return "fireball";
+                case "holy-field": return "aura";
+                case "lightning": return "shockwave";
+                case "arcane-beam": return "piercing-arrow";
+                case "multi-shot": return "arrow";
+                case "arrow-rain": return "arrow";
+                case "orbit-knife": return "orbit-axe";
+                case "dagger": return "sword-sweep";
+                case "crossbow": return "piercing-arrow";
+                default: return null;
+            }
+        }
+
+        /// <summary>The readable glyph texture of a key (its own PNG, else its alias), or null.</summary>
+        public static Texture2D LoadGlyph(string key)
+        {
+            Texture2D own = string.IsNullOrEmpty(key) ? null : Resources.Load<Texture2D>(GlyphFolder + key);
+            if (own != null && own.isReadable)
+            {
+                return own;
+            }
+            string alias = GlyphAlias(key);
+            Texture2D aliased = alias != null ? Resources.Load<Texture2D>(GlyphFolder + alias) : null;
+            return aliased != null && aliased.isReadable ? aliased : null;
+        }
+
+        /// <summary>Glyph key of a survivor item: an evolution uses its base weapon's glyph.</summary>
+        public static string ItemGlyphKey(int catalogIndex)
+        {
+            ItemDef def = SurvivorCatalog.Get(SurvivorViewLogic.BaseWeapon(catalogIndex));
+            return def != null ? def.Id : string.Empty;
+        }
+
+        /// <summary>Icon of a survivor item; evolutions show the base weapon's glyph in a gold frame.</summary>
+        public static Sprite IconForItem(int catalogIndex)
+        {
+            bool evolved = SurvivorViewLogic.IsEvolution(catalogIndex);
+            return IconForKey(ItemGlyphKey(catalogIndex), SurvivorViewLogic.ItemColor(catalogIndex), evolved);
+        }
+
         /// <summary>Icon for any glyph key in <see cref="GlyphFolder"/> (e.g. a survivor item id) on a badge of <paramref name="theme"/>.</summary>
         public static Sprite IconForKey(string key, Color theme)
         {
+            return IconForKey(key, theme, false);
+        }
+
+        /// <summary>Icon for a glyph key; <paramref name="goldFrame"/> draws the thick gold rim of an evolved weapon.</summary>
+        public static Sprite IconForKey(string key, Color theme, bool goldFrame)
+        {
             key = key ?? string.Empty;
-            if (Cache.TryGetValue(key, out Sprite cached) && cached != null)
+            string cacheKey = goldFrame ? key + "#gold" : key;
+            if (Cache.TryGetValue(cacheKey, out Sprite cached) && cached != null)
             {
                 return cached;
             }
 
             Texture2D texture = new Texture2D(Size, Size, TextureFormat.RGBA32, false)
             {
-                name = "Skill Icon " + key,
+                name = "Skill Icon " + cacheKey,
                 wrapMode = TextureWrapMode.Clamp,
                 filterMode = FilterMode.Bilinear
             };
-            texture.SetPixels32(DrawPixels(key, theme));
+            texture.SetPixels32(DrawPixels(key, theme, goldFrame));
             texture.Apply(false, true);
             Sprite sprite = Sprite.Create(texture, new Rect(0f, 0f, Size, Size), new Vector2(0.5f, 0.5f), 100f, 0,
                 SpriteMeshType.FullRect);
             sprite.name = texture.name;
-            Cache[key] = sprite;
+            Cache[cacheKey] = sprite;
             return sprite;
         }
 
         /// <summary>Renders one icon into Size x Size pixels (row 0 is the bottom).</summary>
         public static Color32[] DrawPixels(string key, Color theme)
+        {
+            return DrawPixels(key, theme, false);
+        }
+
+        /// <summary>Renders one icon; <paramref name="goldFrame"/> replaces the thin rim with a wide gold frame.</summary>
+        public static Color32[] DrawPixels(string key, Color theme, bool goldFrame)
         {
             float[] glyph = GlyphMask(key);
             float[] outlineMask = Dilate(glyph, 2);
@@ -114,8 +184,16 @@ namespace PersonalArena.View
                     // Badge: dark gradient lit from above with a bright rim.
                     float light = Mathf.Clamp01((p - new Vector2(0f, 0.35f)).magnitude / 1.4f);
                     Color color = Color.Lerp(theme * 0.62f, theme * 0.14f, light);
-                    float rim = Mathf.Clamp01(1f - Mathf.Abs(badge + 0.04f) / 0.04f);
-                    color = Color.Lerp(color, glow, rim * 0.75f);
+                    if (goldFrame)
+                    {
+                        float frame = Mathf.Clamp01(1f - Mathf.Abs(badge + 0.09f) / 0.09f);
+                        color = Color.Lerp(color, Color.Lerp(GoldFrame, Color.white, frame * 0.35f), Mathf.Clamp01(frame * 1.6f));
+                    }
+                    else
+                    {
+                        float rim = Mathf.Clamp01(1f - Mathf.Abs(badge + 0.04f) / 0.04f);
+                        color = Color.Lerp(color, glow, rim * 0.75f);
+                    }
 
                     // Glyph: soft glow, drop shadow down-right, dark outline, then the white fill.
                     color = Color.Lerp(color, glow, Mathf.Clamp01(glowMask[i] * 1.4f) * 0.55f);
@@ -135,8 +213,8 @@ namespace PersonalArena.View
         private static float[] GlyphMask(string key)
         {
             float[] mask = new float[Size * Size];
-            Texture2D source = Resources.Load<Texture2D>(GlyphFolder + key);
-            if (source == null || !source.isReadable)
+            Texture2D source = LoadGlyph(key);
+            if (source == null)
             {
                 for (int y = 0; y < Size; y++)
                 {

@@ -29,7 +29,7 @@ MonoBehaviour:
     OffHand: {fileID: 0}
     Scale: 1
   - ClassId: archer
-    Body: {fileID: 919132149155446097, guid: 6cf1daae3fb66f54ebb86b551cc25ee5, type: 3}
+    Body: {fileID: 919132149155446097, guid: fcce949224e26b840a9b6255c3031d13, type: 3}
     MainHand: {fileID: 0}
     OffHand: {fileID: 919132149155446097, guid: e15403be26244e24f8eb999dc85c08a0, type: 3}
     Scale: 1

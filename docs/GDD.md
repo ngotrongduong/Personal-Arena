@@ -297,9 +297,24 @@ Modifier khởi điểm (cộng dồn, chốt ở M5):
 ### 3.6 Class và nhân vật
 
 - Người chơi mới có **Warrior**.
-- **Mage** giá 1.500 vàng, **Archer** giá 3.000 vàng (M7). Mỗi class có bộ vũ khí, phụ kiện và
-  skill chủ động riêng.
-- Mỗi class người chơi sở hữu là **một nhân vật** có cấp, điểm chỉ số và **não AI riêng**.
+- **Mage** giá 1.500 vàng, **Archer** giá 3.000 vàng (M7). Mỗi class có bộ vũ khí và skill chủ
+  động riêng; 8 phụ kiện dùng chung.
+- Mỗi class người chơi sở hữu là **một nhân vật** có cấp, điểm chỉ số và **não AI riêng**
+  (behavior `Warrior` / `Mage` / `Archer`, run `<class>-sNNN`).
+
+| Class | Vũ khí (ô danh mục) | Skill chủ động |
+|---|---|---|
+| Warrior | Kiếm quét, Giáo đâm, Rìu xoay, Búa ném, Hào quang, Sóng chấn động (0–5) | Đá, Khiên, Lướt |
+| Mage | Tia phép, Cầu lửa xoay, Vòng băng, Vùng thánh, Sét, Tia ma thuật (14–19) | Cầu lửa, Khiên phép (đỡ mọi hướng), Dịch chuyển 4 m, Bùng băng (choáng) |
+| Archer | Mũi tên, Tên chùm, Mưa tên, Dao xoay, Dao găm, Nỏ (20–25) | Bắn mạnh (xuyên), Lộn lùi, Đá |
+
+**Tiến hóa vũ khí (M7):** vũ khí đạt cấp tối đa + đang có phụ kiện ghép cặp → rương tinh anh kế tiếp
+tiến hóa nó thành bản mạnh hơn (ô danh mục 40–57), ví dụ Kiếm quét + Găng sức mạnh → Kiếm bão, Mưa
+tên + Bùa nam châm → Thiên tiễn. Trình xem hiện thông báo **TIẾN HÓA**.
+
+**Quái mới (M7, xuất hiện từ phút 5):** Exploder (lao vào và nổ), Ghost (bay xuyên vật cản),
+Necromancer (đứng xa gọi thêm zombie; không gọi khi đã đủ trần số quái, chừa chỗ cho boss).
+Các quái này dùng chỗ trống trong quan sát v4 nên não **học tiếp**, không đổi schema.
 
 ### 3.7 Lưu tiến trình
 

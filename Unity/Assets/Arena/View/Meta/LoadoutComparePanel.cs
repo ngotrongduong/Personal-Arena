@@ -49,7 +49,7 @@ namespace PersonalArena.View
                 return;
             }
 
-            CharacterProfile warrior = store.Warrior;
+            CharacterProfile warrior = store.Selected;
             if (warrior == null)
             {
                 return;
@@ -181,7 +181,7 @@ namespace PersonalArena.View
 
         private void OnUse(int loadout)
         {
-            if (store != null && ProfileRules.TrySetActiveLoadout(store.Warrior, loadout))
+            if (store != null && ProfileRules.TrySetActiveLoadout(store.Selected, loadout))
             {
                 store.Save();
                 ProfileChanged?.Invoke();

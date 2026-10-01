@@ -67,6 +67,29 @@ namespace PersonalArena.Core.Tests.Meta
         }
 
         [Test]
+        public void ClassId_PicksThatClassKit()
+        {
+            FarmSession warrior = new FarmSession(SurvivorTestHelpers.Brain(favouredMove: 1), new CharacterBuild { Tier = 1 }, 1, 7, 60f);
+            Assert.That(warrior.ClassId, Is.EqualTo(ProfileRules.WarriorId));
+            while (warrior.RunNext()) { }
+            Assert.That(warrior.Results[0].FinalItemLevels[SurvivorCatalog.SweepIndex], Is.GreaterThanOrEqualTo(1));
+
+            FarmSession mage = new FarmSession(SurvivorTestHelpers.Brain(favouredMove: 1), new CharacterBuild { Tier = 1 }, 1, 7, 60f, ProfileRules.MageId);
+            Assert.That(mage.ClassId, Is.EqualTo(ProfileRules.MageId));
+            while (mage.RunNext()) { }
+            Assert.That(mage.Error, Is.Null);
+            Assert.That(mage.Results[0].FinalItemLevels[SurvivorCatalog.MagicBoltIndex], Is.GreaterThanOrEqualTo(1), "the mage starts with its own weapon");
+            Assert.That(mage.Results[0].FinalItemLevels[SurvivorCatalog.SweepIndex], Is.EqualTo(0), "never the Warrior kit");
+
+            FarmSession archer = new FarmSession(SurvivorTestHelpers.Brain(favouredMove: 1), new CharacterBuild { Tier = 1 }, 1, 7, 60f, ProfileRules.ArcherId);
+            while (archer.RunNext()) { }
+            Assert.That(archer.Results[0].FinalItemLevels[SurvivorCatalog.ArrowIndex], Is.GreaterThanOrEqualTo(1));
+            Assert.That(archer.Results[0].FinalItemLevels[SurvivorCatalog.SweepIndex], Is.EqualTo(0));
+
+            Assert.Throws<ArgumentException>(() => new FarmSession(SurvivorTestHelpers.Brain(), new CharacterBuild { Tier = 1 }, 1, 1, 60f, "paladin"));
+        }
+
+        [Test]
         public void Constructor_ChecksArguments()
         {
             PolicyBrain brain = SurvivorTestHelpers.Brain();

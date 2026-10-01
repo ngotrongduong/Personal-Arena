@@ -13,7 +13,10 @@ namespace PersonalArena.View
         private const int LookBrute = 2;
         private const int LookBoss = 3;
         private const int LookSpitter = 4;
-        private const int LookCount = 5;
+        private const int LookExploder = 5;
+        private const int LookGhost = 6;
+        private const int LookNecromancer = 7;
+        private const int LookCount = 8;
         private const int SpitterTypeIndex = 3;
         private const int MaxCreatesPerFrame = 3;
         private const int MaxDying = 60;
@@ -37,8 +40,13 @@ namespace PersonalArena.View
         private const int TintBoss = 5;
 
         private static readonly bool[] WalkerLoops = { true, true, false, false, false, false, true, false };
-        private static readonly int[] PrewarmCounts = { 40, 20, 10, 1, 8 };
-        private static readonly int[] ReserveCounts = { 16, 10, 6, 1, 4 };
+        private static readonly int[] PrewarmCounts = { 40, 20, 10, 1, 8, 6, 6, 2 };
+        private static readonly int[] ReserveCounts = { 16, 10, 6, 1, 4, 4, 4, 2 };
+
+        // Resting colours of the M7 enemies (multiplied into their KayKit textures).
+        private static readonly Color ExploderTint = new Color(1.6f, 0.72f, 0.42f, 1f);
+        private static readonly Color GhostTint = new Color(0.72f, 0.9f, 1.35f, 0.5f);
+        private static readonly Color NecromancerTint = new Color(1f, 0.72f, 1.45f, 1f);
         private static readonly Color[] TintColors =
         {
             Color.white,
@@ -91,6 +99,76 @@ namespace PersonalArena.View
             public float PendingAnimation;
             public int AppliedTint;
             public int Phase;
+            public float DisplayScale = 1f;
+            public bool Pulsing;
+        }
+
+        private readonly Dictionary<Material, Material> ghostMaterials = new Dictionary<Material, Material>();
+
+        /// <summary>Art walker used for a look (see <see cref="SurvivorViewLogic.EnemyWalkerIndex"/>).</summary>
+        private static int WalkerIndexOfLook(int look)
+        {
+            switch (look)
+            {
+                case LookBoss: return LookBrute;
+                case LookSpitter: return SpitterTypeIndex;
+                case LookExploder: return SurvivorViewLogic.EnemyWalkerIndex(SurvivorDefaults.ExploderTypeIndex);
+                case LookGhost: return SurvivorViewLogic.EnemyWalkerIndex(SurvivorDefaults.GhostTypeIndex);
+                case LookNecromancer: return SurvivorViewLogic.EnemyWalkerIndex(SurvivorDefaults.NecromancerTypeIndex);
+                default: return look;
+            }
+        }
+
+        private static bool HasBaseTint(int look) => look == LookExploder || look == LookGhost || look == LookNecromancer;
+
+        private static Color BaseTint(int look)
+        {
+            switch (look)
+            {
+                case LookExploder: return ExploderTint;
+                case LookGhost: return GhostTint;
+                case LookNecromancer: return NecromancerTint;
+                default: return Color.white;
+            }
+        }
+
+        /// <summary>Lets the ghost's tint alpha show: swaps its materials for shared Standard "Fade" copies.</summary>
+        private void MakeGhostly(Renderer[] renderers)
+        {
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                Material[] shared = renderers[i].sharedMaterials;
+                for (int j = 0; j < shared.Length; j++)
+                {
+                    shared[j] = GhostMaterialFor(shared[j]);
+                }
+                renderers[i].sharedMaterials = shared;
+            }
+        }
+
+        private Material GhostMaterialFor(Material source)
+        {
+            if (source == null)
+            {
+                return null;
+            }
+            if (ghostMaterials.TryGetValue(source, out Material ghost))
+            {
+                return ghost;
+            }
+            ghost = Own(new Material(source) { name = source.name + " (Ghost)" });
+            // Standard shader "Fade" rendering mode, set the same way the Standard material inspector does.
+            ghost.SetFloat("_Mode", 2f);
+            ghost.SetOverrideTag("RenderType", "Transparent");
+            ghost.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+            ghost.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+            ghost.SetFloat("_ZWrite", 0f);
+            ghost.DisableKeyword("_ALPHATEST_ON");
+            ghost.EnableKeyword("_ALPHABLEND_ON");
+            ghost.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            ghost.renderQueue = (int)RenderQueue.Transparent;
+            ghostMaterials[source] = ghost;
+            return ghost;
         }
 
         private void BuildEnemyPools()
@@ -131,8 +209,7 @@ namespace PersonalArena.View
             }
             else if (artSet != null && artSet.HasCharacters && artSet.Walkers.Length > 0)
             {
-                int walkerIndex = look == LookBoss ? LookBrute : look == LookSpitter ? SpitterTypeIndex : look;
-                ArenaArtSet.WalkerLook walker = artSet.WalkerFor(walkerIndex);
+                ArenaArtSet.WalkerLook walker = artSet.WalkerFor(WalkerIndexOfLook(look));
                 body = walker.Body;
                 mainHand = walker.MainHand;
                 offHand = walker.OffHand;
@@ -173,6 +250,10 @@ namespace PersonalArena.View
                 // The horde uses cheap blob shadows; hundreds of shadow casters would dominate the frame.
                 view.Renderers[i].shadowCastingMode = ShadowCastingMode.Off;
             }
+            if (look == LookGhost)
+            {
+                MakeGhostly(view.Renderers);
+            }
 
             float shadowSize = look == LookBoss ? 3.6f : look == LookBrute ? 1.5f : 1.05f;
             view.Shadow = CreateBlobShadow(view.Root, shadowSize);
@@ -201,6 +282,9 @@ namespace PersonalArena.View
                 case LookBrute: return "Brute";
                 case LookBoss: return "Bone Lord";
                 case LookSpitter: return "Spitter";
+                case LookExploder: return "Exploder";
+                case LookGhost: return "Ghost";
+                case LookNecromancer: return "Necromancer";
                 default: return "Walker";
             }
         }
@@ -223,6 +307,18 @@ namespace PersonalArena.View
             if (type == SpitterTypeIndex)
             {
                 return LookSpitter;
+            }
+            if (type == SurvivorDefaults.ExploderTypeIndex)
+            {
+                return LookExploder;
+            }
+            if (type == SurvivorDefaults.GhostTypeIndex)
+            {
+                return LookGhost;
+            }
+            if (type == SurvivorDefaults.NecromancerTypeIndex)
+            {
+                return LookNecromancer;
             }
             return LookWalker;
         }
@@ -296,6 +392,11 @@ namespace PersonalArena.View
             view.DeadSeconds = 0f;
             view.Flash = 0f;
             view.Aura.gameObject.SetActive(false);
+            if (view.Pulsing)
+            {
+                view.Pulsing = false;
+                view.Body.localScale = Vector3.one * view.DisplayScale;
+            }
             view.Animator?.PlayOneShot(WalkerDeath, 1.5f, true);
             view.PendingAnimation = Mathf.Max(view.PendingAnimation, 0.02f);
             if (dyingViews.Count >= MaxDying)
@@ -364,6 +465,8 @@ namespace PersonalArena.View
                     view.HeightScale = scale / Mathf.Max(0.01f, artSet != null ? artSet.CharacterScale : 1f);
                     view.Body.localScale = Vector3.one * scale;
                     view.Body.localPosition = Vector3.zero;
+                    view.DisplayScale = scale;
+                    view.Pulsing = false;
                     view.Shadow.localScale = Vector3.one * (view.Elite ? eliteScale : 1f) * (view.Boss ? 3.6f : view.Look == LookBrute ? 1.5f : 1.05f);
                     bool aura = view.Elite || view.Boss;
                     view.Aura.gameObject.SetActive(aura);
@@ -417,13 +520,14 @@ namespace PersonalArena.View
             {
                 SurvivorEnemyDef def = SurvivorDefaults.EnemyDef(enemy.TypeIndex);
                 float windup = def != null && def.WindupSeconds > 0f ? def.WindupSeconds : 0.9f;
-                // Spitters lob a bone from range; everyone else swings.
-                animator.PlayOneShot(view.Look == LookSpitter ? WalkerThrowState : WalkerAttack, Mathf.Clamp(0.55f / windup, 0.6f, 1.4f), false);
+                // Spitters and necromancers cast from range; everyone else swings.
+                bool ranged = view.Look == LookSpitter || view.Look == LookNecromancer;
+                animator.PlayOneShot(ranged ? WalkerThrowState : WalkerAttack, Mathf.Clamp(0.55f / windup, 0.6f, 1.4f), false);
             }
             view.WasWinding = winding;
 
             view.Claw -= SurvivorSim.FixedDeltaTime;
-            if (!winding && view.Look != LookSpitter && view.Claw <= 0f && enemy.StunRemaining <= 0f && sim.Hero.Alive && animator.OneShot < 0)
+            if (!winding && view.Look != LookSpitter && view.Look != LookNecromancer && view.Claw <= 0f && enemy.StunRemaining <= 0f && sim.Hero.Alive && animator.OneShot < 0)
             {
                 float reach = heroRadius + enemy.Radius + 0.35f;
                 float dx = view.Current.x - hero.x;
@@ -487,6 +591,15 @@ namespace PersonalArena.View
                     : view.Elite ? TintElite
                     : TintNone;
                 ApplyEnemyTint(view, tint);
+                if (view.Look == LookExploder)
+                {
+                    PresentExploderPulse(view, enemy.WindingUp && view.Flash <= 0f);
+                }
+                else if (view.Look == LookGhost)
+                {
+                    // Ghosts float a little above the ground and bob.
+                    view.Body.localPosition = new Vector3(0f, 0.3f + 0.1f * Mathf.Sin(Time.unscaledTime * 3f + view.Phase), 0f);
+                }
 
                 bool onScreen = IsOnScreen(position, enemy.Radius, view.HeightScale);
                 if (onScreen)
@@ -568,7 +681,34 @@ namespace PersonalArena.View
                 return;
             }
             view.AppliedTint = tint;
+            if (HasBaseTint(view.Look))
+            {
+                // M7 enemies keep their own colour at rest and their alpha (the ghost) under every tint.
+                Color baseTint = BaseTint(view.Look);
+                Color color = tint == TintNone ? baseTint : TintColors[tint];
+                color.a = baseTint.a;
+                SetRendererTint(view.Renderers, color, true);
+                return;
+            }
             SetRendererTint(view.Renderers, TintColors[tint], tint != TintNone);
+        }
+
+        /// <summary>An exploder about to blow up throbs: hot tint and a swelling body.</summary>
+        private void PresentExploderPulse(EnemyView view, bool pulsing)
+        {
+            if (pulsing)
+            {
+                float beat = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 22f);
+                SetRendererTint(view.Renderers, Color.Lerp(ExploderTint, new Color(2.8f, 1.4f, 0.6f, 1f), beat), true);
+                view.AppliedTint = -1;
+                view.Body.localScale = Vector3.one * (view.DisplayScale * (1f + 0.14f * beat));
+                view.Pulsing = true;
+            }
+            else if (view.Pulsing)
+            {
+                view.Pulsing = false;
+                view.Body.localScale = Vector3.one * view.DisplayScale;
+            }
         }
 
         private void DisposeEnemyAnimators()

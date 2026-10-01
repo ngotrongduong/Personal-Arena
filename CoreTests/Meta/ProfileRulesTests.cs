@@ -292,7 +292,53 @@ namespace PersonalArena.Core.Tests.Meta
             Assert.That(ProfileRules.ClassPrice("archer"), Is.EqualTo(3000)); Assert.That(ProfileRules.ClassPrice("rogue"), Is.EqualTo(-1));
             Assert.That(ProfileRules.ClassPrice(null), Is.EqualTo(-1));
             Assert.That(ProfileRules.IsClassPlayable("warrior"), Is.True);
-            Assert.That(ProfileRules.IsClassPlayable("mage"), Is.False); Assert.That(ProfileRules.IsClassPlayable("archer"), Is.False);
+            Assert.That(ProfileRules.IsClassPlayable("mage"), Is.True); Assert.That(ProfileRules.IsClassPlayable("archer"), Is.True);
+            Assert.That(ProfileRules.IsClassPlayable("rogue"), Is.False); Assert.That(ProfileRules.IsClassPlayable(null), Is.False);
+        }
+
+        [Test]
+        public void BuyClass_TakesGoldOnceAndAddsAFreshCharacter()
+        {
+            PlayerProfile p = ProfileRules.NewProfile(); p.Gold = 1499;
+            Assert.That(ProfileRules.TryBuyClass(p, "mage"), Is.False, "short of gold");
+            Assert.That(p.Gold, Is.EqualTo(1499)); Assert.That(p.Characters.Count, Is.EqualTo(1));
+
+            p.Gold = 2000;
+            Assert.That(ProfileRules.TryBuyClass(p, "mage"), Is.True);
+            Assert.That(p.Gold, Is.EqualTo(500));
+            CharacterProfile mage = ProfileRules.FindCharacter(p, "mage");
+            Assert.That(mage, Is.Not.Null); Assert.That(mage.Level, Is.EqualTo(0)); Assert.That(mage.BrainRunId, Is.EqualTo("mage-s001"));
+            Assert.That(ProfileRules.TryBuyClass(p, "mage"), Is.False, "already owned");
+            Assert.That(p.Gold, Is.EqualTo(500));
+            Assert.That(ProfileRules.TryBuyClass(p, "warrior"), Is.False, "the warrior is owned from the start");
+            Assert.That(ProfileRules.TryBuyClass(p, "rogue"), Is.False);
+            Assert.That(ProfileRules.TryBuyClass(null, "mage"), Is.False);
+
+            p.Gold = 3000;
+            Assert.That(ProfileRules.TryBuyClass(p, "archer"), Is.True); Assert.That(p.Gold, Is.EqualTo(0));
+            Assert.That(ProfileRules.Sanitize(p), Is.False, "a bought class is a valid profile");
+            Assert.That(p.Characters.Count, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void SelectClass_OnlyOwned()
+        {
+            PlayerProfile p = ProfileRules.NewProfile();
+            Assert.That(ProfileRules.TrySelectClass(p, "mage"), Is.False); Assert.That(p.SelectedClassId, Is.EqualTo("warrior"));
+            p.Gold = 1500; ProfileRules.TryBuyClass(p, "mage");
+            Assert.That(ProfileRules.TrySelectClass(p, "mage"), Is.True); Assert.That(p.SelectedClassId, Is.EqualTo("mage"));
+            Assert.That(ProfileRules.TrySelectClass(p, "warrior"), Is.True); Assert.That(p.SelectedClassId, Is.EqualTo("warrior"));
+        }
+
+        [Test]
+        public void SelectClass_HandEditedUnknownClass_IsKeptButNeverSelected()
+        {
+            PlayerProfile p = ProfileRules.NewProfile();
+            p.Characters.Add(new CharacterProfile { ClassId = "rogue" }); p.SelectedClassId = "rogue";
+            Assert.That(ProfileRules.Sanitize(p), Is.True);
+            Assert.That(p.SelectedClassId, Is.EqualTo("warrior"));
+            Assert.That(ProfileRules.OwnsClass(p, "rogue"), Is.True, "the record is not deleted");
+            Assert.That(ProfileRules.TrySelectClass(p, "rogue"), Is.False); Assert.That(p.SelectedClassId, Is.EqualTo("warrior"));
         }
 
         [Test]

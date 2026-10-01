@@ -23,6 +23,7 @@ namespace PersonalArena.Tools.SurvivorEval
             public int Threads = Environment.ProcessorCount;
             public string Out;
             public bool SelfTest;
+            public string ClassId;
         }
 
         private sealed class Output
@@ -62,13 +63,14 @@ namespace PersonalArena.Tools.SurvivorEval
                 PolicyBrain metadataBrain = PolicyBrain.Load(brainData);
                 string validation = SurvivorPilot.Validate(metadataBrain);
                 if (validation != null) throw new ArgumentException(validation);
+                string classId = ResolveClass(options.ClassId, metadataBrain.BehaviorName);
                 SurvivorRunStats[] runs = new SurvivorRunStats[options.Seeds];
                 // One brain per worker thread: PolicyBrain keeps evaluation buffers and is not thread-safe.
                 Parallel.For(0, runs.Length, new ParallelOptions { MaxDegreeOfParallelism = options.Threads },
                     () => PolicyBrain.Load(brainData),
                     (i, state, brain) =>
                     {
-                        SurvivorConfig config = new SurvivorConfig { RunSeconds = options.RunSeconds };
+                        SurvivorConfig config = new SurvivorConfig { RunSeconds = options.RunSeconds, ClassDef = SurvivorDefaults.ForClass(classId) };
                         config.Build.Tier = options.Tier;
                         runs[i] = new SurvivorEvaluator().RunOne(brain, config, options.SeedStart + i, options.Deterministic);
                         return brain;
@@ -123,12 +125,30 @@ namespace PersonalArena.Tools.SurvivorEval
                     else if (arg == "--run-seconds") result.RunSeconds = float.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
                     else if (arg == "--threads") result.Threads = int.Parse(value);
                     else if (arg == "--out") result.Out = value;
+                    else if (arg == "--class") result.ClassId = value.Trim().ToLowerInvariant();
                     else throw new ArgumentException("Unknown argument " + arg + ".");
                 }
             }
             if (!result.SelfTest && string.IsNullOrWhiteSpace(result.Brain)) throw new ArgumentException("--brain is required.");
             if (result.Seeds <= 0 || result.Threads <= 0 || result.Tier < 1 || result.Tier > 10 || result.RunSeconds < 60f || result.RunSeconds > 900f) throw new ArgumentException("An argument is outside its valid range.");
             return result;
+        }
+
+        /// <summary>
+        /// The hero class the brain plays: --class when given, else the class named by the brain's
+        /// behavior (Warrior / Mage / Archer), else the Warrior. A brain of one class never plays another.
+        /// </summary>
+        private static string ResolveClass(string requested, string behaviorName)
+        {
+            string fromBrain = string.IsNullOrEmpty(behaviorName) ? null : behaviorName.Trim().ToLowerInvariant();
+            if (fromBrain != null && SurvivorDefaults.ForClass(fromBrain) == null) fromBrain = null;
+            if (requested != null)
+            {
+                if (SurvivorDefaults.ForClass(requested) == null) throw new ArgumentException("Unknown --class " + requested + ".");
+                if (fromBrain != null && fromBrain != requested) throw new ArgumentException("The brain is a " + behaviorName + " brain, not " + requested + ".");
+                return requested;
+            }
+            return fromBrain ?? "warrior";
         }
 
         private static void Print(SurvivorEvalSummary s, bool passes)

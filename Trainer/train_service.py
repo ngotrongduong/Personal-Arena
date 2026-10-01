@@ -4,9 +4,10 @@ The viewer (``Build/Watch/PersonalArenaWatch.exe``) starts this script in a hidd
 
     .venv-ml/Scripts/python.exe Trainer/train_service.py --parent-pid <viewer pid>
 
-The service resumes the newest run (or starts ``warrior-s001``), appends ML-Agents output to
-``Trainer/runs/<run>.log``, keeps exporting ``latest.brain`` so the viewer hot-loads every new
-checkpoint, and reports progress in ``Trainer/runs/training_service.json``.
+``--behavior Warrior|Mage|Archer`` picks the hero class (M7); everything below is per class.
+The service resumes the class's newest run (or starts ``<class>-s001``, e.g. ``mage-s001``),
+appends ML-Agents output to ``Trainer/runs/<run>.log``, keeps exporting ``latest.brain`` so the
+viewer hot-loads every new checkpoint, and reports progress in ``Trainer/runs/training_service.json``.
 
 It stops gracefully when ``Trainer/runs/training_service.stop`` appears or the viewer exits:
 it sends the same Ctrl+C a terminal would, so ML-Agents saves a checkpoint before quitting.
@@ -43,7 +44,7 @@ STOP_NAME = "training_service.stop"
 LOCK_NAME = "training_service.lock"
 LOCK_WAIT = 15.0
 ERROR_LOG_NAME = "training_service.err.log"
-DEFAULT_ARENA_AGENTS = 16  # TrainingArenaHost's default warriors per Unity game.
+DEFAULT_ARENA_AGENTS = 16  # TrainingArenaHost's default heroes per Unity game.
 HISTORY_LIMIT = 400
 STATUS_INTERVAL = 2.0
 EXPORT_INTERVAL = 5.0
@@ -55,9 +56,7 @@ CRASH_RETRY_LIMIT = 5
 CPU_FALLBACK_AFTER = 2
 STABLE_RUN_SECONDS = 600.0
 RETRY_DELAY = 5.0
-BEHAVIORS = {name.lower(): name for name in ("Warrior", "Mage", "Archer")}
-# Survivor mode trains only the Warrior until these classes get their own Survivor configs.
-FUTURE_BEHAVIORS = ("Mage", "Archer")
+BEHAVIORS = {name.lower(): name for name in arena_trainer.HERO_BEHAVIORS}
 
 SUMMARY_PATTERN = re.compile(
     r"\[INFO\] (?P<behavior>[^.\s]+)\. Step: (?P<step>\d+)\. Time Elapsed: [\d.]+ s\."
@@ -69,23 +68,26 @@ LESSON_PATTERN = re.compile(
 
 
 def normalize_behavior(value: str) -> str:
-    try:
-        return BEHAVIORS[value.lower()]
-    except KeyError as error:
-        raise argparse.ArgumentTypeError(
-            "behavior must be Warrior, Mage, or Archer"
-        ) from error
+    return arena_trainer.behavior_argument(value)
 
 
 def default_config(behavior: str) -> str:
-    return str(Path("Trainer/config") / f"{behavior.lower()}_survivor_ppo.yaml")
+    return str(arena_trainer.CONFIG_DIRECTORY / f"{behavior.lower()}_survivor_ppo.yaml")
 
 
 def missing_config_message(behavior: str, config_path: Path) -> str:
-    """What the viewer shows when a behavior has no trainer config yet."""
-    if behavior in FUTURE_BEHAVIORS and config_path.name == Path(default_config(behavior)).name:
-        return f"{behavior} training arrives in M7 (Mage/Archer Survivor brains). Only the Warrior can train for now."
+    """What the viewer shows when the trainer config is missing."""
     return f"Trainer config not found: {config_path.name}."
+
+
+def config_problem(behavior: str, config_path: Path) -> str:
+    """Why ``config_path`` cannot train ``behavior`` ("" when it can)."""
+    if not config_path.is_file():
+        return missing_config_message(behavior, config_path)
+    trained = arena_trainer.config_behaviors(config_path)
+    if behavior not in trained:
+        return f"Trainer config {config_path.name} has no {behavior} behavior."
+    return ""
 
 
 @dataclass
@@ -167,28 +169,59 @@ class RunPlan:
     message: str = ""
 
 
+def foreign_run(run_dir: Path, behavior: str) -> bool:
+    """True when ``run_dir`` belongs to another hero class: its name says so (``warrior-s001`` for
+    a Mage) or it holds another class's brain. Training it with ``--force`` would wreck that run."""
+    owner = arena_trainer.run_class(run_dir.name)
+    if owner is not None and owner != behavior:
+        return True
+    return any(
+        (run_dir / other).is_dir() for other in arena_trainer.HERO_BEHAVIORS if other != behavior
+    )
+
+
+def class_checkpoint_dirs(runs_dir: Path, behavior: str) -> list[Path]:
+    """``<run>/<Behavior>`` folders with a resumable checkpoint, only from this class's runs
+    (``mage-...`` for the Mage): a Mage never resumes or upgrades a Warrior run, and vice versa."""
+    return [
+        path
+        for path in runs_dir.glob(f"*/{behavior}")
+        if path.is_dir()
+        and path.parent.name != champion.CHAMPIONS_DIR
+        and not path.parent.name.startswith(".")
+        and arena_trainer.run_belongs_to(path.parent.name, behavior)
+        and (path / "checkpoint.pt").is_file()
+        and export_brain.checkpoints(path)
+    ]
+
+
 def plan_run(runs_dir: Path, behavior: str, requested: str | None = None) -> RunPlan:
     message = ""
+    if (
+        requested
+        and requested != champion.CHAMPIONS_DIR
+        and foreign_run(runs_dir / requested, behavior)
+    ):
+        # The viewer asked for another class's branch: train this class's own newest run instead.
+        message = f"Nhánh {requested} không phải não {behavior}; học tiếp não {behavior} mới nhất."
+        requested = None
     if requested:
         run_id = next_run_id(runs_dir, behavior) if requested == champion.CHAMPIONS_DIR else requested
         requested_dir = runs_dir / run_id
-        requested_behavior = requested_dir / behavior
+        # An existing run of an older schema (pre-Survivor mage-001, even without a checkpoint) is never
+        # trained with --force: that would overwrite it. Start this class's next run instead.
         if (
-            (requested_behavior / "checkpoint.pt").is_file()
+            requested_dir.is_dir()
+            and any(entry.name != arena_trainer.SCHEMA_FILE for entry in requested_dir.iterdir())
             and arena_trainer.run_schema_version(requested_dir) != arena_trainer.SCHEMA_VERSION
         ):
             run_id = next_run_id(runs_dir, behavior)
     else:
+        candidates = class_checkpoint_dirs(runs_dir, behavior)
         resumable = [
             path
-            for path in runs_dir.glob(f"*/{behavior}")
-            if path.is_dir()
-            and path.parent.name != champion.CHAMPIONS_DIR
-            and not path.parent.name.startswith(".")
-            and (path / "checkpoint.pt").is_file()
-            and export_brain.checkpoints(path)
-            and arena_trainer.run_schema_version(path.parent)
-            == arena_trainer.SCHEMA_VERSION
+            for path in candidates
+            if arena_trainer.run_schema_version(path.parent) == arena_trainer.SCHEMA_VERSION
         ]
         newest = (
             max(
@@ -205,14 +238,12 @@ def plan_run(runs_dir: Path, behavior: str, requested: str | None = None) -> Run
             run_id = newest.parent.name
         else:
             run_id = next_run_id(runs_dir, behavior)
+            # Runs without a schema marker are pre-Survivor arena brains (mage-001, warrior-003):
+            # they can never be upgraded, so a class's first Survivor run starts quietly from scratch.
             older = [
                 path
-                for path in runs_dir.glob(f"*/{behavior}")
-                if path.is_dir()
-                and path.parent.name != champion.CHAMPIONS_DIR
-                and not path.parent.name.startswith(".")
-                and (path / "checkpoint.pt").is_file()
-                and export_brain.checkpoints(path)
+                for path in candidates
+                if (path.parent / arena_trainer.SCHEMA_FILE).is_file()
                 and arena_trainer.run_schema_version(path.parent) < arena_trainer.SCHEMA_VERSION
             ]
             older.sort(
@@ -703,8 +734,8 @@ class TrainingService:
         self.stop_path.unlink(missing_ok=True)
         # Check the config before planning, so an untrainable behavior never creates a run folder.
         config_path = arena_trainer.resolve_path(self.args.config, self.root)
-        if not config_path.is_file():
-            message = missing_config_message(self.behavior, config_path)
+        message = config_problem(self.behavior, config_path)
+        if message:
             print(message, file=sys.stderr)
             self.publish("error", message)
             return 2

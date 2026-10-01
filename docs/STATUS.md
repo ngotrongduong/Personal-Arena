@@ -1,7 +1,7 @@
 # Trạng thái dự án
 
 > File này là "bộ nhớ" giữa các phiên. Đọc đầu tiên, cập nhật cuối cùng.
-> Cập nhật lần cuối: 2026-10-01 (phiên Claude, PC — M6 Lịch sử não code xong: T-028, T-029; `warrior-s001` đang train ~106.6M bước).
+> Cập nhật lần cuối: 2026-10-01 tối (phiên Claude, PC — M7 class mua được code xong: T-030..T-032; `warrior-s001` đang train ~154M bước).
 
 ## Hướng đi
 
@@ -23,7 +23,7 @@
   - Unity (T-016): `HeroAgent` 3 nhánh, trình xem Survivor (camera theo nhân vật, nghĩa địa
     KayKit Halloween, HUD EXP/cấp/đồng hồ/vàng/món đồ, bảng lên cấp tô sáng lựa chọn, màn kết trận).
   - T-017: **đã xoá hẳn đấu trường tròn cũ** (`ArenaSim`, quan sát 883, `ArenaPlay.unity`, các view
-    cũ, config `<class>_ppo.yaml`). Mage/Archer chờ config Survivor riêng ở M7. Các mục lịch sử bên
+    cũ, config `<class>_ppo.yaml`). Mage/Archer có config Survivor riêng từ M7. Các mục lịch sử bên
     dưới nói về code cũ này.
   - Test: CoreTests 69/69, pytest 70/70, Unity EditMode 78/78.
 - **M4B code xong (D-032, D-033):**
@@ -122,6 +122,7 @@
 | M4C: đủ nội dung (6 vũ khí, 8 phụ kiện, đồ nhặt, rương, spitter, HUD) | code xong (T-021, T-022) — chờ train trên bản mới và qua đánh giá 100 seed |
 | M5: kinh tế và build (T-023..T-026) + thưởng hạ quái (T-027, D-036) | code xong — chờ nghiệm thu: đổi build → TRAIN → AI đổi lối đánh |
 | M6: Lịch sử não (T-028, T-029, D-037) | code xong — chờ nghiệm thu: mở bảng `L`, chọn não cũ, bấm "Xem ngay" |
+| M7: class mua được, tiến hóa vũ khí, quái mới (T-030..T-032, D-038) | code xong — chờ nghiệm thu: mua Pháp sư/Cung thủ, bấm TRAIN, não nền mới qua đánh giá |
 
 ## Việc tiếp theo (theo thứ tự)
 
@@ -173,6 +174,19 @@ thưởng theo thứ bậc, nghiệm thu bằng đánh giá 100 seed). Đấu tr
      nhánh được) bắt đầu có từ lần bấm TRAIN kế tiếp. 8 não champion cũ chỉ xem được (`.pt` đã bị
      ML-Agents dọn). Lưu phiên bản hiện tại và Nhân bản dùng được ngay.
    - Nghiệm thu M6: mở `L`, chọn một não cũ, bấm Xem ngay → trình xem chơi bằng não đó ngay.
+5. M7 class mua được (D-038) code xong 2026-10-01:
+   - T-030 (Core): bộ đồ Pháp sư (vũ khí 14–19, cầu lửa, khiên phép, dịch chuyển, nổ băng) và Cung thủ
+     (20–25, bắn mạnh, lộn ra sau, đá); 18 tiến hóa (40–57) khi mở rương có vũ khí cấp tối đa + phụ
+     kiện đôi; quái mới từ phút 5: Bom xác (nổ), Hồn ma (đi xuyên vật cản), Pháp sư xác (bắn xa, gọi 3
+     zombie). Schema v4 giữ nguyên → `warrior-s001` học tiếp.
+   - T-031 (Trainer): `mage_survivor_ppo.yaml`, `archer_survivor_ppo.yaml`, `train_service --behavior`,
+     run `mage-sNNN`/`archer-sNNN`, champion/lineage và `SurvivorEval` theo class.
+   - T-032 (trình xem): cửa hàng class trong menu `C` (Mua 1.500 / 3.000 vàng, Chọn), class đang chọn
+     quyết định não được xem, nút TRAIN huấn luyện class đó (đang train class khác → lưu rồi chuyển),
+     hình nhân vật/vũ khí/hiệu ứng/quái mới, thông báo "TIẾN HÓA", 10 icon mới (CC BY).
+   - Bản xem ở `Build/WatchNext`, bản train ở `Build/TrainingNext` — tự tráo vào ở lần mở / lần TRAIN sau.
+   - Nghiệm thu M7: owner mua Pháp sư hoặc Cung thủ, chọn, bấm TRAIN; khi não nền mới qua
+     `SurvivorEval` (trung vị ≥ 10:00, P10 ≥ 7:00) là xong.
 
 ## Cách làm trên PC (Claude)
 
@@ -198,6 +212,13 @@ thưởng theo thứ bậc, nghiệm thu bằng đánh giá 100 seed). Đấu tr
   trước khi phát hành để đảm bảo game không gọi mạng.
 
 ## Nhật ký phiên (mới nhất trên cùng)
+
+### 2026-10-01 tối — Claude (PC): M7 class mua được (T-030..T-032, D-038)
+- T-030 (Core), T-031 (Trainer), T-032 (trình xem) xong; subagent viết, Claude kiểm, reviewer duyệt.
+- `warrior-s001` vẫn học tiếp (schema v4 không đổi). Lần chấm gần nhất 149,0M: 1241,6 điểm, qua mốc
+  M4A, trung vị 1020 s, lần đầu thắng trận (1/100); champion vẫn là não 97,0M (1530 điểm).
+- `Build/WatchNext` + `Build/TrainingNext` có M7, tự tráo vào ở lần mở trình xem / bấm TRAIN sau.
+- Test: CoreTests 236/236, pytest 185/185, EditMode 238/238.
 
 ### 2026-10-01 — Claude (PC): M6 Lịch sử não (T-028, T-029)
 - Owner bấm TRAIN lại: `warrior-s001` khỏe ở ~106.6M bước; champion (96,999,889) qua M4A.

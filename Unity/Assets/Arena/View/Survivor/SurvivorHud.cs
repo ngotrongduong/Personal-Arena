@@ -16,7 +16,7 @@ namespace PersonalArena.View
     [DefaultExecutionOrder(1000)] // After SurvivorRenderer and SurvivorCamera, so the hero tag sits on this frame's hero.
     public sealed partial class SurvivorHud : MonoBehaviour
     {
-        private const int SkillSlots = 3;
+        private const int SkillSlots = 4;
         private const int ItemSlots = 4;
 
         private SurvivorSim sim;
@@ -218,7 +218,43 @@ namespace PersonalArena.View
             sim = survivorSim;
             highlight = pickHighlight;
             ResetCaches();
+            heroName.text = SurvivorViewLogic.HeroNameLine(sim?.Config.ClassDef?.Id);
             Refresh(0f);
+        }
+
+        /// <summary>Big gold banner over the arena that fades out after a few seconds (e.g. "TIẾN HÓA: Bão Sét").</summary>
+        public void ShowToast(string text, Color color)
+        {
+            EnsureBuilt();
+            if (string.IsNullOrEmpty(text))
+            {
+                return;
+            }
+            toastText.text = text;
+            toastText.color = color;
+            toastClock = ToastSeconds;
+            toastText.gameObject.SetActive(true);
+        }
+
+        private void UpdateToast(float delta)
+        {
+            if (!built || toastClock <= 0f)
+            {
+                return;
+            }
+            toastClock -= delta;
+            if (toastClock <= 0f)
+            {
+                toastText.gameObject.SetActive(false);
+                return;
+            }
+            // Pops in over 0.15 s, holds, then fades over the last 0.8 s.
+            float age = ToastSeconds - toastClock;
+            float scale = age < 0.15f ? Mathf.Lerp(1.4f, 1f, age / 0.15f) : 1f;
+            toastText.rectTransform.localScale = new Vector3(scale, scale, 1f);
+            Color color = toastText.color;
+            color.a = Mathf.Clamp01(toastClock / 0.8f);
+            toastText.color = color;
         }
 
         public void SetInfoText(string text)
@@ -277,6 +313,13 @@ namespace PersonalArena.View
             for (int i = 0; i < SkillSlots; i++)
             {
                 shownCooldownTenths[i] = -1;
+                skillSlots[i].Bound = false;
+            }
+            toastClock = 0f;
+            toastText.gameObject.SetActive(false);
+            if (sim != null)
+            {
+                LayoutSkillSlots(sim.Config.ClassDef?.ActiveSkills);
             }
             shownPhase = PickHighlight.Phase.None;
             shownChosen = -1;
@@ -304,6 +347,7 @@ namespace PersonalArena.View
         {
             Refresh(Time.unscaledDeltaTime);
             UpdateHeroLabel(Time.unscaledDeltaTime);
+            UpdateToast(Time.unscaledDeltaTime);
         }
 
         /// <summary>Fades the spectator tag in/out (~0.2 s) and keeps it above the hero on screen.</summary>
@@ -499,7 +543,7 @@ namespace PersonalArena.View
                 return;
             }
             view.Icon.enabled = true;
-            view.Icon.sprite = SkillIconFactory.IconForKey(def.Id, SurvivorViewLogic.ItemColor(item));
+            view.Icon.sprite = SkillIconFactory.IconForItem(item);
             view.Level.text = level >= def.MaxLevel ? "MAX" : level.ToString();
             view.Level.color = level >= def.MaxLevel ? GoldText : Color.white;
             Color frame = SurvivorViewLogic.ItemColor(item);
@@ -515,12 +559,18 @@ namespace PersonalArena.View
             {
                 SkillDef skill = i < skills.Length ? skills[i] : null;
                 SkillSlotView view = skillSlots[i];
-                if (view.Skill != skill)
+                if (!SurvivorViewLogic.SkillVisible(skill))
                 {
+                    view.Skill = skill;
+                    continue;
+                }
+                if (!view.Bound || view.Skill != skill)
+                {
+                    view.Bound = true;
                     view.Skill = skill;
                     view.Color = SkillIconFactory.ColorFor(skill, SkillIconIndex(skill, i));
                     view.Icon.sprite = SkillIconFactory.IconFor(skill, SkillIconIndex(skill, i));
-                    view.Title.text = SkillTitle(skill);
+                    view.Title.text = SurvivorViewLogic.SkillTitle(skill);
                     Color accent = view.Color;
                     accent.a = 0.75f;
                     view.Accent.color = accent;
@@ -554,17 +604,6 @@ namespace PersonalArena.View
         {
             // SkillIconFactory's slot defaults are the old four-slot layout (strike, kick, block, dash).
             return skill != null ? slot : slot + 1;
-        }
-
-        private static string SkillTitle(SkillDef skill)
-        {
-            switch (skill != null ? skill.Kind : SkillKind.None)
-            {
-                case SkillKind.Kick: return "Đá";
-                case SkillKind.Block: return "Đỡ khiên";
-                case SkillKind.Dash: return "Lướt";
-                default: return skill != null ? skill.Id : string.Empty;
-            }
         }
 
         private void RefreshOffer(float delta)
@@ -641,7 +680,7 @@ namespace PersonalArena.View
                 ItemDef def = SurvivorCatalog.Get(item);
                 card.BaseX = start + i * spacing;
                 card.Accent = SurvivorViewLogic.ItemColor(item);
-                card.Icon.sprite = SkillIconFactory.IconForKey(def != null ? def.Id : string.Empty, card.Accent);
+                card.Icon.sprite = def != null ? SkillIconFactory.IconForItem(item) : SkillIconFactory.IconForKey(string.Empty, card.Accent);
                 card.Name.text = def != null ? def.Name : "?";
                 card.Level.text = SurvivorViewLogic.LevelLabel(item, level);
                 card.Level.color = level <= 1 ? new Color(0.5f, 1f, 0.6f) : GoldText;

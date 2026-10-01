@@ -24,6 +24,7 @@ namespace PersonalArena.View
 
         private ProfileStore store;
         private Func<bool> changePending;
+        private bool saveFailed;
 
         private Text headerText;
         private Text walletText;
@@ -47,11 +48,14 @@ namespace PersonalArena.View
         private readonly UiButton[] focusButtons = new UiButton[TrainingFocusInfo.Count];
         private readonly Text[] focusHints = new Text[TrainingFocusInfo.Count];
 
+        // M7 class shop: one card per class (name, state, play style, Mua, Chọn).
+        private readonly ShopCard[] shopCards = new ShopCard[ClassViewLogic.ClassIds.Length];
+
         /// <summary>Raised after the profile changed and was saved (the viewer refreshes its wallet line).</summary>
         public event Action ProfileChanged;
 
         protected override string Title => "NHÂN VẬT & BỘ CHỈ SỐ";
-        protected override Vector2 CardSize => new Vector2(1600f, 900f);
+        protected override Vector2 CardSize => new Vector2(1600f, 1000f);
 
         /// <summary>The profile to edit; <paramref name="pending"/> tells whether the next run will differ from the current one.</summary>
         public void Bind(ProfileStore profileStore, Func<bool> pending)
@@ -70,7 +74,7 @@ namespace PersonalArena.View
             }
 
             PlayerProfile profile = store.Profile;
-            CharacterProfile warrior = store.Warrior;
+            CharacterProfile warrior = store.Selected;
             if (warrior == null)
             {
                 return;
@@ -79,16 +83,17 @@ namespace PersonalArena.View
             int loadout = Mathf.Clamp(warrior.ActiveLoadout, 0, ProfileRules.LoadoutCount - 1);
             int unspent = ProfileRules.UnspentPoints(warrior, loadout);
 
-            headerText.text = "CHIẾN BINH  Cấp " + warrior.Level;
+            headerText.text = ClassViewLogic.UpperName(warrior.ClassId) + "  Cấp " + warrior.Level;
             walletText.text = "Ví: " + MetaViewLogic.FormatGold(profile.Gold) + " vàng     Điểm chưa dùng: " + unspent +
                 "     Bộ đang dùng: " + MetaViewLogic.LoadoutName(warrior, loadout);
             bool pending = changePending != null && changePending();
-            pendingText.text = pending ? "Áp dụng từ trận sau" : string.Empty;
+            pendingText.text = saveFailed ? "Không lưu được hồ sơ" : pending ? "Áp dụng từ trận sau" : string.Empty;
 
             RefreshBuy(profile, warrior);
             RefreshLoadouts(warrior, loadout, unspent);
             RefreshTier(profile);
             RefreshFocus(profile);
+            RefreshShop(profile);
         }
 
         protected override void OnOpened()
@@ -110,8 +115,9 @@ namespace PersonalArena.View
             BuildFocusSection(card);
             BuildShopSection(card);
 
-            Text footer = PlaceText("Footer", card, 17, TextAnchor.UpperLeft, Muted, LeftX, -852f, 1530f, 26f);
-            footer.text = "Thay đổi áp dụng từ trận xem sau. AI học theo build này ở lần HUẤN LUYỆN sau.";
+            Text footer = PlaceText("Footer", card, 17, TextAnchor.UpperLeft, Muted, LeftX, -960f, 1530f, 26f);
+            footer.text = "Thay đổi áp dụng từ trận xem sau. AI học theo build này ở lần HUẤN LUYỆN sau. " +
+                "Mỗi nhân vật có cấp, bộ chỉ số và bộ não riêng.";
         }
 
         // ------------------------------------------------------------------ building
@@ -183,24 +189,26 @@ namespace PersonalArena.View
 
         private void BuildShopSection(RectTransform card)
         {
-            RectTransform section = CreateCard("Shop", card, RightX, -674f, RightWidth, 166f);
+            RectTransform section = CreateCard("Shop", card, RightX, -674f, RightWidth, 276f);
             Header(section, "Cửa hàng nhân vật", 520f);
-            string[] ids = { ProfileRules.WarriorId, ProfileRules.MageId, ProfileRules.ArcherId };
-            string[] names = { "Chiến binh", "Pháp sư", "Cung thủ" };
+            string[] ids = ClassViewLogic.ClassIds;
+            const float columnWidth = 176f;
             for (int i = 0; i < ids.Length; i++)
             {
-                bool playable = ProfileRules.IsClassPlayable(ids[i]);
-                long price = ProfileRules.ClassPrice(ids[i]);
-                string label = playable
-                    ? names[i] + "\nĐang dùng"
-                    : names[i] + " · " + MetaViewLogic.FormatGold(price) + " vàng\nSắp có (M6)";
-                UiButton button = CreateButton("Class " + ids[i], section, label, 15, 18f + i * 178f, -50f, 170f, 96f, null);
-                button.Set(label, playable ? ButtonGo : ButtonColor, playable);
-                if (playable)
-                {
-                    // Showing "in use", not an action.
-                    button.Button.transition = Selectable.Transition.None;
-                }
+                string classId = ids[i];
+                float x = 12f + i * (columnWidth + 8f);
+                ShopCard shop = new ShopCard { ClassId = classId };
+                RectTransform box = CreateImage("Class " + classId, section, Track, UiSprites.RoundedSprite(), Image.Type.Sliced);
+                Place(box, x, -46f, columnWidth, 222f);
+                shop.Name = PlaceText("Name", box, 18, TextAnchor.UpperLeft, Color.white, 8f, -6f, columnWidth - 16f, 24f, true);
+                shop.Name.text = ClassViewLogic.DisplayName(classId);
+                shop.Status = PlaceText("Status", box, 14, TextAnchor.UpperLeft, Muted, 8f, -32f, columnWidth - 16f, 20f, false, true);
+                shop.Style = PlaceText("Style", box, 13, TextAnchor.UpperLeft, Muted, 8f, -54f, columnWidth - 16f, 72f, false, true);
+                shop.Style.verticalOverflow = VerticalWrapMode.Truncate;
+                shop.Style.text = ClassViewLogic.PlayStyle(classId);
+                shop.Buy = CreateButton("Buy", box, ClassViewLogic.BuyLabel(classId), 14, 8f, -130f, columnWidth - 16f, 38f, () => OnBuyClass(classId));
+                shop.Select = CreateButton("Select", box, "Chọn", 15, 8f, -174f, columnWidth - 16f, 38f, () => OnSelectClass(classId));
+                shopCards[i] = shop;
             }
         }
 
@@ -310,11 +318,59 @@ namespace PersonalArena.View
             }
         }
 
+        private void RefreshShop(PlayerProfile profile)
+        {
+            foreach (ShopCard shop in shopCards)
+            {
+                if (shop == null)
+                {
+                    continue;
+                }
+
+                ClassShopState state = ClassViewLogic.ShopState(profile, shop.ClassId);
+                shop.Name.color = state == ClassShopState.Selected ? Gold : Color.white;
+                shop.Status.text = ClassViewLogic.ShopStatus(profile, shop.ClassId);
+                shop.Status.color = state == ClassShopState.TooExpensive ? Warn
+                    : state == ClassShopState.Selected ? Good : Muted;
+
+                bool showBuy = ClassViewLogic.ShowsBuy(state);
+                shop.Buy.SetVisible(showBuy);
+                if (showBuy)
+                {
+                    shop.Buy.Set(ClassViewLogic.BuyLabel(shop.ClassId), ButtonGo, ClassViewLogic.CanBuy(state));
+                }
+
+                bool owned = state == ClassShopState.Selected || state == ClassShopState.Owned;
+                shop.Select.SetVisible(owned);
+                if (owned)
+                {
+                    shop.Select.Set(ClassViewLogic.SelectLabel(state), state == ClassShopState.Selected ? ButtonActive : ButtonGo,
+                        ClassViewLogic.CanSelect(state));
+                }
+            }
+        }
+
         // ------------------------------------------------------------------ actions
+
+        private void OnBuyClass(string classId)
+        {
+            if (store != null && ProfileRules.TryBuyClass(store.Profile, classId))
+            {
+                Commit();
+            }
+        }
+
+        private void OnSelectClass(string classId)
+        {
+            if (store != null && store.Profile.SelectedClassId != classId && ProfileRules.TrySelectClass(store.Profile, classId))
+            {
+                Commit();
+            }
+        }
 
         private void OnBuyLevel()
         {
-            if (store != null && ProfileRules.TryBuyLevel(store.Profile, store.Warrior))
+            if (store != null && ProfileRules.TryBuyLevel(store.Profile, store.Selected))
             {
                 Commit();
             }
@@ -322,7 +378,7 @@ namespace PersonalArena.View
 
         private void OnSelectLoadout(int index)
         {
-            if (store != null && ProfileRules.TrySetActiveLoadout(store.Warrior, index))
+            if (store != null && ProfileRules.TrySetActiveLoadout(store.Selected, index))
             {
                 Commit();
             }
@@ -335,7 +391,7 @@ namespace PersonalArena.View
                 return;
             }
 
-            CharacterProfile warrior = store.Warrior;
+            CharacterProfile warrior = store.Selected;
             if (warrior != null && ProfileRules.TryRename(warrior, warrior.ActiveLoadout, name))
             {
                 Commit();
@@ -354,14 +410,14 @@ namespace PersonalArena.View
                 return;
             }
 
-            CharacterProfile warrior = store.Warrior;
+            CharacterProfile warrior = store.Selected;
             ProfileRules.ResetPoints(warrior, warrior.ActiveLoadout);
             Commit();
         }
 
         private void OnAddPoint(StatId stat)
         {
-            if (store != null && ProfileRules.TryAddPoint(store.Warrior, store.Warrior.ActiveLoadout, stat))
+            if (store != null && ProfileRules.TryAddPoint(store.Selected, store.Selected.ActiveLoadout, stat))
             {
                 Commit();
             }
@@ -369,7 +425,7 @@ namespace PersonalArena.View
 
         private void OnRemovePoint(StatId stat)
         {
-            if (store != null && ProfileRules.TryRemovePoint(store.Warrior, store.Warrior.ActiveLoadout, stat))
+            if (store != null && ProfileRules.TryRemovePoint(store.Selected, store.Selected.ActiveLoadout, stat))
             {
                 Commit();
             }
@@ -408,9 +464,19 @@ namespace PersonalArena.View
 
         private void Commit()
         {
-            store.Save();
+            saveFailed = !store.Save();
             ProfileChanged?.Invoke();
             Refresh();
+        }
+
+        private sealed class ShopCard
+        {
+            public string ClassId;
+            public Text Name;
+            public Text Status;
+            public Text Style;
+            public UiButton Buy;
+            public UiButton Select;
         }
 
         private sealed class StatRow

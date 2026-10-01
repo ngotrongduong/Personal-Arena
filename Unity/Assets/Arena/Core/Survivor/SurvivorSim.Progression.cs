@@ -74,8 +74,21 @@ namespace PersonalArena.Core.Survivor
             AddEvent(SurvivorEventType.MagnetPicked, attracted);
         }
 
+        /// <summary>
+        /// A chest first evolves the first owned weapon (inventory order) that is at max level with its
+        /// paired passive owned; otherwise it raises a random non-maxed item by one level.
+        /// </summary>
         private void OpenChest(Vec2 point)
         {
+            if (TryEvolve(out int evolved, out int baseWeapon))
+            {
+                float evolveGold = MathF.Floor(rng.Range(SurvivorCatalog.ChestGoldMin, SurvivorCatalog.ChestGoldMax)) * stats.TierGold * stats.GreedMul;
+                AddGold(evolveGold, GoldSource.Chest);
+                AddEvent(SurvivorEventType.WeaponEvolved, extra: baseWeapon, id: evolved, point: point);
+                AddEvent(SurvivorEventType.GoldCollected, evolveGold, point: point);
+                AddEvent(SurvivorEventType.ChestOpened, evolveGold, 1, evolved, point);
+                return;
+            }
             int count = 0;
             for (int i = 0; i < inventory.WeaponCount; i++)
             {
@@ -97,6 +110,33 @@ namespace PersonalArena.Core.Survivor
             AddGold(gold, GoldSource.Chest);
             AddEvent(SurvivorEventType.GoldCollected, gold, point: point);
             AddEvent(SurvivorEventType.ChestOpened, gold, newLevel, upgraded, point);
+        }
+
+        private bool TryEvolve(out int evolved, out int baseWeapon)
+        {
+            evolved = -1; baseWeapon = -1;
+            for (int i = 0; i < inventory.WeaponCount; i++)
+            {
+                int index = inventory.WeaponAt(i);
+                int evolution = SurvivorCatalog.EvolutionOf(index);
+                if (evolution < 0 || inventory.Level(evolution) > 0) continue;
+                if (inventory.Level(index) < SurvivorCatalog.Get(index).MaxLevel) continue;
+                ItemDef result = SurvivorCatalog.Get(evolution);
+                if (result.EvolutionPassive >= 0 && inventory.Level(result.EvolutionPassive) < 1) continue;
+                inventory.Replace(index, evolution);
+                weaponCooldowns[evolution] = 0f;
+                RecomputeStats(true);
+                evolved = evolution; baseWeapon = index;
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>True for a pool weapon the hero already evolved (the base must not come back).</summary>
+        private bool EvolvedAway(int weapon)
+        {
+            int evolution = SurvivorCatalog.EvolutionOf(weapon);
+            return evolution >= 0 && inventory.Level(evolution) > 0;
         }
 
         private void CollectXp(float raw)
@@ -128,7 +168,7 @@ namespace PersonalArena.Core.Survivor
             }
             if (inventory.WeaponCount < SurvivorCatalog.MaxWeapons)
             {
-                for (int i = 0; i < Config.ClassDef.WeaponPool.Length; i++) if (inventory.Level(Config.ClassDef.WeaponPool[i]) == 0) candidates[count++] = Config.ClassDef.WeaponPool[i];
+                for (int i = 0; i < Config.ClassDef.WeaponPool.Length; i++) if (inventory.Level(Config.ClassDef.WeaponPool[i]) == 0 && !EvolvedAway(Config.ClassDef.WeaponPool[i])) candidates[count++] = Config.ClassDef.WeaponPool[i];
             }
             if (inventory.PassiveCount < SurvivorCatalog.MaxPassives)
             {

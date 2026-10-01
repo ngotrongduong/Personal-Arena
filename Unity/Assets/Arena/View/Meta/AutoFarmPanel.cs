@@ -92,13 +92,14 @@ namespace PersonalArena.View
                 return false;
             }
 
-            CharacterProfile warrior = store.Warrior;
+            CharacterProfile warrior = store.Selected;
             PlayerProfile profile = store.Profile;
             CharacterBuild build = ProfileRules.ToBuild(warrior, profile.SelectedTier);
             int baseSeed = Environment.TickCount & 0x3fffffff;
             try
             {
-                runner = new AutoFarmRunner(brainBytes(), build, Mathf.Clamp(runs, 1, 100), baseSeed);
+                // M7: the matches use the selected class's kit (the brain the viewer loaded is that class's brain).
+                runner = new AutoFarmRunner(brainBytes(), build, Mathf.Clamp(runs, 1, 100), baseSeed, 900f, warrior.ClassId);
             }
             catch (ArgumentException exception)
             {
@@ -205,19 +206,19 @@ namespace PersonalArena.View
             }
 
             PlayerProfile profile = store.Profile;
-            CharacterProfile warrior = store.Warrior;
+            CharacterProfile warrior = store.Selected;
             bool running = runner != null && !runner.IsRecorded;
 
             string brain = brainName != null ? brainName() : null;
             if (running)
             {
-                buildText.text = "Đang farm với bộ \"" + runnerLoadoutName + "\" ở bậc " + runner.Tier + " (" +
+                buildText.text = "Đang farm " + ClassViewLogic.DisplayName(runner.ClassId) + " với bộ \"" + runnerLoadoutName + "\" ở bậc " + runner.Tier + " (" +
                     MetaViewLogic.TierGoldText(runner.Tier) + ").";
             }
             else if (warrior != null)
             {
                 int tier = Mathf.Clamp(profile.SelectedTier, 1, ProfileRules.MaxTier);
-                buildText.text = "Bộ: " + MetaViewLogic.LoadoutName(warrior, warrior.ActiveLoadout) + " (" +
+                buildText.text = ClassViewLogic.DisplayName(warrior.ClassId) + "   Bộ: " + MetaViewLogic.LoadoutName(warrior, warrior.ActiveLoadout) + " (" +
                     MetaViewLogic.CompactPoints(warrior.Loadouts[warrior.ActiveLoadout].Points, 3) + ")   Bậc " + tier + " (" +
                     MetaViewLogic.TierGoldText(tier) + ")" + (string.IsNullOrEmpty(brain) ? string.Empty : "\nBộ não: " + brain);
             }
@@ -269,7 +270,7 @@ namespace PersonalArena.View
         /// <summary>Why a session cannot start now, or null.</summary>
         private string StartBlockReason()
         {
-            if (store == null || store.Warrior == null)
+            if (store == null || store.Selected == null)
             {
                 return "Chưa đọc được hồ sơ.";
             }
@@ -314,7 +315,8 @@ namespace PersonalArena.View
                 return;
             }
 
-            CharacterProfile warrior = store.Warrior;
+            // Book into the character whose kit the session played, even if the owner switched class meanwhile.
+            CharacterProfile warrior = ProfileRules.FindCharacter(store.Profile, runner.ClassId) ?? store.Selected;
             List<string> lines = new List<string>();
             lastSummary = runner.Record(store.Profile, warrior, runnerLoadout, runnerLoadoutName, lines);
             store.Save();

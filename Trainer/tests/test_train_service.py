@@ -300,6 +300,17 @@ def test_plan_run_does_not_resume_an_explicit_incompatible_run(tmp_path: Path):
     assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-s001", "new", 0)
 
 
+def test_plan_run_never_forces_over_a_legacy_run_without_checkpoint(tmp_path: Path):
+    legacy = tmp_path / "mage-001" / "Mage"
+    legacy.mkdir(parents=True)
+    (legacy / "Mage-500.pt").write_bytes(b"old")
+
+    plan = train_service.plan_run(tmp_path, "Mage", "mage-001")
+
+    assert (plan.run_id, plan.mode) == ("mage-s001", "new")
+    assert (legacy / "Mage-500.pt").read_bytes() == b"old"
+
+
 def test_plan_run_forces_a_folder_without_checkpoint(tmp_path: Path):
     (tmp_path / "broken").mkdir()
 
@@ -629,20 +640,19 @@ def test_parser_normalizes_behavior_and_chooses_its_default_config(
     assert Path(args.config) == Path("Trainer/config") / config
 
 
-def test_only_the_warrior_has_a_survivor_config_for_now():
+def test_every_class_has_a_survivor_config():
     root = arena_trainer.repository_root()
 
-    assert (root / train_service.default_config("Warrior")).is_file()
-    for behavior in train_service.FUTURE_BEHAVIORS:
-        assert not (root / train_service.default_config(behavior)).exists()
+    for behavior in train_service.BEHAVIORS.values():
+        assert (root / train_service.default_config(behavior)).is_file()
 
 
 @pytest.mark.parametrize("behavior", ["Mage", "Archer"])
-def test_mage_and_archer_report_a_clear_error_without_a_run_folder(
+def test_a_missing_class_config_is_reported_without_a_run_folder(
     tmp_path: Path, capsys, behavior: str
 ):
     args = train_service.create_parser().parse_args(
-        ["--behavior", behavior, "--results-dir", str(tmp_path)]
+        ["--behavior", behavior, "--results-dir", str(tmp_path), "--config", str(tmp_path / "gone.yaml")]
     )
 
     assert train_service.TrainingService(args).run() == 2
@@ -650,9 +660,8 @@ def test_mage_and_archer_report_a_clear_error_without_a_run_folder(
     status = read_status(tmp_path)
     assert status["state"] == "error"
     assert status["behavior"] == behavior
-    assert "arrives in M7" in status["message"]
-    assert "Only the Warrior can train" in status["message"]
-    assert "arrives in M7" in capsys.readouterr().err
+    assert status["message"] == "Trainer config not found: gone.yaml."
+    assert "Trainer config not found" in capsys.readouterr().err
     assert not (tmp_path / train_service.ERROR_LOG_NAME).exists()
     assert not (tmp_path / f"{behavior.lower()}-s001").exists()
 

@@ -36,3 +36,13 @@ Resources/SkillIcons/might-gauntlet   mailed-fist           Lorc
 Resources/SkillIcons/hourglass        sands-of-time         Lorc
 Resources/SkillIcons/area-charm       expanded-rays         Lorc
 Resources/SkillIcons/magnet-charm     magnet                Lorc
+Resources/SkillIcons/magic-bolt       bolt-spell-cast       Delapouite
+Resources/SkillIcons/fire-orb         three-burning-balls   Lorc
+Resources/SkillIcons/holy-field       sunbeams              Lorc
+Resources/SkillIcons/lightning        lightning-tree        Lorc
+Resources/SkillIcons/arcane-beam      laser-precision       Lorc
+Resources/SkillIcons/multi-shot       striking-arrows       Lorc
+Resources/SkillIcons/arrow-rain       arrow-cluster         Lorc
+Resources/SkillIcons/orbit-knife      thrown-daggers        Lorc
+Resources/SkillIcons/dagger           plain-dagger          Lorc
+Resources/SkillIcons/crossbow         crossbow              Carl Olsen (https://github.com/carl-olsen)

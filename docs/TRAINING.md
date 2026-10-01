@@ -6,8 +6,10 @@ Môi trường: mỗi process Unity chạy **16 arena độc lập** (headless, 
 Mỗi agent chạy một trận Survivor (`SurvivorSim`, D-026) 60 Hz của riêng nó và ra quyết định mỗi
 5 tick (12 Hz). Lúc đang có bảng lên cấp thì quyết định mỗi tick. Action 3 nhánh 9/5/5 (di chuyển,
 skill chủ động, chọn nâng cấp); quan sát schema v4 = 2264 số, có chừa chỗ trống (D-027).
-Hiện chỉ Warrior được train (behavior `Warrior`, config `Trainer/config/warrior_survivor_ppo.yaml`).
-Mage/Archer có config Survivor riêng ở M7; service từ chối rõ ràng nếu được yêu cầu train chúng.
+Mỗi class có não và config riêng (M7): behavior `Warrior` / `Mage` / `Archer`, config
+`Trainer/config/<class>_survivor_ppo.yaml`, run `<class>-sNNN`. Dịch vụ train nhận `--behavior`; nút
+TRAIN train class owner đang chọn (class phải mua bằng vàng trước). Bộ đánh giá `Tools/SurvivorEval`
+tự chơi đúng class của não (tên behavior trong checkpoint, hoặc `--class`).
 
 ## 1. Build môi trường
 

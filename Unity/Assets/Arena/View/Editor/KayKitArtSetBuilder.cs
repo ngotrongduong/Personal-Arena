@@ -42,8 +42,8 @@ namespace PersonalArena.View.Editor
             {
                 Hero("warrior", "Knight", "sword_1handed", "shield_round", 1f),
                 Hero("mage", "Mage", "staff", null, 1f),
-                // KayKit rangers hold the bow in the left hand.
-                Hero("archer", "Ranger", null, "bow", 1f)
+                // M7: the Archer is the hooded rogue; KayKit bows are held in the left hand.
+                Hero("archer", "Rogue_Hooded", null, "bow", 1f)
             };
             // Indexed by zombie type: walker, runner, brute, spitter.
             art.Walkers = new[]

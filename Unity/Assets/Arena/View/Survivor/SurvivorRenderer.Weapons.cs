@@ -7,28 +7,34 @@ using UnityEngine.Rendering;
 namespace PersonalArena.View
 {
     /// <summary>
-    /// M4C weapon and loot visuals: spear fans, orbiting axes, the aura disc, the shockwave ring,
-    /// Spitter spit and the chest / magnet pickups' bursts. Everything is pooled and built once.
+    /// Weapon and loot visuals: thrust streaks (spear, arcane beam, crossbow), orbiting axes / fire orbs / knives,
+    /// the aura disc, the shockwave ring, strike blasts (lightning, arrow rain), skill blasts (fireball, frost burst),
+    /// Spitter spit and the chest / magnet bursts. Evolutions draw like their base weapon, larger and gold-tinted.
+    /// Everything is pooled and built once.
     /// </summary>
     public sealed partial class SurvivorRenderer
     {
-        private const int SpearPool = 6;
-        private const int AxePool = 3;
+        private const int SpearPool = 14;
+        private const int AxePool = 8;
         private const int SpitPrewarm = 16;
         private const float SpearLifetime = 0.24f;
-        private const float SpearLength = 5f;
         private const float SpearHeight = 0.9f;
         private const float AxeHeight = 0.95f;
         private const float SpitHeight = 0.9f;
+        private const float LightningHeight = 7f;
         // The ring texture peaks at 80 % of its half size, so a ring of radius R needs a quad of 2.5 R.
         private const float RingQuadPerRadius = 2.5f;
 
         private static readonly Color SpearColor = new Color(0.55f, 0.85f, 1f, 1f);
         private static readonly Color AxeTrailColor = new Color(1f, 0.55f, 0.35f, 0.55f);
+        private static readonly Color FireOrbTrailColor = new Color(1f, 0.5f, 0.15f, 0.65f);
+        private static readonly Color KnifeTrailColor = new Color(0.75f, 0.88f, 1f, 0.5f);
         private static readonly Color AuraColor = new Color(1f, 0.88f, 0.4f, 1f);
         private static readonly Color WaveColor = new Color(0.6f, 0.68f, 1f, 1f);
+        private static readonly Color LightningColor = new Color(0.75f, 0.85f, 1f, 1f);
         private static readonly Color SpitColor = new Color(0.55f, 1f, 0.3f, 1f);
         private static readonly Color MagnetColor = new Color(0.5f, 0.7f, 1f, 1f);
+        private static readonly Color EvolvedTint = new Color(1.35f, 1.12f, 0.55f, 1f);
 
         private readonly SpearFx[] spears = new SpearFx[SpearPool];
         private readonly AxeView[] axes = new AxeView[AxePool];
@@ -47,7 +53,16 @@ namespace PersonalArena.View
         private Material spitMaterial;
         private Material spitGlowMaterial;
         private Material axeFallbackMaterial;
+        private Material fireOrbMaterial;
+        private Material fireOrbGlowMaterial;
+        private Material knifeBladeMaterial;
+        private Material knifeHandleMaterial;
         private int nextSpear;
+        private int orbitLookIndex = int.MinValue;
+        private int auraWeapon = -1;
+        private int waveWeapon = -1;
+        private Color auraColor = AuraColor;
+        private Color waveColor = WaveColor;
 
         private sealed class SpearFx
         {
@@ -55,6 +70,9 @@ namespace PersonalArena.View
             public Material Material;
             public Vector3 Origin;
             public Vector3 Direction;
+            public Vector3 Up = Vector3.up;
+            public Color Color = SpearColor;
+            public float Width = 1f;
             public float Length;
             public float Age = SpearLifetime;
         }
@@ -63,6 +81,10 @@ namespace PersonalArena.View
         {
             public Transform Root;
             public Transform Spinner;
+            public GameObject AxeModel;
+            public GameObject OrbModel;
+            public GameObject KnifeModel;
+            public Renderer[] Renderers;
             public TrailRenderer Trail;
             public bool Active;
             public Vector3 Previous;
@@ -94,6 +116,11 @@ namespace PersonalArena.View
             }
 
             axeFallbackMaterial = Own(CreateEmissive("Axe Fallback", new Color(0.7f, 0.72f, 0.78f), new Color(0.25f, 0.12f, 0.05f), 0.75f, 0.8f));
+            fireOrbMaterial = Own(CreateEmissive("Fire Orb", new Color(1f, 0.55f, 0.15f), new Color(2.2f, 0.9f, 0.2f), 0.6f, 0f));
+            fireOrbGlowMaterial = Own(FxAssets.Create("Fire Orb Glow", FxAssets.RadialGlow, true));
+            fireOrbGlowMaterial.color = new Color(1f, 0.5f, 0.15f, 0.75f);
+            knifeBladeMaterial = Own(CreateEmissive("Knife Blade", new Color(0.82f, 0.86f, 0.92f), new Color(0.12f, 0.14f, 0.18f), 0.85f, 0.9f));
+            knifeHandleMaterial = Own(CreateStandard("Knife Handle", new Color(0.35f, 0.24f, 0.14f), 0.2f));
             for (int i = 0; i < AxePool; i++)
             {
                 axes[i] = CreateAxeView();
@@ -134,14 +161,17 @@ namespace PersonalArena.View
         private AxeView CreateAxeView()
         {
             AxeView view = new AxeView();
-            GameObject root = new GameObject("Orbit Axe");
+            GameObject root = new GameObject("Orbit Weapon");
             root.transform.SetParent(weaponRoot, false);
             view.Root = root.transform;
             view.Spinner = CreateChild("Spinner", view.Root);
 
+            // Warrior: a KayKit axe laid flat.
+            Transform axe = CreateChild("Axe", view.Spinner);
+            view.AxeModel = axe.gameObject;
             if (survivorArt != null && survivorArt.AxeProp != null)
             {
-                GameObject prop = Instantiate(survivorArt.AxeProp, view.Spinner, false);
+                GameObject prop = Instantiate(survivorArt.AxeProp, axe, false);
                 prop.name = survivorArt.AxeProp.name;
                 // The KayKit axe stands along +Y; lay it flat so it sweeps like a thrown blade.
                 prop.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
@@ -150,21 +180,42 @@ namespace PersonalArena.View
             }
             else
             {
-                GameObject handle = CreatePrimitive("Handle", PrimitiveType.Cylinder, view.Spinner, hammerHandleMaterial);
+                GameObject handle = CreatePrimitive("Handle", PrimitiveType.Cylinder, axe, hammerHandleMaterial);
                 handle.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
                 handle.transform.localScale = new Vector3(0.08f, 0.32f, 0.08f);
-                GameObject blade = CreatePrimitive("Blade", PrimitiveType.Cube, view.Spinner, axeFallbackMaterial);
+                GameObject blade = CreatePrimitive("Blade", PrimitiveType.Cube, axe, axeFallbackMaterial);
                 blade.transform.localPosition = new Vector3(0.18f, 0f, 0.26f);
                 blade.transform.localScale = new Vector3(0.36f, 0.06f, 0.3f);
             }
+
+            // Mage: a glowing fire orb.
+            Transform orb = CreateChild("Fire Orb", view.Spinner);
+            view.OrbModel = orb.gameObject;
+            GameObject core = CreatePrimitive("Core", PrimitiveType.Sphere, orb, fireOrbMaterial);
+            core.transform.localScale = Vector3.one * 0.44f;
+            Transform glow = CreateFlatQuad("Glow", orb, fireOrbGlowMaterial);
+            glow.localScale = new Vector3(1.5f, 1f, 1.5f);
+
+            // Archer: a flat spinning knife.
+            Transform knife = CreateChild("Knife", view.Spinner);
+            view.KnifeModel = knife.gameObject;
+            GameObject knifeBlade = CreatePrimitive("Blade", PrimitiveType.Cube, knife, knifeBladeMaterial);
+            knifeBlade.transform.localPosition = new Vector3(0f, 0f, 0.14f);
+            knifeBlade.transform.localScale = new Vector3(0.09f, 0.03f, 0.5f);
+            GameObject knifeHandle = CreatePrimitive("Handle", PrimitiveType.Cube, knife, knifeHandleMaterial);
+            knifeHandle.transform.localPosition = new Vector3(0f, 0f, -0.2f);
+            knifeHandle.transform.localScale = new Vector3(0.07f, 0.05f, 0.18f);
+
             Renderer[] renderers = view.Spinner.GetComponentsInChildren<Renderer>(true);
             for (int i = 0; i < renderers.Length; i++)
             {
                 renderers[i].shadowCastingMode = ShadowCastingMode.Off;
             }
+            view.Renderers = renderers;
 
             view.Trail = effects.CreateTrail(view.Root, 0f, AxeTrailColor, 0.55f, 0.18f);
             view.Trail.emitting = false;
+            ApplyOrbitLook(view, WeaponVisual.OrbitAxe, false, AxeTrailColor);
             root.SetActive(false);
             return view;
         }
@@ -187,6 +238,16 @@ namespace PersonalArena.View
             view.Trail.emitting = false;
             root.SetActive(false);
             return view;
+        }
+
+        /// <summary>Same colour ramp as <see cref="ArenaEffects.CreateTrail"/>, for recolouring a trail at runtime.</summary>
+        private static Gradient TrailGradient(Color color)
+        {
+            Gradient gradient = new Gradient();
+            gradient.SetKeys(
+                new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(color, 0.25f), new GradientColorKey(color, 1f) },
+                new[] { new GradientAlphaKey(0.8f, 0f), new GradientAlphaKey(0.45f, 0.4f), new GradientAlphaKey(0f, 1f) });
+            return gradient;
         }
 
         // ------------------------------------------------------------------ reset / sync
@@ -218,6 +279,10 @@ namespace PersonalArena.View
             auraPulse = 0f;
             wavePrevious = 0f;
             waveCurrent = 0f;
+            auraWeapon = -1;
+            waveWeapon = -1;
+            auraColor = AuraColor;
+            waveColor = WaveColor;
             if (auraRoot != null)
             {
                 auraRoot.gameObject.SetActive(false);
@@ -244,11 +309,64 @@ namespace PersonalArena.View
             view.Root.gameObject.SetActive(false);
         }
 
+        /// <summary>Switches every orbit view to the model of the owned orbit weapon (axe, fire orb, knife; gold if evolved).</summary>
+        private void SetOrbitWeapon(int catalogIndex)
+        {
+            orbitLookIndex = catalogIndex;
+            WeaponVisual visual = SurvivorViewLogic.WeaponVisualOf(catalogIndex);
+            bool evolved = SurvivorViewLogic.IsEvolution(catalogIndex);
+            Color trail = visual == WeaponVisual.FireOrb ? FireOrbTrailColor
+                : visual == WeaponVisual.OrbitKnife ? KnifeTrailColor
+                : AxeTrailColor;
+            if (evolved)
+            {
+                trail = Color.Lerp(trail, SurvivorViewLogic.EvolutionGold, 0.7f);
+                trail.a = 0.65f;
+            }
+            for (int i = 0; i < axes.Length; i++)
+            {
+                ApplyOrbitLook(axes[i], visual, evolved, trail);
+            }
+        }
+
+        private void ApplyOrbitLook(AxeView view, WeaponVisual visual, bool evolved, Color trail)
+        {
+            bool orb = visual == WeaponVisual.FireOrb;
+            bool knife = visual == WeaponVisual.OrbitKnife;
+            view.AxeModel.SetActive(!orb && !knife);
+            view.OrbModel.SetActive(orb);
+            view.KnifeModel.SetActive(knife);
+            float scale = evolved ? SurvivorViewLogic.EvolutionScale : 1f;
+            view.Spinner.localScale = Vector3.one * scale;
+            view.Trail.colorGradient = TrailGradient(trail);
+            view.Trail.widthMultiplier = (orb ? 0.7f : 0.55f) * scale;
+            SetRendererTint(view.Renderers, EvolvedTint, evolved);
+        }
+
         private void SyncWeapons()
         {
             if (sim == null)
             {
                 return;
+            }
+
+            int orbitWeapon = sim.OrbitWeaponIndex;
+            if (orbitWeapon >= 0 && orbitWeapon != orbitLookIndex)
+            {
+                SetOrbitWeapon(orbitWeapon);
+            }
+
+            int aura = sim.AuraWeaponIndex;
+            if (aura != auraWeapon)
+            {
+                auraWeapon = aura;
+                auraColor = FxColor(aura, AuraColor);
+            }
+            int wave = sim.ShockwaveWeaponIndex;
+            if (wave != waveWeapon)
+            {
+                waveWeapon = wave;
+                waveColor = FxColor(wave, WaveColor);
             }
 
             Vec2 hero = sim.Hero.Position;
@@ -342,56 +460,202 @@ namespace PersonalArena.View
 
         // ------------------------------------------------------------------ events
 
-        /// <summary>Weapon ids 1, 2, 4 and 5 (the sweep and the hammer stay in <see cref="OnWeaponFired"/>).</summary>
-        private void OnNewWeaponFired(SurvivorEvent e, Vector3 heroPosition, Vector3 direction)
+        /// <summary>
+        /// Every weapon visual except the sweep and the projectile throwers (those stay in <see cref="OnWeaponFired"/>):
+        /// thrusts, orbits, auras, shockwaves and strikes. Evolutions arrive with their own index and draw like the base.
+        /// </summary>
+        private void OnNewWeaponFired(SurvivorEvent e, Vector3 heroPosition, Vector3 direction, WeaponVisual visual)
         {
-            switch (e.Id)
+            bool evolved = SurvivorViewLogic.IsEvolution(e.Id);
+            switch (visual)
             {
-                case 1:
+                case WeaponVisual.Spear:
+                case WeaponVisual.ArcaneBeam:
+                case WeaponVisual.Crossbow:
                 {
-                    PlayHeroOneShot((strikeCount & 1) == 1 ? HeroStrikeB : HeroStrikeA, 2f, false);
-                    strikeCount++;
+                    if (visual == WeaponVisual.Spear)
+                    {
+                        PlayHeroOneShot((strikeCount & 1) == 1 ? HeroStrikeB : HeroStrikeA, 2f, false);
+                        strikeCount++;
+                    }
+                    else
+                    {
+                        PlayHeroOneShot(visual == WeaponVisual.ArcaneBeam ? HeroCast : HeroThrow, 2f, false);
+                    }
                     int n = Mathf.Max(1, Mathf.RoundToInt(e.Extra));
-                    float length = SpearLength * Mathf.Max(0.1f, sim.DerivedStats.AreaMul);
+                    float length = SurvivorViewLogic.ThrustLength(e.Id, sim.DerivedStats.AreaMul);
+                    float width = (visual == WeaponVisual.ArcaneBeam ? 1.35f : visual == WeaponVisual.Crossbow ? 0.6f : 1f)
+                        * (evolved ? SurvivorViewLogic.EvolutionScale : 1f);
+                    Color color = FxColor(e.Id, SpearColor);
                     for (int k = 0; k < n; k++)
                     {
                         float angle = SurvivorCatalog.ThrustAngleOffset(k, n);
                         // Positive offsets turn counter-clockwise in sim space (x, y) = world (x, z).
                         Vector3 spearDirection = Quaternion.AngleAxis(-angle * Mathf.Rad2Deg, Vector3.up) * direction;
-                        StartSpear(heroPosition, spearDirection, length);
+                        StartStreak(heroPosition + Vector3.up * SpearHeight, spearDirection, length, color, width, Vector3.up, true);
                     }
                     break;
                 }
-                case 2:
-                    effects.Sparkle(heroPosition, AxeTrailColor, 8, 1.6f, 1.2f, 0.2f);
+                case WeaponVisual.OrbitAxe:
+                case WeaponVisual.FireOrb:
+                case WeaponVisual.OrbitKnife:
+                    effects.Sparkle(heroPosition, FxColor(e.Id, AxeTrailColor), 8, 1.6f, 1.2f, 0.2f);
                     break;
-                case 4:
+                case WeaponVisual.Aura:
+                case WeaponVisual.HolyField:
                     auraPulse = 1f;
                     break;
-                case 5:
+                case WeaponVisual.Shockwave:
+                case WeaponVisual.FrostNova:
                 {
                     Vector3 center = ArenaSpace.ToWorld(e.Point);
-                    effects.Flash(center + Vector3.up * 0.6f, WaveColor, 3f, 0.18f);
-                    effects.Puff(center, DustColor, 10, 0.9f, 2.4f, 0.6f, 0.3f);
-                    PlayHeroOneShot(HeroKick, 1.6f, false);
+                    Color color = FxColor(e.Id, WaveColor);
+                    effects.Flash(center + Vector3.up * 0.6f, color, 3f, 0.18f);
+                    if (visual == WeaponVisual.FrostNova)
+                    {
+                        effects.Sparkle(center, color, 14, 1.2f, 1.2f, 0.22f);
+                        PlayHeroOneShot(HeroCast, 1.8f, false);
+                    }
+                    else
+                    {
+                        effects.Puff(center, DustColor, 10, 0.9f, 2.4f, 0.6f, 0.3f);
+                        PlayHeroOneShot(HeroKick, 1.6f, false);
+                    }
                     break;
+                }
+                case WeaponVisual.Lightning:
+                    PlayHeroOneShot(HeroCast, 1.9f, false);
+                    break;
+                case WeaponVisual.ArrowRain:
+                    PlayHeroOneShot(HeroThrow, 1.9f, false);
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// A blast hit the ground. Strike weapons (lightning bolt, arrow volley) carry their catalog index; skill blasts
+        /// carry −1: the frost burst (at the hero, announced by an AreaBurst SkillUsed in the same tick) or the
+        /// fireball explosion.
+        /// </summary>
+        private void OnStrikeLanded(SurvivorEvent e, IReadOnlyList<SurvivorEvent> events, int index, Vector3 heroPosition)
+        {
+            Vector3 point = ArenaSpace.ToWorld(e.Point);
+            float radius = Mathf.Max(0.3f, e.Value);
+            if (e.Id < 0)
+            {
+                if (IsFrostBurst(e, events, index))
+                {
+                    effects.Shockwave(heroPosition, FrostColor, radius * RingQuadPerRadius, 0.5f);
+                    effects.Shockwave(heroPosition, Color.white, radius * RingQuadPerRadius * 0.6f, 0.3f);
+                    effects.Flash(heroPosition + Vector3.up * 0.8f, FrostColor, radius * 1.2f, 0.25f);
+                    effects.Sparkle(heroPosition, FrostColor, 22, radius * 0.7f, 1.4f, 0.26f);
+                }
+                else
+                {
+                    effects.Shockwave(point, FireballColor, radius * RingQuadPerRadius, 0.45f);
+                    effects.Flash(point + Vector3.up * 0.8f, FireballColor, radius * 1.6f, 0.25f);
+                    effects.Sparks(point + Vector3.up * 0.6f, Vector3.up, FireballColor, 12, 8f, 1.2f);
+                    if (puffsLeft > 0)
+                    {
+                        puffsLeft--;
+                        effects.Puff(point, SmokeColor, 8, 1f, radius, 0.8f, 0.8f);
+                    }
+                }
+                return;
+            }
+
+            WeaponVisual visual = SurvivorViewLogic.WeaponVisualOf(e.Id);
+            bool evolved = SurvivorViewLogic.IsEvolution(e.Id);
+            if (visual == WeaponVisual.ArrowRain)
+            {
+                Color color = FxColor(e.Id, LightningColor);
+                // A volley: a few streaks falling steeply onto the target, then a ring of the real radius.
+                int arrows = evolved ? 5 : 3;
+                for (int k = 0; k < arrows; k++)
+                {
+                    float a = (k + 0.5f) / arrows * Mathf.PI * 2f + e.Point.X;
+                    Vector3 land = point + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * (radius * 0.55f);
+                    Vector3 top = land + new Vector3(-0.8f, 4.5f, -0.8f);
+                    Vector3 fall = land - top;
+                    StartStreak(top, fall.normalized, fall.magnitude, color, evolved ? 0.5f : 0.38f, StreakUp(fall), false);
+                }
+                effects.Shockwave(point, color, radius * RingQuadPerRadius, 0.4f);
+                if (puffsLeft > 0)
+                {
+                    puffsLeft--;
+                    effects.Puff(point, DustColor, 5, 0.6f, radius, 0.5f, 0.3f);
+                }
+            }
+            else
+            {
+                Color color = FxColor(e.Id, LightningColor);
+                // Lightning: a vertical bolt from the sky, a flash and a ring of the real radius.
+                Vector3 top = point + Vector3.up * LightningHeight;
+                StartStreak(top, Vector3.down, LightningHeight, color, evolved ? 1.3f : 0.95f, StreakUp(Vector3.down), false);
+                effects.Flash(point + Vector3.up * 0.8f, color, radius * 2.2f, 0.18f);
+                effects.Shockwave(point, color, radius * RingQuadPerRadius, 0.35f);
+                if (sparksLeft > 0)
+                {
+                    sparksLeft--;
+                    effects.Sparks(point + Vector3.up * 0.3f, Vector3.up, color, 8, 7f, 1.1f);
                 }
             }
         }
 
-        private void StartSpear(Vector3 heroPosition, Vector3 direction, float length)
+        private bool IsFrostBurst(SurvivorEvent e, IReadOnlyList<SurvivorEvent> events, int index)
+        {
+            Vec2 hero = sim.Hero.Position;
+            float dx = e.Point.X - hero.X;
+            float dy = e.Point.Y - hero.Y;
+            if (dx * dx + dy * dy > 1f)
+            {
+                return false;
+            }
+            SkillDef[] skills = sim.Config.ClassDef != null ? sim.Config.ClassDef.ActiveSkills : null;
+            if (skills == null)
+            {
+                return false;
+            }
+            for (int i = index + 1; i < events.Count; i++)
+            {
+                if (events[i].Type != SurvivorEventType.SkillUsed)
+                {
+                    continue;
+                }
+                int slot = (int)events[i].Value;
+                if (slot >= 0 && slot < skills.Length && skills[slot] != null && skills[slot].Kind == SkillKind.AreaBurst)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>Orientation hint for a streak quad: flat on the ground when horizontal, facing the camera otherwise.</summary>
+        private Vector3 StreakUp(Vector3 direction)
+        {
+            Camera camera = ResolveCamera();
+            Vector3 toCamera = camera != null ? -camera.transform.forward : Vector3.up;
+            Vector3 up = Vector3.ProjectOnPlane(toCamera, direction.normalized);
+            return up.sqrMagnitude > 1e-4f ? up.normalized : Vector3.back;
+        }
+
+        private void StartStreak(Vector3 origin, Vector3 direction, float length, Color color, float width, Vector3 up, bool sparks)
         {
             SpearFx spear = spears[nextSpear];
             nextSpear = (nextSpear + 1) % spears.Length;
-            spear.Origin = heroPosition + Vector3.up * SpearHeight;
+            spear.Origin = origin;
             spear.Direction = direction;
+            spear.Up = up;
             spear.Length = length;
+            spear.Color = color;
+            spear.Width = width;
             spear.Age = 0f;
             spear.Root.gameObject.SetActive(true);
-            if (sparksLeft > 0)
+            if (sparks && sparksLeft > 0)
             {
                 sparksLeft--;
-                effects.Sparks(spear.Origin + direction * length, direction, SpearColor, 5, 6f, 0.7f);
+                effects.Sparks(origin + direction * length, direction, color, 5, 6f, 0.7f);
             }
         }
 
@@ -450,9 +714,9 @@ namespace PersonalArena.View
                 float grow = Mathf.Clamp01(t / 0.35f);
                 float length = spear.Length * (0.35f + 0.65f * grow);
                 float alpha = t < 0.35f ? 1f : 1f - (t - 0.35f) / 0.65f;
-                spear.Material.color = new Color(SpearColor.r, SpearColor.g, SpearColor.b, alpha);
-                spear.Root.SetPositionAndRotation(spear.Origin + spear.Direction * (length * 0.5f), Quaternion.LookRotation(spear.Direction, Vector3.up));
-                spear.Root.localScale = new Vector3(0.55f + 0.25f * (1f - t), 1f, length);
+                spear.Material.color = new Color(spear.Color.r, spear.Color.g, spear.Color.b, alpha);
+                spear.Root.SetPositionAndRotation(spear.Origin + spear.Direction * (length * 0.5f), Quaternion.LookRotation(spear.Direction, spear.Up));
+                spear.Root.localScale = new Vector3((0.55f + 0.25f * (1f - t)) * spear.Width, 1f, length);
             }
         }
 
@@ -492,8 +756,8 @@ namespace PersonalArena.View
             auraDisc.localScale = new Vector3(radius * 2f, 1f, radius * 2f);
             float ringSize = radius * RingQuadPerRadius * (1f + 0.04f * auraPulse);
             auraRing.localScale = new Vector3(ringSize, 1f, ringSize);
-            auraDiscMaterial.color = new Color(AuraColor.r, AuraColor.g * 0.8f, AuraColor.b * 0.5f, 0.16f + 0.05f * breathe + 0.22f * auraPulse);
-            auraRingMaterial.color = new Color(AuraColor.r, AuraColor.g, AuraColor.b, 0.35f + 0.1f * breathe + 0.4f * auraPulse);
+            auraDiscMaterial.color = new Color(auraColor.r, auraColor.g * 0.8f, auraColor.b * 0.5f, 0.16f + 0.05f * breathe + 0.22f * auraPulse);
+            auraRingMaterial.color = new Color(auraColor.r, auraColor.g, auraColor.b, 0.35f + 0.1f * breathe + 0.4f * auraPulse);
         }
 
         private void PresentWave()
@@ -515,7 +779,7 @@ namespace PersonalArena.View
             float size = Mathf.Max(0.1f, radius) * RingQuadPerRadius;
             waveRoot.SetPositionAndRotation(center, Quaternion.identity);
             waveRoot.localScale = new Vector3(size, 1f, size);
-            waveMaterial.color = new Color(WaveColor.r, WaveColor.g, WaveColor.b, 0.25f + 0.75f * fade);
+            waveMaterial.color = new Color(waveColor.r, waveColor.g, waveColor.b, 0.25f + 0.75f * fade);
         }
 
         private void PresentSpit()
