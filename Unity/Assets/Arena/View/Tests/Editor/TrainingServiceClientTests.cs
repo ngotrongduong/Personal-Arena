@@ -257,6 +257,28 @@ namespace PersonalArena.View.Tests
             Assert.That(arguments, Does.EndWith(" --behavior Warrior --run-id warrior-s002"));
         }
 
+        [TestCase("warrior", "Warrior")]
+        [TestCase("mage", "Mage")]
+        [TestCase("archer", "Archer")]
+        public void ServiceArguments_TrainTheSelectedClass(string classId, string behavior)
+        {
+            string runs = Path.Combine(Path.GetTempPath(), "PA-Root", "Trainer", "runs");
+            TrainingServiceClient client = new TrainingServiceClient(runs);
+            TrainingPower power = new TrainingPower("FAST", 8, 16, 20f);
+
+            // A freshly bought class has no run yet: TRAIN starts "<class>-s001".
+            string firstRun = ClassViewLogic.TrainRunId(null, classId + "-s001", classId, false, false);
+            Assert.That(firstRun, Is.EqualTo(classId + "-s001"));
+            Assert.That(client.ServiceArguments(42, power, ClassViewLogic.BehaviorName(classId), null, firstRun),
+                Does.EndWith(" --behavior " + behavior + " --run-id " + classId + "-s001"));
+
+            // Once the class has a run, TRAIN lets the service resume this class's newest run.
+            string resumed = ClassViewLogic.TrainRunId(null, classId + "-s001", classId, true, true);
+            Assert.That(resumed, Is.Null);
+            Assert.That(client.ServiceArguments(42, power, ClassViewLogic.BehaviorName(classId), null, resumed),
+                Does.EndWith(" --behavior " + behavior));
+        }
+
         [Test]
         public void ServiceArguments_IgnoresUnsafeRunIds()
         {

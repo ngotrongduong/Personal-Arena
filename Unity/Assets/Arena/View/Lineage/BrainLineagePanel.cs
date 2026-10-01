@@ -99,7 +99,18 @@ namespace PersonalArena.View
         {
             store = profileStore;
             runsDirectory = runs;
-            behavior = string.IsNullOrEmpty(behaviorName) ? "Warrior" : behaviorName;
+            string newBehavior = string.IsNullOrEmpty(behaviorName) ? "Warrior" : behaviorName;
+            if (!string.Equals(newBehavior, behavior, StringComparison.Ordinal))
+            {
+                // M7 class switch: another class has its own branches; forget this one's picks.
+                selectedRunId = null;
+                comparePicks[0] = null;
+                comparePicks[1] = null;
+                newestPick = -1;
+                message = null;
+            }
+
+            behavior = newBehavior;
             trainingSnapshot = training;
             command = null;
             if (!string.IsNullOrEmpty(runs))
@@ -207,8 +218,19 @@ namespace PersonalArena.View
 
         private string ActiveRunId()
         {
-            CharacterProfile warrior = store != null ? store.Warrior : null;
-            return warrior != null ? warrior.BrainRunId : null;
+            CharacterProfile character = PanelCharacter();
+            return character != null ? character.BrainRunId : null;
+        }
+
+        /// <summary>The character whose branches this panel shows (the class of <see cref="behavior"/>).</summary>
+        private CharacterProfile PanelCharacter()
+        {
+            if (store == null || store.Profile == null)
+            {
+                return null;
+            }
+
+            return ProfileRules.FindCharacter(store.Profile, ClassViewLogic.ClassIdOfBehavior(behavior)) ?? store.Selected;
         }
 
         /// <summary>The run the training service is training now, or null.</summary>
@@ -220,7 +242,9 @@ namespace PersonalArena.View
             }
 
             TrainingSnapshot snapshot = trainingSnapshot();
-            return snapshot.IsActive && snapshot.Status != null && !string.IsNullOrEmpty(snapshot.Status.run_id)
+            bool sameClass = snapshot.Status != null &&
+                !ClassViewLogic.IsOtherClass(ClassViewLogic.StatusBehavior(true, snapshot.Status.behavior), behavior);
+            return snapshot.IsActive && sameClass && !string.IsNullOrEmpty(snapshot.Status.run_id)
                 ? snapshot.Status.run_id
                 : null;
         }
@@ -361,7 +385,7 @@ namespace PersonalArena.View
         /// <summary>Sets the profile's active branch, saves it and tells the controller. False when the save failed.</summary>
         private bool SetActiveBranch(string runId)
         {
-            CharacterProfile warrior = store != null ? store.Warrior : null;
+            CharacterProfile warrior = PanelCharacter();
             if (warrior == null)
             {
                 return false;

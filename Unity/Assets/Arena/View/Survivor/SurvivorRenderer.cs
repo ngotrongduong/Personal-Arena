@@ -31,6 +31,8 @@ namespace PersonalArena.View
         private const int HeroDash = 6;
         private const int HeroDeath = 8;
         private const int HeroThrow = 9;
+        private const int HeroCast = 10;
+        private const int HeroDodgeBack = 11;
 
         private static readonly bool[] HeroLoops = { true, true, true, false, false, false, false, false, false, false, false, false };
 
@@ -49,6 +51,13 @@ namespace PersonalArena.View
         private static readonly Color EliteColor = new Color(0.72f, 0.4f, 1f);
         private static readonly Color BossColor = new Color(1f, 0.25f, 0.2f);
         private static readonly Color LevelUpColor = new Color(1f, 0.88f, 0.4f);
+        private static readonly Color BubbleColor = new Color(0.45f, 0.7f, 1f);
+        private static readonly Color BlinkColor = new Color(0.65f, 0.55f, 1f);
+        private static readonly Color FireballColor = new Color(1f, 0.5f, 0.15f);
+        private static readonly Color FrostColor = new Color(0.6f, 0.9f, 1f);
+        private static readonly Color ExplodeColor = new Color(1f, 0.38f, 0.15f);
+        private static readonly Color SmokeColor = new Color(0.25f, 0.18f, 0.15f, 0.65f);
+        private static readonly Color SummonColor = new Color(0.7f, 0.35f, 1f);
 
         private static string[] numberCache;
 
@@ -73,6 +82,15 @@ namespace PersonalArena.View
         private TrailRenderer heroTrail;
         private float heroBodyScale = 1f;
         private Material heroFallbackMaterial;
+        private string heroClassId;
+        private Transform heroBubble;
+        private Transform heroBubbleRing;
+        private Transform heroBubbleFill;
+        private Material bubbleRingMaterial;
+        private Material bubbleFillMaterial;
+        private float bubbleFlash;
+        private Color bubbleFlashColor = BubbleColor;
+        private bool heroHasBubble;
 
         private Vector3 heroPrevious;
         private Vector3 heroCurrent;
@@ -101,6 +119,9 @@ namespace PersonalArena.View
         private int sparksLeft = SparksPerFrame;
 
         public SurvivorSim Sim => sim;
+
+        /// <summary>Raised when the simulation evolves a weapon (argument: evolution catalog index), e.g. for a HUD toast.</summary>
+        public event System.Action<int> WeaponEvolved;
 
         /// <summary>Where the hero is drawn this frame (the follow camera aims here).</summary>
         public Vector3 HeroWorldPosition => heroDisplayPosition;
@@ -136,6 +157,14 @@ namespace PersonalArena.View
             }
 
             heroRoot.gameObject.SetActive(true);
+            string classId = sim.Config.ClassDef != null && !string.IsNullOrEmpty(sim.Config.ClassDef.Id) ? sim.Config.ClassDef.Id : "warrior";
+            if (classId != heroClassId)
+            {
+                BuildHeroBody(classId);
+            }
+            heroHasBubble = SurvivorViewLogic.BlockIsBubble(sim.Config.ClassDef);
+            bubbleFlash = 0f;
+            heroBubble.gameObject.SetActive(false);
             heroCurrent = ArenaSpace.ToWorld(sim.Hero.Position);
             heroPrevious = heroCurrent;
             heroCurrentYaw = ArenaSpace.YawDegrees(sim.Hero.Facing);
@@ -296,8 +325,46 @@ namespace PersonalArena.View
         {
             heroRoot = CreateChild("Hero", actorsRoot);
             heroBody = CreateChild("Body Visual", heroRoot);
+            BuildHeroBody("warrior");
 
-            ArenaArtSet.HeroLook look = artSet != null && artSet.HasCharacters ? artSet.HeroFor("warrior") : default;
+            heroShadow = CreateBlobShadow(heroRoot, 1.3f);
+            heroShieldGlow = effects.CreateShield(heroRoot);
+            BuildBubble();
+            heroStars = effects.CreateStunStars(heroRoot, 1.85f);
+            heroTrail = effects.CreateTrail(heroRoot, 0.75f, DashColor, 0.95f, 0.22f);
+
+            // A warm torch glow around the hero keeps the knight readable in the moonlit graveyard.
+            GameObject lightObject = new GameObject("Hero Light");
+            lightObject.transform.SetParent(heroRoot, false);
+            lightObject.transform.localPosition = new Vector3(0f, 2.6f, 0f);
+            Light heroLight = lightObject.AddComponent<Light>();
+            heroLight.type = LightType.Point;
+            heroLight.range = 10f;
+            heroLight.intensity = 1.5f;
+            heroLight.color = new Color(1f, 0.8f, 0.58f);
+            heroLight.shadows = LightShadows.None;
+            heroLight.renderMode = LightRenderMode.ForcePixel;
+        }
+
+        /// <summary>
+        /// (Re)builds the hero model for a class (warrior knight, mage, hooded archer) with the shared hero clips.
+        /// Classes without an art entry fall back to the default hero model inside <see cref="ArenaArtSet.HeroFor"/>.
+        /// </summary>
+        private void BuildHeroBody(string classId)
+        {
+            heroClassId = classId;
+            heroAnimator?.Dispose();
+            heroAnimator = null;
+            for (int i = heroBody.childCount - 1; i >= 0; i--)
+            {
+                GameObject child = heroBody.GetChild(i).gameObject;
+                // Detach first so GetComponentsInChildren below never sees the old model during a deferred Destroy.
+                child.SetActive(false);
+                child.transform.SetParent(null, false);
+                DestroyUnityObject(child);
+            }
+
+            ArenaArtSet.HeroLook look = artSet != null && artSet.HasCharacters ? artSet.HeroFor(classId) : default;
             if (look.Body != null)
             {
                 heroBodyScale = artSet.CharacterScale * (look.Scale > 0f ? look.Scale : 1f);
@@ -313,30 +380,75 @@ namespace PersonalArena.View
             else
             {
                 heroBodyScale = 1f;
-                heroFallbackMaterial = CreateStandard("Hero Fallback", new Color(0.22f, 0.48f, 0.85f), 0.3f);
+                if (heroFallbackMaterial == null)
+                {
+                    heroFallbackMaterial = CreateStandard("Hero Fallback", new Color(0.22f, 0.48f, 0.85f), 0.3f);
+                }
+                heroFallbackMaterial.color = classId == "mage" ? new Color(0.45f, 0.3f, 0.85f)
+                    : classId == "archer" ? new Color(0.3f, 0.6f, 0.3f)
+                    : new Color(0.22f, 0.48f, 0.85f);
                 GameObject body = CreatePrimitive("Hero Body", PrimitiveType.Capsule, heroBody, heroFallbackMaterial);
                 body.transform.localPosition = new Vector3(0f, 0.8f, 0f);
                 body.transform.localScale = new Vector3(0.8f, 0.8f, 0.8f);
             }
             heroBody.localScale = Vector3.one * heroBodyScale;
             heroRenderers = heroBody.GetComponentsInChildren<Renderer>(true);
+            heroFlashTinted = false;
+        }
 
-            heroShadow = CreateBlobShadow(heroRoot, 1.3f);
-            heroShieldGlow = effects.CreateShield(heroRoot);
-            heroStars = effects.CreateStunStars(heroRoot, 1.85f);
-            heroTrail = effects.CreateTrail(heroRoot, 0.75f, DashColor, 0.95f, 0.22f);
+        /// <summary>The mage's mana shield: a camera-facing ring plus a soft fill, shown while blocking.</summary>
+        private void BuildBubble()
+        {
+            heroBubble = CreateChild("Mana Bubble", heroRoot);
+            heroBubble.localPosition = new Vector3(0f, 0.95f, 0f);
+            bubbleRingMaterial = Own(FxAssets.Create("Mana Bubble Ring", FxAssets.Ring, true));
+            bubbleFillMaterial = Own(FxAssets.Create("Mana Bubble Fill", FxAssets.RadialGlow, true));
+            heroBubbleFill = CreateFlatQuad("Fill", heroBubble, bubbleFillMaterial);
+            heroBubbleRing = CreateFlatQuad("Ring", heroBubble, bubbleRingMaterial);
+            heroBubble.gameObject.SetActive(false);
+        }
 
-            // A warm torch glow around the hero keeps the knight readable in the moonlit graveyard.
-            GameObject lightObject = new GameObject("Hero Light");
-            lightObject.transform.SetParent(heroRoot, false);
-            lightObject.transform.localPosition = new Vector3(0f, 2.6f, 0f);
-            Light heroLight = lightObject.AddComponent<Light>();
-            heroLight.type = LightType.Point;
-            heroLight.range = 10f;
-            heroLight.intensity = 1.5f;
-            heroLight.color = new Color(1f, 0.8f, 0.58f);
-            heroLight.shadows = LightShadows.None;
-            heroLight.renderMode = LightRenderMode.ForcePixel;
+        private void PresentBubble(bool blocking, float realDelta)
+        {
+            bubbleFlash = Mathf.Max(0f, bubbleFlash - realDelta * 4f);
+            bool show = heroHasBubble && (blocking || bubbleFlash > 0f);
+            if (heroBubble.gameObject.activeSelf != show)
+            {
+                heroBubble.gameObject.SetActive(show);
+            }
+            if (!show)
+            {
+                return;
+            }
+
+            Camera camera = ResolveCamera();
+            Vector3 toCamera = camera != null ? -camera.transform.forward : Vector3.up;
+            // The flat quads face +Y; turn them toward the camera so the bubble reads as a sphere outline.
+            heroBubble.rotation = Quaternion.FromToRotation(Vector3.up, toCamera);
+            float pulse = 1f + 0.04f * Mathf.Sin(Time.unscaledTime * 6f);
+            const float radius = 1.15f;
+            float ringSize = radius * RingQuadPerRadius * pulse;
+            heroBubbleRing.localScale = new Vector3(ringSize, 1f, ringSize);
+            float fillSize = radius * 2.3f * pulse;
+            heroBubbleFill.localScale = new Vector3(fillSize, 1f, fillSize);
+            Color tint = Color.Lerp(BubbleColor, bubbleFlashColor, bubbleFlash);
+            float strength = blocking ? 1f : bubbleFlash;
+            bubbleRingMaterial.color = new Color(tint.r, tint.g, tint.b, (0.55f + 0.45f * bubbleFlash) * strength);
+            bubbleFillMaterial.color = new Color(tint.r, tint.g, tint.b, (0.14f + 0.3f * bubbleFlash) * strength);
+        }
+
+        /// <summary>Block feedback: the mage's bubble flashes, everyone else's front shield does.</summary>
+        private void FlashGuard(Color color)
+        {
+            if (heroHasBubble)
+            {
+                bubbleFlash = 1f;
+                bubbleFlashColor = color;
+            }
+            else
+            {
+                heroShieldGlow?.Flash(color);
+            }
         }
 
         // ------------------------------------------------------------------ hero
@@ -406,7 +518,9 @@ namespace PersonalArena.View
             }
 
             heroRoot.SetPositionAndRotation(heroDisplayPosition, Quaternion.Euler(0f, heroDisplayYaw, 0f));
-            heroShieldGlow?.SetBlocking(hero.Blocking && hero.Alive);
+            bool blocking = hero.Blocking && hero.Alive;
+            heroShieldGlow?.SetBlocking(blocking && !heroHasBubble);
+            PresentBubble(blocking, realDelta);
             heroStars?.SetVisible(hero.Alive && hero.StunRemaining > 0f);
             if (heroShadow != null)
             {
@@ -520,11 +634,11 @@ namespace PersonalArena.View
                         effects.Puff(heroPosition, new Color(0.3f, 0.22f, 0.3f, 0.7f), 16, 1.2f, 2f, 1.2f, 0.6f);
                         break;
                     case SurvivorEventType.Blocked:
-                        heroShieldGlow?.Flash(BlockColor);
-                        effects.Sparks(heroPosition + Vector3.up * 0.9f + heroRoot.forward * 0.6f, heroRoot.forward, BlockColor, 6, 5f, 0.9f);
+                        FlashGuard(heroHasBubble ? BubbleColor : BlockColor);
+                        effects.Sparks(heroPosition + Vector3.up * 0.9f + heroRoot.forward * 0.6f, heroRoot.forward, heroHasBubble ? BubbleColor : BlockColor, 6, 5f, 0.9f);
                         break;
                     case SurvivorEventType.Parry:
-                        heroShieldGlow?.Flash(ParryColor);
+                        FlashGuard(ParryColor);
                         effects.Flash(heroPosition + Vector3.up * 0.9f + heroRoot.forward * 0.6f, ParryColor, 2f, 0.25f);
                         effects.Text(heroPosition + Vector3.up * 2.4f, "ĐỠ ĐÒN!", ParryColor, 1.2f, 0.9f);
                         break;
@@ -560,6 +674,38 @@ namespace PersonalArena.View
                             effects.Sparkle(ArenaSpace.ToWorld(e.Point, 0.3f), GoldColor, 5, 0.3f, 1.2f, 0.18f);
                         }
                         break;
+                    case SurvivorEventType.StrikeLanded:
+                        OnStrikeLanded(e, events, i, heroPosition);
+                        break;
+                    case SurvivorEventType.EnemyExploded:
+                        OnEnemyExploded(e);
+                        break;
+                    case SurvivorEventType.EnemySummoned:
+                    {
+                        Vector3 point = ArenaSpace.ToWorld(e.Point);
+                        if (enemiesById.TryGetValue(e.Id, out EnemyView summoner))
+                        {
+                            summoner.Animator?.PlayOneShot(WalkerThrowState, 1.2f, false);
+                        }
+                        effects.Shockwave(point, SummonColor, 3.5f * RingQuadPerRadius * 0.5f, 0.8f);
+                        effects.Flash(point + Vector3.up * 1.2f, SummonColor, 2.2f, 0.3f);
+                        if (puffsLeft > 0)
+                        {
+                            puffsLeft--;
+                            effects.Puff(point, new Color(0.35f, 0.15f, 0.5f, 0.6f), 10, 1f, 2.6f, 1f, 0.7f);
+                        }
+                        break;
+                    }
+                    case SurvivorEventType.WeaponEvolved:
+                    {
+                        Color gold = SurvivorViewLogic.EvolutionGold;
+                        effects.Shockwave(heroPosition, gold, 6f, 0.8f);
+                        effects.Flash(heroPosition + Vector3.up, gold, 4f, 0.35f);
+                        effects.Sparkle(heroPosition, gold, 32, 1.2f, 3f, 0.3f);
+                        effects.Text(heroPosition + Vector3.up * 3f, "TIẾN HÓA!", gold, 1.6f, 1.6f);
+                        WeaponEvolved?.Invoke(e.Id);
+                        break;
+                    }
                 }
             }
         }
@@ -574,27 +720,45 @@ namespace PersonalArena.View
             direction.Normalize();
             float yaw = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
 
-            if (e.Id == 0)
+            WeaponVisual visual = SurvivorViewLogic.WeaponVisualOf(e.Id);
+            switch (visual)
             {
-                int level = sim.Inventory.Level(0);
-                float reach = SurvivorViewLogic.SweepRange(level, sim.DerivedStats.AreaMul) / 1.25f;
-                bool mirror = (strikeCount & 1) == 1;
-                PlayHeroOneShot(mirror ? HeroStrikeB : HeroStrikeA, 1.7f, false);
-                strikeCount++;
-                Vector3 origin = heroPosition + Vector3.up * 0.85f;
-                effects.Slash(origin, yaw, StrikeColor, mirror, reach, 0.22f);
-                if (SurvivorViewLogic.SweepHitsBehind(level))
+                case WeaponVisual.Sweep:
+                case WeaponVisual.Dagger:
                 {
-                    effects.Slash(origin, yaw + 180f, StrikeColor, !mirror, reach, 0.22f);
+                    // Sword, dagger and their evolutions: a crescent the size of the real hit arc.
+                    bool dagger = visual == WeaponVisual.Dagger;
+                    int level = Mathf.Max(1, sim.Inventory.Level(e.Id));
+                    float reach = SurvivorViewLogic.SweepRange(e.Id, level, sim.DerivedStats.AreaMul) / 1.25f;
+                    bool mirror = (strikeCount & 1) == 1;
+                    PlayHeroOneShot(mirror ? HeroStrikeB : HeroStrikeA, dagger ? 2.3f : 1.7f, false);
+                    strikeCount++;
+                    Color color = FxColor(e.Id, StrikeColor);
+                    float life = dagger ? 0.16f : 0.22f;
+                    Vector3 origin = heroPosition + Vector3.up * 0.85f;
+                    effects.Slash(origin, yaw, color, mirror, reach, life);
+                    if (SurvivorViewLogic.SweepHitsBehind(e.Id, level))
+                    {
+                        effects.Slash(origin, yaw + 180f, color, !mirror, reach, life);
+                    }
+                    if (SurvivorViewLogic.IsEvolution(e.Id) && sparksLeft > 0)
+                    {
+                        sparksLeft--;
+                        effects.Sparkle(origin + direction * reach * 0.6f, SurvivorViewLogic.EvolutionGold, 6, reach * 0.4f, 1f, 0.18f);
+                    }
+                    break;
                 }
-            }
-            else if (e.Id == 3)
-            {
-                PlayHeroOneShot(HeroThrow, 1.9f, false);
-            }
-            else
-            {
-                OnNewWeaponFired(e, heroPosition, direction);
+                case WeaponVisual.Hammer:
+                case WeaponVisual.Arrow:
+                    PlayHeroOneShot(HeroThrow, 1.9f, false);
+                    break;
+                case WeaponVisual.MagicBolt:
+                case WeaponVisual.MultiShot:
+                    PlayHeroOneShot(HeroCast, 1.9f, false);
+                    break;
+                default:
+                    OnNewWeaponFired(e, heroPosition, direction, visual);
+                    break;
             }
         }
 
@@ -602,7 +766,8 @@ namespace PersonalArena.View
         {
             int slot = (int)e.Value;
             SkillDef[] skills = sim.Config.ClassDef.ActiveSkills;
-            SkillKind kind = slot >= 0 && slot < skills.Length && skills[slot] != null ? skills[slot].Kind : SkillKind.None;
+            SkillDef skill = slot >= 0 && slot < skills.Length ? skills[slot] : null;
+            SkillKind kind = skill != null ? skill.Kind : SkillKind.None;
             Vector3 forward = heroRoot.forward;
             switch (kind)
             {
@@ -612,13 +777,74 @@ namespace PersonalArena.View
                     effects.Sparks(heroPosition + Vector3.up * 0.6f + forward * 0.9f, forward, KickColor, 10, 7f, 0.9f);
                     break;
                 case SkillKind.Dash:
-                    PlayHeroOneShot(HeroDash, 1.6f, true);
+                    PlayHeroOneShot(skill.DashBackward ? HeroDodgeBack : HeroDash, 1.6f, true);
                     effects.Puff(heroPosition, DustColor, 6, 0.7f, 1.2f, 0.6f, 0.3f);
                     break;
                 case SkillKind.Block:
-                    heroShieldGlow?.Flash(BlockColor);
+                    FlashGuard(heroHasBubble ? BubbleColor : BlockColor);
                     break;
+                case SkillKind.Projectile:
+                {
+                    // Fireball for the mage, power shot for the archer.
+                    bool fire = SurvivorViewLogic.ProjectileLookOf(-1 - slot, sim.Config.ClassDef) == ProjectileLook.Fireball;
+                    PlayHeroOneShot(fire ? HeroCast : HeroThrow, 1.8f, true);
+                    Color color = fire ? FireballColor : SurvivorViewLogic.EvolutionGold;
+                    effects.Flash(heroPosition + Vector3.up * 1f + forward * 0.7f, color, 1.8f, 0.2f);
+                    break;
+                }
+                case SkillKind.AreaBurst:
+                    // The ice ring itself is drawn from the StrikeLanded event of the burst.
+                    PlayHeroOneShot(HeroCast, 2f, true);
+                    break;
+                case SkillKind.Teleport:
+                {
+                    // Core moved the hero before announcing the skill: flash at both ends and snap the model.
+                    Vector3 from = heroPrevious;
+                    Vector3 to = heroCurrent;
+                    effects.Afterimage(heroRenderers, BlinkColor, 0.45f);
+                    effects.Flash(from + Vector3.up * 0.9f, BlinkColor, 2.6f, 0.3f);
+                    effects.Flash(to + Vector3.up * 0.9f, BlinkColor, 2.6f, 0.3f);
+                    effects.Sparkle(from, BlinkColor, 12, 0.6f, 1.6f, 0.22f);
+                    effects.Sparkle(to, BlinkColor, 12, 0.6f, 1.6f, 0.22f);
+                    effects.Shockwave(to, BlinkColor, 2.4f, 0.35f);
+                    heroSnap = true;
+                    break;
+                }
             }
+        }
+
+        private void OnEnemyExploded(SurvivorEvent e)
+        {
+            Vector3 point = ArenaSpace.ToWorld(e.Point);
+            float radius = Mathf.Max(0.5f, e.Value);
+            effects.Shockwave(point, ExplodeColor, radius * RingQuadPerRadius, 0.45f);
+            effects.Flash(point + Vector3.up * 0.7f, ExplodeColor, radius * 1.8f, 0.24f);
+            effects.Sparks(point + Vector3.up * 0.5f, Vector3.up, ExplodeColor, 10, 8f, 1.2f);
+            if (puffsLeft > 0)
+            {
+                puffsLeft--;
+                effects.Puff(point, SmokeColor, 10, 1.1f, radius, 0.9f, 0.9f);
+            }
+            // The exploder is gone at once (no death animation, no EnemyKilled follows).
+            if (enemiesById.TryGetValue(e.Id, out EnemyView view))
+            {
+                ReleaseEnemy(view);
+            }
+        }
+
+        /// <summary>
+        /// Effect colour of a weapon: the renderer's own colour for the warrior's weapons, the item colour for the
+        /// mage and archer weapons, pulled toward gold for an evolution.
+        /// </summary>
+        private static Color FxColor(int catalogIndex, Color original)
+        {
+            if (catalogIndex < 0)
+            {
+                return original;
+            }
+            int baseIndex = SurvivorViewLogic.BaseWeapon(catalogIndex);
+            Color color = baseIndex <= 5 ? original : SurvivorViewLogic.ItemColor(baseIndex);
+            return SurvivorViewLogic.IsEvolution(catalogIndex) ? Color.Lerp(color, SurvivorViewLogic.EvolutionGold, 0.6f) : color;
         }
 
         private void OnDamageDealt(SurvivorEvent e, bool crit)

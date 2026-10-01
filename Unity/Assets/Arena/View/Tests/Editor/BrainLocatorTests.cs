@@ -143,6 +143,26 @@ namespace PersonalArena.View.Tests
             Assert.That(BrainLocator.FindChampionBrain(root, "Mage"), Is.Null);
         }
 
+        [Test]
+        public void EachClass_FindsOnlyItsOwnBehaviorBrain()
+        {
+            string warrior = WriteBrain("warrior-s001", ClassViewLogic.BehaviorName("warrior"), new DateTime(2026, 4, 1, 0, 0, 0, DateTimeKind.Utc));
+            string mage = WriteBrain("mage-s001", ClassViewLogic.BehaviorName("mage"), new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc));
+            // A legacy (older schema) Mage brain is newer but must not win while a current one exists.
+            string legacyMage = WriteBrain("mage-legacy", "Mage", new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc), Current - 1);
+
+            Assert.That(BrainLocator.FindNewestBrain(root, "Warrior"), Is.EqualTo(warrior));
+            Assert.That(BrainLocator.FindNewestBrain(root, "Mage"), Is.EqualTo(mage));
+            Assert.That(BrainLocator.FindNewestBrain(root, "Mage", false), Is.EqualTo(mage));
+            Assert.That(BrainLocator.FindNewestBrain(root, "Archer"), Is.Null, "no Archer brain yet: the viewer shows the no-brain hint");
+            Assert.That(BrainLocator.FindNewestRunDirectory(root, "Mage"), Is.EqualTo(Path.Combine(root, "mage-s001")));
+
+            File.Delete(mage);
+            Assert.That(BrainLocator.FindNewestBrain(root, "Mage"), Is.Null, "a legacy Mage brain is never driven by default");
+            Assert.That(BrainLocator.FindNewestBrain(root, "Mage", false), Is.EqualTo(legacyMage));
+            Assert.That(BrainLocator.FindNewestBrain(root, "Warrior"), Is.EqualTo(warrior));
+        }
+
         private string WriteBrain(string run, string behavior, DateTime writtenUtc,
             int schemaVersion = Current)
         {

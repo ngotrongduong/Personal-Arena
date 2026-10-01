@@ -21,6 +21,7 @@ namespace PersonalArena.Core.Meta
         private readonly PolicyBrain brain;
         private readonly CharacterBuild build;
         private readonly float runSeconds;
+        private readonly string classId;
         private readonly SurvivorEvaluator evaluator = new SurvivorEvaluator();
         private readonly List<SurvivorRunStats> results = new List<SurvivorRunStats>();
         private int completed;
@@ -29,20 +30,25 @@ namespace PersonalArena.Core.Meta
         private volatile bool cancelled;
 
         /// <param name="runSeconds">Run length of every match (the normal 900 s; shorter only for tests).</param>
-        public FarmSession(PolicyBrain brain, CharacterBuild build, int runCount, int baseSeed, float runSeconds = 900f)
+        /// <param name="classId">Class whose kit the matches use (M7: warrior, mage, archer); null means the Warrior.</param>
+        public FarmSession(PolicyBrain brain, CharacterBuild build, int runCount, int baseSeed, float runSeconds = 900f, string classId = null)
         {
             if (runCount < MinRuns || runCount > MaxRuns) throw new ArgumentOutOfRangeException(nameof(runCount));
             this.brain = brain ?? throw new ArgumentNullException(nameof(brain));
             if (build == null) throw new ArgumentNullException(nameof(build));
             build.Validate();
+            this.classId = classId ?? ProfileRules.WarriorId;
+            if (SurvivorDefaults.ForClass(this.classId) == null) throw new ArgumentException("Unknown class '" + classId + "'.", nameof(classId));
             this.build = build.Clone();
             this.runSeconds = runSeconds;
             RunCount = runCount;
             BaseSeed = baseSeed;
-            new SurvivorConfig { Build = this.build.Clone(), RunSeconds = runSeconds }.Validate();
+            NewConfig().Validate();
         }
 
         public int RunCount { get; }
+        /// <summary>Class id of the kit every match uses.</summary>
+        public string ClassId => classId;
         public int BaseSeed { get; }
         /// <summary>Stats of the finished matches, in seed order. Read only after <see cref="IsDone"/>.</summary>
         public IReadOnlyList<SurvivorRunStats> Results => results;
@@ -67,7 +73,7 @@ namespace PersonalArena.Core.Meta
             if (done) return false;
             int index = Completed;
             if (cancelled || index >= RunCount) { done = true; return false; }
-            SurvivorConfig config = new SurvivorConfig { Build = build.Clone(), RunSeconds = runSeconds };
+            SurvivorConfig config = NewConfig();
             SurvivorRunStats stats;
             try
             {
@@ -86,5 +92,8 @@ namespace PersonalArena.Core.Meta
             if (cancelled || Completed >= RunCount) done = true;
             return true;
         }
+
+        private SurvivorConfig NewConfig() =>
+            new SurvivorConfig { Build = build.Clone(), RunSeconds = runSeconds, ClassDef = SurvivorDefaults.ForClass(classId) };
     }
 }

@@ -27,7 +27,8 @@ namespace PersonalArena.View
         /// <param name="brainBytes">Bytes of the brain file the viewer plays with.</param>
         /// <param name="build">The owner's build (<see cref="ProfileRules.ToBuild"/>); copied.</param>
         /// <param name="runSeconds">Match length (900 normally; shorter only in tests).</param>
-        public AutoFarmRunner(byte[] brainBytes, CharacterBuild build, int runCount, int baseSeed, float runSeconds = 900f)
+        /// <param name="classId">Class whose kit the matches use (the selected character's class); null = Warrior.</param>
+        public AutoFarmRunner(byte[] brainBytes, CharacterBuild build, int runCount, int baseSeed, float runSeconds = 900f, string classId = null)
         {
             if (brainBytes == null || brainBytes.Length == 0)
             {
@@ -46,10 +47,11 @@ namespace PersonalArena.View
             }
 
             this.build = build.Clone();
-            session = new FarmSession(brain, this.build, runCount, baseSeed, runSeconds);
+            session = new FarmSession(brain, this.build, runCount, baseSeed, runSeconds, classId);
         }
 
         public int RunCount => session.RunCount;
+        public string ClassId => session.ClassId;
         public int Completed => session.Completed;
         public float TotalGold => session.TotalGold;
         public int Tier => build.Tier;

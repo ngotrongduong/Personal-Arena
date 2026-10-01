@@ -33,6 +33,8 @@ namespace PersonalArena.View
 
         private sealed class SkillSlotView
         {
+            public RectTransform Root;
+            public bool Bound;
             public SkillDef Skill;
             public Color Color;
             public Image Icon;
@@ -82,6 +84,13 @@ namespace PersonalArena.View
         private Text killsText;
         private readonly ItemSlotView[] itemSlots = new ItemSlotView[ItemSlots * 2];
         private readonly SkillSlotView[] skillSlots = new SkillSlotView[SkillSlots];
+        private RectTransform skillsPanel;
+        private Text heroName;
+
+        // M7: "TIẾN HÓA: <tên>" banner shown for a few seconds when a weapon evolves.
+        private const float ToastSeconds = 2.6f;
+        private Text toastText;
+        private float toastClock;
 
         private Text helpText;
         private Text infoText;
@@ -295,8 +304,8 @@ namespace PersonalArena.View
         {
             RectTransform vitals = CreatePanel("Vitals", canvasRoot, PanelColor);
             SetRect(vitals, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -40f), new Vector2(440f, 304f), new Vector2(0f, 1f));
-            Text heroName = CreateText("Name", vitals, 17, TextAnchor.UpperLeft, GoldText);
-            heroName.text = "CHIẾN BINH  (AI điều khiển)";
+            heroName = CreateText("Name", vitals, 17, TextAnchor.UpperLeft, GoldText);
+            heroName.text = SurvivorViewLogic.HeroNameLine(null);
             heroName.fontStyle = FontStyle.Bold;
             SetRect(heroName.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -10f), new Vector2(400f, 22f), new Vector2(0f, 1f));
 
@@ -357,10 +366,50 @@ namespace PersonalArena.View
         private void BuildSkills()
         {
             RectTransform skills = CreatePanel("Skills", canvasRoot, PanelColor);
-            SetRect(skills, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 18f), new Vector2(456f, 150f), new Vector2(0.5f, 0f));
+            SetRect(skills, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 18f),
+                new Vector2(SurvivorViewLogic.SkillPanelWidth(SkillSlots), 150f), new Vector2(0.5f, 0f));
+            skillsPanel = skills;
             for (int i = 0; i < SkillSlots; i++)
             {
-                skillSlots[i] = CreateSkillSlot(skills, i, -144f + i * 144f);
+                skillSlots[i] = CreateSkillSlot(skills, i, SurvivorViewLogic.SkillSlotX(i, SkillSlots));
+            }
+
+            toastText = CreateText("Evolution Toast", canvasRoot, 44, TextAnchor.MiddleCenter, GoldText);
+            toastText.fontStyle = FontStyle.Bold;
+            Outline toastOutline = toastText.gameObject.AddComponent<Outline>();
+            toastOutline.effectColor = new Color(0.25f, 0.12f, 0f, 0.9f);
+            toastOutline.effectDistance = new Vector2(2f, -2f);
+            SetRect(toastText.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 300f), new Vector2(1000f, 64f), new Vector2(0.5f, 0.5f));
+            toastText.gameObject.SetActive(false);
+        }
+
+        /// <summary>Shows only the class's real skills (no "None" slot), centred under the arena.</summary>
+        private void LayoutSkillSlots(SkillDef[] skills)
+        {
+            int visible = 0;
+            for (int i = 0; i < SkillSlots; i++)
+            {
+                SkillDef skill = skills != null && i < skills.Length ? skills[i] : null;
+                if (SurvivorViewLogic.SkillVisible(skill))
+                {
+                    visible++;
+                }
+            }
+            int shown = Mathf.Max(1, visible);
+            skillsPanel.sizeDelta = new Vector2(SurvivorViewLogic.SkillPanelWidth(shown), skillsPanel.sizeDelta.y);
+            skillsPanel.gameObject.SetActive(visible > 0);
+            int column = 0;
+            for (int i = 0; i < SkillSlots; i++)
+            {
+                SkillDef skill = skills != null && i < skills.Length ? skills[i] : null;
+                bool show = SurvivorViewLogic.SkillVisible(skill);
+                SkillSlotView view = skillSlots[i];
+                view.Root.gameObject.SetActive(show);
+                if (show)
+                {
+                    view.Root.anchoredPosition = new Vector2(SurvivorViewLogic.SkillSlotX(column, shown), 0f);
+                    column++;
+                }
             }
         }
 
@@ -369,6 +418,7 @@ namespace PersonalArena.View
             SkillSlotView view = new SkillSlotView { LastCooldown = 0f };
             RectTransform slot = CreatePanel("Skill " + (index + 1), parent, new Color(0.1f, 0.11f, 0.16f, 1f));
             SetRect(slot, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(x, 0f), new Vector2(132f, 132f), new Vector2(0.5f, 0.5f));
+            view.Root = slot;
 
             RectTransform glow = CreateSliced("Glow", slot, Color.clear);
             SetStretch(glow, 0f, 0f, 0f, 0f);

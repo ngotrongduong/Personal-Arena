@@ -136,8 +136,8 @@ namespace PersonalArena.View
         // ------------------------------------------------------------------ training with the owner's choices
 
         /// <summary>
-        /// TRAIN uses the owner's build only once it means something: the Warrior has a level or a tier above 1
-        /// is selected. A level-0, tier-1 owner keeps the random-build curriculum.
+        /// TRAIN uses the owner's build only once it means something: the selected class's character has a level
+        /// or a tier above 1 is selected. A level-0, tier-1 owner keeps the random-build curriculum.
         /// </summary>
         public static bool UsesOwnerBuild(PlayerProfile profile)
         {
@@ -146,8 +146,8 @@ namespace PersonalArena.View
                 return false;
             }
 
-            CharacterProfile warrior = ProfileRules.FindCharacter(profile, ProfileRules.WarriorId);
-            return (warrior != null && warrior.Level >= 1) || profile.SelectedTier > 1;
+            CharacterProfile character = ClassViewLogic.SelectedCharacter(profile);
+            return (character != null && character.Level >= 1) || profile.SelectedTier > 1;
         }
 
         /// <summary>What StartTraining passes: points and tier per <see cref="UsesOwnerBuild"/>, the focus id always.</summary>
@@ -159,10 +159,10 @@ namespace PersonalArena.View
                 return owner;
             }
 
-            CharacterProfile warrior = ProfileRules.FindCharacter(profile, ProfileRules.WarriorId);
-            if (warrior != null)
+            CharacterProfile character = ClassViewLogic.SelectedCharacter(profile);
+            if (character != null)
             {
-                CharacterBuild build = ProfileRules.ToBuild(warrior, profile.SelectedTier);
+                CharacterBuild build = ProfileRules.ToBuild(character, profile.SelectedTier);
                 owner.Points = (int[])build.Points.Clone();
                 owner.Tier = build.Tier;
             }
@@ -367,10 +367,10 @@ namespace PersonalArena.View
                 return string.Empty;
             }
 
-            CharacterProfile warrior = ProfileRules.FindCharacter(profile, ProfileRules.WarriorId);
-            string loadout = LoadoutName(warrior, warrior != null ? warrior.ActiveLoadout : 0);
+            CharacterProfile character = ClassViewLogic.SelectedCharacter(profile);
+            string loadout = LoadoutName(character, character != null ? character.ActiveLoadout : 0);
             return "Ví: " + FormatGold(profile.Gold) + " vàng   Bậc " + profile.SelectedTier +
-                (warrior != null ? "   Cấp " + warrior.Level : string.Empty) +
+                (character != null ? "   " + ClassViewLogic.DisplayName(character.ClassId) + " cấp " + character.Level : string.Empty) +
                 "\nBộ: " + loadout + "   Trọng tâm: " + FocusName(profile.TrainingFocus);
         }
 

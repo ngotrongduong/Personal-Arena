@@ -11,15 +11,16 @@ using UnityEngine.InputSystem;
 namespace PersonalArena.View
 {
     /// <summary>
-    /// "Watch AI" mode of the survivor game: the newest Warrior brain plays 15-minute graveyard runs,
+    /// "Watch AI" mode of the survivor game: the newest brain of the selected class plays 15-minute graveyard runs,
     /// new brains exported by training are hot-loaded, and each level-up shows which item the AI picked.
     /// M5: every run uses the owner's build and tier (<see cref="ProfileRules.ToBuild"/>, applied at run start),
     /// a run the brain played pays gold into the saved profile, and the character (C), Auto Farm (F) and
     /// build comparison (V) panels edit the profile. All rules run in Core; this class only steps, saves and draws.
+    /// M7: the selected class (profile SelectedClassId) drives the brain, kit, panels and TRAIN; changing it
+    /// restarts the watched run with that class's brain.
     /// </summary>
     public sealed class SurvivorWatchController : MonoBehaviour
     {
-        public const string BehaviorName = "Warrior";
         private const int MaximumTicksPerFrame = 48;
         private const float BrainPollSeconds = 2f;
         private const float EndScreenSeconds = 5f;
@@ -116,8 +117,14 @@ namespace PersonalArena.View
         private bool loadedIsVersion;
         private int brainLoadCount;
 
+        // M7: the watched and trained class, and a TRAIN press that stops another class's training first.
+        private string classId = ProfileRules.WarriorId;
+        private bool lineageBound;
+        private bool pendingClassStart;
+        private string switchFromBehavior;
+
         // Screenshot mode (-screenshot <png> [-quitAfterScreenshot] [-showProfile] [-openPanel character|farm|compare|lineage]
-        // [-farmRuns N] [-endShot] [-labelShot]) used to check the build. Pass -profile <scratch path> with it.
+        // [-farmRuns N] [-endShot] [-labelShot] [-enemyShot]) used to check the build. Pass -profile <scratch path> with it.
         private const float PanelOpenSeconds = 6f;
         private const float PanelShotSeconds = 8f;
         private const float FarmShotSeconds = 14f;
@@ -133,11 +140,29 @@ namespace PersonalArena.View
         private bool hordeShotTaken;
         private bool endShotTaken;
         private bool labelShotTaken;
+        // -enemyShot: one more shot once the M7 enemies (exploder, ghost, necromancer) are in the run.
+        private bool enemyShot;
+        private bool enemyShotTaken;
+        private const float EnemyShotGiveUpSeconds = 300f;
         private float labelSeenSince = float.PositiveInfinity;
         private float quitAt = float.PositiveInfinity;
 
         public SurvivorSim Sim => sim;
         public SurvivorPilot Pilot => pilot;
+        /// <summary>The class on screen ("warrior", "mage", "archer").</summary>
+        public string ClassId => classId;
+        /// <summary>ML-Agents behavior name of the class on screen ("Warrior", "Mage", "Archer").</summary>
+        public string BehaviorName => ClassViewLogic.BehaviorName(classId);
+
+        /// <summary>The character record of the class on screen.</summary>
+        private CharacterProfile CurrentCharacter =>
+            store != null ? ProfileRules.FindCharacter(store.Profile, classId) ?? store.Selected : null;
+
+        /// <summary>The behavior the training service trains now (from its status), or null.</summary>
+        private string RunningBehavior => ClassViewLogic.StatusBehavior(trainingSnapshot.Status != null, trainingSnapshot.Status?.behavior);
+
+        /// <summary>True while the service trains a class other than the one on screen.</summary>
+        private bool TrainingOtherClass => trainingSnapshot.IsActive && ClassViewLogic.IsOtherClass(RunningBehavior, BehaviorName);
 
         private void Start()
         {
@@ -172,6 +197,7 @@ namespace PersonalArena.View
             }
             endShot = HasArgument("-endShot");
             labelShot = HasArgument("-labelShot");
+            enemyShot = HasArgument("-enemyShot");
             watchBest = HasArgument("-best") || PlayerPrefs.GetInt(WatchBestPreference, 0) == 1;
 
             // Profile: -profile <folder or file> for checks and screenshots, else the owner's real profile.
@@ -179,6 +205,7 @@ namespace PersonalArena.View
             store = ProfileStore.Create(profileOverride, Application.persistentDataPath,
                 Path.Combine(Application.temporaryCachePath, "profile-fallback"));
             ShowProfileLoadNotice(store.Load());
+            classId = store.SelectedClassId;
 
             // -runSeconds N (60..900) shortens runs so the end screen can be checked; only with a scratch -profile.
             if (!string.IsNullOrWhiteSpace(profileOverride) &&
@@ -210,6 +237,7 @@ namespace PersonalArena.View
             if (lineagePanel != null && !string.IsNullOrWhiteSpace(runsDirectory) && Directory.Exists(runsDirectory))
             {
                 lineagePanel.Bind(store, runsDirectory, BehaviorName, () => trainingSnapshot);
+                lineageBound = true;
                 lineagePanel.ProfileChanged += OnProfileChanged;
                 lineagePanel.WatchVersionRequested += OnWatchVersionRequested;
             }
@@ -232,7 +260,7 @@ namespace PersonalArena.View
                 PollTraining();
             }
 
-            SurvivorConfig config = new SurvivorConfig { Build = NextRunBuild() };
+            SurvivorConfig config = new SurvivorConfig { Build = NextRunBuild(), ClassDef = ClassDefinition(classId) };
             if (shortRunSeconds > 0f)
             {
                 config.RunSeconds = shortRunSeconds;
@@ -242,6 +270,7 @@ namespace PersonalArena.View
             followCamera.SetTarget(survivorRenderer);
             survivorRenderer.SetCamera(followCamera.ViewCamera);
             survivorRenderer.Bind(sim);
+            survivorRenderer.WeaponEvolved += OnWeaponEvolved;
             hud.BindHeroLabel(survivorRenderer, followCamera.ViewCamera);
             StartRun();
             PollBrain();
@@ -259,8 +288,21 @@ namespace PersonalArena.View
             }
         }
 
+        /// <summary>HUD toast "TIẾN HÓA: &lt;tên&gt;" when the hero's weapon evolves.</summary>
+        private void OnWeaponEvolved(int evolutionIndex)
+        {
+            if (hud != null)
+            {
+                hud.ShowToast(SurvivorViewLogic.EvolvedToast(evolutionIndex), SurvivorViewLogic.EvolutionGold);
+            }
+        }
+
         private void OnDestroy()
         {
+            if (survivorRenderer != null)
+            {
+                survivorRenderer.WeaponEvolved -= OnWeaponEvolved;
+            }
             if (hud != null)
             {
                 hud.TrainingButtonClicked -= OnTrainingButton;
@@ -300,7 +342,7 @@ namespace PersonalArena.View
         /// <summary>The build of the next run: the active loadout and selected tier of the profile, fixed until the run ends.</summary>
         private CharacterBuild NextRunBuild()
         {
-            CharacterProfile warrior = store.Warrior;
+            CharacterProfile warrior = CurrentCharacter;
             runBuild = ProfileRules.ToBuild(warrior, store.Profile.SelectedTier);
             runLoadout = warrior.ActiveLoadout;
             runLoadoutName = MetaViewLogic.LoadoutName(warrior, runLoadout);
@@ -315,13 +357,21 @@ namespace PersonalArena.View
                 return false;
             }
 
-            CharacterProfile warrior = store.Warrior;
+            CharacterProfile warrior = CurrentCharacter;
             return warrior.ActiveLoadout != runLoadout ||
                 !MetaViewLogic.SameBuild(runBuild, ProfileRules.ToBuild(warrior, store.Profile.SelectedTier));
         }
 
         private void OnProfileChanged()
         {
+            // M7: "Chọn" in the character panel picked another class: watch that class's brain now.
+            string selected = store != null ? store.SelectedClassId : classId;
+            if (!string.Equals(selected, classId, StringComparison.Ordinal))
+            {
+                SwitchClass(selected);
+                return;
+            }
+
             RefreshInfo();
             characterPanel?.Refresh();
             comparePanel?.Refresh();
@@ -335,6 +385,62 @@ namespace PersonalArena.View
             {
                 PollBrain();
             }
+        }
+
+        /// <summary>The kit of a class (Core <see cref="SurvivorDefaults.ForClass"/>); an unknown id gives the Warrior.</summary>
+        private static SurvivorClassDef ClassDefinition(string id)
+        {
+            return SurvivorDefaults.ForClass(id) ?? SurvivorDefaults.Warrior();
+        }
+
+        /// <summary>
+        /// M7 class change: forget the old class's brain (newest, champion or saved version), point the lineage,
+        /// history and profile panels at the new class, and start a fresh run with its kit and its brain.
+        /// Running training is left alone; TRAIN offers to switch it.
+        /// </summary>
+        private void SwitchClass(string newClassId)
+        {
+            classId = string.IsNullOrEmpty(newClassId) ? ProfileRules.WarriorId : newClassId;
+            watchedVersion = null;
+            watchedBranchName = null;
+            loadedIsVersion = false;
+            loadedIsChampion = false;
+            loadedChampion = null;
+            loadedPath = null;
+            loadedWriteTime = default;
+            loadedBrainBytes = null;
+            loadedBrainName = null;
+            brainStatus = null;
+            pilot.ClearBrain();
+            recent.Clear();
+
+            if (lineageBound && lineagePanel != null)
+            {
+                lineagePanel.Bind(store, runsDirectory, BehaviorName, () => trainingSnapshot);
+            }
+            if (training != null)
+            {
+                historyPanel?.SetRunDirectory(BrainLocator.FindNewestRunDirectory(runsDirectory, BehaviorName));
+                profilePanel?.SetSource(runsDirectory, BehaviorName);
+            }
+
+            if (sim != null)
+            {
+                sim.Config.ClassDef = ClassDefinition(classId);
+                RestartNow();
+            }
+
+            PollBrain();
+            if (training != null)
+            {
+                PollTraining();
+            }
+
+            characterPanel?.Refresh();
+            comparePanel?.Refresh();
+            ShowSwitchNotice("Đang xem " + ClassViewLogic.DisplayName(classId) +
+                (pilot.Brain == null ? "\n" + ClassViewLogic.NoBrainText(classId, training != null) : string.Empty));
+            switchNoticeUntil = Time.unscaledTime + ProfileNoticeSeconds;
         }
 
         /// <summary>"Xem ngay" in the lineage panel: watch that saved version now (fresh run), until B.</summary>
@@ -381,7 +487,7 @@ namespace PersonalArena.View
         /// <summary>Newest brain: the active branch's latest.brain when it exists with the current schema, else the newest run's.</summary>
         private string NewestBrainPath()
         {
-            CharacterProfile warrior = store != null ? store.Warrior : null;
+            CharacterProfile warrior = CurrentCharacter;
             string branchBrain = warrior != null
                 ? LineageStore.BranchLatestBrain(runsDirectory, BehaviorName, warrior.BrainRunId)
                 : null;
@@ -769,19 +875,17 @@ namespace PersonalArena.View
                     {
                         brainStatus = "Không tìm thấy thư mục Trainer/runs.";
                     }
-                    else if (string.IsNullOrWhiteSpace(brainFile) &&
+                    else if (string.IsNullOrWhiteSpace(brainFile) && classId == ProfileRules.WarriorId &&
                         BrainLocator.FindNewestBrain(runsDirectory, BehaviorName, false) != null)
                     {
                         brainStatus = "Luật chơi đã đổi sang chế độ Sinh tồn.\nBộ não cũ không biết luật mới nên chiến binh đứng chờ.\n" +
                             "Bấm HUẤN LUYỆN AI để dạy nó luật mới.";
                     }
-                    else if (training != null)
-                    {
-                        brainStatus = "Chiến binh chưa có bộ não nên đứng chờ.\nBấm HUẤN LUYỆN AI để bắt đầu dạy nó.";
-                    }
                     else
                     {
-                        brainStatus = "Đang chờ AI lưu bộ não đầu tiên...";
+                        // M7: a bought class starts without a brain ("Chưa có não Mage — bấm HUẤN LUYỆN AI");
+                        // its pre-Survivor runs (mage-001, archer-001) are never loaded.
+                        brainStatus = ClassViewLogic.NoBrainText(classId, training != null);
                     }
                 }
 
@@ -881,15 +985,26 @@ namespace PersonalArena.View
             }
 
             restartWithNewPower = false;
-            if (trainingSnapshot.IsActive)
+            switch (ClassViewLogic.TrainAction(trainingSnapshot.State, RunningBehavior, BehaviorName))
             {
-                training.RequestStop();
-                stopRequestedAt = Time.unscaledTime;
-                trainingNotice = null;
-            }
-            else if (trainingSnapshot.State != TrainingState.External && trainingSnapshot.State != TrainingState.Unavailable)
-            {
-                StartTraining();
+                case TrainButtonAction.Stop:
+                    pendingClassStart = false;
+                    training.RequestStop();
+                    stopRequestedAt = Time.unscaledTime;
+                    trainingNotice = null;
+                    break;
+                case TrainButtonAction.SwitchClass:
+                    // M7: another class is training. Stop it gracefully (it saves a checkpoint), then start this class.
+                    pendingClassStart = true;
+                    switchFromBehavior = RunningBehavior;
+                    training.RequestStop();
+                    stopRequestedAt = Time.unscaledTime;
+                    trainingNotice = null;
+                    break;
+                case TrainButtonAction.Start:
+                    pendingClassStart = false;
+                    StartTraining();
+                    break;
             }
 
             PollTraining();
@@ -897,11 +1012,18 @@ namespace PersonalArena.View
 
         private void StartTraining()
         {
-            // The owner's build and tier (once the Warrior has a level or a tier above 1) and the training focus.
+            // The owner's build and tier (once the selected character has a level or a tier above 1) and the training focus.
             OwnerTraining owner = MetaViewLogic.OwnerTrainingFor(store.Profile);
-            // M6: continue the active branch when it has a checkpoint (null: the service picks the newest run).
-            CharacterProfile warrior = store.Warrior;
-            string runId = LineageStore.TrainRunId(runsDirectory, BehaviorName, warrior != null ? warrior.BrainRunId : null);
+            // M6: continue the active branch when it has a checkpoint. M7: a class's first training uses its
+            // character's run id (mage-s001); otherwise null and the service picks this class's newest run.
+            CharacterProfile character = CurrentCharacter;
+            string profileRunId = character != null ? character.BrainRunId : null;
+            string runId = ClassViewLogic.TrainRunId(
+                LineageStore.TrainRunId(runsDirectory, BehaviorName, profileRunId),
+                profileRunId,
+                classId,
+                TrainingServiceClient.IsSafeRunId(profileRunId) && Directory.Exists(Path.Combine(runsDirectory, profileRunId)),
+                BrainLocator.FindNewestRunDirectory(runsDirectory, BehaviorName) != null);
             trainingNotice = training.Start(System.Diagnostics.Process.GetCurrentProcess().Id, Powers[powerIndex], BehaviorName, owner, runId);
             startedTraining = trainingNotice == null;
             if (startedTraining)
@@ -921,8 +1043,9 @@ namespace PersonalArena.View
             powerIndex = (powerIndex + 1) % Powers.Length;
             PlayerPrefs.SetInt(PowerPreference, powerIndex);
             PlayerPrefs.Save();
-            // Running training picks up the new power after a save-and-restart.
-            if (trainingSnapshot.IsActive && trainingSnapshot.State != TrainingState.Stopping)
+            // Running training picks up the new power after a save-and-restart (not when it trains another
+            // class: a restart would start the class on screen instead; the power applies to the next TRAIN).
+            if (trainingSnapshot.IsActive && trainingSnapshot.State != TrainingState.Stopping && !TrainingOtherClass)
             {
                 restartWithNewPower = true;
                 training.RequestStop();
@@ -951,8 +1074,20 @@ namespace PersonalArena.View
                 }
             }
 
+            if (pendingClassStart && !trainingSnapshot.IsActive)
+            {
+                // M7: the other class's training has saved and quit; start the class on screen.
+                pendingClassStart = false;
+                if (trainingSnapshot.State == TrainingState.Stopped || trainingSnapshot.State == TrainingState.Idle)
+                {
+                    StartTraining();
+                    trainingSnapshot = training.Read();
+                }
+            }
+
             TrainingStatus status = trainingSnapshot.Status;
-            if (historyPanel != null && trainingSnapshot.IsActive && status != null && !string.IsNullOrEmpty(status.run_id))
+            bool otherClass = TrainingOtherClass;
+            if (historyPanel != null && trainingSnapshot.IsActive && !otherClass && status != null && !string.IsNullOrEmpty(status.run_id))
             {
                 string activeRun = Path.Combine(runsDirectory, status.run_id);
                 if (Directory.Exists(activeRun))
@@ -973,11 +1108,19 @@ namespace PersonalArena.View
                     hud.SetTrainingButton("HUẤN LUYỆN AI", false, TrainColor);
                     text = "Máy này chưa huấn luyện được:\n" + training.MissingPiece();
                     break;
+                case TrainingState.Starting when otherClass:
+                case TrainingState.Training when otherClass:
+                    // M7: another class trains; TRAIN stops it (saving) and then trains the class on screen.
+                    hud.SetTrainingButton(stopAsked ? "ĐANG DỪNG..." : ClassViewLogic.SwitchTrainLabel(classId), !stopAsked, TrainColor);
+                    text = ClassViewLogic.OtherClassTrainingLine(RunningBehavior, classId) +
+                        (status.step > 0 ? "\n" + status.run_id + ": bước " + status.step.ToString("N0", culture) : string.Empty);
+                    break;
                 case TrainingState.Starting:
                     hud.SetTrainingButton(stopAsked ? "ĐANG DỪNG..." : "DỪNG HUẤN LUYỆN", !stopAsked, StopColor);
                     text = status != null && status.message != null && status.message.StartsWith("The trainer crashed", StringComparison.Ordinal)
                         ? "Trình huấn luyện bị lỗi và sẽ tự chạy lại.\nTiến độ vẫn được giữ."
-                        : "Đang khởi động... nạp các đấu trường huấn luyện\n(khoảng một phút). Chiến binh ở đây sẽ\ntự cập nhật khi AI học tiến bộ.";
+                        : "Đang khởi động... nạp các đấu trường huấn luyện\n(khoảng một phút). " + ClassViewLogic.DisplayName(classId) +
+                          " ở đây sẽ\ntự cập nhật khi AI học tiến bộ.";
                     break;
                 case TrainingState.Training:
                     hud.SetTrainingButton(stopAsked ? "ĐANG DỪNG..." : "DỪNG HUẤN LUYỆN", !stopAsked, StopColor);
@@ -996,7 +1139,8 @@ namespace PersonalArena.View
                     break;
                 case TrainingState.External:
                     hud.SetTrainingButton("ĐANG HUẤN LUYỆN (NGOÀI)", false, StopColor);
-                    text = "Huấn luyện được chạy từ bên ngoài game.\nChiến binh ở đây vẫn tự cập nhật\nmỗi khi có bộ não mới.";
+                    text = "Huấn luyện được chạy từ bên ngoài game.\n" + ClassViewLogic.DisplayName(classId) +
+                        " ở đây vẫn tự cập nhật\nmỗi khi có bộ não mới.";
                     break;
                 case TrainingState.Stopped:
                     hud.SetTrainingButton("HUẤN LUYỆN AI", true, TrainColor);
@@ -1012,7 +1156,7 @@ namespace PersonalArena.View
                     break;
             }
 
-            if (trainingSnapshot.State != TrainingState.Unavailable && trainingSnapshot.State != TrainingState.External)
+            if (trainingSnapshot.State != TrainingState.Unavailable && trainingSnapshot.State != TrainingState.External && !otherClass)
             {
                 text += "\n" + TrainingChoicesText(trainingSnapshot.State, status);
             }
@@ -1020,6 +1164,10 @@ namespace PersonalArena.View
             if (restartWithNewPower)
             {
                 text = "Đổi sức mạnh sang " + Powers[powerIndex].Name + ":\nđang lưu tiến độ rồi chạy lại...";
+            }
+            if (pendingClassStart)
+            {
+                text = ClassViewLogic.SwitchNotice(switchFromBehavior, classId);
             }
             if (!string.IsNullOrEmpty(trainingNotice))
             {
@@ -1097,7 +1245,7 @@ namespace PersonalArena.View
             if (brainPlayedRun)
             {
                 // A watched run the brain played pays into the wallet (Farm = false), then saves and logs.
-                CharacterProfile warrior = store.Warrior;
+                CharacterProfile warrior = CurrentCharacter;
                 RunReward reward = ProfileRules.RecordRun(store.Profile, warrior, runLoadout,
                     MetaViewLogic.ToRunResult(sim, runBuild.Tier, false));
                 store.Save();
@@ -1125,21 +1273,22 @@ namespace PersonalArena.View
             CultureInfo culture = CultureInfo.InvariantCulture;
             string text;
             PolicyBrain brain = pilot.Brain;
+            string title = ClassViewLogic.AiTitle(classId);
             if (brain == null)
             {
-                text = "AI CHIẾN BINH\nChưa có bộ não";
+                text = title + "\nChưa có bộ não";
             }
             else
             {
                 if (loadedIsVersion && watchedVersion != null)
                 {
-                    text = "AI CHIẾN BINH\nNão: " + watchedVersion.Name + " (" + watchedBranchName + ")" +
+                    text = title + "\nNão: " + watchedVersion.Name + " (" + watchedBranchName + ")" +
                         "\nĐã học " + brain.Step.ToString("N0", culture) + " bước" +
                         "   Phiên bản đã lưu   (B: não mới nhất)";
                 }
                 else if (loadedIsChampion)
                 {
-                    text = "AI CHIẾN BINH   NÃO GIỎI NHẤT" +
+                    text = title + "   NÃO GIỎI NHẤT" +
                         (loadedChampion != null ? "   " + loadedChampion.run_id : string.Empty) +
                         "\nĐã học " + brain.Step.ToString("N0", culture) + " bước" +
                         (loadedChampion != null ? (loadedChampion.passes_m4a ? "   đạt M4A" : "   chưa đạt M4A") : string.Empty) +
@@ -1147,7 +1296,7 @@ namespace PersonalArena.View
                 }
                 else
                 {
-                    text = "AI CHIẾN BINH   " + BrainLocator.RunName(loadedPath) +
+                    text = title + "   " + BrainLocator.RunName(loadedPath) +
                         "\nĐã học " + brain.Step.ToString("N0", culture) + " bước" +
                         "   (nạp lúc " + loadedAt.ToString("HH:mm", culture) + ")" +
                         "\nNão mới nhất, tự cập nhật   (B: não giỏi nhất)";
@@ -1273,7 +1422,16 @@ namespace PersonalArena.View
                 Capture(SiblingPath(screenshotPath, "_end"));
             }
 
-            bool done = highlightShotTaken && hordeShotTaken && (!labelShot || labelShotTaken) && (!endShot || endShotTaken);
+            // -enemyShot: the new enemies on screen (two of the three M7 kinds alive), or give up after a while.
+            if (enemyShot && !enemyShotTaken && !highlight.BlocksSim && !sim.IsEnded &&
+                (NewEnemyKindsAlive() >= 2 || real > EnemyShotGiveUpSeconds))
+            {
+                enemyShotTaken = true;
+                Capture(SiblingPath(screenshotPath, "_enemies"));
+            }
+
+            bool done = highlightShotTaken && hordeShotTaken && (!labelShot || labelShotTaken) && (!endShot || endShotTaken) &&
+                (!enemyShot || enemyShotTaken);
             if (done && quitAfterScreenshot && float.IsPositiveInfinity(quitAt))
             {
                 quitAt = Time.unscaledTime + 1.5f;
@@ -1315,6 +1473,27 @@ namespace PersonalArena.View
                     quitAt = Time.unscaledTime + 1.5f;
                 }
             }
+        }
+
+        /// <summary>How many of the M7 enemy kinds (exploder, ghost, necromancer) are alive in the run.</summary>
+        private int NewEnemyKindsAlive()
+        {
+            bool exploder = false;
+            bool ghost = false;
+            bool necromancer = false;
+            IReadOnlyList<SurvivorEnemy> enemies = sim.Enemies;
+            for (int i = 0; i < enemies.Count; i++)
+            {
+                SurvivorEnemy enemy = enemies[i];
+                if (enemy == null || !enemy.Active)
+                {
+                    continue;
+                }
+                exploder |= enemy.TypeIndex == SurvivorDefaults.ExploderTypeIndex;
+                ghost |= enemy.TypeIndex == SurvivorDefaults.GhostTypeIndex;
+                necromancer |= enemy.TypeIndex == SurvivorDefaults.NecromancerTypeIndex;
+            }
+            return (exploder ? 1 : 0) + (ghost ? 1 : 0) + (necromancer ? 1 : 0);
         }
 
         private void Capture(string path)
