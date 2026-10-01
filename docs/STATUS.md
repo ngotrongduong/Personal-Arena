@@ -1,7 +1,7 @@
 # Trạng thái dự án
 
 > File này là "bộ nhớ" giữa các phiên. Đọc đầu tiên, cập nhật cuối cùng.
-> Cập nhật lần cuối: 2026-10-01 tối (phiên Claude, PC — M7 class mua được code xong: T-030..T-032; `warrior-s001` đang train ~154M bước).
+> Cập nhật lần cuối: 2026-10-01 đêm (phiên Claude, PC — M7 owner đã nghiệm thu; M8 đánh bóng code xong: T-033..T-035).
 
 ## Hướng đi
 
@@ -122,7 +122,8 @@
 | M4C: đủ nội dung (6 vũ khí, 8 phụ kiện, đồ nhặt, rương, spitter, HUD) | code xong (T-021, T-022) — chờ train trên bản mới và qua đánh giá 100 seed |
 | M5: kinh tế và build (T-023..T-026) + thưởng hạ quái (T-027, D-036) | code xong — chờ nghiệm thu: đổi build → TRAIN → AI đổi lối đánh |
 | M6: Lịch sử não (T-028, T-029, D-037) | code xong — chờ nghiệm thu: mở bảng `L`, chọn não cũ, bấm "Xem ngay" |
-| M7: class mua được, tiến hóa vũ khí, quái mới (T-030..T-032, D-038) | code xong — chờ nghiệm thu: mua Pháp sư/Cung thủ, bấm TRAIN, não nền mới qua đánh giá |
+| M7: class mua được, tiến hóa vũ khí, quái mới (T-030..T-032, D-038) | xong — owner đã mua Pháp sư + Cung thủ, chạy tốt (não nền Mage/Archer vẫn đang học) |
+| M8: đánh bóng — âm thanh, cài đặt + phiên bản + smoke test, cân bằng (T-033..T-035, D-039) | code xong — chờ owner nghiệm thu bản build mới |
 
 ## Việc tiếp theo (theo thứ tự)
 
@@ -187,6 +188,17 @@ thưởng theo thứ bậc, nghiệm thu bằng đánh giá 100 seed). Đấu tr
    - Bản xem ở `Build/WatchNext`, bản train ở `Build/TrainingNext` — tự tráo vào ở lần mở / lần TRAIN sau.
    - Nghiệm thu M7: owner mua Pháp sư hoặc Cung thủ, chọn, bấm TRAIN; khi não nền mới qua
      `SurvivorEval` (trung vị ≥ 10:00, P10 ≥ 7:00) là xong.
+6. M8 đánh bóng (D-039) code xong 2026-10-01:
+   - T-033: âm thanh Kenney CC0 + nhạc CC0, phím `M`, im khi cửa sổ ở nền / chạy tự động.
+   - T-034: bảng Cài đặt (`O` / nút bánh răng: âm lượng, cửa sổ, chất lượng, FPS, Thoát), nhãn
+     `Personal Arena v0.8.<số commit>` + icon app, `-smokeTest <report.json>` (bắt buộc `-profile`
+     tạm) chạy trọn vòng 3 class; `watch_ai.ps1` báo lỗi tiếng Việt kèm đường dẫn `Player.log`.
+   - T-035: cân bằng theo `SurvivorEval --set`: ngọc EXP × 1,5 (`XpMul`), máu trùm × 0,4
+     (`BossHpMul`, 6.000 → 2.400), vàng rơi 3% → 4,5%. Luật đổi nhưng schema không đổi → não học tiếp.
+   - Theo dõi sau khi owner bấm TRAIN trên bản mới: Mage P10 (395 s ở bản cân bằng mới, cần tập),
+     AI có bắt đầu đánh trùm không (sát thương trùm trung bình mới ~1%).
+   - Ý tưởng milestone sau: nới chỗ chừa cho quái (8 → 16 loại) và skill (4 → 6) bằng một lần
+     `brain_upgrade` để thêm nhiều quái/skill mới mà não vẫn học tiếp.
 
 ## Cách làm trên PC (Claude)
 
@@ -212,6 +224,15 @@ thưởng theo thứ bậc, nghiệm thu bằng đánh giá 100 seed). Đấu tr
   trước khi phát hành để đảm bảo game không gọi mạng.
 
 ## Nhật ký phiên (mới nhất trên cùng)
+
+### 2026-10-01 đêm — Claude (PC): M8 đánh bóng (T-033..T-035)
+- Owner nghiệm thu M7 (mua Pháp sư + Cung thủ, chạy tốt).
+- T-033 âm thanh, T-034 bản build hoàn chỉnh (subagent viết, reviewer soát, Claude sửa `watch_ai.ps1`
+  về ASCII + nới giới hạn smoke test), T-035 cân bằng (Claude, đánh giá 100 seed).
+- T-034b: smoke test bản cuối từng trượt ở Cung thủ (trận 60 s chưa lên cấp vì bắn xa, ngọc EXP nằm
+  xa). Nay mỗi trận thử dài 120 s và mỗi class dùng não champion của chính nó.
+- `Build/WatchNext` + `Build/TrainingNext` có M8, tự tráo vào ở lần mở trình xem / bấm TRAIN sau.
+- Test: CoreTests 239/239, EditMode 289/289 (T-034).
 
 ### 2026-10-01 tối — Claude (PC): M7 class mua được (T-030..T-032, D-038)
 - T-030 (Core), T-031 (Trainer), T-032 (trình xem) xong; subagent viết, Claude kiểm, reviewer duyệt.
