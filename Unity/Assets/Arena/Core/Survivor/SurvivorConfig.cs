@@ -62,6 +62,10 @@ namespace PersonalArena.Core.Survivor
         public float SpawnPerTier = 0.15f;
         /// <summary>Enemy pool slots kept free for boss summons.</summary>
         public int SummonReserve = 20;
+        /// <summary>Boss HP × this (the boss ignores HpPerMinute; HpPerTier still applies).</summary>
+        public float BossHpMul = 0.4f;
+        /// <summary>Every XP gem dropped by a kill × this.</summary>
+        public float XpMul = 1.5f;
 
         // Elites.
         public float EliteRadiusMul = 1.6f;
@@ -104,7 +108,7 @@ namespace PersonalArena.Core.Survivor
         public int ObstacleAttemptsPerObstacle = 64;
 
         // Loot and pickups.
-        public float GoldChance = 0.03f;
+        public float GoldChance = 0.045f;
         public float GoldMin = 1f;
         /// <summary>Exclusive upper bound of the floored gold roll.</summary>
         public float GoldMax = 6f;
@@ -161,6 +165,8 @@ namespace PersonalArena.Core.Survivor
             Check(PickupFlySpeed); Check(CollectMargin); Check(FillerGold); Check(FillerHeal);
             Check(DenserSpawnsMul); Check(EarlyEliteSeconds); Check(FastRunnerSpeedMul); Check(LessMeatMul); Check(EarlyBruteFromSeconds);
             Check(RegenDelaySeconds); Check(RegenFractionPerSecond); Check(BossSummonFasterMul); Check(NightmareSpeedMul); Check(NightmareEliteHpMul);
+            Check(BossHpMul); Check(XpMul);
+            if (BossHpMul <= 0f) throw new ArgumentOutOfRangeException(nameof(BossHpMul));
             if (EarlyBruteMinWeight < 0 || DoubleEliteCount < 1 || BossSummonFasterMul <= 0f) throw new ArgumentOutOfRangeException(nameof(DoubleEliteCount));
             if (SpawnRingMax < SpawnRingMin || GoldMax < GoldMin || EliteGoldMax < EliteGoldMin) throw new ArgumentOutOfRangeException(nameof(SpawnRingMax), "A range has max < min.");
             if (SummonReserve < 0 || EliteCount < 0 || SurroundedCount < 1 || BossSummonCount < 0) throw new ArgumentOutOfRangeException(nameof(SummonReserve));

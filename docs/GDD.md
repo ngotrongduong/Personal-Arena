@@ -161,7 +161,7 @@ Dùng 4 loại zombie của M3, nhưng chỉnh số liệu hợp với kiểu "�
   - M4A: rớt **một túi vàng lớn** (20–40 vàng) và **một ngọc 50 EXP**.
   - M4C: rớt thêm **rương**.
 - **Boss Chúa tể xương** (phút 15):
-  - dáng Brute nhưng to gấp 2,5 lần, máu 6.000, chậm 1,4 m/s;
+  - dáng Brute nhưng to gấp 2,5 lần, máu 6.000 × 0,4 = **2.400** (M8, T-035; vẫn nhân theo bậc), chậm 1,4 m/s;
   - cứ 6 s vung đòn quét 40 ST, có báo trước 1,2 s;
   - cứ 10 s gọi 8 Walker.
 
@@ -187,8 +187,8 @@ Dùng 4 loại zombie của M3, nhưng chỉnh số liệu hợp với kiểu "�
 
 | Đồ | Nguồn | Tác dụng | Có từ |
 |---|---|---|---|
-| Ngọc EXP | Mọi quái | Cộng EXP (× Học nhanh) | M4A |
-| **Xu vàng** | Quái thường 3% (× May mắn); tinh anh luôn rớt túi lớn | 1–5 vàng × hệ số bậc × Tham lam | M4A |
+| Ngọc EXP | Mọi quái | Cộng EXP (× Học nhanh). Từ M8 (T-035) mọi ngọc rớt ra × 1,5 so với cột EXP ở bảng quái | M4A |
+| **Xu vàng** | Quái thường 4,5% (× May mắn; 3% trước M8); tinh anh luôn rớt túi lớn | 1–5 vàng × hệ số bậc × Tham lam | M4A |
 | Thịt | Quái 0,5% | Hồi 30 máu | M4A |
 | Nam châm | Quái 0,2% | Hút mọi ngọc trên bản đồ về người | M4C |
 | Rương | Tinh anh | Nâng ngẫu nhiên 1 món đang có (lên 1 cấp) + 50–150 vàng × hệ số bậc | M4C |

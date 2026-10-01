@@ -18,7 +18,7 @@ namespace PersonalArena.Core.Tests.Survivor
         [Test]
         public void Tier1_ScriptedRun_MatchesPreM5Golden()
         {
-            SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.Config(), 99);
+            SurvivorSim sim = new SurvivorSim(PreM8(SurvivorTestHelpers.Config()), 99);
             long hash = 17;
             for (int tick = 0; tick < 10800 && !sim.IsEnded; tick++)
             {
@@ -47,7 +47,7 @@ namespace PersonalArena.Core.Tests.Survivor
 
         private static long InvulnerableHash(float untilSeconds, out SurvivorSim sim)
         {
-            sim = new SurvivorSim(new SurvivorConfig(), 2024); sim.SetHeroInvulnerableForTests();
+            sim = new SurvivorSim(PreM8(new SurvivorConfig()), 2024); sim.SetHeroInvulnerableForTests();
             long hash = 17;
             for (int tick = 0; tick < 62000 && !sim.IsEnded && sim.Time < untilSeconds; tick++)
             {
@@ -60,12 +60,22 @@ namespace PersonalArena.Core.Tests.Survivor
         [Test]
         public void Tier1_EvaluatorRun_MatchesPreM5Golden()
         {
-            SurvivorRunStats stats = new SurvivorEvaluator().RunOne(SurvivorTestHelpers.Brain(favouredMove: 1), new SurvivorConfig { RunSeconds = 120f }, 555, true);
+            SurvivorRunStats stats = new SurvivorEvaluator().RunOne(SurvivorTestHelpers.Brain(favouredMove: 1), PreM8(new SurvivorConfig { RunSeconds = 120f }), 555, true);
             long hash = 17;
             hash = hash * 31 + Bits(stats.SurvivedSeconds); hash = hash * 31 + (int)stats.EndReason; hash = hash * 31 + stats.Level;
             hash = hash * 31 + stats.Kills; hash = hash * 31 + Bits(stats.Gold); hash = hash * 31 + Bits(stats.TotalXp);
             hash = hash * 31 + Bits(stats.DamageTaken); hash = hash * 31 + Bits(stats.DamageDealt); hash = hash * 31 + Bits(stats.MinHpRatio);
             Assert.That(hash, Is.EqualTo(EvaluatorGolden), "end " + stats.EndReason + " at " + stats.SurvivedSeconds);
+        }
+
+        /// <summary>
+        /// The goldens were recorded before the T-035 (M8) balance pass; with its three numbers set back they
+        /// still pin every other rule bit for bit.
+        /// </summary>
+        internal static SurvivorConfig PreM8(SurvivorConfig config)
+        {
+            config.Tuning.XpMul = 1f; config.Tuning.BossHpMul = 1f; config.Tuning.GoldChance = 0.03f;
+            return config;
         }
 
         internal static long StateHash(SurvivorSim sim)
