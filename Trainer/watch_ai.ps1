@@ -40,11 +40,30 @@ if (Test-Path $python) {
         -WorkingDirectory $root -WindowStyle Hidden -PassThru
 }
 
+$exitCode = 0
+$startedAt = Get-Date
 try {
-    Start-Process -FilePath $viewer -ArgumentList @('-runs', "`"$(Join-Path $root 'Trainer\runs')`"") -Wait
+    $viewerProcess = Start-Process -FilePath $viewer -ArgumentList @('-runs', "`"$(Join-Path $root 'Trainer\runs')`"") -PassThru
+    $null = $viewerProcess.Handle  # keeps the handle so ExitCode is readable after the viewer closes
+    $viewerProcess.WaitForExit()
+    $exitCode = $viewerProcess.ExitCode
 }
 finally {
     if ($exporter -and -not $exporter.HasExited) {
         Stop-Process -Id $exporter.Id -Force
     }
+}
+
+# A viewer that fails while starting closes by itself within seconds: say so (in Vietnamese) and point to its log.
+# The text is kept ASCII here (\u escapes) so Windows PowerShell reads this file correctly without a BOM.
+$secondsOpen = ((Get-Date) - $startedAt).TotalSeconds
+if ($exitCode -ne 0 -and $exitCode -ne $null -and $secondsOpen -lt 15) {
+    $log = Join-Path $env:USERPROFILE 'AppData\LocalLow\ngotrongduong\Personal Arena\Player.log'
+    Write-Host ''
+    Write-Host ([regex]::Unescape("Trình xem AI bị lỗi khi mở (mã lỗi $exitCode).")) -ForegroundColor Red
+    Write-Host ([regex]::Unescape("Nhật ký lỗi nằm ở:")) -ForegroundColor Yellow
+    Write-Host "  $log"
+    Write-Host ([regex]::Unescape("Hãy gửi file này cho Claude để sửa."))
+    Read-Host ([regex]::Unescape("Nhấn Enter để đóng"))
+    exit $exitCode
 }

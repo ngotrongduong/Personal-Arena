@@ -45,6 +45,9 @@ namespace PersonalArena.View
         private float xpShown;
         private float bossShown = 1f;
         private float endCountdown;
+        private bool fpsVisible;
+        private int fpsFrames;
+        private float fpsClock;
 
         public event Action TrainingButtonClicked;
         public event Action TrainingPowerClicked;
@@ -85,6 +88,51 @@ namespace PersonalArena.View
             {
                 EnsureBuilt();
                 return lineagePanel;
+            }
+        }
+
+        public SettingsPanel SettingsPanel
+        {
+            get
+            {
+                EnsureBuilt();
+                return settingsPanel;
+            }
+        }
+
+        /// <summary>Opens or closes the settings (O or the gear button); only one full-screen panel is open at a time.</summary>
+        public void ToggleSettingsPanel()
+        {
+            EnsureBuilt();
+            CloseOtherPanels(settingsPanel);
+            settingsPanel.Toggle();
+        }
+
+        /// <summary>Shows or hides the small FPS counter in the bottom-left corner.</summary>
+        public void SetFpsVisible(bool visible)
+        {
+            EnsureBuilt();
+            fpsVisible = visible;
+            fpsFrames = 0;
+            fpsClock = 0f;
+            fpsText.text = "FPS ...";
+            fpsText.gameObject.SetActive(visible);
+        }
+
+        private void UpdateFps(float delta)
+        {
+            if (!fpsVisible || fpsText == null)
+            {
+                return;
+            }
+
+            fpsFrames++;
+            fpsClock += delta;
+            if (fpsClock >= 0.5f)
+            {
+                fpsText.text = "FPS " + Mathf.RoundToInt(fpsFrames / fpsClock);
+                fpsFrames = 0;
+                fpsClock = 0f;
             }
         }
 
@@ -144,7 +192,7 @@ namespace PersonalArena.View
         /// <summary>True when a full-screen panel is open or closed itself with Escape this frame (Escape must not pause then).</summary>
         public bool PanelHandlesEscape()
         {
-            return Handles(characterPanel) || Handles(farmPanel) || Handles(comparePanel) || Handles(lineagePanel) ||
+            return Handles(characterPanel) || Handles(farmPanel) || Handles(comparePanel) || Handles(lineagePanel) || Handles(settingsPanel) ||
                 (historyPanel != null && (historyPanel.IsOpen || historyPanel.ConsumedEscapeThisFrame)) ||
                 (profilePanel != null && (profilePanel.IsOpen || profilePanel.ConsumedEscapeThisFrame));
         }
@@ -179,6 +227,10 @@ namespace PersonalArena.View
             if (lineagePanel != null && !ReferenceEquals(lineagePanel, keep))
             {
                 lineagePanel.SetOpen(false);
+            }
+            if (settingsPanel != null && !ReferenceEquals(settingsPanel, keep))
+            {
+                settingsPanel.SetOpen(false);
             }
         }
 
@@ -348,6 +400,7 @@ namespace PersonalArena.View
             Refresh(Time.unscaledDeltaTime);
             UpdateHeroLabel(Time.unscaledDeltaTime);
             UpdateToast(Time.unscaledDeltaTime);
+            UpdateFps(Time.unscaledDeltaTime);
         }
 
         /// <summary>Fades the spectator tag in/out (~0.2 s) and keeps it above the hero on screen.</summary>
