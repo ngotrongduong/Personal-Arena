@@ -5,7 +5,12 @@ using PersonalArena.Core;
 namespace PersonalArena.Core.Survivor
 {
     public enum ItemKind { None, Weapon, Passive, Filler }
-    public enum WeaponPattern { None, Sweep, Thrust, Orbit, Thrown, Aura, Shockwave }
+    /// <summary>
+    /// How a weapon attacks. Strike: hits random enemies in range with a small instant blast at each.
+    /// Fan: a spread of projectiles toward the nearest enemy. A class owns at most one Orbit, one Aura
+    /// and one Shockwave weapon (the sim keeps one state for each).
+    /// </summary>
+    public enum WeaponPattern { None, Sweep, Thrust, Orbit, Thrown, Aura, Shockwave, Strike, Fan }
     public enum StatId
     {
         MaxHp, Armor, Regen, Might, Crit, CritDamage, Cooldown, Area,
@@ -49,8 +54,14 @@ namespace PersonalArena.Core.Survivor
         public float AngularSpeedDegrees { get; init; }
         /// <summary>Cooldown change for each level above one (seconds).</summary>
         public float CooldownPerLevel { get; init; }
-        /// <summary>Half-width of an instant capsule weapon before the area multiplier.</summary>
+        /// <summary>Half-width of an instant capsule weapon, or a Strike's blast radius, before the area multiplier.</summary>
         public float Width { get; init; }
+        /// <summary>Stun applied to each enemy hit by a Shockwave or Strike weapon (0 = none).</summary>
+        public float StunSeconds { get; init; }
+        /// <summary>Evolution: the weapon it replaces (−1 for a normal item).</summary>
+        public int EvolvesFrom { get; init; } = -1;
+        /// <summary>Evolution: the passive the hero must own (any level) next to the max-level base weapon.</summary>
+        public int EvolutionPassive { get; init; } = -1;
         /// <summary>Passive: effect per level (see <see cref="SurvivorCatalog.PassivePerLevel"/>).</summary>
         public float PerLevel { get; init; }
     }
@@ -135,8 +146,127 @@ namespace PersonalArena.Core.Survivor
         private static readonly ItemDef AreaCharm = Passive(AreaCharmIndex, "area-charm", "Bùa vùng");
         private static readonly ItemDef MagnetCharm = Passive(MagnetCharmIndex, "magnet-charm", "Nam châm");
 
+        // Mage weapons (14..19).
+        public const int MagicBoltIndex = 14;
+        public const int FireOrbIndex = 15;
+        public const int FrostNovaIndex = 16;
+        public const int HolyFieldIndex = 17;
+        public const int LightningIndex = 18;
+        public const int ArcaneBeamIndex = 19;
+        // Archer weapons (20..25).
+        public const int ArrowIndex = 20;
+        public const int MultiShotIndex = 21;
+        public const int ArrowRainIndex = 22;
+        public const int OrbitKnifeIndex = 23;
+        public const int DaggerIndex = 24;
+        public const int CrossbowIndex = 25;
+        /// <summary>Evolutions occupy 40..57: evolution of weapon w is <see cref="EvolutionOf"/>(w).</summary>
+        public const int FirstEvolutionIndex = 40;
+        public const int EvolutionCount = 18;
+
+        private static readonly ItemDef MagicBolt = new ItemDef
+        {
+            CatalogIndex = MagicBoltIndex, Id = "magic-bolt", Name = "Tia phép", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Thrown,
+            BaseDamage = 15f, DamagePerLevel = 5f, BaseRange = 12f, BaseCooldown = 1f, Knockback = 0.2f,
+            ProjectileSpeed = 14f, ProjectileRadius = 0.3f, ProjectileRange = 14f,
+            CountByLevel = Array.AsReadOnly(new[] { 1, 1, 2, 2, 3 })
+        };
+        private static readonly ItemDef FireOrb = new ItemDef
+        {
+            CatalogIndex = FireOrbIndex, Id = "fire-orb", Name = "Cầu lửa xoay", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Orbit,
+            BaseDamage = 10f, DamagePerLevel = 4f, BaseRange = 2.6f, BaseCooldown = 3.5f, Knockback = 0.3f,
+            ProjectileRadius = 0.45f, Duration = 4f, HitInterval = 0.5f, AngularSpeedDegrees = 240f,
+            CountByLevel = Array.AsReadOnly(new[] { 1, 2, 2, 3, 3 })
+        };
+        private static readonly ItemDef FrostNova = new ItemDef
+        {
+            CatalogIndex = FrostNovaIndex, Id = "frost-nova", Name = "Vòng băng", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Shockwave,
+            BaseDamage = 14f, DamagePerLevel = 5f, BaseRange = 5.5f, BaseCooldown = 4.5f, CooldownPerLevel = -0.3f,
+            Knockback = 1f, ProjectileSpeed = 9f, StunSeconds = 0.6f
+        };
+        private static readonly ItemDef HolyField = new ItemDef
+        {
+            CatalogIndex = HolyFieldIndex, Id = "holy-field", Name = "Vùng thánh", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Aura,
+            BaseDamage = 6f, DamagePerLevel = 2f, BaseRange = 2.2f, Knockback = 0.1f,
+            RangePerLevel = 0.1f, HitInterval = 0.5f
+        };
+        private static readonly ItemDef Lightning = new ItemDef
+        {
+            CatalogIndex = LightningIndex, Id = "lightning", Name = "Sét", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Strike,
+            BaseDamage = 28f, DamagePerLevel = 9f, BaseRange = 9f, BaseCooldown = 2f, Knockback = 0.2f,
+            Width = 1f, StunSeconds = 0.2f, CountByLevel = Array.AsReadOnly(new[] { 1, 1, 2, 2, 3 })
+        };
+        private static readonly ItemDef ArcaneBeam = new ItemDef
+        {
+            CatalogIndex = ArcaneBeamIndex, Id = "arcane-beam", Name = "Tia ma thuật", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Thrust,
+            BaseDamage = 22f, DamagePerLevel = 8f, BaseRange = 7f, BaseCooldown = 2.2f, Knockback = 0.2f,
+            Width = 0.4f, CountByLevel = Array.AsReadOnly(new[] { 1, 1, 1, 2, 2 })
+        };
+        private static readonly ItemDef Arrow = new ItemDef
+        {
+            CatalogIndex = ArrowIndex, Id = "arrow", Name = "Mũi tên", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Thrown,
+            BaseDamage = 18f, DamagePerLevel = 6f, BaseRange = 14f, BaseCooldown = 0.9f, Knockback = 0.3f,
+            ProjectileSpeed = 18f, ProjectileRadius = 0.25f, ProjectileRange = 16f, Pierce = 1,
+            CountByLevel = Array.AsReadOnly(new[] { 1, 1, 2, 2, 3 })
+        };
+        private static readonly ItemDef MultiShot = new ItemDef
+        {
+            CatalogIndex = MultiShotIndex, Id = "multi-shot", Name = "Tên chùm", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Fan,
+            BaseDamage = 10f, DamagePerLevel = 4f, BaseRange = 9f, BaseCooldown = 1.6f, Knockback = 0.2f,
+            ProjectileSpeed = 16f, ProjectileRadius = 0.25f, ProjectileRange = 11f, ArcDegrees = 40f,
+            CountByLevel = Array.AsReadOnly(new[] { 3, 3, 4, 5, 5 })
+        };
+        private static readonly ItemDef ArrowRain = new ItemDef
+        {
+            CatalogIndex = ArrowRainIndex, Id = "arrow-rain", Name = "Mưa tên", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Strike,
+            BaseDamage = 16f, DamagePerLevel = 6f, BaseRange = 10f, BaseCooldown = 2.5f, Knockback = 0.1f,
+            Width = 1.4f, CountByLevel = Array.AsReadOnly(new[] { 2, 2, 3, 3, 4 })
+        };
+        private static readonly ItemDef OrbitKnife = new ItemDef
+        {
+            CatalogIndex = OrbitKnifeIndex, Id = "orbit-knife", Name = "Dao xoay", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Orbit,
+            BaseDamage = 9f, DamagePerLevel = 3f, BaseRange = 1.9f, BaseCooldown = 2.5f, Knockback = 0.2f,
+            ProjectileRadius = 0.35f, Duration = 3.5f, HitInterval = 0.4f, AngularSpeedDegrees = 420f,
+            CountByLevel = Array.AsReadOnly(new[] { 1, 2, 3, 3, 4 })
+        };
+        private static readonly ItemDef Dagger = new ItemDef
+        {
+            CatalogIndex = DaggerIndex, Id = "dagger", Name = "Dao găm", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Sweep,
+            BaseDamage = 14f, DamagePerLevel = 5f, BaseRange = 1.8f, BaseCooldown = 0.7f, Knockback = 0.2f,
+            RangePerLevel = 0.1f, ArcDegrees = 180f, BackArcLevel = 5
+        };
+        private static readonly ItemDef Crossbow = new ItemDef
+        {
+            CatalogIndex = CrossbowIndex, Id = "crossbow", Name = "Nỏ", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Thrust,
+            BaseDamage = 45f, DamagePerLevel = 15f, BaseRange = 9f, BaseCooldown = 2.6f, Knockback = 1f,
+            Width = 0.25f, CountByLevel = Array.AsReadOnly(new[] { 1, 1, 1, 2, 2 })
+        };
+
+        private static readonly ItemDef[] Evolutions =
+        {
+            Evolve(Sweep, 40, "storm-blade", "Kiếm bão", MightGauntletIndex),
+            Evolve(SpearThrust, 41, "dragon-lance", "Thương rồng", CritEyeIndex),
+            Evolve(OrbitAxe, 42, "axe-cyclone", "Lốc rìu", AreaCharmIndex),
+            Evolve(Hammer, 43, "thunder-hammer", "Búa sấm", HourglassIndex),
+            Evolve(Aura, 44, "holy-aura", "Hào quang thánh", IronHeartIndex),
+            Evolve(Shockwave, 45, "earthquake", "Động đất", BoneArmorIndex),
+            Evolve(MagicBolt, 46, "spell-storm", "Bão phép", HourglassIndex),
+            Evolve(FireOrb, 47, "solar-ring", "Vành mặt trời", AreaCharmIndex),
+            Evolve(FrostNova, 48, "ice-age", "Kỷ băng hà", BoneArmorIndex),
+            Evolve(HolyField, 49, "sanctuary", "Thánh địa", IronHeartIndex),
+            Evolve(Lightning, 50, "thunder-god", "Lôi thần", CritEyeIndex),
+            Evolve(ArcaneBeam, 51, "doom-ray", "Tia hủy diệt", MightGauntletIndex),
+            Evolve(Arrow, 52, "wind-arrow", "Tên gió", WindBootsIndex),
+            Evolve(MultiShot, 53, "arrow-fan", "Quạt tên", AreaCharmIndex),
+            Evolve(ArrowRain, 54, "sky-arrows", "Thiên tiễn", MagnetCharmIndex),
+            Evolve(OrbitKnife, 55, "blade-dance", "Vũ điệu dao", MightGauntletIndex),
+            Evolve(Dagger, 56, "twin-assassin", "Song đao ám sát", CritEyeIndex),
+            Evolve(Crossbow, 57, "siege-crossbow", "Nỏ công thành", BoneArmorIndex)
+        };
+
         public static ItemDef Get(int index)
         {
+            if (index >= FirstEvolutionIndex && index < FirstEvolutionIndex + EvolutionCount) return Evolutions[index - FirstEvolutionIndex];
             return index switch
             {
                 0 => Sweep,
@@ -153,9 +283,54 @@ namespace PersonalArena.Core.Survivor
                 11 => AreaCharm,
                 12 => WindBoots,
                 13 => MagnetCharm,
+                14 => MagicBolt,
+                15 => FireOrb,
+                16 => FrostNova,
+                17 => HolyField,
+                18 => Lightning,
+                19 => ArcaneBeam,
+                20 => Arrow,
+                21 => MultiShot,
+                22 => ArrowRain,
+                23 => OrbitKnife,
+                24 => Dagger,
+                25 => Crossbow,
                 62 => BonusGold,
                 63 => BonusHeal,
                 _ => null
+            };
+        }
+
+        /// <summary>Catalog index of the evolution of base weapon <paramref name="weapon"/>, or −1.</summary>
+        public static int EvolutionOf(int weapon)
+        {
+            for (int i = 0; i < Evolutions.Length; i++) if (Evolutions[i].EvolvesFrom == weapon) return Evolutions[i].CatalogIndex;
+            return -1;
+        }
+
+        /// <summary>
+        /// An evolution keeps the base weapon's pattern with its level-5 numbers improved: damage ×1.5,
+        /// range ×1.2, cooldown ×0.8, one more projectile, +1 pierce, longer orbit, faster hits.
+        /// It has a single level, so the level-scaling fields are folded in and zeroed.
+        /// </summary>
+        private static ItemDef Evolve(ItemDef b, int index, string id, string name, int passive)
+        {
+            int top = b.MaxLevel - 1;
+            int topCount = b.CountByLevel.Count == 0 ? 0 : b.CountByLevel[Math.Min(top, b.CountByLevel.Count - 1)];
+            return new ItemDef
+            {
+                CatalogIndex = index, Id = id, Name = name, Kind = ItemKind.Weapon, Pattern = b.Pattern, MaxLevel = 1,
+                BaseDamage = (b.BaseDamage + b.DamagePerLevel * top) * 1.5f,
+                BaseRange = b.BaseRange * (1f + b.RangePerLevel * top) * 1.2f,
+                BaseCooldown = (b.BaseCooldown + b.CooldownPerLevel * top) * 0.8f,
+                Knockback = b.Knockback * 1.2f,
+                ArcDegrees = b.ArcDegrees, BackArcLevel = b.BackArcLevel > 0 ? 1 : 0,
+                ProjectileSpeed = b.ProjectileSpeed, ProjectileRadius = b.ProjectileRadius * 1.2f,
+                ProjectileRange = b.ProjectileRange * 1.2f, Pierce = b.ProjectileSpeed > 0f ? b.Pierce + 1 : b.Pierce,
+                CountByLevel = topCount == 0 ? Array.Empty<int>() : Array.AsReadOnly(new[] { topCount + 1 }),
+                Duration = b.Duration * 1.25f, HitInterval = b.HitInterval * 0.8f,
+                AngularSpeedDegrees = b.AngularSpeedDegrees, Width = b.Width * 1.2f, StunSeconds = b.StunSeconds * 1.5f,
+                EvolvesFrom = b.CatalogIndex, EvolutionPassive = passive
             };
         }
 
@@ -221,7 +396,8 @@ namespace PersonalArena.Core.Survivor
         }
     }
 
-    public enum SurvivorAttackKind { Contact, Melee, Ranged }
+    /// <summary>Explode: winds up next to the hero, then blows up (area damage) and dies without drops.</summary>
+    public enum SurvivorAttackKind { Contact, Melee, Ranged, Explode }
 
     public sealed class SurvivorEnemyDef
     {
@@ -245,6 +421,13 @@ namespace PersonalArena.Core.Survivor
         public float ProjectileSpeed { get; init; }
         public float ProjectileRadius { get; init; }
         public float ProjectileRange { get; init; }
+        /// <summary>Explode: blast radius around the enemy.</summary>
+        public float ExplodeRadius { get; init; }
+        /// <summary>Moves through obstacles (still kept inside the map).</summary>
+        public bool IgnoresObstacles { get; init; }
+        /// <summary>Seconds between walker summons (0 = never; the boss uses the tuning instead).</summary>
+        public float SummonInterval { get; init; }
+        public int SummonCount { get; init; }
     }
 
     public sealed class SpawnPhase
@@ -293,15 +476,43 @@ namespace PersonalArena.Core.Survivor
                 Xp = 2, KnockbackResist = 0f, TurnSpeedDegPerSec = 360f
             },
             Enemy(4, "bone-lord", 6000f, 1.4f, 1.75f, 1000f, SurvivorAttackKind.Melee, 40f, 3.5f, 180f, 1.2f, 4.8f, 0, 1f, 180f, true),
-            null, null, null
+            new SurvivorEnemyDef
+            {
+                TypeIndex = ExploderTypeIndex, Id = "exploder", BaseHp = 25f, MoveSpeed = 2.8f, Radius = 0.45f, Mass = 1f,
+                AttackKind = SurvivorAttackKind.Explode, AttackDamage = 30f, AttackRange = 1f, AttackArcDegrees = 360f,
+                WindupSeconds = 0.6f, ExplodeRadius = 2.2f, Xp = 2, KnockbackResist = 0f, TurnSpeedDegPerSec = 360f
+            },
+            new SurvivorEnemyDef
+            {
+                TypeIndex = GhostTypeIndex, Id = "ghost", BaseHp = 12f, MoveSpeed = 3.6f, Radius = 0.35f, Mass = 0.5f,
+                AttackKind = SurvivorAttackKind.Contact, AttackDamage = 6f, Xp = 2, KnockbackResist = 0f,
+                TurnSpeedDegPerSec = 360f, IgnoresObstacles = true
+            },
+            new SurvivorEnemyDef
+            {
+                TypeIndex = NecromancerTypeIndex, Id = "necromancer", BaseHp = 60f, MoveSpeed = 2f, Radius = 0.5f, Mass = 1.5f,
+                AttackKind = SurvivorAttackKind.Ranged, AttackDamage = 8f, PreferredDistance = 9f,
+                AttackRange = 11f, AttackArcDegrees = 60f, WindupSeconds = 0.6f, RecoverSeconds = 3.5f,
+                ProjectileSpeed = 6f, ProjectileRadius = 0.3f, ProjectileRange = 13f,
+                Xp = 6, KnockbackResist = 0.3f, TurnSpeedDegPerSec = 240f, SummonInterval = 6f, SummonCount = 3
+            }
         };
 
+        public const int EnemyTypeCount = 8;
+        /// <summary>Elites are only drawn from the four basic types.</summary>
+        public const int EliteTypeCount = 4;
+        public const int ExploderTypeIndex = 5;
+        public const int GhostTypeIndex = 6;
+        public const int NecromancerTypeIndex = 7;
+
+        // New enemies only appear from 300 s, so the spawn sequence before that is unchanged.
         private static readonly SpawnPhase[] Phases =
         {
             Phase(0, 60, 1, 0, 0, 0, 30, 1), Phase(60, 180, 3, 1, 0, 0, 60, 2),
-            Phase(180, 300, 3, 2, 1, 0, 90, 3), Phase(300, 420, 2, 2, 1, 1, 120, 4),
-            Phase(420, 600, 2, 3, 1, 2, 160, 5), Phase(600, 720, 1, 3, 2, 2, 200, 6),
-            Phase(720, 900, 1, 3, 3, 3, 250, 8)
+            Phase(180, 300, 3, 2, 1, 0, 90, 3), Phase(300, 420, 2, 2, 1, 1, 120, 4, exploder: 1),
+            Phase(420, 600, 2, 3, 1, 2, 160, 5, exploder: 1, ghost: 1),
+            Phase(600, 720, 1, 3, 2, 2, 200, 6, exploder: 2, ghost: 1, necromancer: 1),
+            Phase(720, 900, 1, 3, 3, 3, 250, 8, exploder: 2, ghost: 2, necromancer: 1)
         };
 
         public static SurvivorClassDef Warrior()
@@ -319,6 +530,58 @@ namespace PersonalArena.Core.Survivor
                     new SkillDef { Id = "dash", Kind = SkillKind.Dash, Cooldown = 2.5f, EnergyCost = 15f, DashDistance = 3f, DashSpeed = 18f },
                     new SkillDef { Id = "none", Kind = SkillKind.None }
                 }
+            };
+        }
+
+        /// <summary>Fragile caster: less HP, more energy, a ranged weapon kit and four skills.</summary>
+        public static SurvivorClassDef Mage()
+        {
+            return new SurvivorClassDef
+            {
+                Id = "mage", MaxHp = 110f, Regen = 0.15f, Armor = 0f, MoveSpeed = 4.3f,
+                Acceleration = 30f, Radius = 0.45f, PickupRadius = 1.8f, CritChance = 0.05f,
+                CritDamage = 1.5f, MaxEnergy = 150f, EnergyRegen = 20f, Mass = 0.9f,
+                StartingWeapon = SurvivorCatalog.MagicBoltIndex, WeaponPool = new[] { 14, 15, 16, 17, 18, 19 },
+                PassivePool = new[] { 6, 7, 8, 9, 10, 11, 12, 13 },
+                ActiveSkills = new[]
+                {
+                    new SkillDef { Id = "fireball", Kind = SkillKind.Projectile, Damage = 40f, Range = 12f, ProjectileSpeed = 14f, ProjectileRadius = 0.4f, AreaRadius = 2f, Knockback = 1f, Cooldown = 3f, EnergyCost = 25f },
+                    new SkillDef { Id = "mana-shield", Kind = SkillKind.Block, EnergyCost = 15f, EnergyPerSecond = 25f, BlockMoveMultiplier = 0.7f, BlockDamageMultiplier = 0.4f, ParryWindowSeconds = 0.15f, StunSeconds = 1f, BlockStaggerSeconds = 0.4f, BlockPushback = 0.5f, BlockAllDirections = true },
+                    new SkillDef { Id = "blink", Kind = SkillKind.Teleport, Cooldown = 4f, EnergyCost = 20f, DashDistance = 4f },
+                    new SkillDef { Id = "frost-burst", Kind = SkillKind.AreaBurst, Damage = 15f, AreaRadius = 3f, StunSeconds = 1.5f, Knockback = 1.5f, Cooldown = 8f, EnergyCost = 40f }
+                }
+            };
+        }
+
+        /// <summary>Fast skirmisher: medium HP, higher crit, long-range weapons, a piercing shot and a back roll.</summary>
+        public static SurvivorClassDef Archer()
+        {
+            return new SurvivorClassDef
+            {
+                Id = "archer", MaxHp = 130f, Regen = 0.2f, Armor = 0f, MoveSpeed = 5f,
+                Acceleration = 34f, Radius = 0.45f, PickupRadius = 1.6f, CritChance = 0.08f,
+                CritDamage = 1.6f, MaxEnergy = 100f, EnergyRegen = 15f, Mass = 0.9f,
+                StartingWeapon = SurvivorCatalog.ArrowIndex, WeaponPool = new[] { 20, 21, 22, 23, 24, 25 },
+                PassivePool = new[] { 6, 7, 8, 9, 10, 11, 12, 13 },
+                ActiveSkills = new[]
+                {
+                    new SkillDef { Id = "power-shot", Kind = SkillKind.Projectile, Damage = 50f, Range = 14f, ProjectileSpeed = 22f, ProjectileRadius = 0.35f, Knockback = 2.5f, Pierce = true, Cooldown = 3.5f, EnergyCost = 20f },
+                    new SkillDef { Id = "roll-back", Kind = SkillKind.Dash, DashBackward = true, Cooldown = 2.5f, EnergyCost = 15f, DashDistance = 3.5f, DashSpeed = 18f },
+                    new SkillDef { Id = "kick", Kind = SkillKind.Kick, Damage = 10f, Range = 1.8f, ArcDegrees = 100f, StunSeconds = 1.2f, Knockback = 3f, Cooldown = 3f },
+                    new SkillDef { Id = "none", Kind = SkillKind.None }
+                }
+            };
+        }
+
+        /// <summary>Survivor kit for a class id (warrior, mage, archer), or null.</summary>
+        public static SurvivorClassDef ForClass(string classId)
+        {
+            return classId switch
+            {
+                "warrior" => Warrior(),
+                "mage" => Mage(),
+                "archer" => Archer(),
+                _ => null
             };
         }
 
@@ -348,7 +611,12 @@ namespace PersonalArena.Core.Survivor
                 TurnSpeedDegPerSec = turn, IsBoss = boss };
         }
 
-        private static SpawnPhase Phase(float from, float to, int w, int r, int b, int s, int max, float rate) =>
-            new SpawnPhase { From = from, To = to, Weights = Array.AsReadOnly(new[] { w, r, b, s }), MaxAlive = max, SpawnsPerSecond = rate };
+        private static SpawnPhase Phase(float from, float to, int w, int r, int b, int s, int max, float rate,
+            int exploder = 0, int ghost = 0, int necromancer = 0) =>
+            new SpawnPhase
+            {
+                From = from, To = to, MaxAlive = max, SpawnsPerSecond = rate,
+                Weights = Array.AsReadOnly(new[] { w, r, b, s, 0, exploder, ghost, necromancer })
+            };
     }
 }

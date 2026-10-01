@@ -23,6 +23,9 @@ namespace PersonalArena.Core.Survivor
         internal float BlockStarted;
         internal float DashRemaining;
         internal Vec2 DashDirection;
+        /// <summary>The block skill being held and the dash skill in progress (their slot's def).</summary>
+        internal SkillDef BlockSkill;
+        internal SkillDef DashSkill;
     }
 
     public sealed class SurvivorDerivedStats
@@ -84,6 +87,11 @@ namespace PersonalArena.Core.Survivor
         public float Knockback { get; internal set; }
         public float Lifetime { get; internal set; }
         public int PierceRemaining { get; internal set; }
+        /// <summary>Catalog index of the weapon that fired it, or −1 − slot for an active skill.</summary>
+        public int SourceIndex { get; internal set; }
+        /// <summary>When above 0 the first hit blows up: every enemy within this radius takes the damage.</summary>
+        public float ExplodeRadius { get; internal set; }
+        internal float StunSeconds;
         internal readonly int[] HitIds = new int[3];
         internal int HitCount;
     }
@@ -147,6 +155,17 @@ namespace PersonalArena.Core.Survivor
                 else if (def.Kind == ItemKind.Passive) passives[PassiveCount++] = index;
             }
             levels[index] = level;
+        }
+
+        /// <summary>Swaps an owned weapon for <paramref name="replacement"/> at level 1, keeping its slot.</summary>
+        internal void Replace(int owned, int replacement)
+        {
+            for (int i = 0; i < WeaponCount; i++)
+            {
+                if (weapons[i] != owned) continue;
+                weapons[i] = replacement; levels[owned] = 0; levels[replacement] = 1;
+                return;
+            }
         }
     }
 }

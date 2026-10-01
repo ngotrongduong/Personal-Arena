@@ -84,7 +84,7 @@ namespace PersonalArena.ML
                         return value;
                     }
 
-                    Debug.LogWarning($"--hero-class '{value}' has no Survivor kit yet (arrives in M7), training {fallback}.");
+                    Debug.LogWarning($"--hero-class '{value}' is not a known hero class, training {fallback}.");
                 }
             }
 

@@ -149,6 +149,7 @@ namespace PersonalArena.View
                 case DeathCause.Brute: return "trúng đòn Đồ tể";
                 case DeathCause.Contact: return "bị quái cào";
                 case DeathCause.Projectile: return "trúng đạn";
+                case DeathCause.Explosion: return "dính Bom xác nổ";
                 default: return string.Empty;
             }
         }

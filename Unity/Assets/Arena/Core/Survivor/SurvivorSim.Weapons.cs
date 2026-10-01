@@ -33,6 +33,16 @@ namespace PersonalArena.Core.Survivor
                     weaponCooldowns[index] = def.BaseCooldown * stats.CooldownMul;
                     AddEvent(SurvivorEventType.WeaponFired, extra: spearCount, id: index, point: thrustDirection);
                 }
+                else if (def.Pattern == WeaponPattern.Strike && StrikeTargets(def, level, out int strikeCount))
+                {
+                    weaponCooldowns[index] = def.BaseCooldown * stats.CooldownMul;
+                    AddEvent(SurvivorEventType.WeaponFired, extra: strikeCount, id: index);
+                }
+                else if (def.Pattern == WeaponPattern.Fan && FireFan(def, level, out Vec2 fanDirection))
+                {
+                    weaponCooldowns[index] = def.BaseCooldown * stats.CooldownMul;
+                    AddEvent(SurvivorEventType.WeaponFired, id: index, point: fanDirection);
+                }
                 else if (def.Pattern == WeaponPattern.Aura)
                 {
                     TickAura(def, level);
@@ -79,7 +89,8 @@ namespace PersonalArena.Core.Survivor
                 projectile.Velocity = direction * speed; projectile.Radius = def.ProjectileRadius * stats.AreaMul;
                 projectile.Damage = def.BaseDamage + def.DamagePerLevel * (level - 1);
                 projectile.Knockback = def.Knockback; projectile.Lifetime = speed > 0f ? def.ProjectileRange / speed : 0f;
-                projectile.PierceRemaining = def.Pierce;
+                projectile.PierceRemaining = def.Pierce; projectile.SourceIndex = def.CatalogIndex;
+                projectile.ExplodeRadius = 0f; projectile.StunSeconds = def.StunSeconds;
                 projectile.HitCount = 0; hammerTargetIds[fired] = target.Id; fired++;
             }
             return fired > 0;
@@ -158,11 +169,20 @@ namespace PersonalArena.Core.Survivor
                     }
                 }
                 if (found == 0) continue;
+                if (p.ExplodeRadius > 0f)
+                {
+                    p.Active = false;
+                    AddEvent(SurvivorEventType.StrikeLanded, p.ExplodeRadius, id: p.SourceIndex, point: p.Position);
+                    Blast(p.Position, p.ExplodeRadius, p.Damage, p.Knockback, p.StunSeconds);
+                    if (IsEnded) return;
+                    continue;
+                }
                 Vec2 pushDirection = p.Velocity.Normalized();
                 for (int n = 0; n < found; n++)
                 {
                     SurvivorEnemy e = enemies[enemyScratch[n]];
                     DamageEnemy(e, p.Damage, p.Knockback, pushDirection);
+                    if (p.StunSeconds > 0f) Stun(e, p.StunSeconds);
                     if (p.HitCount < p.HitIds.Length) p.HitIds[p.HitCount++] = e.Id;
                     if (p.PierceRemaining-- <= 0 || p.HitCount >= p.HitIds.Length) { p.Active = false; break; }
                 }

@@ -206,12 +206,13 @@ namespace PersonalArena.ML
 
         public static SurvivorClassDef CreateClass(string classId)
         {
-            if (!string.Equals(classId, ClassRegistry.WarriorId, StringComparison.OrdinalIgnoreCase))
+            SurvivorClassDef def = SurvivorDefaults.ForClass(classId?.ToLowerInvariant());
+            if (def == null)
             {
-                throw new ArgumentException($"Class '{classId}' has no Survivor kit yet (arrives in M7).", nameof(classId));
+                throw new ArgumentException($"Unknown hero class ID '{classId}'.", nameof(classId));
             }
 
-            return SurvivorDefaults.Warrior();
+            return def;
         }
 
         private static float Share(float value)

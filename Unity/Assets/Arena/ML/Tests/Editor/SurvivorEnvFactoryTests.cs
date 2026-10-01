@@ -252,10 +252,14 @@ namespace PersonalArena.ML.Tests
         }
 
         [Test]
-        public void OnlyWarriorHasASurvivorKit()
+        public void EveryClassHasASurvivorKit()
         {
             Assert.AreEqual("warrior", SurvivorEnvFactory.CreateClass("warrior").Id);
-            Assert.Throws<System.ArgumentException>(() => SurvivorEnvFactory.CreateClass("mage"));
+            Assert.AreEqual("mage", SurvivorEnvFactory.CreateClass("Mage").Id);
+            Assert.AreEqual("archer", SurvivorEnvFactory.CreateClass("archer").Id);
+            Assert.Throws<System.ArgumentException>(() => SurvivorEnvFactory.CreateClass("rogue"));
+            foreach (string id in ClassRegistry.ClassIds) Assert.IsTrue(ClassRegistry.HasSurvivorKit(id), id);
+            Assert.IsFalse(ClassRegistry.HasSurvivorKit("rogue"));
         }
     }
 }

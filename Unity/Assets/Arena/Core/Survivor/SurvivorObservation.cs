@@ -44,7 +44,7 @@ namespace PersonalArena.Core.Survivor
             if (buffer == null || buffer.Length < Size) throw new ArgumentException("Observation buffer is too small.", nameof(buffer));
             Array.Clear(buffer, 0, Size);
             WriteSelf(sim, buffer);
-            for (int i = 0; i < SurvivorCatalog.CatalogSize; i++) buffer[InventoryOffset + i] = sim.Inventory.Level(i) / 5f;
+            for (int i = 0; i < SurvivorCatalog.CatalogSize; i++) buffer[InventoryOffset + i] = InventoryValue(i, sim.Inventory.Level(i));
             WriteOffers(sim, buffer);
             Array.Clear(densityEnemyCount, 0, densityEnemyCount.Length); Array.Clear(densityGemXp, 0, densityGemXp.Length); Array.Clear(densityApproach, 0, densityApproach.Length);
             WriteRays(sim, buffer);
@@ -210,6 +210,15 @@ namespace PersonalArena.Core.Survivor
         {
             if (pickup.Kind != PickupKind.Gem) return; Vec2 delta = pickup.Position - origin; int ring = RingSquared(delta.LengthSquared);
             if (ring >= 0) densityGemXp[ring * 8 + Sector(delta.Angle())] += pickup.Value;
+        }
+
+        /// <summary>Owned level over the item's max level (M7: an evolution has max level 1, so owning it reads 1).</summary>
+        private static float InventoryValue(int index, int level)
+        {
+            if (level <= 0) return 0f;
+            ItemDef def = SurvivorCatalog.Get(index);
+            int max = def == null || def.MaxLevel <= 0 ? 5 : def.MaxLevel;
+            return (float)level / max;
         }
 
         private static int Ring(float distance) => distance < 5f ? 0 : distance < 12f ? 1 : distance < 30f ? 2 : -1;

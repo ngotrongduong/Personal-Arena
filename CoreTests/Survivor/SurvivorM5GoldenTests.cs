@@ -11,7 +11,8 @@ namespace PersonalArena.Core.Tests.Survivor
     public sealed class SurvivorM5GoldenTests
     {
         private const long ScriptedGolden = -1118288171824513550L;
-        private const long InvulnerableGolden = 7534749380105573185L;
+        private const long InvulnerableFirst300Golden = -9118142893328684146L;
+        private const long InvulnerableGolden = -2939688974014092448L;
         private const long EvaluatorGolden = -3686507806682452368L;
 
         [Test]
@@ -27,17 +28,33 @@ namespace PersonalArena.Core.Tests.Survivor
             Assert.That(hash, Is.EqualTo(ScriptedGolden), "end " + sim.EndReason + " at " + sim.Time);
         }
 
+        /// <summary>
+        /// M7 adds enemies from minute 5 on, so the pre-M5 behaviour is pinned up to 300 s (checked tick by tick
+        /// against the pre-M7 code); the full run is pinned by a golden recorded on M7 (T-030).
+        /// </summary>
         [Test]
-        public void Tier1_InvulnerableFullRun_MatchesPreM5Golden()
+        public void Tier1_InvulnerableRun_First300Seconds_MatchesPreM5Golden()
         {
-            SurvivorSim sim = new SurvivorSim(new SurvivorConfig(), 2024); sim.SetHeroInvulnerableForTests();
+            Assert.That(InvulnerableHash(300f, out SurvivorSim sim), Is.EqualTo(InvulnerableFirst300Golden), "at " + sim.Time);
+        }
+
+        [Test]
+        public void Tier1_InvulnerableFullRun_MatchesM7Golden()
+        {
+            long hash = InvulnerableHash(float.PositiveInfinity, out SurvivorSim sim);
+            Assert.That(hash, Is.EqualTo(InvulnerableGolden), "end " + sim.EndReason + " at " + sim.Time + " gold " + sim.Gold);
+        }
+
+        private static long InvulnerableHash(float untilSeconds, out SurvivorSim sim)
+        {
+            sim = new SurvivorSim(new SurvivorConfig(), 2024); sim.SetHeroInvulnerableForTests();
             long hash = 17;
-            for (int tick = 0; tick < 62000 && !sim.IsEnded; tick++)
+            for (int tick = 0; tick < 62000 && !sim.IsEnded && sim.Time < untilSeconds; tick++)
             {
                 SurvivorInput input = sim.IsAwaitingPick ? new SurvivorInput(0, 0, 1 + tick % 3) : new SurvivorInput((tick / 45) % 9, (tick / 200) % 4, 0);
                 sim.Step(input); hash = hash * 31 + StateHash(sim);
             }
-            Assert.That(hash, Is.EqualTo(InvulnerableGolden), "end " + sim.EndReason + " at " + sim.Time + " gold " + sim.Gold);
+            return hash;
         }
 
         [Test]

@@ -352,8 +352,33 @@ namespace PersonalArena.Core.Meta
             }
         }
 
-        /// <summary>Only the Warrior is playable in M5; the UI shows the others as "sắp có".</summary>
-        public static bool IsClassPlayable(string classId) => classId == WarriorId;
+        /// <summary>Every known class has a Survivor kit since M7.</summary>
+        public static bool IsClassPlayable(string classId) => ClassPrice(classId) >= 0;
+
+        public static bool OwnsClass(PlayerProfile p, string classId) => FindCharacter(p, classId) != null;
+
+        /// <summary>
+        /// Buys a class with gold: takes the price from the wallet and adds a fresh level-0 character whose
+        /// brain run is "&lt;class&gt;-s001". Fails (no change) for an unknown or already owned class or when gold is short.
+        /// </summary>
+        public static bool TryBuyClass(PlayerProfile p, string classId)
+        {
+            if (p == null || !IsClassPlayable(classId) || OwnsClass(p, classId)) return false;
+            long price = ClassPrice(classId);
+            if (p.Gold < price) return false;
+            if (p.Characters == null) p.Characters = new List<CharacterProfile>();
+            p.Gold -= price;
+            p.Characters.Add(NewCharacter(classId));
+            return true;
+        }
+
+        /// <summary>Makes an owned class the selected one (the watched and trained hero).</summary>
+        public static bool TrySelectClass(PlayerProfile p, string classId)
+        {
+            if (p == null || !OwnsClass(p, classId)) return false;
+            p.SelectedClassId = classId;
+            return true;
+        }
 
         private static Loadout NewLoadout(int index) => new Loadout { Name = DefaultLoadoutName(index), Points = new int[StatInfo.SlotCount], Record = new LoadoutRecord() };
 

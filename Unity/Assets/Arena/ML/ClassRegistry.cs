@@ -13,16 +13,16 @@ namespace PersonalArena.ML
         /// <summary>Every playable class ID in HUD/selection order.</summary>
         public static readonly string[] ClassIds = { WarriorId, MageId, ArcherId };
 
-        /// <summary>Survivor kit for a class; only the warrior has one until M7.</summary>
+        /// <summary>Survivor kit for a class (M7: every class has its own weapons and skills).</summary>
         public static SurvivorClassDef Create(string classId)
         {
             return SurvivorEnvFactory.CreateClass(Normalize(classId));
         }
 
-        /// <summary>True when the class can already be trained in Survivor mode.</summary>
+        /// <summary>True when the class can be trained in Survivor mode.</summary>
         public static bool HasSurvivorKit(string classId)
         {
-            return string.Equals(classId, WarriorId, StringComparison.OrdinalIgnoreCase);
+            return IsKnown(classId);
         }
 
         public static string BehaviorName(string classId)

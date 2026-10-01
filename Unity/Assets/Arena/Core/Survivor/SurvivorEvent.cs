@@ -8,7 +8,15 @@ namespace PersonalArena.Core.Survivor
         HeroDamaged, HeroDied, Blocked, Parry, SkillUsed, SkillFailed,
         XpCollected, GoldCollected, Healed, LevelUp, OfferShown, ItemPicked,
         WeaponFired, EnemySpawned, EliteSpawned, BossSpawned, RunWon,
-        RunTimeUp, RunExpired, MagnetPicked, ChestOpened
+        RunTimeUp, RunExpired, MagnetPicked, ChestOpened,
+        /// <summary>Id = evolution catalog index, Extra = replaced weapon index.</summary>
+        WeaponEvolved,
+        /// <summary>An exploder blew up at Point; Value = blast radius.</summary>
+        EnemyExploded,
+        /// <summary>A summoner raised walkers at Point; Value = how many.</summary>
+        EnemySummoned,
+        /// <summary>A Strike weapon or skill blast hit the ground at Point; Value = radius, Id = source index.</summary>
+        StrikeLanded
     }
 
     public readonly struct SurvivorEvent
@@ -23,6 +31,6 @@ namespace PersonalArena.Core.Survivor
     }
 
     public enum EndReason { None, Died, Won, TimeUp, Expired }
-    public enum DeathCause { None, Surrounded, Boss, Brute, Contact, Projectile }
+    public enum DeathCause { None, Surrounded, Boss, Brute, Contact, Projectile, Explosion }
     public enum PickupKind { None, Gem, Gold, Meat, Chest, Magnet }
 }

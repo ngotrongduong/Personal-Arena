@@ -13,8 +13,6 @@ namespace PersonalArena.Core.Survivor
         public const int PickupCapacity = 600;
         public const int GemCapacity = 400;
         public const int ObstacleCapacity = 64;
-        private const int BlockSlot = 1;
-        private const int DashSlot = 2;
         private const int BossTypeIndex = 4;
         private const int BruteTypeIndex = 2;
         private const int RunnerTypeIndex = 1;
@@ -166,7 +164,7 @@ namespace PersonalArena.Core.Survivor
             Hero.Position = Vec2.Zero; Hero.Velocity = Vec2.Zero; Hero.Facing = 0f;
             Hero.MaxEnergy = Config.ClassDef.MaxEnergy; Hero.Energy = Hero.MaxEnergy;
             Hero.Radius = Config.ClassDef.Radius; Hero.Alive = true; Hero.Blocking = false;
-            Hero.Dashing = false; Hero.StunRemaining = 0f;
+            Hero.Dashing = false; Hero.StunRemaining = 0f; Hero.BlockSkill = null; Hero.DashSkill = null;
             Array.Clear(Hero.SkillCooldowns, 0, Hero.SkillCooldowns.Length);
             RecomputeStats(false); Hero.Hp = Hero.MaxHp;
             events.Clear();
@@ -216,7 +214,7 @@ namespace PersonalArena.Core.Survivor
             for (int i = 0; i < Hero.SkillCooldowns.Length; i++) Hero.SkillCooldowns[i] = MathF.Max(0f, Hero.SkillCooldowns[i] - FixedDeltaTime);
             for (int i = 0; i < weaponCooldowns.Length; i++)
             {
-                if (i == SurvivorCatalog.OrbitAxeIndex && OrbitAxeCount > 0) continue;
+                if (i == orbitWeaponIndex && OrbitAxeCount > 0) continue;
                 weaponCooldowns[i] = MathF.Max(0f, weaponCooldowns[i] - FixedDeltaTime);
             }
             Hero.StunRemaining = MathF.Max(0f, Hero.StunRemaining - FixedDeltaTime);
@@ -242,7 +240,7 @@ namespace PersonalArena.Core.Survivor
                 if (!Hero.Blocking)
                 {
                     Hero.Energy -= skill.EnergyCost;
-                    Hero.BlockStarted = Time;
+                    Hero.BlockStarted = Time; Hero.BlockSkill = skill;
                     SkillUses[slot]++;
                     AddEvent(SurvivorEventType.SkillUsed, slot);
                 }
@@ -259,10 +257,13 @@ namespace PersonalArena.Core.Survivor
             if (skill.Kind == SkillKind.Kick) hits = Kick(skill);
             else if (skill.Kind == SkillKind.Dash)
             {
-                Vec2 direction = MoveDirection(input.Move);
+                Vec2 direction = skill.DashBackward ? Vec2.FromAngle(Hero.Facing + MathF.PI) : MoveDirection(input.Move);
                 if (direction.LengthSquared < 0.01f) direction = Vec2.FromAngle(Hero.Facing);
-                Hero.Dashing = true; Hero.DashDirection = direction; Hero.DashRemaining = skill.DashDistance;
+                Hero.Dashing = true; Hero.DashDirection = direction; Hero.DashRemaining = skill.DashDistance; Hero.DashSkill = skill;
             }
+            else if (skill.Kind == SkillKind.Projectile) FireSkillProjectile(slot, skill);
+            else if (skill.Kind == SkillKind.AreaBurst) hits = AreaBurst(skill);
+            else if (skill.Kind == SkillKind.Teleport) Teleport(skill, input.Move);
             AddEvent(SurvivorEventType.SkillUsed, slot, hits);
         }
 
@@ -276,15 +277,14 @@ namespace PersonalArena.Core.Survivor
             Vec2 old = Hero.Position;
             if (Hero.Dashing)
             {
-                SkillDef dash = Config.ClassDef.ActiveSkills[DashSlot];
-                float distance = MathF.Min(Hero.DashRemaining, dash.DashSpeed * FixedDeltaTime);
+                float distance = MathF.Min(Hero.DashRemaining, Hero.DashSkill.DashSpeed * FixedDeltaTime);
                 Hero.Position += Hero.DashDirection * distance;
                 Hero.DashRemaining -= distance;
                 if (Hero.DashRemaining <= 0.0001f) Hero.Dashing = false;
             }
             else
             {
-                Vec2 target = MoveDirection(move) * stats.MoveSpeed * (Hero.Blocking ? Config.ClassDef.ActiveSkills[BlockSlot].BlockMoveMultiplier : 1f);
+                Vec2 target = MoveDirection(move) * stats.MoveSpeed * (Hero.Blocking && Hero.BlockSkill != null ? Hero.BlockSkill.BlockMoveMultiplier : 1f);
                 Vec2 delta = target - Hero.Velocity;
                 float maxChange = Config.ClassDef.Acceleration * FixedDeltaTime;
                 if (delta.Length > maxChange) delta = delta.Normalized() * maxChange;

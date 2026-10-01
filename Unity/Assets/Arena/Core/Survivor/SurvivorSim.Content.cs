@@ -17,18 +17,36 @@ namespace PersonalArena.Core.Survivor
         private float shockwaveMaxRadius;
         private Vec2 shockwaveCenter;
         private readonly Vec2[] orbitAxePositions = new Vec2[8];
+        /// <summary>Catalog index of the orbit weapon of the current volley (its cooldown waits while it spins).</summary>
+        private int orbitWeaponIndex = -1;
 
         public int OrbitAxeCount => orbitAxeCount;
         public float OrbitAxeRadius => orbitAxeCount > 0 ? orbitAxeRadius : 0f;
+        /// <summary>Catalog index of the spinning orbit weapon, or −1.</summary>
+        public int OrbitWeaponIndex => orbitAxeCount > 0 ? orbitWeaponIndex : -1;
+        /// <summary>Catalog index of the owned aura weapon, or −1.</summary>
+        public int AuraWeaponIndex => OwnedWeaponWithPattern(WeaponPattern.Aura);
+        /// <summary>Catalog index of the owned shockwave weapon, or −1.</summary>
+        public int ShockwaveWeaponIndex => OwnedWeaponWithPattern(WeaponPattern.Shockwave);
         public float AuraRadius
         {
             get
             {
-                int level = inventory.Level(SurvivorCatalog.AuraIndex);
-                if (level <= 0) return 0f;
-                ItemDef def = SurvivorCatalog.Get(SurvivorCatalog.AuraIndex);
-                return def.BaseRange * (1f + def.RangePerLevel * (level - 1)) * stats.AreaMul;
+                int index = AuraWeaponIndex;
+                if (index < 0) return 0f;
+                ItemDef def = SurvivorCatalog.Get(index);
+                return def.BaseRange * (1f + def.RangePerLevel * (inventory.Level(index) - 1)) * stats.AreaMul;
             }
+        }
+
+        private int OwnedWeaponWithPattern(WeaponPattern pattern)
+        {
+            for (int i = 0; i < inventory.WeaponCount; i++)
+            {
+                int index = inventory.WeaponAt(i);
+                if (SurvivorCatalog.Get(index).Pattern == pattern) return index;
+            }
+            return -1;
         }
         public float ShockwaveRadius => shockwaveActive ? shockwaveRadius : 0f;
         public Vec2 ShockwaveCenter => shockwaveCenter;
@@ -42,7 +60,7 @@ namespace PersonalArena.Core.Survivor
 
         private void ResetContentState()
         {
-            orbitAxeCount = 0; orbitAngle = 0f; orbitRemaining = 0f; orbitRadius = 0f; orbitAxeRadius = 0f;
+            orbitAxeCount = 0; orbitAngle = 0f; orbitRemaining = 0f; orbitRadius = 0f; orbitAxeRadius = 0f; orbitWeaponIndex = -1;
             shockwaveActive = false; shockwaveId = 0; shockwaveRadius = 0f; shockwaveMaxRadius = 0f; shockwaveCenter = Vec2.Zero;
         }
 
@@ -81,13 +99,15 @@ namespace PersonalArena.Core.Survivor
             if (orbitAxeCount == 0)
             {
                 if (weaponCooldowns[def.CatalogIndex] > 0f) return;
-                orbitAxeCount = CountAtLevel(def.CountByLevel, level);
+                orbitAxeCount = Math.Min(CountAtLevel(def.CountByLevel, level), orbitAxePositions.Length);
+                orbitWeaponIndex = def.CatalogIndex;
                 orbitAngle = Hero.Facing; orbitRemaining = def.Duration;
                 orbitRadius = def.BaseRange * stats.AreaMul; orbitAxeRadius = def.ProjectileRadius * stats.AreaMul;
                 AddEvent(SurvivorEventType.WeaponFired, extra: orbitAxeCount, id: def.CatalogIndex);
                 ApplyOrbitHits(def, level);
                 return;
             }
+            orbitWeaponIndex = def.CatalogIndex; // a chest may evolve the weapon mid-spin
             orbitAngle = WrapAngle(orbitAngle + def.AngularSpeedDegrees * MathF.PI / 180f * FixedDeltaTime);
             orbitRemaining -= FixedDeltaTime;
             if (orbitRemaining <= 0f)
@@ -153,8 +173,123 @@ namespace PersonalArena.Core.Survivor
                 if ((enemy.Position - shockwaveCenter).LengthSquared > reach * reach) continue;
                 enemy.LastShockwaveId = shockwaveId;
                 DamageEnemy(enemy, damage, def.Knockback, AwayFromPoint(enemy.Position, shockwaveCenter));
+                if (def.StunSeconds > 0f) Stun(enemy, def.StunSeconds);
             }
             if (shockwaveRadius >= shockwaveMaxRadius) shockwaveActive = false;
+        }
+
+        /// <summary>Strike: <c>count</c> random enemies in range each get a blast of radius Width × area.</summary>
+        private bool StrikeTargets(ItemDef def, int level, out int count)
+        {
+            count = Math.Min(CountAtLevel(def.CountByLevel, level), hammerTargetIds.Length);
+            float damage = def.BaseDamage + def.DamagePerLevel * (level - 1);
+            float radius = def.Width * stats.AreaMul;
+            int fired = 0;
+            for (int strike = 0; strike < count && !IsEnded; strike++)
+            {
+                SurvivorEnemy target = RandomTarget(fired, def.BaseRange);
+                if (target == null) break;
+                hammerTargetIds[fired++] = target.Id;
+                Blast(target.Position, radius, damage, def.Knockback, def.StunSeconds);
+                AddEvent(SurvivorEventType.StrikeLanded, radius, id: def.CatalogIndex, point: target.Position);
+            }
+            count = fired;
+            return fired > 0;
+        }
+
+        /// <summary>Fan: <c>count</c> projectiles spread over ArcDegrees, centred on the nearest enemy in range.</summary>
+        private bool FireFan(ItemDef def, int level, out Vec2 aim)
+        {
+            aim = Vec2.Zero;
+            SurvivorEnemy target = NearestEnemy(def.BaseRange);
+            if (target == null) return false;
+            aim = (target.Position - Hero.Position).Normalized();
+            if (aim.LengthSquared < 1e-8f) aim = Vec2.FromAngle(Hero.Facing);
+            int count = CountAtLevel(def.CountByLevel, level);
+            float step = count > 1 ? def.ArcDegrees * MathF.PI / 180f / (count - 1) : 0f;
+            float damage = def.BaseDamage + def.DamagePerLevel * (level - 1);
+            for (int k = 0; k < count; k++)
+            {
+                Vec2 direction = Rotate(aim, (k - (count - 1) * 0.5f) * step);
+                if (!LaunchProjectile(def.CatalogIndex, direction, def.ProjectileSpeed, def.ProjectileRadius * stats.AreaMul,
+                    damage, def.Knockback, def.ProjectileRange, def.Pierce, 0f, 0f)) break;
+            }
+            return true;
+        }
+
+        private SurvivorEnemy NearestEnemy(float range)
+        {
+            SurvivorEnemy target = null; float nearest = float.PositiveInfinity;
+            for (int i = 0; i < enemyLimit; i++)
+            {
+                SurvivorEnemy enemy = enemies[i]; if (!enemy.Active) continue;
+                float distanceSquared = (enemy.Position - Hero.Position).LengthSquared;
+                float reach = range + enemy.Radius;
+                if (distanceSquared <= reach * reach && distanceSquared < nearest) { nearest = distanceSquared; target = enemy; }
+            }
+            return target;
+        }
+
+        private bool LaunchProjectile(int source, Vec2 direction, float speed, float radius, float damage, float knockback,
+            float range, int pierce, float explodeRadius, float stun)
+        {
+            SurvivorProjectile projectile = NewProjectile();
+            if (projectile == null) return false;
+            projectile.Active = true; projectile.Id = nextProjectileId++; projectile.Position = Hero.Position;
+            projectile.Velocity = direction * speed; projectile.Radius = radius; projectile.Damage = damage;
+            projectile.Knockback = knockback; projectile.Lifetime = speed > 0f ? range / speed : 0f;
+            projectile.PierceRemaining = pierce; projectile.HitCount = 0; projectile.SourceIndex = source;
+            projectile.ExplodeRadius = explodeRadius; projectile.StunSeconds = stun;
+            return true;
+        }
+
+        /// <summary>Damages every enemy within <paramref name="radius"/> of <paramref name="center"/>; returns the number hit.</summary>
+        private int Blast(Vec2 center, float radius, float damage, float knockback, float stun)
+        {
+            int hits = 0;
+            for (int i = 0; i < enemyLimit && !IsEnded; i++)
+            {
+                SurvivorEnemy enemy = enemies[i]; if (!enemy.Active) continue;
+                float reach = radius + enemy.Radius;
+                if ((enemy.Position - center).LengthSquared > reach * reach) continue;
+                DamageEnemy(enemy, damage, knockback, AwayFromPoint(enemy.Position, center));
+                if (stun > 0f) Stun(enemy, stun);
+                hits++;
+            }
+            return hits;
+        }
+
+        private static void Stun(SurvivorEnemy enemy, float seconds)
+        {
+            if (enemy.Active && !enemy.IsBoss) enemy.StunRemaining = MathF.Max(enemy.StunRemaining, seconds);
+        }
+
+        /// <summary>Skill projectile: aims at the nearest enemy within Range, else along the facing.</summary>
+        private void FireSkillProjectile(int slot, SkillDef skill)
+        {
+            SurvivorEnemy target = NearestEnemy(skill.Range);
+            Vec2 direction = target != null ? (target.Position - Hero.Position).Normalized() : Vec2.FromAngle(Hero.Facing);
+            if (direction.LengthSquared < 1e-8f) direction = Vec2.FromAngle(Hero.Facing);
+            int pierce = skill.Pierce ? 2 : 0;
+            LaunchProjectile(-1 - slot, direction, skill.ProjectileSpeed, skill.ProjectileRadius * stats.AreaMul, skill.Damage,
+                skill.Knockback, skill.Range * 1.2f, pierce, skill.AreaRadius * stats.AreaMul, skill.StunSeconds);
+        }
+
+        private int AreaBurst(SkillDef skill)
+        {
+            float radius = skill.AreaRadius * stats.AreaMul;
+            AddEvent(SurvivorEventType.StrikeLanded, radius, id: -1, point: Hero.Position);
+            return Blast(Hero.Position, radius, skill.Damage, skill.Knockback, skill.StunSeconds);
+        }
+
+        /// <summary>Jumps DashDistance along the move direction (else the facing), then leaves walls and obstacles.</summary>
+        private void Teleport(SkillDef skill, int move)
+        {
+            Vec2 direction = MoveDirection(move);
+            if (direction.LengthSquared < 0.01f) direction = Vec2.FromAngle(Hero.Facing);
+            Vec2 point = Hero.Position + direction * skill.DashDistance;
+            ClampAndPushOut(ref point, Hero.Radius);
+            Hero.Position = point;
         }
 
         private bool HasEnemyInRange(float range)
