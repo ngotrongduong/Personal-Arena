@@ -43,9 +43,8 @@ namespace PersonalArena.Core.Survivor
             }
             SpawnPhase phase = SurvivorDefaults.PhaseAt(Time);
             if (phase == null) return;
-            float scale = 1f + tuning.SpawnPerTier * (Config.Build.Tier - 1);
-            if (Has(TierModifier.DenserSpawns)) scale *= tuning.DenserSpawnsMul;
-            int max = Math.Min(EnemyCapacity - tuning.SummonReserve, (int)MathF.Floor(phase.MaxAlive * scale));
+            float scale = SpawnScale();
+            int max = NormalAliveCap(phase, scale);
             spawnAccumulator += phase.SpawnsPerSecond * scale * FixedDeltaTime;
             while (spawnAccumulator >= 1f)
             {
@@ -54,6 +53,21 @@ namespace PersonalArena.Core.Survivor
                 int type = WeightedType(phase);
                 if (TrySpawnPoint(tuning.SpawnAttempts, false, SpawnRadius(type, false), out Vec2 point)) SpawnEnemy(type, point, false, false);
             }
+        }
+
+        private float SpawnScale()
+        {
+            SurvivorTuning tuning = Config.Tuning;
+            float scale = 1f + tuning.SpawnPerTier * (Config.Build.Tier - 1);
+            if (Has(TierModifier.DenserSpawns)) scale *= tuning.DenserSpawnsMul;
+            return scale;
+        }
+
+        /// <summary>Most normal (non-boss) enemies alive at once: the phase cap, never eating the boss summon reserve.</summary>
+        private int NormalAliveCap(SpawnPhase phase, float scale)
+        {
+            int poolCap = EnemyCapacity - Config.Tuning.SummonReserve;
+            return phase == null ? poolCap : Math.Min(poolCap, (int)MathF.Floor(phase.MaxAlive * scale));
         }
 
         private int WeightedType(SpawnPhase phase)
@@ -243,9 +257,15 @@ namespace PersonalArena.Core.Survivor
                     e.SummonCooldown -= FixedDeltaTime;
                     if (e.SummonCooldown <= 0f)
                     {
-                        SummonWalkers(e, def.SummonCount, SummonerRingRadius);
+                        // Summons obey the phase cap and leave the boss reserve free.
+                        int room = NormalAliveCap(SurvivorDefaults.PhaseAt(MathF.Min(Time, tuning.BossSpawnSeconds - 0.1f)), SpawnScale()) - aliveNormalCount;
+                        int count = Math.Min(def.SummonCount, room);
+                        if (count > 0)
+                        {
+                            SummonWalkers(e, count, SummonerRingRadius);
+                            AddEvent(SurvivorEventType.EnemySummoned, count, id: e.Id, point: e.Position);
+                        }
                         e.SummonCooldown += def.SummonInterval;
-                        AddEvent(SurvivorEventType.EnemySummoned, def.SummonCount, id: e.Id, point: e.Position);
                     }
                 }
                 if (!e.Active) continue;

@@ -188,6 +188,7 @@ namespace PersonalArena.Core.Survivor
             LastStepSeconds = FixedDeltaTime;
             CaptureEnemyPositions();
             Vec2 heroStart = Hero.Position;
+            teleportShift = Vec2.Zero;
             LastMove = input.Move >= 0 && input.Move < SurvivorInput.MoveBranchSize ? input.Move : 0;
             Time += FixedDeltaTime;
             TickCooldowns();
@@ -201,7 +202,7 @@ namespace PersonalArena.Core.Survivor
             if (!IsEnded) UpdateEnemyProjectiles();
             if (!IsEnded) ResolveBodyCollisions();
             FinalizeEnemyVelocities();
-            Hero.Velocity = (Hero.Position - heroStart) / FixedDeltaTime;
+            Hero.Velocity = (Hero.Position - heroStart - teleportShift) / FixedDeltaTime;
             if (IsEnded) return;
             UpdatePickups();
             Regenerate();

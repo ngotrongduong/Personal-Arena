@@ -177,6 +177,19 @@ namespace PersonalArena.Core.Tests.Survivor
         }
 
         [Test]
+        public void MageBlink_IsNotCountedAsVelocity_TheHeroStopsAtTheBlinkPoint()
+        {
+            SurvivorSim sim = ClassSim(SurvivorDefaults.Mage(), 9);
+            sim.Step(new SurvivorInput(1, 3, 0));
+            Vec2 landed = sim.Hero.Position;
+            float walk = SurvivorDefaults.Mage().MoveSpeed * 1.5f;
+            Assert.That(sim.Hero.Velocity.Length, Is.LessThanOrEqualTo(walk));
+            for (int tick = 0; tick < 30; tick++) sim.Step(default);
+            Assert.That(sim.Hero.Velocity.Length, Is.LessThanOrEqualTo(walk));
+            Assert.That(Vec2.Distance(sim.Hero.Position, landed), Is.LessThan(0.5f), "no slide after the blink");
+        }
+
+        [Test]
         public void MageBlink_StaysInsideTheMap()
         {
             SurvivorSim sim = ClassSim(SurvivorDefaults.Mage(), 10);
@@ -269,6 +282,22 @@ namespace PersonalArena.Core.Tests.Survivor
             }
             Assert.That(times.Count, Is.EqualTo(2));
             Assert.That(times[0], Is.EqualTo(6f).Within(0.05f)); Assert.That(times[1], Is.EqualTo(12f).Within(0.05f));
+        }
+
+        [Test]
+        public void Necromancer_SummonsNothingWhenTheEnemyCapIsReached_LeavingTheBossReserveFree()
+        {
+            SurvivorSim sim = ClassSim(SurvivorDefaults.Warrior(), 17); sim.SetHeroInvulnerableForTests(); sim.SetEnemiesInvulnerableForTests();
+            sim.SetWeaponCooldownForTests(0, 1000f);
+            int poolCap = SurvivorSim.EnemyCapacity - new SurvivorTuning().SummonReserve;
+            for (int i = 0; sim.AliveEnemyCount < poolCap; i++)
+                sim.SpawnEnemyForTests(SurvivorDefaults.NecromancerTypeIndex, Vec2.FromAngle(i * 0.37f) * (10f + i % 8));
+            for (int tick = 0; tick < 420 && !sim.IsEnded; tick++)
+            {
+                sim.Step(sim.IsAwaitingPick ? new SurvivorInput(0, 0, 1) : default);
+                for (int i = 0; i < sim.Events.Count; i++) Assert.That(sim.Events[i].Type, Is.Not.EqualTo(SurvivorEventType.EnemySummoned));
+                Assert.That(sim.AliveEnemyCount, Is.LessThanOrEqualTo(poolCap));
+            }
         }
 
         [Test]

@@ -113,7 +113,8 @@ namespace PersonalArena.Core.Meta
             }
             if (FindCharacter(p, WarriorId) == null) { p.Characters.Insert(0, NewCharacter(WarriorId)); changed = true; }
             for (int i = 0; i < p.Characters.Count; i++) changed |= SanitizeCharacter(p.Characters[i]);
-            if (string.IsNullOrEmpty(p.SelectedClassId) || FindCharacter(p, p.SelectedClassId) == null) { p.SelectedClassId = WarriorId; changed = true; }
+            // Unknown classes (hand-edited profile) are kept but can never be the selected hero.
+            if (string.IsNullOrEmpty(p.SelectedClassId) || FindCharacter(p, p.SelectedClassId) == null || !IsClassPlayable(p.SelectedClassId)) { p.SelectedClassId = WarriorId; changed = true; }
 
             if (p.Stats == null) { p.Stats = new ProfileStats(); changed = true; }
             ProfileStats s = p.Stats;
@@ -375,7 +376,7 @@ namespace PersonalArena.Core.Meta
         /// <summary>Makes an owned class the selected one (the watched and trained hero).</summary>
         public static bool TrySelectClass(PlayerProfile p, string classId)
         {
-            if (p == null || !OwnsClass(p, classId)) return false;
+            if (p == null || !IsClassPlayable(classId) || !OwnsClass(p, classId)) return false;
             p.SelectedClassId = classId;
             return true;
         }
