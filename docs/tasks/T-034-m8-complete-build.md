@@ -81,6 +81,11 @@ Done on `task/t034-m8-build` (2026-10-01).
     champion stayed level 1 in 5 of 30 seeds, because it kills far from its gems. The smoke runs are now
     120 s; at 120 s the Archer champion never stayed level 1 (0 of 50 seeds). The build script now puts
     `mage.brain` / `archer.brain` (each class's champion) next to `-brain`.
+  - Closing the window mid-test used to exit with no report. It now writes a failing report that names the
+    stage ("the viewer quit in stage ..."). The exit code is still 0 when the window is closed, so read the
+    report's `passed` field.
+  - Final build v0.8.109: **passed**. Warrior 2 offers, Mage 3, Archer 2. Panels C/F/V/L/G/P/O ok, farm
+    +497 gold, 187 s.
 - **Launcher:** `Trainer/watch_ai.ps1` shows a Vietnamese message with the `Player.log` path and waits for
   Enter when the viewer exits with an error within 15 s of starting.
 - **Tests:** CoreTests 236 passed; EditMode 289 passed (16 new: `ViewerSettingsTests`, `SmokeTestReportTests`).
