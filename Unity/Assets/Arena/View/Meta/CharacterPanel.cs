@@ -356,7 +356,12 @@ namespace PersonalArena.View
         {
             if (store != null && ProfileRules.TryBuyClass(store.Profile, classId))
             {
+                UiSounds.Purchase();
                 Commit();
+            }
+            else
+            {
+                UiSounds.Refused();
             }
         }
 
@@ -372,7 +377,12 @@ namespace PersonalArena.View
         {
             if (store != null && ProfileRules.TryBuyLevel(store.Profile, store.Selected))
             {
+                UiSounds.Purchase();
                 Commit();
+            }
+            else
+            {
+                UiSounds.Refused();
             }
         }
 
@@ -420,6 +430,10 @@ namespace PersonalArena.View
             if (store != null && ProfileRules.TryAddPoint(store.Selected, store.Selected.ActiveLoadout, stat))
             {
                 Commit();
+            }
+            else
+            {
+                UiSounds.Refused();
             }
         }
 

@@ -51,6 +51,8 @@ namespace PersonalArena.View
         [SerializeField] private SurvivorRenderer survivorRenderer;
         [SerializeField] private SurvivorHud hud;
         [SerializeField] private SurvivorCamera followCamera;
+        [Tooltip("M8 sound; optional (a scene without it stays silent).")]
+        [SerializeField] private SurvivorAudio survivorAudio;
 
         private readonly SurvivorPilot pilot = new SurvivorPilot();
         private readonly PickHighlight highlight = new PickHighlight();
@@ -200,6 +202,16 @@ namespace PersonalArena.View
             enemyShot = HasArgument("-enemyShot");
             watchBest = HasArgument("-best") || PlayerPrefs.GetInt(WatchBestPreference, 0) == 1;
 
+            // M8: automated runs never make noise (-screenshot, -quitAfterScreenshot, -smokeTest, -mute);
+            // -audioLog <path> writes the cue counts so the wiring can be checked without hearing it.
+            if (survivorAudio != null)
+            {
+                bool forceSilent = !string.IsNullOrEmpty(screenshotPath) || quitAfterScreenshot ||
+                    HasArgument("-smokeTest") || HasArgument("-mute");
+                survivorAudio.Configure(forceSilent, CommandLineValue("-audioLog"), "seed " + seed.ToString(CultureInfo.InvariantCulture));
+                survivorAudio.SetCamera(followCamera != null ? followCamera.ViewCamera : Camera.main);
+            }
+
             // Profile: -profile <folder or file> for checks and screenshots, else the owner's real profile.
             string profileOverride = CommandLineValue("-profile");
             store = ProfileStore.Create(profileOverride, Application.persistentDataPath,
@@ -220,6 +232,7 @@ namespace PersonalArena.View
                 "R trận mới   G biểu đồ học   P hồ sơ AI\n" +
                 "C nhân vật   F farm vàng   V so sánh build\n" +
                 "B đổi não mới nhất / giỏi nhất   L lịch sử não\n" +
+                "M tắt/bật tiếng\n" +
                 "Lăn chuột: phóng to / thu nhỏ");
 
             characterPanel = hud.CharacterPanel;
@@ -429,6 +442,10 @@ namespace PersonalArena.View
                 sim.Config.ClassDef = ClassDefinition(classId);
                 RestartNow();
             }
+            if (survivorAudio != null)
+            {
+                survivorAudio.OnClassSwitched();
+            }
 
             PollBrain();
             if (training != null)
@@ -624,13 +641,17 @@ namespace PersonalArena.View
             survivorRenderer.SetInterpolationAlpha(accumulator / step);
         }
 
-        /// <summary>After every sim step (the pick step too): spectator label, chronicle, HUD tag.</summary>
+        /// <summary>After every sim step (the pick step too): spectator label, chronicle, HUD tag, sounds.</summary>
         private void ObserveStep()
         {
             brainPlayedRun = true;
             labeler.Observe(sim, sim.LastStepSeconds);
             chronicle.Observe(sim, labeler.Current);
             hud.SetHeroLabel(labeler.Current);
+            if (survivorAudio != null)
+            {
+                survivorAudio.OnStep(sim);
+            }
         }
 
         /// <summary>Freezes the run and shows the offered cards; the AI picks once they have been visible for a moment.</summary>
@@ -652,6 +673,10 @@ namespace PersonalArena.View
                 }
             }
             highlight.ShowOffer(count, offerItems, offerLevels);
+            if (survivorAudio != null && highlight.BlocksSim)
+            {
+                survivorAudio.OnCardsShown();
+            }
         }
 
         /// <summary>Asks the brain for its pick, applies it with one paused tick, and highlights the chosen card.</summary>
@@ -677,6 +702,10 @@ namespace PersonalArena.View
             {
                 highlight.Clear();
             }
+            if (survivorAudio != null)
+            {
+                survivorAudio.OnPickHighlighted();
+            }
         }
 
         private void StartRun()
@@ -695,6 +724,10 @@ namespace PersonalArena.View
             hud.SetPaused(paused);
             RefreshInfo();
             characterPanel?.Refresh();
+            if (survivorAudio != null)
+            {
+                survivorAudio.OnRunStarted();
+            }
         }
 
         /// <summary>New run: the profile's current build and tier take effect here (never mid-run).</summary>
@@ -748,6 +781,15 @@ namespace PersonalArena.View
                 paused = !paused;
                 accumulator = 0f;
                 hud.SetPaused(paused);
+                if (survivorAudio != null)
+                {
+                    survivorAudio.SetPaused(paused);
+                }
+            }
+
+            if (keyboard.mKey.wasPressedThisFrame && survivorAudio != null)
+            {
+                ShowSwitchNotice(survivorAudio.ToggleMute() ? "Đã tắt tiếng" : "Đã bật tiếng");
             }
 
             if (keyboard.spaceKey.wasPressedThisFrame)
@@ -1232,6 +1274,16 @@ namespace PersonalArena.View
             }
 
             resultRecorded = true;
+            if (survivorAudio != null)
+            {
+                survivorAudio.OnRunEnded(sim.EndReason);
+                if (!string.IsNullOrEmpty(screenshotPath))
+                {
+                    // Screenshot mode may quit soon after; keep the counts of the finished run.
+                    survivorAudio.WriteAudioLog();
+                }
+            }
+
             recent.Enqueue(new RecentRun(sim.Time, sim.Level, sim.Gold));
             while (recent.Count > RecentRunCount)
             {
@@ -1527,6 +1579,10 @@ namespace PersonalArena.View
             if (followCamera == null)
             {
                 followCamera = FindFirstObjectByType<SurvivorCamera>();
+            }
+            if (survivorAudio == null)
+            {
+                survivorAudio = GetComponent<SurvivorAudio>();
             }
 
             if (survivorRenderer == null || hud == null || followCamera == null)

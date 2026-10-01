@@ -92,4 +92,118 @@ training build.
 
 ## Result
 
-(filled in when done)
+### Packs (all CC0 1.0; rows in `Unity/Assets/ThirdParty/CREDITS.md`, license text in each folder)
+
+Only the files named in `SurvivorSoundSetBuilder.Table` are imported (about 90 short effects + 2 music loops),
+into `Unity/Assets/ThirdParty/Audio/<Pack>/`:
+
+| Folder | Pack | Source |
+|---|---|---|
+| `KenneyImpactSounds` | Kenney *Impact Sounds* | https://kenney.nl/assets/impact-sounds |
+| `KenneyRpgAudio` | Kenney *RPG Audio* | https://kenney.nl/assets/rpg-audio |
+| `KenneyInterfaceSounds` | Kenney *Interface Sounds* | https://kenney.nl/assets/interface-sounds |
+| `KenneySciFiSounds` | Kenney *Sci-fi Sounds* | https://kenney.nl/assets/sci-fi-sounds |
+| `KenneyDigitalAudio` | Kenney *Digital Audio* | https://kenney.nl/assets/digital-audio |
+| `KenneyMusicJingles` | Kenney *Music Jingles* | https://kenney.nl/assets/music-jingles |
+| `Music` | "When the Shadows Gather" by Tsorthan Grove (run loop, 2.6 MB); "Heavy Boss Battle 2" by MintoDog (boss loop, 3.9 MB) | OpenGameArt (CC0) |
+
+Import rules (`View/Editor/AudioImportRules.cs`, everything under `Assets/ThirdParty/Audio/`): Vorbis;
+effects *Decompress On Load* (quality 0.7), music *Streaming* (quality 0.6, load in background).
+
+### Code
+
+- `View/Audio/` (pure, EditMode-tested): `SoundCue`, `SoundCueInfo` (per-cue interval, voices, hold time,
+  volume, pitch, jitter, spatial, important), `SoundCueMap` (event → cue, jingle by `EndReason`),
+  `SoundThrottle` (per-cue interval and voice cap, global cap 24 with 4 voices kept for important cues),
+  `GemCombo` (gem pitch climbs a pentatonic scale, resets after 0.7 s), `SoundMixer` (throttle + jitter +
+  distance fall-off + pan + counts), `SoundStats` (`-audioLog` text), `SoundSettings` (master / music /
+  effects / muted / mute-in-background, PlayerPrefs through `ISoundSettingsStorage`), `UiSounds` (menu hub).
+- `SurvivorAudio` (viewer only): 28 effect sources, 2 crossfading music sources (run ↔ boss), 1 jingle
+  source; all 2D with a small stereo pan; music ducks while paused, on the end screen and while the cards
+  are open. Clips come from `SurvivorSoundSet.asset`, built by `SurvivorSoundSetBuilder` (called by
+  `PlaySceneBuilder`, menu *Personal Arena/Rebuild Survivor Sound Set*).
+- `SurvivorWatchController` hooks: after every step (step loop and `ResolvePick`), run start/restart,
+  cards shown, AI pick highlighted, run end (one jingle), class switch, Esc pause, **M** mute toggle
+  ("Đã tắt tiếng" / "Đã bật tiếng", saved), help line "M tắt/bật tiếng". `AudioListener.volume` is set
+  every frame: 0 when muted, when the window is in the background (default on), or forced silent by
+  `-screenshot`, `-quitAfterScreenshot`, `-smokeTest` or `-mute`. `-audioLog <path>` writes the counts at
+  quit (and at run end in screenshot mode).
+- Buttons: `MetaPanel.CreateButton`, the HUD button factory and the panel close buttons click; buying a
+  class or a level plays a coin, a refused purchase / stat point a soft error.
+- Silent by construction: Auto Farm runs use `SurvivorEvaluator` (Core, no view); the training scene has
+  no `SurvivorAudio`.
+
+### Cue → file (relative to `Assets/ThirdParty/Audio/`; one clip picked at random per play)
+
+| Cue | Files |
+|---|---|
+| SwordSwing | RpgAudio knifeSlice, knifeSlice2 |
+| SpearThrust | RpgAudio drawKnife1, drawKnife2 |
+| AxeWhirl | RpgAudio cloth3, cloth4 |
+| HammerThrow | RpgAudio cloth1, cloth2 |
+| Shockwave | Impact impactPunch_heavy_000/001 |
+| MagicBolt | SciFi laserSmall_000/001/002 |
+| FireOrb | SciFi forceField_000/001 |
+| FrostNova | Impact impactGlass_light_000/001 |
+| ArcaneBeam | SciFi laserRetro_000/001 |
+| ArrowShot, MultiShot, PowerShot | Interface pluck_001/002 |
+| KnifeWhirl | RpgAudio drawKnife3 |
+| DaggerSlash | RpgAudio knifeSlice2 |
+| CrossbowShot | RpgAudio metalLatch, metalClick |
+| LightningStrike | Digital zap1, zap2 |
+| ArrowRain | Impact impactWood_light_000/001/002 |
+| Explosion (fireball blast, exploder) | SciFi explosionCrunch_000/001/002 |
+| Summon | Digital phaserDown1, phaserDown2 |
+| Hit | Impact impactSoft_medium_000/001/002 |
+| CritHit | Impact impactPunch_medium_000/001/002 |
+| EnemyKill | Impact impactPlank_medium_000/001/002 |
+| EliteKill | Impact impactWood_heavy_000/001 |
+| BossHit | Impact impactPunch_heavy_002/003 |
+| BossKill | SciFi lowFrequency_explosion_001 |
+| HeroHurt | Impact impactSoft_heavy_000/001/002 |
+| ShieldBlock | Impact impactMetal_medium_000/001 |
+| Parry | Impact impactPlate_light_000/001 |
+| HeroDeath | Impact impactBell_heavy_000 |
+| Kick | Impact impactPunch_medium_003/004 |
+| ShieldUp | Impact impactMetal_light_000/001 |
+| Dash (dash, roll-back) | RpgAudio cloth1, cloth2 |
+| Fireball | SciFi thrusterFire_000/001 |
+| ManaShield | SciFi forceField_002/003 |
+| Blink | Digital phaseJump1, phaseJump2 |
+| FrostBurst | Impact impactGlass_medium_000/001 |
+| Gem (rising pitch) | Interface glass_001 |
+| Coin | RpgAudio handleCoins, handleCoins2 |
+| Heal | Digital powerUp3 |
+| Magnet | Digital highUp |
+| Chest | RpgAudio doorOpen_1 |
+| LevelUp | Digital powerUp1 |
+| CardsShown / CardPick | Interface maximize_001 / confirmation_001 |
+| Evolution | MusicJingles jingles-hit_01 |
+| EliteSpawn | SciFi slime_000/001 |
+| BossSpawn (+ boss music) | SciFi lowFrequency_explosion_000 |
+| VictoryJingle / DefeatJingle / EndJingle | MusicJingles jingles-hit_00 / jingles-pizzicato_03 / jingles-pizzicato_00 |
+| UiClick / UiCoin / UiError / UiToggle | Interface click_001 / RpgAudio handleCoins2 / Interface error_004 / Interface switch_002 |
+| Run music / boss music | Music when_the_shadows_gather / heavy_boss_battle_2_bpm110 |
+
+Silent on purpose: aura and holy-field pulses, enemy spawns, `OfferShown` (the viewer plays CardsShown when
+it shows the cards), `SkillFailed`, and the run-end events (the jingle is chosen once per run by `EndReason`).
+A Mage frost burst is heard once as FrostBurst (its −1 strike is dropped), the fireball blast as Explosion.
+
+### Tests and verification
+
+- New EditMode tests (35): `SoundCueMapTests` (15: weapons of all classes, evolutions, silent auras,
+  strikes, every skill of every kit, frost-burst de-dup, fireball blast, silent events, world points,
+  jingles, every cue has files in the builder table), `SoundThrottleTests` (7: 250-enemy horde at 48
+  steps per frame for 10 s stays ≤ 20 ordinary voices and ≤ the per-cue caps, hits still heard every second;
+  important cues pass under a full mix; interval; hold; reserve; reset), `SoundMixerTests` (8: gem combo,
+  distance fall-off and pan, jitter range, audio-log counts), `SoundSettingsTests` (5: defaults, round trip,
+  clamping, listener volume cases, buses).
+- Verification run (scratch build, never `Build/Watch`): `-mute -screenshot -quitAfterScreenshot
+  -audioLog -speed 8 -seed 23 -runSeconds 60 -endShot -profile <scratch>` with a copy of the Warrior
+  champion brain; the audio log must list weapon, hit, kill, gem, level-up and a run-end jingle with
+  `forcedSilent true` and `missingClipCues 0`, and `Player.log` has no errors.
+- Measured 2026-10-01: CoreTests 236/236, EditMode 273/273 (35 audio). Verification run (7 runs of 60 s):
+  2232 cues requested, 1525 played (throttle), weapon 318, hit 289, kill 244, gem 103, level-up 11,
+  run-end jingle 7, `forcedSilent true`, `missingClipCues 0`, 0 problem lines in `Player.log`.
+- Tuning after the run: the Warrior brain raises its shield ~1.2 times per second (SurvivorEval), so
+  `ShieldUp` is soft and sparse (0.7 s interval, 1 voice, volume 0.22); `Kick` 0.5.

@@ -1,0 +1,10 @@
+Music of the Personal Arena viewer (both CC0 1.0, public domain dedication):
+
+when_the_shadows_gather.ogg: "When the Shadows Gather" by Tsorthan Grove
+  Source: https://opengameart.org/content/when-the-shadows-gather
+  License: CC0 1.0 Universal (http://creativecommons.org/publicdomain/zero/1.0/)
+
+heavy_boss_battle_2_bpm110.ogg: "Heavy Boss Battle 2" by MintoDog
+  Source: https://opengameart.org/content/heavy-boss-battle-2
+  License: CC0 1.0 Universal (http://creativecommons.org/publicdomain/zero/1.0/)
+
