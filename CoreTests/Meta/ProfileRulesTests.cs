@@ -331,6 +331,17 @@ namespace PersonalArena.Core.Tests.Meta
         }
 
         [Test]
+        public void SelectClass_HandEditedUnknownClass_IsKeptButNeverSelected()
+        {
+            PlayerProfile p = ProfileRules.NewProfile();
+            p.Characters.Add(new CharacterProfile { ClassId = "rogue" }); p.SelectedClassId = "rogue";
+            Assert.That(ProfileRules.Sanitize(p), Is.True);
+            Assert.That(p.SelectedClassId, Is.EqualTo("warrior"));
+            Assert.That(ProfileRules.OwnsClass(p, "rogue"), Is.True, "the record is not deleted");
+            Assert.That(ProfileRules.TrySelectClass(p, "rogue"), Is.False); Assert.That(p.SelectedClassId, Is.EqualTo("warrior"));
+        }
+
+        [Test]
         public void ProfileClasses_AreJsonUtilityFriendly()
         {
             foreach (Type type in new[] { typeof(PlayerProfile), typeof(CharacterProfile), typeof(Loadout), typeof(LoadoutRecord), typeof(ProfileStats) })

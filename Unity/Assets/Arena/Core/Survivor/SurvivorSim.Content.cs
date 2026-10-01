@@ -282,15 +282,24 @@ namespace PersonalArena.Core.Survivor
             return Blast(Hero.Position, radius, skill.Damage, skill.Knockback, skill.StunSeconds);
         }
 
-        /// <summary>Jumps DashDistance along the move direction (else the facing), then leaves walls and obstacles.</summary>
+        /// <summary>
+        /// Jumps DashDistance along the move direction (else the facing), then leaves obstacles and stays
+        /// inside the map. The jump is recorded in <see cref="teleportShift"/> so it never counts as velocity.
+        /// </summary>
         private void Teleport(SkillDef skill, int move)
         {
             Vec2 direction = MoveDirection(move);
             if (direction.LengthSquared < 0.01f) direction = Vec2.FromAngle(Hero.Facing);
             Vec2 point = Hero.Position + direction * skill.DashDistance;
             ClampAndPushOut(ref point, Hero.Radius);
+            float limit = Config.MapHalfSize - Hero.Radius;
+            point = new Vec2(MathF.Max(-limit, MathF.Min(limit, point.X)), MathF.Max(-limit, MathF.Min(limit, point.Y)));
+            teleportShift += point - Hero.Position;
             Hero.Position = point;
         }
+
+        /// <summary>Displacement from blinks during the current tick; excluded from the hero's velocity.</summary>
+        private Vec2 teleportShift;
 
         private bool HasEnemyInRange(float range)
         {
