@@ -17,7 +17,7 @@ namespace PersonalArena.View
     public sealed partial class SurvivorWatchController
     {
         private const float SmokeRunSeconds = 60f;
-        private const float SmokeTimeLimitSeconds = 360f;
+        private const float SmokeTimeLimitSeconds = 540f;
         private const float SmokeClassTimeoutSeconds = 120f;
         private const float SmokeBrainWaitSeconds = 30f;
         private const float SmokePanelSettleSeconds = 0.4f;

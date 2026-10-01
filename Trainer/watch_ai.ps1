@@ -60,10 +60,10 @@ $secondsOpen = ((Get-Date) - $startedAt).TotalSeconds
 if ($exitCode -ne 0 -and $exitCode -ne $null -and $secondsOpen -lt 15) {
     $log = Join-Path $env:USERPROFILE 'AppData\LocalLow\ngotrongduong\Personal Arena\Player.log'
     Write-Host ''
-    Write-Host ([regex]::Unescape("Trình xem AI bị lỗi khi mở (mã lỗi $exitCode).")) -ForegroundColor Red
-    Write-Host ([regex]::Unescape("Nhật ký lỗi nằm ở:")) -ForegroundColor Yellow
+    Write-Host ([regex]::Unescape("Tr\u00ecnh xem AI b\u1ecb l\u1ed7i khi m\u1edf (m\u00e3 l\u1ed7i $exitCode).")) -ForegroundColor Red
+    Write-Host ([regex]::Unescape("Nh\u1eadt k\u00fd l\u1ed7i n\u1eb1m \u1edf:")) -ForegroundColor Yellow
     Write-Host "  $log"
-    Write-Host ([regex]::Unescape("Hãy gửi file này cho Claude để sửa."))
-    Read-Host ([regex]::Unescape("Nhấn Enter để đóng"))
+    Write-Host ([regex]::Unescape("H\u00e3y g\u1eedi file n\u00e0y cho Claude \u0111\u1ec3 s\u1eeda."))
+    Read-Host ([regex]::Unescape("Nh\u1ea5n Enter \u0111\u1ec3 \u0111\u00f3ng"))
     exit $exitCode
 }
