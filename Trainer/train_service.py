@@ -208,9 +208,11 @@ def plan_run(runs_dir: Path, behavior: str, requested: str | None = None) -> Run
     if requested:
         run_id = next_run_id(runs_dir, behavior) if requested == champion.CHAMPIONS_DIR else requested
         requested_dir = runs_dir / run_id
-        requested_behavior = requested_dir / behavior
+        # An existing run of an older schema (pre-Survivor mage-001, even without a checkpoint) is never
+        # trained with --force: that would overwrite it. Start this class's next run instead.
         if (
-            (requested_behavior / "checkpoint.pt").is_file()
+            requested_dir.is_dir()
+            and any(entry.name != arena_trainer.SCHEMA_FILE for entry in requested_dir.iterdir())
             and arena_trainer.run_schema_version(requested_dir) != arena_trainer.SCHEMA_VERSION
         ):
             run_id = next_run_id(runs_dir, behavior)
