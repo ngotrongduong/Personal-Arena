@@ -209,6 +209,13 @@ namespace PersonalArena.View
             return settings.Muted;
         }
 
+        /// <summary>Saves <see cref="Settings"/> after the settings panel changed them, and applies the new loudness.</summary>
+        public void SaveSettings()
+        {
+            settings.Save(storage);
+            ApplyListenerVolume();
+        }
+
         /// <summary>A hero-centred cue (menus, cards, switches).</summary>
         public void Play(SoundCue cue)
         {

@@ -19,7 +19,7 @@ namespace PersonalArena.View
     /// M7: the selected class (profile SelectedClassId) drives the brain, kit, panels and TRAIN; changing it
     /// restarts the watched run with that class's brain.
     /// </summary>
-    public sealed class SurvivorWatchController : MonoBehaviour
+    public sealed partial class SurvivorWatchController : MonoBehaviour
     {
         private const int MaximumTicksPerFrame = 48;
         private const float BrainPollSeconds = 2f;
@@ -125,6 +125,9 @@ namespace PersonalArena.View
         private bool pendingClassStart;
         private string switchFromBehavior;
 
+        // M8 settings (O / gear): window mode, graphics quality and the FPS counter, saved in PlayerPrefs.
+        private ViewerSettings viewerSettings;
+
         // Screenshot mode (-screenshot <png> [-quitAfterScreenshot] [-showProfile] [-openPanel character|farm|compare|lineage]
         // [-farmRuns N] [-endShot] [-labelShot] [-enemyShot]) used to check the build. Pass -profile <scratch path> with it.
         private const float PanelOpenSeconds = 6f;
@@ -214,6 +217,13 @@ namespace PersonalArena.View
 
             // Profile: -profile <folder or file> for checks and screenshots, else the owner's real profile.
             string profileOverride = CommandLineValue("-profile");
+
+            // M8 -smokeTest <report.json>: refuses to run without a scratch -profile and a -brain (never the real profile).
+            if (HasArgument("-smokeTest") && !BeginSmokeTest(profileOverride))
+            {
+                return;
+            }
+
             store = ProfileStore.Create(profileOverride, Application.persistentDataPath,
                 Path.Combine(Application.temporaryCachePath, "profile-fallback"));
             ShowProfileLoadNotice(store.Load());
@@ -225,6 +235,12 @@ namespace PersonalArena.View
             {
                 shortRunSeconds = Mathf.Clamp(requestedRun, 60f, 900f);
             }
+            if (smoke != null)
+            {
+                // The smoke test plays short runs at x8.
+                shortRunSeconds = shortRunSeconds > 0f ? shortRunSeconds : SmokeRunSeconds;
+                speedIndex = SpeedSteps.Length - 1;
+            }
 
             hud.SetHelpText(
                 "AI tự chơi - bạn chỉ cần xem\n" +
@@ -232,8 +248,21 @@ namespace PersonalArena.View
                 "R trận mới   G biểu đồ học   P hồ sơ AI\n" +
                 "C nhân vật   F farm vàng   V so sánh build\n" +
                 "B đổi não mới nhất / giỏi nhất   L lịch sử não\n" +
-                "M tắt/bật tiếng\n" +
+                "M tắt/bật tiếng   O cài đặt\n" +
                 "Lăn chuột: phóng to / thu nhỏ");
+
+            // M8 settings: quality and window mode apply at start (automated runs keep their window as launched).
+            PlayerPrefsSoundStorage prefs = new PlayerPrefsSoundStorage();
+            viewerSettings = ViewerSettings.Load(prefs);
+            bool applyWindowMode = string.IsNullOrEmpty(screenshotPath) && !quitAfterScreenshot && smoke == null;
+            SettingsPanel.ApplyDisplay(viewerSettings, applyWindowMode);
+            SettingsPanel settingsPanel = hud.SettingsPanel;
+            if (settingsPanel != null)
+            {
+                settingsPanel.Bind(survivorAudio, viewerSettings, prefs, applyWindowMode);
+                settingsPanel.DisplayChanged += OnDisplayChanged;
+            }
+            hud.SetFpsVisible(viewerSettings.ShowFps);
 
             characterPanel = hud.CharacterPanel;
             farmPanel = hud.FarmPanel;
@@ -271,6 +300,19 @@ namespace PersonalArena.View
                     profilePanel?.SetOpen(true);
                 }
                 PollTraining();
+            }
+            else if (!string.IsNullOrWhiteSpace(runsDirectory) && Directory.Exists(runsDirectory))
+            {
+                // A fixed -brain with a runs folder: no TRAIN button, but the charts (G) and AI profile (P) still open.
+                hud.EnsureAnalysisPanels();
+                historyPanel = hud.HistoryPanel;
+                historyPanel?.SetRunDirectory(BrainLocator.FindNewestRunDirectory(runsDirectory, BehaviorName));
+                profilePanel = hud.ProfilePanel;
+                profilePanel?.SetSource(runsDirectory, BehaviorName);
+                if (showProfile)
+                {
+                    profilePanel?.SetOpen(true);
+                }
             }
 
             SurvivorConfig config = new SurvivorConfig { Build = NextRunBuild(), ClassDef = ClassDefinition(classId) };
@@ -337,6 +379,20 @@ namespace PersonalArena.View
             {
                 lineagePanel.ProfileChanged -= OnProfileChanged;
                 lineagePanel.WatchVersionRequested -= OnWatchVersionRequested;
+            }
+            if (hud != null && hud.SettingsPanel != null)
+            {
+                hud.SettingsPanel.DisplayChanged -= OnDisplayChanged;
+            }
+            EndSmokeLogCapture();
+        }
+
+        /// <summary>A display setting changed in the settings panel: show or hide the FPS counter.</summary>
+        private void OnDisplayChanged()
+        {
+            if (hud != null && viewerSettings != null)
+            {
+                hud.SetFpsVisible(viewerSettings.ShowFps);
             }
         }
 
@@ -431,7 +487,7 @@ namespace PersonalArena.View
             {
                 lineagePanel.Bind(store, runsDirectory, BehaviorName, () => trainingSnapshot);
             }
-            if (training != null)
+            if (!string.IsNullOrWhiteSpace(runsDirectory))
             {
                 historyPanel?.SetRunDirectory(BrainLocator.FindNewestRunDirectory(runsDirectory, BehaviorName));
                 profilePanel?.SetSource(runsDirectory, BehaviorName);
@@ -562,6 +618,7 @@ namespace PersonalArena.View
 
             float realDelta = Time.unscaledDeltaTime;
             UpdateScreenshots();
+            UpdateSmokeTest();
 
             if (sim.IsEnded)
             {
@@ -677,6 +734,10 @@ namespace PersonalArena.View
             {
                 survivorAudio.OnCardsShown();
             }
+            if (smoke != null && highlight.BlocksSim)
+            {
+                SmokeOfferShown();
+            }
         }
 
         /// <summary>Asks the brain for its pick, applies it with one paused tick, and highlights the chosen card.</summary>
@@ -706,6 +767,10 @@ namespace PersonalArena.View
             {
                 survivorAudio.OnPickHighlighted();
             }
+            if (smoke != null)
+            {
+                SmokePicked();
+            }
         }
 
         private void StartRun()
@@ -727,6 +792,10 @@ namespace PersonalArena.View
             if (survivorAudio != null)
             {
                 survivorAudio.OnRunStarted();
+            }
+            if (smoke != null)
+            {
+                SmokeRunStarted();
             }
         }
 
@@ -773,6 +842,11 @@ namespace PersonalArena.View
             if (keyboard.lKey.wasPressedThisFrame)
             {
                 hud.ToggleLineagePanel();
+            }
+
+            if (keyboard.oKey.wasPressedThisFrame)
+            {
+                hud.ToggleSettingsPanel();
             }
 
             // Esc first closes an open full-screen panel; only a second press pauses.
@@ -907,7 +981,7 @@ namespace PersonalArena.View
                 ? BrainLocator.FindChampionBrain(runsDirectory, BehaviorName)
                 : null;
             string path = !string.IsNullOrWhiteSpace(brainFile)
-                ? brainFile
+                ? FixedBrainPath()
                 : versionPath ?? champion ?? NewestBrainPath();
             if (string.IsNullOrEmpty(path) || !File.Exists(path))
             {
@@ -1298,9 +1372,14 @@ namespace PersonalArena.View
             {
                 // A watched run the brain played pays into the wallet (Farm = false), then saves and logs.
                 CharacterProfile warrior = CurrentCharacter;
+                long goldBefore = store.Profile.Gold;
                 RunReward reward = ProfileRules.RecordRun(store.Profile, warrior, runLoadout,
                     MetaViewLogic.ToRunResult(sim, runBuild.Tier, false));
-                store.Save();
+                bool saved = store.Save();
+                if (smoke != null)
+                {
+                    SmokeRunBooked(warrior != null ? warrior.ClassId : classId, goldBefore, reward, saved);
+                }
                 store.AppendEconomyLine(EconomyLog.Line(DateTime.UtcNow, EconomyLog.WatchMode, warrior.ClassId, runBuild.Tier,
                     runLoadoutName, runBuild, MetaViewLogic.ToRunStats(sim, seed)));
                 hud.SetEndReward(MetaViewLogic.RewardText(reward), true);
@@ -1508,6 +1587,9 @@ namespace PersonalArena.View
                         break;
                     case "lineage":
                         hud.ToggleLineagePanel();
+                        break;
+                    case "settings":
+                        hud.ToggleSettingsPanel();
                         break;
                     default:
                         hud.ToggleCharacterPanel();
