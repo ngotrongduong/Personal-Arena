@@ -24,6 +24,8 @@ namespace PersonalArena.Tools.SurvivorEval
             public string Out;
             public bool SelfTest;
             public string ClassId;
+            /// <summary>--set Name=Value: SurvivorTuning fields to override, to try a balance change against a trained brain.</summary>
+            public List<KeyValuePair<string, string>> TuningOverrides = new List<KeyValuePair<string, string>>();
         }
 
         private sealed class Output
@@ -64,6 +66,7 @@ namespace PersonalArena.Tools.SurvivorEval
                 string validation = SurvivorPilot.Validate(metadataBrain);
                 if (validation != null) throw new ArgumentException(validation);
                 string classId = ResolveClass(options.ClassId, metadataBrain.BehaviorName);
+                ApplyTuning(new SurvivorTuning(), options.TuningOverrides);
                 SurvivorRunStats[] runs = new SurvivorRunStats[options.Seeds];
                 // One brain per worker thread: PolicyBrain keeps evaluation buffers and is not thread-safe.
                 Parallel.For(0, runs.Length, new ParallelOptions { MaxDegreeOfParallelism = options.Threads },
@@ -72,6 +75,7 @@ namespace PersonalArena.Tools.SurvivorEval
                     {
                         SurvivorConfig config = new SurvivorConfig { RunSeconds = options.RunSeconds, ClassDef = SurvivorDefaults.ForClass(classId) };
                         config.Build.Tier = options.Tier;
+                        ApplyTuning(config.Tuning, options.TuningOverrides);
                         runs[i] = new SurvivorEvaluator().RunOne(brain, config, options.SeedStart + i, options.Deterministic);
                         return brain;
                     },
@@ -126,6 +130,12 @@ namespace PersonalArena.Tools.SurvivorEval
                     else if (arg == "--threads") result.Threads = int.Parse(value);
                     else if (arg == "--out") result.Out = value;
                     else if (arg == "--class") result.ClassId = value.Trim().ToLowerInvariant();
+                    else if (arg == "--set")
+                    {
+                        int equals = value.IndexOf('=');
+                        if (equals <= 0) throw new ArgumentException("--set needs Name=Value, got " + value + ".");
+                        result.TuningOverrides.Add(new KeyValuePair<string, string>(value.Substring(0, equals).Trim(), value.Substring(equals + 1).Trim()));
+                    }
                     else throw new ArgumentException("Unknown argument " + arg + ".");
                 }
             }
@@ -149,6 +159,22 @@ namespace PersonalArena.Tools.SurvivorEval
                 return requested;
             }
             return fromBrain ?? "warrior";
+        }
+
+        /// <summary>Sets each named public float/int field of <paramref name="tuning"/> and validates the result.</summary>
+        private static void ApplyTuning(SurvivorTuning tuning, List<KeyValuePair<string, string>> overrides)
+        {
+            foreach (KeyValuePair<string, string> pair in overrides)
+            {
+                System.Reflection.FieldInfo field = typeof(SurvivorTuning).GetField(pair.Key);
+                if (field == null) throw new ArgumentException("Unknown tuning field " + pair.Key + ".");
+                System.Globalization.CultureInfo invariant = System.Globalization.CultureInfo.InvariantCulture;
+                if (field.FieldType == typeof(float)) field.SetValue(tuning, float.Parse(pair.Value, invariant));
+                else if (field.FieldType == typeof(int)) field.SetValue(tuning, int.Parse(pair.Value, invariant));
+                else throw new ArgumentException("Tuning field " + pair.Key + " is not a number.");
+            }
+            try { tuning.Validate(); }
+            catch (ArgumentOutOfRangeException exception) { throw new ArgumentException("Invalid tuning: " + exception.Message); }
         }
 
         private static void Print(SurvivorEvalSummary s, bool passes)

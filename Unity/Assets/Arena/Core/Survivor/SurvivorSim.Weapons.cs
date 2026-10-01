@@ -239,7 +239,7 @@ namespace PersonalArena.Core.Survivor
                 EndReason = EndReason.Won; AddEvent(SurvivorEventType.RunWon); return;
             }
             SurvivorEnemyDef def = SurvivorDefaults.EnemyDef(enemy.TypeIndex);
-            SpawnGem(enemy.Position, enemy.Elite ? tuning.EliteXp : def.Xp);
+            SpawnGem(enemy.Position, (enemy.Elite ? tuning.EliteXp : def.Xp) * tuning.XpMul);
             Vec2 goldPoint = enemy.Position + Vec2.FromAngle(tuning.GoldDropAngle) * tuning.DropOffset;
             if (enemy.Elite)
             {

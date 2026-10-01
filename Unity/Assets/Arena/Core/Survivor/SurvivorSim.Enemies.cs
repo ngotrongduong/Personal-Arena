@@ -150,7 +150,7 @@ namespace PersonalArena.Core.Survivor
             if (slot < 0) return null;
             SurvivorTuning tuning = Config.Tuning;
             SurvivorEnemy e = enemies[slot];
-            float hpTime = boss ? 1f : 1f + tuning.HpPerMinute * Time / 60f;
+            float hpTime = boss ? tuning.BossHpMul : 1f + tuning.HpPerMinute * Time / 60f;
             float damageTime = boss ? 1f : 1f + tuning.DamagePerMinute * Time / 60f;
             float hpTier = 1f + tuning.HpPerTier * (Config.Build.Tier - 1);
             float damageTier = 1f + tuning.DamagePerTier * (Config.Build.Tier - 1);

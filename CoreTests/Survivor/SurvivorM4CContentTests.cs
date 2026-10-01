@@ -211,7 +211,7 @@ namespace PersonalArena.Core.Tests.Survivor
             int[] expected = { 0, 0, 0, 1, 2, 2, 3 };
             for (int i = 0; i < expected.Length; i++) Assert.That(SurvivorDefaults.GetPhase(i).Weights[3], Is.EqualTo(expected[i]));
             SurvivorSim sim = new SurvivorSim(NoCritConfig(), 75); SurvivorEnemy spitter = sim.SpawnEnemyForTests(3, new Vec2(5f, 0f)); sim.DamageEnemyForTests(spitter, 1000f);
-            Assert.That(FindPickup(sim, PickupKind.Gem).Value, Is.EqualTo(2f));
+            Assert.That(FindPickup(sim, PickupKind.Gem).Value, Is.EqualTo(2f * sim.Config.Tuning.XpMul));
         }
 
         [Test]
