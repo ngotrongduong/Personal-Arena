@@ -72,10 +72,15 @@ Done on `task/t034-m8-build` (2026-10-01).
 - **`-smokeTest <report.json>`** (`View/SmokeTestReport.cs`, `SurvivorWatchController.Smoke.cs`): implies mute,
   refuses without `-profile` / `-brain` or with a profile inside the real profile folder (checked: exit 1 with a
   "refused" report). Starts a 2-run Auto Farm, then buys (granting gold) and selects Warrior, Mage, Archer
-  (`<class>.brain` next to `-brain` is used per class), 60 s runs at x8, checks start / offer / pick / end
+  (`<class>.brain` next to `-brain` is used per class), 120 s runs at x8, checks start / offer / pick / end
   reason / gold booked and re-read from disk / next run; then opens and closes C, F, V, L, G, P, O; any
   Error/Assert/Exception log or 6 min = fail. Check build: **passed** for all three classes in 312 s, exit 0,
   0 problem lines in Player.log. Pass `-runs <empty scratch folder>` so L / G / P bind.
+  - Follow-up (T-034b): the final M8 build failed once on Archer, "no level-up offer shown". The Warrior
+    brain was used for every class, and a 60 s run is too short for a ranged class. The Archer's own
+    champion stayed level 1 in 5 of 30 seeds, because it kills far from its gems. The smoke runs are now
+    120 s; at 120 s the Archer champion never stayed level 1 (0 of 50 seeds). The build script now puts
+    `mage.brain` / `archer.brain` (each class's champion) next to `-brain`.
 - **Launcher:** `Trainer/watch_ai.ps1` shows a Vietnamese message with the `Player.log` path and waits for
   Enter when the viewer exits with an error within 15 s of starting.
 - **Tests:** CoreTests 236 passed; EditMode 289 passed (16 new: `ViewerSettingsTests`, `SmokeTestReportTests`).
