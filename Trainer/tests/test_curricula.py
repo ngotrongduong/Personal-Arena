@@ -1,22 +1,28 @@
 from pathlib import Path
 
+import pytest
+
 
 CONFIG_DIR = Path(__file__).resolve().parents[1] / "config"
 
 
 def test_only_survivor_configs_remain():
-    assert sorted(path.name for path in CONFIG_DIR.glob("*.yaml")) == ["warrior_survivor_ppo.yaml"]
+    assert sorted(path.name for path in CONFIG_DIR.glob("*.yaml")) == [
+        "archer_survivor_ppo.yaml", "mage_survivor_ppo.yaml", "warrior_survivor_ppo.yaml"
+    ]
 
 
-def test_survivor_config_parses_with_mlagents_and_has_reward_curriculum():
+@pytest.mark.parametrize("behavior", ["Warrior", "Mage", "Archer"])
+def test_survivor_config_parses_with_mlagents_and_has_reward_curriculum(behavior: str):
     from mlagents.plugins.trainer_type import register_trainer_plugins
     from mlagents.trainers.cli_utils import load_config
     from mlagents.trainers.settings import CompletionCriteriaSettings, RunOptions
 
-    path = CONFIG_DIR / "warrior_survivor_ppo.yaml"
+    path = CONFIG_DIR / f"{behavior.lower()}_survivor_ppo.yaml"
     register_trainer_plugins()
     options = RunOptions.from_dict(load_config(str(path)))
-    trainer = options.behaviors["Warrior"]
+    assert list(options.behaviors) == [behavior]
+    trainer = options.behaviors[behavior]
 
     assert trainer.hyperparameters.batch_size == 4096
     assert trainer.hyperparameters.buffer_size == 81920
@@ -40,7 +46,7 @@ def test_survivor_config_parses_with_mlagents_and_has_reward_curriculum():
         and item.measure == CompletionCriteriaSettings.MeasureType.REWARD
         and item.signal_smoothing
         and item.min_lesson_length == 200
-        and item.behavior == "Warrior"
+        and item.behavior == behavior
         for item in criteria
     )
     assert lessons[-1].completion_criteria is None
@@ -78,7 +84,7 @@ def test_survivor_config_parses_with_mlagents_and_has_reward_curriculum():
             and lesson.completion_criteria.measure
             == CompletionCriteriaSettings.MeasureType.PROGRESS
             and lesson.completion_criteria.min_lesson_length == 200
-            and lesson.completion_criteria.behavior == "Warrior"
+            and lesson.completion_criteria.behavior == behavior
             for lesson in curriculum[:-1]
         )
         assert curriculum[-1].completion_criteria is None

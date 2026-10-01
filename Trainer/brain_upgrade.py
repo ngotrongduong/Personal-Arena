@@ -391,7 +391,11 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument("--runs-dir", type=Path, default=arena_trainer.DEFAULT_RESULTS_DIRECTORY)
     parser.add_argument("--source", required=True, help="Source run id.")
     parser.add_argument("--new-run", required=True, help="New run id.")
-    parser.add_argument("--behavior", default="Warrior")
+    parser.add_argument(
+        "--behavior",
+        type=arena_trainer.behavior_argument,
+        help="Hero behavior (default: the source run's class, e.g. Mage for mage-s001; else Warrior).",
+    )
     parser.add_argument("--old-version", type=int)
     parser.add_argument("--new-version", type=int, default=arena_trainer.SCHEMA_VERSION)
     return parser
@@ -399,6 +403,8 @@ def create_parser() -> argparse.ArgumentParser:
 
 def main(argv: Iterable[str] | None = None) -> int:
     args = create_parser().parse_args(list(argv) if argv is not None else None)
+    if args.behavior is None:
+        args.behavior = arena_trainer.run_class(args.source) or "Warrior"
     old_version = args.old_version
     if old_version is None:
         old_version = arena_trainer.run_schema_version(args.runs_dir / args.source)

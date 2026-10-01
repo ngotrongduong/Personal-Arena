@@ -352,7 +352,7 @@ def _now() -> str:
 def main(argv: Iterable[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--results-dir", type=Path, default=arena_trainer.DEFAULT_RESULTS_DIRECTORY)
-    parser.add_argument("--behavior", default="Warrior")
+    parser.add_argument("--behavior", type=arena_trainer.behavior_argument, default="Warrior")
     subparsers = parser.add_subparsers(dest="command", required=True)
     status_parser = subparsers.add_parser("status")
     status_parser.set_defaults(command="status")

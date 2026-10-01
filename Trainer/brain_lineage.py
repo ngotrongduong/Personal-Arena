@@ -3,8 +3,9 @@
 A *version* is a saved brain of one run at one step, kept under
 ``runs/champions/<Behavior>/lineage/versions/<run>-<step>/`` (``brain.brain``, ``version.json``
 and, while it is kept, the ML-Agents ``checkpoint.pt`` needed to train on from it). A *branch* is
-a training run (``warrior-sNNN``). Forking copies a version's checkpoint into a new run; existing
-runs are never changed or deleted.
+a training run of that class (``warrior-sNNN``, ``mage-sNNN``, ``archer-sNNN``). Every behavior
+has its own lineage folder, so classes never share versions or branches. Forking copies a
+version's checkpoint into a new run; existing runs are never changed or deleted.
 
 File ownership: this module writes ``versions/`` and ``branches.json``; the viewer writes
 ``labels.json`` (names and pins), which this module only reads.
@@ -539,7 +540,7 @@ def _now() -> str:
 def create_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--results-dir", type=Path, default=arena_trainer.DEFAULT_RESULTS_DIRECTORY)
-    parser.add_argument("--behavior", default="Warrior")
+    parser.add_argument("--behavior", type=arena_trainer.behavior_argument, default="Warrior")
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("sync")
     commands.add_parser("prune")

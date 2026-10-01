@@ -6,6 +6,7 @@ Python side of Personal Arena.
 |---|---|
 | `requirements-ml.lock.txt` | Exact ML environment (Windows, Python 3.10.12, torch cu121). Install: `docs/SETUP.md` |
 | `config/warrior_survivor_ppo.yaml` | Survivor PPO and its reward-measured run-length curriculum |
+| `config/mage_survivor_ppo.yaml`, `config/archer_survivor_ppo.yaml` | Same PPO and curricula keyed by the `Mage` / `Archer` behavior (M7); keep all three in step |
 | `arena_trainer.py` *(M4)* | Wrapper the game calls to train one owned hero and write `progress.json` |
 | `tests/` *(M4)* | pytest |
 
@@ -14,14 +15,24 @@ Python side of Personal Arena.
 New runs use names such as `warrior-s001`, `warrior-s002`, and so on. Legacy names such as
 `warrior-011` do not affect this sequence and are never resumed as Survivor runs.
 
-Only the Warrior trains in Survivor mode for now. Mage and Archer get their own Survivor configs in
-M7; until then the training service reports that clearly instead of starting a run.
+Every class trains its own brain (M7). `--behavior Warrior|Mage|Archer` (any case) picks the
+config `<class>_survivor_ppo.yaml`, the default run `<class>-s001` (the owner's brain, D-035) and
+the next number for `<class>-sNNN`. Resume, schema upgrade, champions, lineage, exported
+`<run>/<Behavior>/latest.brain` and `training_history.json` only ever look at runs of that class.
+A requested `--run-id` that belongs to another class is ignored (the newest run of the asked class
+is used instead), and a class with no Survivor run yet starts from scratch without
+`--initialize-from`. Legacy round-arena runs such as `mage-001` are never resumed or upgraded.
+
+```text
+python Trainer/train_service.py --behavior Mage
+python Trainer/arena_trainer.py --hero-class archer --run-id archer-s001
+```
 
 Each run records `schema_version.txt`; a run without it counts as schema 1. Training resumes a
 checkpoint when its observation schema matches the current schema. Balance or rules changes that
 leave the schema unchanged continue the same run.
 
-The Warrior Survivor config uses a 3-by-512 PPO network with game-normalized observations. Its
+Each Survivor config uses a 3-by-512 PPO network with game-normalized observations. Its
 reward curriculum advances the episode limit from 3 to 6 to 10 to 15 minutes only after the
 smoothed mean reward shows that most agents survive the current lesson.
 
@@ -54,6 +65,7 @@ python Trainer/champion.py --behavior Warrior status
 python Trainer/champion.py --behavior Warrior evaluate
 python Trainer/champion.py --behavior Warrior evaluate --run-id warrior-s001
 python Trainer/champion.py --behavior Warrior restore warrior-s001-2000000
+python Trainer/champion.py --behavior Mage evaluate --run-id mage-s001
 ```
 
 The training service starts the same evaluation in a background thread whenever the current run
