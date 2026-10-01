@@ -488,6 +488,18 @@ namespace PersonalArena.View
             FinishSmokeTest();
         }
 
+        /// <summary>The window closed (or the app quit) mid-test: write a failing report instead of none.</summary>
+        private void AbortSmokeTestOnQuit()
+        {
+            if (smoke == null || smokeStage == SmokeStage.Finished)
+            {
+                return;
+            }
+
+            SmokeError("the viewer quit in stage " + smokeStage + " before the smoke test finished");
+            FinishSmokeTest();
+        }
+
         /// <summary>Writes the report and quits with 0 (passed) or 1.</summary>
         private void FinishSmokeTest()
         {
