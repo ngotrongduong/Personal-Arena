@@ -396,7 +396,10 @@ def test_ids_that_could_escape_the_runs_folder_are_refused(tmp_path: Path, bad: 
         brain_lineage.snapshot(runs, BEHAVIOR, bad, evaluate=False)
     assert brain_lineage.main(["--results-dir", str(runs), "fork", "--run-id", bad]) == 1
     assert json.loads(capsys.readouterr().out.strip().splitlines()[-1])["ok"] is False
-    assert brain_lineage.main(["--results-dir", str(runs), "--behavior", bad, "sync"]) == 1
+    # M7: --behavior only accepts a hero class, so argparse refuses a path-like one up front.
+    with pytest.raises(SystemExit) as refused:
+        brain_lineage.main(["--results-dir", str(runs), "--behavior", bad, "sync"])
+    assert refused.value.code == 2
     assert not runs.exists()
 
 

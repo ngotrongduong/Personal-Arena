@@ -38,15 +38,17 @@ def test_hero_class_picks_its_survivor_config_by_default(tmp_path: Path):
 
 
 @pytest.mark.parametrize("hero_class", ["mage", "archer"])
-def test_missing_future_survivor_config_has_a_clear_message(
+def test_a_missing_class_config_is_reported_by_path(
     tmp_path: Path, monkeypatch, capsys, hero_class: str
 ):
     monkeypatch.setattr(arena_trainer, "repository_root", lambda: tmp_path)
 
     with pytest.raises(SystemExit):
-        arena_trainer.main(["--run-id", "future", "--hero-class", hero_class])
+        arena_trainer.main(["--run-id", "missing", "--hero-class", hero_class])
 
-    assert "Mage/Archer Survivor brains arrive in M7" in capsys.readouterr().err
+    error = capsys.readouterr().err
+    assert f"trainer config was not found: {tmp_path / 'Trainer' / 'config' / f'{hero_class}_survivor_ppo.yaml'}" in error
+    assert "M7" not in error
 
 
 def test_build_command_adds_resume_and_custom_values(tmp_path: Path):

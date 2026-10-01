@@ -26,6 +26,49 @@ MAX_STAT_POINTS = 20
 TRAINING_FOCUSES = ("balanced", "survival", "gold", "boss", "offense")
 OWNER_BUILD_SHARE = 0.7
 
+# M7: every hero class trains its own Survivor brain. The ML-Agents behavior name is the class
+# name ("Mage"); the Unity --hero-class value and the run prefix are its lower case ("mage-s001").
+HERO_BEHAVIORS = ("Warrior", "Mage", "Archer")
+
+
+def behavior_name(value: str) -> str:
+    """``mage``/``MAGE``/``Mage`` -> ``Mage``; raises ValueError for anything else."""
+    for name in HERO_BEHAVIORS:
+        if value.strip().lower() == name.lower():
+            return name
+    raise ValueError(f"behavior must be one of {', '.join(HERO_BEHAVIORS)}")
+
+
+def behavior_argument(value: str) -> str:
+    """argparse type for ``--behavior``."""
+    try:
+        return behavior_name(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError(str(error)) from None
+
+
+def run_class(run_id: str) -> str | None:
+    """The hero behavior a run name belongs to (``mage-s001`` -> ``Mage``), or None."""
+    prefix = run_id.split("-", 1)[0].lower()
+    return next((name for name in HERO_BEHAVIORS if name.lower() == prefix and "-" in run_id), None)
+
+
+def run_belongs_to(run_id: str, behavior: str) -> bool:
+    """True when ``run_id`` is named for ``behavior``'s class (``warrior-s001`` for Warrior)."""
+    return run_class(run_id) == behavior
+
+
+def config_behaviors(path: Path) -> list[str]:
+    """Behavior names a trainer config trains (empty when it cannot be read)."""
+    import yaml  # PyYAML ships with mlagents.
+
+    try:
+        data = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+    except (OSError, yaml.YAMLError, UnicodeDecodeError):
+        return []
+    behaviors = data.get("behaviors") if isinstance(data, dict) else None
+    return list(behaviors) if isinstance(behaviors, dict) else []
+
 
 def owner_build(value: str) -> str:
     """argparse type: 16 comma-separated stat point counts (0..20), returned normalised."""
@@ -185,8 +228,8 @@ def create_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--hero-class",
-        choices=("warrior", "mage", "archer"),
-        help="Hero class trained by the Unity environment.",
+        choices=tuple(name.lower() for name in HERO_BEHAVIORS),
+        help="Hero class trained by the Unity environment (default: the config's behavior).",
     )
     parser.add_argument(
         "--torch-device",
@@ -297,6 +340,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = create_parser()
     args = parser.parse_args(argv)
     root = repository_root()
+    config = resolve_path(config_for(args), root)
+    trained = config_behaviors(config) if config.is_file() else []
+    if args.hero_class is None and len(trained) == 1 and trained[0] in HERO_BEHAVIORS:
+        # An explicit Mage/Archer config must make Unity spawn that class, not the default Warrior.
+        args.hero_class = trained[0].lower()
+    if args.hero_class and trained and behavior_name(args.hero_class) not in trained:
+        parser.error(
+            f"{config.name} trains {', '.join(trained)}, not {behavior_name(args.hero_class)}"
+        )
     command = build_command(args, root)
 
     if args.dry_run:
@@ -307,8 +359,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     config = Path(command[1])
     environment = Path(command[command.index("--env") + 1])
     if not config.is_file():
-        if args.config is None and args.hero_class in ("mage", "archer"):
-            parser.error("Mage/Archer Survivor brains arrive in M7")
         parser.error(f"trainer config was not found: {config}")
     if not learner.is_file():
         parser.error(f"mlagents-learn was not found: {learner}")
