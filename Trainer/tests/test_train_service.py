@@ -300,6 +300,17 @@ def test_plan_run_does_not_resume_an_explicit_incompatible_run(tmp_path: Path):
     assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-s001", "new", 0)
 
 
+def test_plan_run_never_forces_over_a_legacy_run_without_checkpoint(tmp_path: Path):
+    legacy = tmp_path / "mage-001" / "Mage"
+    legacy.mkdir(parents=True)
+    (legacy / "Mage-500.pt").write_bytes(b"old")
+
+    plan = train_service.plan_run(tmp_path, "Mage", "mage-001")
+
+    assert (plan.run_id, plan.mode) == ("mage-s001", "new")
+    assert (legacy / "Mage-500.pt").read_bytes() == b"old"
+
+
 def test_plan_run_forces_a_folder_without_checkpoint(tmp_path: Path):
     (tmp_path / "broken").mkdir()
 
