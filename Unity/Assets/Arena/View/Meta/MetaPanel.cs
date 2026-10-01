@@ -84,6 +84,7 @@ namespace PersonalArena.View
             closeImage.raycastTarget = true;
             Button closeButton = closeRect.gameObject.AddComponent<Button>();
             closeButton.targetGraphic = closeImage;
+            closeButton.onClick.AddListener(UiSounds.Click);
             closeButton.onClick.AddListener(() => SetOpen(false));
             Text closeLabel = CreateText("Label", closeRect, 25, TextAnchor.MiddleCenter, Color.white);
             closeLabel.text = "X";
@@ -279,6 +280,7 @@ namespace PersonalArena.View
             colors.disabledColor = Color.white;
             colors.colorMultiplier = 1f;
             button.colors = colors;
+            button.onClick.AddListener(UiSounds.Click);
             if (onClick != null)
             {
                 button.onClick.AddListener(onClick);

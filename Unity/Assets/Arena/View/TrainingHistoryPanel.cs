@@ -84,6 +84,7 @@ namespace PersonalArena.View
                 new Vector2(48f, 48f), new Vector2(1f, 1f));
             Button closeButton = closeRect.gameObject.AddComponent<Button>();
             closeButton.targetGraphic = closeRect.GetComponent<Image>();
+            closeButton.onClick.AddListener(UiSounds.Click);
             closeButton.onClick.AddListener(() => SetOpen(false));
             Text closeLabel = CreateText("Label", closeRect, 25, TextAnchor.MiddleCenter, Color.white);
             closeLabel.text = "X";

@@ -5,7 +5,8 @@
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "PersonalArena.Core",
-        "PersonalArena.View"
+        "PersonalArena.View",
+        "PersonalArena.View.Editor"
     ],
     "includePlatforms": [
         "Editor"

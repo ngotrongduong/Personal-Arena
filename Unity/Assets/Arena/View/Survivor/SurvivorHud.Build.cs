@@ -737,6 +737,7 @@ namespace PersonalArena.View
             colors.colorMultiplier = 1.2f;
             colors.fadeDuration = 0.08f;
             button.colors = colors;
+            button.onClick.AddListener(UiSounds.Click);
             label = CreateText("Label", rect, fontSize, TextAnchor.MiddleCenter, Color.white);
             label.fontStyle = FontStyle.Bold;
             SetStretch(label.rectTransform, 6f, 6f, 0f, 0f);

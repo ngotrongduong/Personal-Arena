@@ -51,13 +51,19 @@ namespace PersonalArena.View.Editor
             EnsureSceneFolder();
             KayKitArtSetBuilder.EnsureArtSet();
             SurvivorArtSetBuilder.EnsureArtSet();
+            SurvivorSoundSetBuilder.EnsureSoundSet();
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             // Load after NewScene: opening a scene unloads unused assets, which would drop an earlier reference.
             ArenaArtSet artSet = AssetDatabase.LoadAssetAtPath<ArenaArtSet>(KayKitArtSetBuilder.AssetPath);
             SurvivorArtSet survivorArt = AssetDatabase.LoadAssetAtPath<SurvivorArtSet>(SurvivorArtSetBuilder.AssetPath);
+            SurvivorSoundSet soundSet = AssetDatabase.LoadAssetAtPath<SurvivorSoundSet>(SurvivorSoundSetBuilder.AssetPath);
             if (artSet == null || survivorArt == null)
             {
                 throw new InvalidOperationException("Survivor art sets are missing.");
+            }
+            if (soundSet == null)
+            {
+                throw new InvalidOperationException("Survivor sound set is missing.");
             }
 
             // Moonlit graveyard: cool key light, bluish ambient and a dark violet fog that hides the map edge.
@@ -88,6 +94,10 @@ namespace PersonalArena.View.Editor
             rendererObject.FindProperty("survivorArt").objectReferenceValue = survivorArt;
             rendererObject.ApplyModifiedPropertiesWithoutUndo();
             SurvivorHud hud = survivorObject.AddComponent<SurvivorHud>();
+            // M8 sound (viewer only; the training scene has no audio component).
+            SurvivorAudio survivorAudio = survivorObject.AddComponent<SurvivorAudio>();
+            survivorAudio.SoundSet = soundSet;
+            EditorUtility.SetDirty(survivorAudio);
             SurvivorWatchController controller = survivorObject.AddComponent<SurvivorWatchController>();
 
             GameObject cameraObject = new GameObject("Main Camera");
@@ -104,6 +114,7 @@ namespace PersonalArena.View.Editor
             controllerObject.FindProperty("survivorRenderer").objectReferenceValue = survivorRenderer;
             controllerObject.FindProperty("hud").objectReferenceValue = hud;
             controllerObject.FindProperty("followCamera").objectReferenceValue = followCamera;
+            controllerObject.FindProperty("survivorAudio").objectReferenceValue = survivorAudio;
             controllerObject.ApplyModifiedPropertiesWithoutUndo();
 
             GameObject eventSystemObject = new GameObject("EventSystem");
