@@ -398,6 +398,8 @@ namespace PersonalArena.View
 
         private void OnApplicationQuit()
         {
+            AbortSmokeTestOnQuit();
+
             // Auto Farm: cancel, wait up to 2 s, book the finished matches (the panel also does this itself).
             farmPanel?.ShutDown();
 

@@ -16,7 +16,9 @@ namespace PersonalArena.View
     /// </summary>
     public sealed partial class SurvivorWatchController
     {
-        private const float SmokeRunSeconds = 60f;
+        // 120 s (not 60): a ranged class often kills far from its gems and is still level 1 after 60 s
+        // (Archer champion: 5 of 30 seeds); at 120 s none of 50 seeds stayed level 1.
+        private const float SmokeRunSeconds = 120f;
         private const float SmokeTimeLimitSeconds = 540f;
         private const float SmokeClassTimeoutSeconds = 120f;
         private const float SmokeBrainWaitSeconds = 30f;
@@ -483,6 +485,18 @@ namespace PersonalArena.View
                 SmokeError("Auto Farm booked " + booked + " of " + SmokeFarmRuns + " runs");
             }
 
+            FinishSmokeTest();
+        }
+
+        /// <summary>The window closed (or the app quit) mid-test: write a failing report instead of none.</summary>
+        private void AbortSmokeTestOnQuit()
+        {
+            if (smoke == null || smokeStage == SmokeStage.Finished)
+            {
+                return;
+            }
+
+            SmokeError("the viewer quit in stage " + smokeStage + " before the smoke test finished");
             FinishSmokeTest();
         }
 
