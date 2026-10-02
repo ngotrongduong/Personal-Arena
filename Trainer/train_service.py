@@ -36,7 +36,7 @@ from typing import Callable, Iterable, TextIO
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from Trainer import arena_trainer, brain_upgrade, export_brain  # noqa: E402
+from Trainer import arena_trainer, brain_lineage, brain_upgrade, export_brain  # noqa: E402
 from Trainer import champion  # noqa: E402
 
 STATUS_NAME = "training_service.json"
@@ -197,6 +197,13 @@ def class_checkpoint_dirs(runs_dir: Path, behavior: str) -> list[Path]:
 
 def plan_run(runs_dir: Path, behavior: str, requested: str | None = None) -> RunPlan:
     message = ""
+    if requested and requested != champion.CHAMPIONS_DIR:
+        try:
+            brain_lineage.check_id(requested, "nhánh")
+        except brain_lineage.LineageError:
+            # Never let a run name leave the runs folder: train this class's own newest run instead.
+            message = f"Tên nhánh {requested} không hợp lệ; học tiếp não {behavior} mới nhất."
+            requested = None
     if (
         requested
         and requested != champion.CHAMPIONS_DIR

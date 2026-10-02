@@ -885,3 +885,15 @@ def test_install_staged_build_keeps_current_build_on_error(tmp_path: Path, monke
     assert "could not install" in message
     assert (tmp_path / "Build" / "Training" / "PersonalArenaTraining.exe").read_text(encoding="utf-8") == "old"
     assert (tmp_path / "Build" / "TrainingNext" / "PersonalArenaTraining.exe").is_file()
+
+
+@pytest.mark.parametrize("name", ["../victim", "..", "a/b", "Champions", "warrior-s001.", "con\n"])
+def test_plan_run_rejects_run_names_that_could_leave_the_runs_folder(tmp_path: Path, name: str):
+    victim = tmp_path.parent / "victim"
+    make_checkpoint(tmp_path.parent, "victim", 5)
+
+    plan = train_service.plan_run(tmp_path, "Warrior", name)
+
+    assert (plan.run_id, plan.mode) == ("warrior-s001", "new")
+    assert "không hợp lệ" in plan.message
+    assert victim.is_dir()
