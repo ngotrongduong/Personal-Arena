@@ -349,7 +349,7 @@ namespace PersonalArena.View.Tests
             string versions = Directory.CreateDirectory(Path.Combine(lineage, "versions")).FullName;
 
             WriteVersion(versions, ChampionVersionId,
-                "{\"id\":\"" + ChampionVersionId + "\",\"run_id\":\"warrior-s001\",\"step\":96999889,\"schema_version\":4," +
+                "{\"id\":\"" + ChampionVersionId + "\",\"run_id\":\"warrior-s001\",\"step\":96999889,\"schema_version\":" + PersonalArena.Core.Survivor.SurvivorObservation.SchemaVersion + "," +
                 "\"source\":\"champion\",\"created_at\":\"2026-09-30T08:00:00Z\",\"evaluated\":true,\"score\":512.5," +
                 "\"champion\":true,\"passes_m4a\":true,\"summary\":{\"Runs\":100,\"MedianSurvivedSeconds\":420.5," +
                 "\"P10SurvivedSeconds\":300.0,\"WinRate\":0.25,\"DamageTakenPerMinute\":40.0," +
@@ -357,7 +357,7 @@ namespace PersonalArena.View.Tests
                 "\"brain_file\":\"brain.brain\",\"has_checkpoint\":true}",
                 96999889L, true);
             WriteVersion(versions, PlainVersionId,
-                "{\"id\":\"" + PlainVersionId + "\",\"run_id\":\"warrior-s002\",\"step\":1500000,\"schema_version\":4," +
+                "{\"id\":\"" + PlainVersionId + "\",\"run_id\":\"warrior-s002\",\"step\":1500000,\"schema_version\":" + PersonalArena.Core.Survivor.SurvivorObservation.SchemaVersion + "," +
                 "\"source\":\"snapshot\",\"created_at\":\"2026-09-30T09:00:00Z\",\"evaluated\":false,\"score\":NaN," +
                 "\"summary\":null,\"has_checkpoint\":false}",
                 1500000L, false);

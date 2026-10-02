@@ -15,12 +15,12 @@ namespace PersonalArena.Core.Tests.Survivor
         // ---- slots and schema ----
 
         [Test]
-        public void Slots_AreSixPlusSix_AndTheSchemaIsUnchanged()
+        public void Slots_AreSixPlusSix_AndTheSchemaIsV5()
         {
             Assert.That(SurvivorCatalog.MaxWeapons, Is.EqualTo(6)); Assert.That(SurvivorCatalog.MaxPassives, Is.EqualTo(6));
             Assert.That(new SurvivorTuning().MaxWeaponSlots, Is.EqualTo(6)); Assert.That(new SurvivorTuning().MaxPassiveSlots, Is.EqualTo(6));
-            Assert.That(SurvivorObservation.Size, Is.EqualTo(2264)); Assert.That(SurvivorObservation.SchemaVersion, Is.EqualTo(4));
-            Assert.That(SurvivorCatalog.CatalogSize, Is.EqualTo(64)); Assert.That(SurvivorInput.SkillBranchSize, Is.EqualTo(5));
+            Assert.That(SurvivorObservation.Size, Is.EqualTo(2592)); Assert.That(SurvivorObservation.SchemaVersion, Is.EqualTo(5));
+            Assert.That(SurvivorCatalog.CatalogSize, Is.EqualTo(128)); Assert.That(SurvivorInput.SkillBranchSize, Is.EqualTo(7));
             Assert.That(SurvivorInput.MoveBranchSize, Is.EqualTo(9)); Assert.That(SurvivorInput.PickBranchSize, Is.EqualTo(5));
         }
 
@@ -44,7 +44,7 @@ namespace PersonalArena.Core.Tests.Survivor
             float[] values = new float[SurvivorObservation.Size]; new SurvivorObservation().Write(sim, values);
             for (int slot = 0; slot < sim.OfferCount; slot++)
             {
-                int offset = SurvivorObservation.OffersOffset + slot * 66; Assert.That(values[offset + sim.GetOffer(slot).CatalogIndex], Is.EqualTo(1f)); Assert.That(values[offset + 65], Is.EqualTo(1f));
+                int offset = SurvivorObservation.OffersOffset + slot * SurvivorObservation.OfferStride; Assert.That(values[offset + sim.GetOffer(slot).CatalogIndex], Is.EqualTo(1f)); Assert.That(values[offset + SurvivorCatalog.CatalogSize + 1], Is.EqualTo(1f));
             }
         }
 
@@ -456,7 +456,7 @@ namespace PersonalArena.Core.Tests.Survivor
         public void WarCry_ActionMask_ReadyThenCooldownThenEnergy_AndTheObservationShowsIt()
         {
             SurvivorSim sim = NewSim(71); sim.SetWeaponCooldownForTests(0, 1000f);
-            bool[] move = new bool[9], skill = new bool[5], pick = new bool[5]; SurvivorActionMask.WriteMask(sim, move, skill, pick);
+            bool[] move = new bool[SurvivorInput.MoveBranchSize], skill = new bool[SurvivorInput.SkillBranchSize], pick = new bool[SurvivorInput.PickBranchSize]; SurvivorActionMask.WriteMask(sim, move, skill, pick);
             Assert.That(skill[4], Is.True);
             float[] values = new float[SurvivorObservation.Size]; SurvivorObservation observation = new SurvivorObservation(); observation.Write(sim, values);
             Assert.That(values[10], Is.EqualTo(1f), "skill_allowed_3"); Assert.That(values[6], Is.Zero, "skill_cooldown_3");

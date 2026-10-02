@@ -20,9 +20,9 @@ namespace PersonalArena.ML.Tests
 
                 Assert.AreEqual("Warrior", behavior.BehaviorName);
                 Assert.AreEqual(SurvivorObservation.Size, behavior.BrainParameters.VectorObservationSize);
-                Assert.AreEqual(2264, behavior.BrainParameters.VectorObservationSize);
+                Assert.AreEqual(SurvivorObservation.Size, behavior.BrainParameters.VectorObservationSize);
                 int[] branches = behavior.BrainParameters.ActionSpec.BranchSizes;
-                CollectionAssert.AreEqual(new[] { 9, 5, 5 }, branches);
+                CollectionAssert.AreEqual(new[] { SurvivorInput.MoveBranchSize, SurvivorInput.SkillBranchSize, SurvivorInput.PickBranchSize }, branches);
             }
             finally
             {
@@ -44,9 +44,9 @@ namespace PersonalArena.ML.Tests
                 BehaviorSetup.Configure(behavior, classId);
 
                 Assert.AreEqual(behaviorName, behavior.BehaviorName);
-                Assert.AreEqual(2264, behavior.BrainParameters.VectorObservationSize);
+                Assert.AreEqual(SurvivorObservation.Size, behavior.BrainParameters.VectorObservationSize);
                 Assert.AreEqual(1, behavior.BrainParameters.NumStackedVectorObservations);
-                CollectionAssert.AreEqual(new[] { 9, 5, 5 }, behavior.BrainParameters.ActionSpec.BranchSizes);
+                CollectionAssert.AreEqual(new[] { SurvivorInput.MoveBranchSize, SurvivorInput.SkillBranchSize, SurvivorInput.PickBranchSize }, behavior.BrainParameters.ActionSpec.BranchSizes);
                 Assert.AreEqual(0, behavior.BrainParameters.ActionSpec.NumContinuousActions);
             }
             finally
@@ -80,7 +80,7 @@ namespace PersonalArena.ML.Tests
             {
                 SurvivorClassDef kit = ClassRegistry.Create(id);
                 Assert.AreEqual(id, kit.Id);
-                // Skill branch: 0 = no skill, 1..4 = the four slots.
+                // Skill branch: 0 = no skill, 1..6 = the six slots (slots 4-5 are `none` until new skills arrive).
                 Assert.AreEqual(SurvivorInput.SkillBranchSize - 1, kit.ActiveSkills.Length, id);
             }
         }

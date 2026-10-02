@@ -50,7 +50,7 @@ namespace PersonalArena.View.Tests
             PolicyBrain brain = PolicyBrain.Load(ZeroBrain());
 
             Assert.That(SurvivorPilot.Validate(brain), Is.Null);
-            Assert.That(brain.ObservationSize, Is.EqualTo(2264));
+            Assert.That(brain.ObservationSize, Is.EqualTo(SurvivorObservation.Size));
         }
 
         [Test]

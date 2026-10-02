@@ -4,20 +4,25 @@ using PersonalArena.Core;
 namespace PersonalArena.Core.Survivor
 {
     /// <summary>
-    /// Observation schema v4 offsets: self 0..63, inventory 64..127, offers 128..391,
-    /// rays 392..2191 (72 x 25), density 2192..2263 (3 rings x 8 sectors x 3 channels).
+    /// Observation schema v5 offsets: self 0..71, inventory 72..199 (128 catalog slots), offers 200..719 (4 x 130),
+    /// rays 720..2519 (72 x 25), density 2520..2591 (3 rings x 8 sectors x 3 channels). Total 2592.
+    /// Self: 0 hp, 1 max hp, 2 energy, 3-6 cooldown skill 0..3, 7-10 allowed skill 0..3, 11 blocking, 12 dashing, 13 reserved,
+    /// 14-15 velocity, 16-19 wall distances, 20-25 time/level/xp/tier/awaiting/boss, 26-29 boss, 30-45 stat points, 46 enemies, 47 gold,
+    /// 48-56 last move (9), 57-61 last skill none,1..4, 62-63 facing cos/sin,
+    /// 64-65 cooldown skill 4..5, 66-67 allowed skill 4..5, 68-69 last skill 5..6, 70-71 reserved.
     /// Every value is finite and clamped to [-1, 1].
     /// </summary>
     public sealed class SurvivorObservation
     {
-        public const int SchemaVersion = 4;
-        public const int Size = 2264;
+        public const int SchemaVersion = 5;
+        public const int Size = 2592;
         public const int SelfOffset = 0;
-        public const int InventoryOffset = 64;
-        public const int OffersOffset = 128;
-        public const int RaysOffset = 392;
+        public const int InventoryOffset = 72;
+        public const int OffersOffset = 200;
+        public const int RaysOffset = 720;
         public const int RayStride = 25;
-        public const int DensityOffset = 2192;
+        public const int OfferStride = SurvivorCatalog.CatalogSize + 2;
+        public const int DensityOffset = 2520;
         private const float RayRange = 20f;
         private readonly bool[] moveMask = new bool[SurvivorInput.MoveBranchSize];
         private readonly bool[] skillMask = new bool[SurvivorInput.SkillBranchSize];
@@ -57,11 +62,12 @@ namespace PersonalArena.Core.Survivor
             SurvivorHero h = sim.Hero; SurvivorDerivedStats s = sim.DerivedStats;
             b[0] = h.MaxHp > 0f ? h.Hp / h.MaxHp : 0f; b[1] = h.MaxHp / 500f; b[2] = h.MaxEnergy > 0f ? h.Energy / h.MaxEnergy : 0f;
             SurvivorActionMask.WriteMask(sim, moveMask, skillMask, pickMask);
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < SurvivorInput.SkillSlotCount; i++)
             {
                 SkillDef def = sim.Config.ClassDef.ActiveSkills[i];
-                b[3 + i] = def == null || def.Cooldown <= 0f ? 0f : h.SkillCooldowns[i] / def.Cooldown;
-                b[7 + i] = skillMask[i + 1] ? 1f : 0f;
+                int cooldownAt = i < 4 ? 3 + i : 60 + i, allowedAt = i < 4 ? 7 + i : 62 + i;
+                b[cooldownAt] = def == null || def.Cooldown <= 0f ? 0f : h.SkillCooldowns[i] / def.Cooldown;
+                b[allowedAt] = skillMask[i + 1] ? 1f : 0f;
             }
             b[11] = h.Blocking ? 1f : 0f; b[12] = h.Dashing ? 1f : 0f;
             b[14] = h.Velocity.X / 20f; b[15] = h.Velocity.Y / 20f;
@@ -80,6 +86,7 @@ namespace PersonalArena.Core.Survivor
             b[46] = sim.AliveEnemyCount / 300f; b[47] = MathF.Log10(1f + sim.Gold) / 4f;
             if (sim.LastMove >= 0 && sim.LastMove < 9) b[48 + sim.LastMove] = 1f;
             if (sim.LastSkill >= 0 && sim.LastSkill < 5) b[57 + sim.LastSkill] = 1f;
+            else if (sim.LastSkill >= 5 && sim.LastSkill < SurvivorInput.SkillBranchSize) b[63 + sim.LastSkill] = 1f;
             b[62] = MathF.Cos(h.Facing); b[63] = MathF.Sin(h.Facing);
             _ = s;
         }
@@ -88,8 +95,8 @@ namespace PersonalArena.Core.Survivor
         {
             for (int slot = 0; slot < sim.OfferCount; slot++)
             {
-                (int index, int nextLevel) = sim.GetOffer(slot); int offset = OffersOffset + slot * 66;
-                b[offset + index] = 1f; b[offset + 64] = nextLevel / 5f; b[offset + 65] = 1f;
+                (int index, int nextLevel) = sim.GetOffer(slot); int offset = OffersOffset + slot * OfferStride;
+                b[offset + index] = 1f; b[offset + SurvivorCatalog.CatalogSize] = nextLevel / 5f; b[offset + SurvivorCatalog.CatalogSize + 1] = 1f;
             }
         }
 

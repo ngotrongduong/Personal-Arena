@@ -41,7 +41,7 @@ namespace PersonalArena.Core.Tests.Survivor
         }
 
         /// <summary>Zero-weight brain; a non-negative favoured index gets a bias of 10 in its branch.</summary>
-        public static PolicyBrain Brain(int observation = SurvivorObservation.Size, int move = 9, int skill = 5, int pick = 5, int favouredMove = -1, int favouredPick = -1)
+        public static PolicyBrain Brain(int observation = SurvivorObservation.Size, int move = SurvivorInput.MoveBranchSize, int skill = SurvivorInput.SkillBranchSize, int pick = SurvivorInput.PickBranchSize, int favouredMove = -1, int favouredPick = -1)
         {
             using MemoryStream stream = new MemoryStream(); using BinaryWriter writer = new BinaryWriter(stream, Encoding.UTF8, true);
             writer.Write(new byte[] { (byte)'P', (byte)'A', (byte)'B', (byte)'R' }); writer.Write(PolicyBrain.FormatVersion);

@@ -15,7 +15,7 @@ namespace PersonalArena.Core.Survivor
         public float Energy { get; internal set; }
         public float MaxEnergy { get; internal set; }
         public float Radius { get; internal set; }
-        public float[] SkillCooldowns { get; } = new float[4];
+        public float[] SkillCooldowns { get; } = new float[SurvivorInput.SkillSlotCount];
         public bool Blocking { get; internal set; }
         public bool Dashing { get; internal set; }
         public bool Alive { get; internal set; }

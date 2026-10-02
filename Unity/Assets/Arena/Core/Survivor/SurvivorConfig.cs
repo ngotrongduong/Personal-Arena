@@ -32,7 +32,7 @@ namespace PersonalArena.Core.Survivor
             if (Build == null || ClassDef == null || Rewards == null) throw new ArgumentNullException();
             Build.Validate();
             Rewards.Validate();
-            if (ClassDef.ActiveSkills == null || ClassDef.ActiveSkills.Length != 4) throw new ArgumentException("Class needs four active skill slots.");
+            if (ClassDef.ActiveSkills == null || ClassDef.ActiveSkills.Length != SurvivorInput.SkillSlotCount) throw new ArgumentException("Class needs six active skill slots.");
         }
 
         private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
@@ -189,7 +189,9 @@ namespace PersonalArena.Core.Survivor
     public readonly struct SurvivorInput
     {
         public const int MoveBranchSize = 9;
-        public const int SkillBranchSize = 5;
+        /// <summary>Active skill slots per class (schema v5: 6).</summary>
+        public const int SkillSlotCount = 6;
+        public const int SkillBranchSize = SkillSlotCount + 1;
         public const int PickBranchSize = 5;
         public readonly int Move;
         public readonly int Skill;

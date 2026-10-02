@@ -25,7 +25,7 @@ namespace PersonalArena.Core.Tests.Survivor
             string[] ids = { "duration-charm", "duplicator", "spiked-armor", "omni-box" };
             for (int i = 0; i < 4; i++) { ItemDef def = SurvivorCatalog.Get(34 + i); Assert.That(def.Id, Is.EqualTo(ids[i])); Assert.That(def.Kind, Is.EqualTo(ItemKind.Passive)); Assert.That(def.PerLevel, Is.GreaterThan(0f)); Assert.That(def.MaxLevel, Is.EqualTo(i == 1 ? 2 : 5)); }
             Assert.That(SurvivorCatalog.Get(38), Is.Null); Assert.That(SurvivorCatalog.Get(62).Kind, Is.EqualTo(ItemKind.Filler));
-            Assert.That(SurvivorObservation.Size, Is.EqualTo(2264)); Assert.That(SurvivorObservation.SchemaVersion, Is.EqualTo(4)); Assert.That(SurvivorInput.SkillBranchSize, Is.EqualTo(5));
+            Assert.That(SurvivorObservation.Size, Is.EqualTo(2592)); Assert.That(SurvivorObservation.SchemaVersion, Is.EqualTo(5)); Assert.That(SurvivorInput.SkillBranchSize, Is.EqualTo(7));
         }
 
         [Test]

@@ -238,7 +238,13 @@ thưởng theo thứ bậc, nghiệm thu bằng đánh giá 100 seed). Đấu tr
 - **Đợt 1b (T-038)**: Vòng bảo hộ (31), Boomerang (32), Bình độc (33) cho Warrior; phụ kiện Bùa thời gian (34),
   Bộ nhân đôi (35, tối đa cấp 2), Giáp phản (36), Hộp tổng hợp (37) cho cả 3 class. Hai chỉ số mới `Duration`,
   `Amount` dùng chỗ `Reserved13/14`. CoreTests 342/342. Danh mục còn trống: 38–39. Chưa có hình ảnh/HUD (T-037).
-- Đợt 2 (danh mục 128, 6 skill, tiến hóa cho vũ khí mới, Mage/Archer) chưa làm.
+- **Đợt 2, T-039 (Core) xong**: schema **v5** = 2592 giá trị (self 0..71, túi đồ 72..199 gồm 128 ô, đề nghị 200..719
+  = 4 × 130, tia 720..2519, mật độ 2520..2591), hành động 9/7/5 (6 skill chủ động, 2 ô mới tạm là `none`),
+  danh mục 128 (chỉ số cũ không dời). CoreTests 360/360. **Chưa xong**: T-040 (Trainer: `survivor_v5.json`, nâng
+  não v4 → v5; test `JsonSchemaMatchesTheCoreLayout` đang bỏ qua tới khi file đó có), T-041 (Unity, cần PC: thanh
+  skill 6 ô ở `SurvivorHud`, build lại, chạy EditMode). Hiện **bản xem/bản train cũ không chạy được với Core mới**
+  (khác schema): đừng build hay train từ nhánh này trước khi T-040 và T-041 xong.
+- Nội dung đợt 2 (nhóm C, tiến hóa mới, skill thứ 5–6, Mage/Archer) chưa làm.
 
 ### 2026-10-02 — Claude (cloud): CI xanh lại, review M5–M8
 - CI `core-tests` đỏ từ M5: 2 golden băm từng bit float (ghi trên Windows) lệch trên Linux. Nay 2 test đó chỉ

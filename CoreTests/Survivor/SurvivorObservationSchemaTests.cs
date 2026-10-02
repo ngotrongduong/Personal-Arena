@@ -10,7 +10,9 @@ namespace PersonalArena.Core.Tests.Survivor
         [Test]
         public void JsonSchemaMatchesTheCoreLayout()
         {
-            string path = Path.Combine(FindRepoRoot(), "Trainer", "schemas", "survivor_v4.json");
+            // The v5 JSON is written by T-040 (Trainer). Until it exists this check cannot run; it is NOT silently green.
+            string path = Path.Combine(FindRepoRoot(), "Trainer", "schemas", "survivor_v" + SurvivorObservation.SchemaVersion + ".json");
+            if (!File.Exists(path)) Assert.Inconclusive("Trainer/schemas/survivor_v" + SurvivorObservation.SchemaVersion + ".json does not exist yet (T-040).");
             using JsonDocument document = JsonDocument.Parse(File.ReadAllText(path));
             JsonElement root = document.RootElement;
 

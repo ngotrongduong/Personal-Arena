@@ -387,7 +387,7 @@ namespace PersonalArena.Core.Tests.Survivor
 
         private static void AssertFinite(float[] values)
         {
-            Assert.That(values.Length, Is.EqualTo(2264));
+            Assert.That(values.Length, Is.EqualTo(SurvivorObservation.Size));
             for (int i = 0; i < values.Length; i++) { Assert.That(float.IsFinite(values[i]), Is.True, "index " + i); Assert.That(values[i], Is.InRange(-1f, 1f), "index " + i); }
         }
     }

@@ -81,7 +81,7 @@ namespace PersonalArena.Core.Survivor
             Config = config ?? throw new ArgumentNullException(nameof(config));
             Config.Validate();
             Hero = new SurvivorHero();
-            SkillUses = new int[4];
+            SkillUses = new int[SurvivorInput.SkillSlotCount];
             spatialHash = new SpatialHash(Config.MapHalfSize, EnemyCapacity);
             Reset(seed);
         }

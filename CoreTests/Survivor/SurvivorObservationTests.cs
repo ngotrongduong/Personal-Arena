@@ -8,13 +8,13 @@ namespace PersonalArena.Core.Tests.Survivor
     public sealed class SurvivorObservationTests
     {
         [Test]
-        public void Observation_SizeIs2264_AndOffsets()
+        public void Observation_SizeIs2592_AndOffsets()
         {
-            Assert.That(SurvivorObservation.Size, Is.EqualTo(2264)); Assert.That(SurvivorObservation.InventoryOffset, Is.EqualTo(64)); Assert.That(SurvivorObservation.OffersOffset, Is.EqualTo(128)); Assert.That(SurvivorObservation.RaysOffset, Is.EqualTo(392)); Assert.That(SurvivorObservation.DensityOffset, Is.EqualTo(2192));
+            Assert.That(SurvivorObservation.Size, Is.EqualTo(2592)); Assert.That(SurvivorObservation.InventoryOffset, Is.EqualTo(72)); Assert.That(SurvivorObservation.OffersOffset, Is.EqualTo(200)); Assert.That(SurvivorObservation.RaysOffset, Is.EqualTo(720)); Assert.That(SurvivorObservation.DensityOffset, Is.EqualTo(2520));
             SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.Config(), 4); sim.SetHeroStateForTests(Vec2.Zero, new Vec2(2, 0), 0f); SurvivorEnemy enemy = sim.SpawnEnemyForTests(0, new Vec2(5, 0)); sim.SetEnemyVelocityForTests(enemy, new Vec2(-2, 0)); sim.SpawnPickupForTests(PickupKind.Gem, new Vec2(8, 0), 10f); sim.GiveXpForTests(5f); sim.Step(default);
             float[] values = new float[SurvivorObservation.Size]; new SurvivorObservation().Write(sim, values);
-            Assert.That(values[48 + sim.LastMove], Is.EqualTo(1f)); Assert.That(values[57 + sim.LastSkill], Is.EqualTo(1f)); Assert.That(values[62], Is.EqualTo(MathF.Cos(sim.Hero.Facing)).Within(0.001f)); Assert.That(values[64], Is.EqualTo(0.2f));
-            Assert.That(values[SurvivorObservation.OffersOffset + 65], Is.EqualTo(1f)); Assert.That(values[SurvivorObservation.RaysOffset + 2], Is.EqualTo(1f)); Assert.That(values[SurvivorObservation.RaysOffset + 18], Is.EqualTo(1f)); Assert.That(values[SurvivorObservation.DensityOffset], Is.GreaterThan(0f));
+            Assert.That(values[48 + sim.LastMove], Is.EqualTo(1f)); Assert.That(values[57 + sim.LastSkill], Is.EqualTo(1f)); Assert.That(values[62], Is.EqualTo(MathF.Cos(sim.Hero.Facing)).Within(0.001f)); Assert.That(values[SurvivorObservation.InventoryOffset], Is.EqualTo(0.2f));
+            Assert.That(values[SurvivorObservation.OffersOffset + 129], Is.EqualTo(1f)); Assert.That(values[SurvivorObservation.RaysOffset + 2], Is.EqualTo(1f)); Assert.That(values[SurvivorObservation.RaysOffset + 18], Is.EqualTo(1f)); Assert.That(values[SurvivorObservation.DensityOffset], Is.GreaterThan(0f));
         }
 
         [Test]
@@ -41,7 +41,7 @@ namespace PersonalArena.Core.Tests.Survivor
         [Test]
         public void ActionMask_PickOnlyWhenOffer_SkillsMaskedOnCooldownAndEnergy()
         {
-            SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.OldConfig(), 3); bool[] move = new bool[9], skill = new bool[5], pick = new bool[5]; SurvivorActionMask.WriteMask(sim, move, skill, pick);
+            SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.OldConfig(), 3); bool[] move = new bool[SurvivorInput.MoveBranchSize], skill = new bool[SurvivorInput.SkillBranchSize], pick = new bool[SurvivorInput.PickBranchSize]; SurvivorActionMask.WriteMask(sim, move, skill, pick);
             Assert.That(move, Is.All.True); Assert.That(pick[0], Is.True); Assert.That(pick[1], Is.False); Assert.That(skill[4], Is.False);
             sim.Step(new SurvivorInput(0, 1, 0)); SurvivorActionMask.WriteMask(sim, move, skill, pick); Assert.That(skill[1], Is.False);
             sim.GiveXpForTests(5f); sim.Step(default); SurvivorActionMask.WriteMask(sim, move, skill, pick); Assert.That(move[0], Is.True); Assert.That(move[1], Is.False); Assert.That(skill[0], Is.True); Assert.That(skill[1], Is.False); Assert.That(pick[1], Is.True);
