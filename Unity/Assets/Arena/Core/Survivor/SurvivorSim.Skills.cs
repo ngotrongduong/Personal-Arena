@@ -3,7 +3,10 @@ using PersonalArena.Core;
 
 namespace PersonalArena.Core.Survivor
 {
-    /// <summary>M9 active skills 5 and 6: leap slam, whirlwind, caltrop trap, arrow barrage, fire wall, chain lightning. All state is preallocated.</summary>
+    /// <summary>
+    /// Active skill effects: kick, skill projectile, area burst and teleport, plus the M9 skills 5 and 6 (leap slam, whirlwind,
+    /// caltrop trap, arrow barrage, fire wall, chain lightning). All state is preallocated.
+    /// </summary>
     public sealed partial class SurvivorSim
     {
         private const float SkillEpsilon = 1e-4f;
@@ -21,6 +24,65 @@ namespace PersonalArena.Core.Survivor
         public bool Whirling => whirlRemaining > 0f && Hero.Alive;
         /// <summary>Seconds of spin left (0 when not spinning).</summary>
         public float WhirlRemaining => Whirling ? whirlRemaining : 0f;
+
+        /// <summary>Displacement from blinks during the current tick; excluded from the hero's velocity.</summary>
+        private Vec2 teleportShift;
+
+        // ---- kick ----
+
+        private int Kick(SkillDef skill)
+        {
+            int hits = 0;
+            for (int i = 0; i < enemyLimit && !IsEnded; i++)
+            {
+                SurvivorEnemy e = enemies[i]; if (!e.Active) continue;
+                Vec2 delta = e.Position - Hero.Position;
+                float reach = skill.Range + e.Radius;
+                if (delta.LengthSquared > reach * reach || !InArc(Hero.Facing, delta, skill.ArcDegrees)) continue;
+                DamageEnemy(e, skill.Damage, skill.Knockback, AwayFromHero(e)); e.StunRemaining = MathF.Max(e.StunRemaining, skill.StunSeconds); hits++;
+            }
+            return hits;
+        }
+
+        // ---- skill projectile ----
+
+        /// <summary>Skill projectile: aims at the nearest enemy within Range, else along the facing.</summary>
+        private void FireSkillProjectile(int slot, SkillDef skill)
+        {
+            SurvivorEnemy target = NearestEnemy(skill.Range);
+            Vec2 direction = target != null ? (target.Position - Hero.Position).Normalized() : Vec2.FromAngle(Hero.Facing);
+            if (direction.LengthSquared < 1e-8f) direction = Vec2.FromAngle(Hero.Facing);
+            int pierce = skill.Pierce ? 2 : 0;
+            LaunchProjectile(-1 - slot, direction, skill.ProjectileSpeed, skill.ProjectileRadius * stats.AreaMul, skill.Damage,
+                skill.Knockback, skill.Range * 1.2f, pierce, skill.AreaRadius * stats.AreaMul, skill.StunSeconds);
+        }
+
+        // ---- area burst ----
+
+        private int AreaBurst(SkillDef skill)
+        {
+            float radius = skill.AreaRadius * stats.AreaMul;
+            AddEvent(SurvivorEventType.StrikeLanded, radius, id: -1, point: Hero.Position);
+            return Blast(Hero.Position, radius, skill.Damage, skill.Knockback, skill.StunSeconds);
+        }
+
+        // ---- teleport ----
+
+        /// <summary>
+        /// Jumps DashDistance along the move direction (else the facing), then leaves obstacles and stays
+        /// inside the map. The jump is recorded in <see cref="teleportShift"/> so it never counts as velocity.
+        /// </summary>
+        private void Teleport(SkillDef skill, int move)
+        {
+            Vec2 direction = MoveDirection(move);
+            if (direction.LengthSquared < 0.01f) direction = Vec2.FromAngle(Hero.Facing);
+            Vec2 point = Hero.Position + direction * skill.DashDistance;
+            ClampAndPushOut(ref point, Hero.Radius);
+            float limit = Config.MapHalfSize - Hero.Radius;
+            point = new Vec2(MathF.Max(-limit, MathF.Min(limit, point.X)), MathF.Max(-limit, MathF.Min(limit, point.Y)));
+            teleportShift += point - Hero.Position;
+            Hero.Position = point;
+        }
 
         // ---- warrior: leap slam ----
 

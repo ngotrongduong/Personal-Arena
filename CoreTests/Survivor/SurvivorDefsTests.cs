@@ -20,6 +20,26 @@ namespace PersonalArena.Core.Tests.Survivor
             Assert.That(SurvivorCatalog.Get(62).Kind, Is.EqualTo(ItemKind.Filler)); Assert.That(SurvivorCatalog.Get(63).Kind, Is.EqualTo(ItemKind.Filler));
         }
 
+        /// <summary>Guards the static init order of the catalog partials: every evolution row and its base row exist once the class is loaded.</summary>
+        [Test]
+        public void Catalog_EveryEvolutionAndItsBaseAreInitialised()
+        {
+            int evolutions = 0;
+            for (int i = 0; i < SurvivorCatalog.CatalogSize; i++)
+            {
+                ItemDef def = SurvivorCatalog.Get(i);
+                if (def == null || def.EvolvesFrom < 0) continue;
+                evolutions++;
+                ItemDef baseRow = SurvivorCatalog.Get(def.EvolvesFrom);
+                Assert.That(baseRow, Is.Not.Null, def.Id);
+                Assert.That(def.Pattern, Is.EqualTo(baseRow.Pattern), def.Id);
+                Assert.That(SurvivorCatalog.EvolutionOf(def.EvolvesFrom), Is.EqualTo(i), def.Id);
+            }
+            for (int i = 0; i < SurvivorCatalog.EvolutionCount; i++) Assert.That(SurvivorCatalog.Get(SurvivorCatalog.FirstEvolutionIndex + i), Is.Not.Null);
+            for (int i = 0; i < SurvivorCatalog.NewEvolutionCount; i++) Assert.That(SurvivorCatalog.Get(SurvivorCatalog.FirstNewEvolutionIndex + i), Is.Not.Null);
+            Assert.That(evolutions, Is.EqualTo(SurvivorCatalog.EvolutionCount + SurvivorCatalog.NewEvolutionCount));
+        }
+
         [Test]
         public void BuildRandomizer_RespectsCapsAndRange()
         {

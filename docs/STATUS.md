@@ -263,6 +263,14 @@ thưởng theo thứ bậc, nghiệm thu bằng đánh giá 100 seed). Đấu tr
   đám quái đã tốn ≈ 0,050 ms, mỗi vũ khí M9 chỉ cộng 0–0,015 ms (Đồng hồ băng còn làm nhanh hơn vì quái đứng yên) →
   chi phí chính là mô phỏng quái, không phải vũ khí mới. Mục tiêu 0,05 ms đặt cho PC của owner; CI giữ ngưỡng 0,2 ms.
   Nếu cần nhanh hơn: tối ưu cập nhật/tách quái, không phải vũ khí.
+- **T-046 xong (chỉ di chuyển code)**: vũ khí chia theo cơ chế (`SurvivorSim.Weapons{,.Melee,.AroundHero,.Projectiles,
+  .Area,.Defense}.cs`, skill gom vào `.Skills.cs`), danh mục tách thành `SurvivorDefs.cs` (kiểu), `SurvivorCatalog.cs`
+  (logic), `SurvivorCatalog.Items.cs` (mọi dòng dữ liệu + 2 bảng tiến hóa, **phải ở cùng file theo thứ tự phụ thuộc**),
+  `SurvivorClassKits.cs`, `SurvivorEnemyDefs.cs`; dispatch thành `switch`. Bỏ `Content/Wave1b/GroupC`. Hash 18 trận dài
+  trước/sau khớp từng bit; CoreTests 622/622. Vũ khí mới đặt vào file theo cơ chế của nó.
+  - Nhận thấy nhưng chưa sửa: Đá (`Kick`) gán choáng thẳng nên choáng được trùm (vũ khí thì không); `FireFan` vẫn tính
+    hồi chiêu khi pool đạn đầy; `ThrustSpears` tự tìm quái gần nhất thay vì `NearestEnemy`; mảng `orbitAxePositions`,
+    `hammerTargetIds` dùng số 8 cứng; tên `hammerTargetIds` không còn đúng nghĩa.
 - Chưa làm:
   toàn bộ phần hiển thị Unity (T-041 + icon/hiệu ứng/âm thanh), cân bằng bằng `SurvivorEval`.
 
