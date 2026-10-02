@@ -1,7 +1,7 @@
 # Trạng thái dự án
 
 > File này là "bộ nhớ" giữa các phiên. Đọc đầu tiên, cập nhật cuối cùng.
-> Cập nhật lần cuối: 2026-10-01 đêm (phiên Claude, PC — M7 owner đã nghiệm thu; M8 đánh bóng code xong: T-033..T-035).
+> Cập nhật lần cuối: 2026-10-02 (phiên Claude cloud: CI xanh, review M5–M8). Trước đó 2026-10-01 đêm (phiên Claude, PC — M7 owner đã nghiệm thu; M8 đánh bóng code xong: T-033..T-035).
 
 ## Hướng đi
 
@@ -224,6 +224,26 @@ thưởng theo thứ bậc, nghiệm thu bằng đánh giá 100 seed). Đấu tr
   trước khi phát hành để đảm bảo game không gọi mạng.
 
 ## Nhật ký phiên (mới nhất trên cùng)
+
+### 2026-10-02 — Claude (cloud): CI xanh lại, review M5–M8
+- CI `core-tests` đỏ từ M5: 2 golden băm từng bit float (ghi trên Windows) lệch trên Linux. Nay 2 test đó chỉ
+  chạy trên Windows (`Assume`) và CI có thêm job `windows-latest` (PR #7, xanh cả hai).
+- Cloud đã dựng được `dotnet test` (.NET 10 ở `/root/.dotnet`) và pytest (Python 3.10 + bản pin trong
+  `Trainer/requirements-ml.lock.txt`, torch CPU). pytest 196 qua, 1 lỗi: fixture `old.brain` lệch 1 byte
+  (RNG torch khác nền tảng; CI không chạy pytest, test C# đọc đúng file đã commit).
+- Review M5–M8 (2 reviewer, chỉ đọc). Đã sửa: `--run-id` thoát khỏi thư mục runs, `check_id` quá lỏng, thư mục
+  tạm trùng khi ghi phiên bản, điểm mặc định tính sớm, `RecordRun` nhận giây vô hạn. Phần View (Unity UI) chưa review.
+- **Chưa sửa, cần quyết định/thiết kế:**
+  - Rẽ nhánh từ phiên bản lịch sử (champion cũ) không có `training_status.json` → curriculum có thể về lesson 0.
+  - Thưởng hạ quái (`PerKill` 0,004) tổng cả trận lớn hơn thưởng sống sót (≈ 18 so với ≈ 9 ở bậc 1 theo fuzz),
+    trái thứ bậc D-030; Pháp sư xác triệu hồi walker liên tục nên AI có thể học farm. Cần bàn lại cân bằng.
+  - `DoubleElites` (bậc ≥ 7) cũng nhân đôi trùm tinh anh sớm lúc 90 s: đúng ý GDD không?
+  - Walker triệu hồi có thể nằm ngoài bản đồ 1 tick; sự kiện `EnemySummoned` báo thừa khi pool đầy. Sửa sẽ đổi
+    golden M7 (ghi trên Windows) nên chưa làm.
+  - `brain_lineage`: khoá khi rẽ nhánh/dọn song song, ghi file trên Windows không retry, `prune` có thể xoá
+    phiên bản đang được sao chép (đọc code, chưa chạy thử).
+- Việc cần PC: grep `SENTIS_ANALYTICS_ENABLED` trong `Library/PackageCache/com.unity.ai.inference*` để biết bản
+  build có gửi gì không (cấu hình Analytics/Ads/Purchasing đã tắt, code game không gọi mạng).
 
 ### 2026-10-01 đêm — Claude (PC): M8 đánh bóng (T-033..T-035)
 - Owner nghiệm thu M7 (mua Pháp sư + Cung thủ, chạy tốt).

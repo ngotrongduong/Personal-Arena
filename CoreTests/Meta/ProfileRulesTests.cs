@@ -232,6 +232,9 @@ namespace PersonalArena.Core.Tests.Meta
 
             RunReward odd = ProfileRules.RecordRun(p, c, 1, new RunResult { SurvivedSeconds = float.NaN, End = EndReason.Died, Gold = float.NaN });
             Assert.That(odd.GoldAdded, Is.EqualTo(0)); Assert.That(record.RecentSeconds[19], Is.EqualTo(0f));
+            ProfileRules.RecordRun(p, c, 1, new RunResult { SurvivedSeconds = float.PositiveInfinity, End = EndReason.Died, Gold = 0f });
+            Assert.That(record.RecentSeconds[19], Is.EqualTo(0f), "an infinite run time is stored as 0, not as infinity");
+            Assert.That(float.IsInfinity(record.BestSeconds), Is.False); Assert.That(float.IsInfinity(record.TotalMinutes), Is.False);
             Assert.That(ProfileRules.RecordRun(p, c, 1, new RunResult { Gold = -50f }).GoldAdded, Is.EqualTo(0));
             long before = p.Gold;
             Assert.That(ProfileRules.RecordRun(p, c, 1, new RunResult { Gold = float.PositiveInfinity }).GoldAdded, Is.EqualTo(ProfileRules.MaxRunGold));

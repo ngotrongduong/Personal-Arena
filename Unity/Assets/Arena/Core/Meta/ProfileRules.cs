@@ -286,7 +286,7 @@ namespace PersonalArena.Core.Meta
             if (p.Stats == null) p.Stats = new ProfileStats();
             long gold = float.IsNaN(r.Gold) || r.Gold <= 0f ? 0L
                 : r.Gold >= MaxRunGold ? MaxRunGold : (long)Math.Floor(r.Gold);
-            float seconds = float.IsNaN(r.SurvivedSeconds) || r.SurvivedSeconds < 0f ? 0f : r.SurvivedSeconds;
+            float seconds = float.IsNaN(r.SurvivedSeconds) || float.IsInfinity(r.SurvivedSeconds) || r.SurvivedSeconds < 0f ? 0f : r.SurvivedSeconds;
             bool won = r.End == EndReason.Won;
             p.Gold = SaturatingAdd(p.Gold, gold);
 
