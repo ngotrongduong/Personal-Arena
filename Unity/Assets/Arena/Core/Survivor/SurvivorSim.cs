@@ -10,6 +10,8 @@ namespace PersonalArena.Core.Survivor
         public const int EnemyCapacity = 400;
         public const int ProjectileCapacity = 128;
         public const int EnemyProjectileCapacity = 64;
+        public const int BoomerangCapacity = 6;
+        public const int ZoneCapacity = 3;
         public const int PickupCapacity = 600;
         public const int GemCapacity = 400;
         public const int ObstacleCapacity = 64;
@@ -24,6 +26,8 @@ namespace PersonalArena.Core.Survivor
         private readonly SurvivorEnemy[] enemies = CreateEnemies();
         private readonly SurvivorProjectile[] projectiles = CreateProjectiles();
         private readonly SurvivorEnemyProjectile[] enemyProjectiles = CreateEnemyProjectiles();
+        private readonly SurvivorBoomerang[] boomerangs = CreateBoomerangs();
+        private readonly SurvivorZone[] zones = CreateZones();
         private readonly SurvivorPickup[] pickups = CreatePickups();
         private readonly SurvivorObstacle[] obstacles = CreateObstacles();
         private readonly List<SurvivorEvent> events = new List<SurvivorEvent>(4096);
@@ -115,6 +119,8 @@ namespace PersonalArena.Core.Survivor
         public IReadOnlyList<SurvivorEnemy> Enemies => enemies;
         public IReadOnlyList<SurvivorProjectile> Projectiles => projectiles;
         public IReadOnlyList<SurvivorEnemyProjectile> EnemyProjectiles => enemyProjectiles;
+        public IReadOnlyList<SurvivorBoomerang> Boomerangs => boomerangs;
+        public IReadOnlyList<SurvivorZone> Zones => zones;
         public IReadOnlyList<SurvivorPickup> Pickups => pickups;
         public IReadOnlyList<SurvivorObstacle> Obstacles => obstacles;
         public IReadOnlyList<SurvivorEvent> Events => events;
@@ -198,10 +204,13 @@ namespace PersonalArena.Core.Survivor
             SpawnScheduledEnemies();
             FireWeapons();
             if (!IsEnded) UpdateProjectiles();
+            if (!IsEnded) UpdateBoomerangs();
+            if (!IsEnded) UpdateZones();
             if (!IsEnded) UpdateEnemies();
             if (!IsEnded) UpdateEnemyProjectiles();
             if (!IsEnded) ResolveBodyCollisions();
             if (!IsEnded) ResolveRetaliate();
+            if (!IsEnded) ResolveReflect();
             FinalizeEnemyVelocities();
             Hero.Velocity = (Hero.Position - heroStart - teleportShift) / FixedDeltaTime;
             if (IsEnded) return;
@@ -345,20 +354,23 @@ namespace PersonalArena.Core.Survivor
             CharacterBuild b = Config.Build;
             SurvivorClassDef c = Config.ClassDef;
             stats.MaxHp = c.MaxHp * (1f + Passive(SurvivorCatalog.IronHeartIndex) + Point(b, StatId.MaxHp));
-            stats.Armor = c.Armor + Passive(SurvivorCatalog.BoneArmorIndex) + Point(b, StatId.Armor);
+            stats.Armor = c.Armor + Passive(SurvivorCatalog.BoneArmorIndex) + Point(b, StatId.Armor) + Passive(SurvivorCatalog.SpikedArmorIndex);
             stats.Regen = c.Regen + Point(b, StatId.Regen) + Passive(SurvivorCatalog.RecoveryIndex);
-            stats.Might = 1f + Passive(SurvivorCatalog.MightGauntletIndex) + Point(b, StatId.Might);
+            stats.Might = 1f + Passive(SurvivorCatalog.MightGauntletIndex) + Point(b, StatId.Might) + Passive(SurvivorCatalog.OmniBoxIndex);
             stats.CritChance = MathF.Min(1f, c.CritChance + Passive(SurvivorCatalog.CritEyeIndex) + Point(b, StatId.Crit));
             stats.CritDamage = c.CritDamage + Point(b, StatId.CritDamage);
             // Hourglass lowers the cooldown multiplier; the Cooldown stat's per-point value is already negative.
             stats.CooldownMul = MathF.Max(0.4f, 1f - Passive(SurvivorCatalog.HourglassIndex) + Point(b, StatId.Cooldown));
-            stats.AreaMul = 1f + Passive(SurvivorCatalog.AreaCharmIndex) + Point(b, StatId.Area);
-            stats.MoveSpeed = c.MoveSpeed * (1f + Passive(SurvivorCatalog.WindBootsIndex) + Point(b, StatId.MoveSpeed));
+            stats.AreaMul = 1f + Passive(SurvivorCatalog.AreaCharmIndex) + Point(b, StatId.Area) + Passive(SurvivorCatalog.OmniBoxIndex);
+            stats.MoveSpeed = c.MoveSpeed * (1f + Passive(SurvivorCatalog.WindBootsIndex) + Point(b, StatId.MoveSpeed) + Passive(SurvivorCatalog.OmniBoxIndex));
             stats.PickupRadius = c.PickupRadius * (1f + Passive(SurvivorCatalog.MagnetCharmIndex) + Point(b, StatId.Magnet));
             stats.Luck = Point(b, StatId.Luck) + Passive(SurvivorCatalog.CloverIndex);
             stats.GreedMul = 1f + Point(b, StatId.Greed) + Passive(SurvivorCatalog.GreedIndex);
             stats.GrowthMul = 1f + Point(b, StatId.Growth) + Passive(SurvivorCatalog.CrownIndex);
             stats.TierGold = 1f + 0.5f * (b.Tier - 1);
+            stats.DurationMul = 1f + Passive(SurvivorCatalog.DurationCharmIndex) + Passive(SurvivorCatalog.OmniBoxIndex);
+            stats.Amount = Math.Min(inventory.Level(SurvivorCatalog.DuplicatorIndex), SurvivorCatalog.MaxVolleyCount);
+            stats.ReflectFraction = SurvivorCatalog.SpikedReflectPerLevel * inventory.Level(SurvivorCatalog.SpikedArmorIndex);
             Hero.MaxHp = stats.MaxHp;
             if (preserveHpGain && stats.MaxHp > oldMax) Hero.Hp += stats.MaxHp - oldMax;
             Hero.Hp = MathF.Min(Hero.Hp, Hero.MaxHp);
@@ -371,6 +383,8 @@ namespace PersonalArena.Core.Survivor
         {
             for (int i = 0; i < enemies.Length; i++) { enemies[i].Active = false; enemies[i].Separated = false; }
             for (int i = 0; i < projectiles.Length; i++) projectiles[i].Active = false;
+            for (int i = 0; i < boomerangs.Length; i++) boomerangs[i].Active = false;
+            for (int i = 0; i < zones.Length; i++) zones[i].Active = false;
             for (int i = 0; i < enemyProjectiles.Length; i++) enemyProjectiles[i].Active = false;
             for (int i = 0; i < pickups.Length; i++) pickups[i].Active = false;
             for (int i = 0; i < obstacles.Length; i++) obstacles[i].Active = false;
@@ -520,6 +534,8 @@ namespace PersonalArena.Core.Survivor
         private static float WrapAngle(float angle) { while (angle > MathF.PI) angle -= MathF.PI * 2f; while (angle < -MathF.PI) angle += MathF.PI * 2f; return angle; }
         private static SurvivorEnemy[] CreateEnemies() { SurvivorEnemy[] a = new SurvivorEnemy[EnemyCapacity]; for (int i = 0; i < a.Length; i++) a[i] = new SurvivorEnemy(); return a; }
         private static SurvivorProjectile[] CreateProjectiles() { SurvivorProjectile[] a = new SurvivorProjectile[ProjectileCapacity]; for (int i = 0; i < a.Length; i++) a[i] = new SurvivorProjectile(); return a; }
+        private static SurvivorBoomerang[] CreateBoomerangs() { SurvivorBoomerang[] a = new SurvivorBoomerang[BoomerangCapacity]; for (int i = 0; i < a.Length; i++) a[i] = new SurvivorBoomerang(); return a; }
+        private static SurvivorZone[] CreateZones() { SurvivorZone[] a = new SurvivorZone[ZoneCapacity]; for (int i = 0; i < a.Length; i++) a[i] = new SurvivorZone(); return a; }
         private static SurvivorEnemyProjectile[] CreateEnemyProjectiles() { SurvivorEnemyProjectile[] a = new SurvivorEnemyProjectile[EnemyProjectileCapacity]; for (int i = 0; i < a.Length; i++) a[i] = new SurvivorEnemyProjectile(); return a; }
         private static SurvivorPickup[] CreatePickups() { SurvivorPickup[] a = new SurvivorPickup[PickupCapacity]; for (int i = 0; i < a.Length; i++) a[i] = new SurvivorPickup(); return a; }
         private static SurvivorObstacle[] CreateObstacles() { SurvivorObstacle[] a = new SurvivorObstacle[ObstacleCapacity]; for (int i = 0; i < a.Length; i++) a[i] = new SurvivorObstacle(); return a; }
@@ -579,6 +595,7 @@ namespace PersonalArena.Core.Survivor
             SpawnEnemyProjectile(point, velocity, radius, damage, lifetime, sourceId);
         internal float WeaponCooldownForTests(int index) => weaponCooldowns[index];
         internal void SetWeaponCooldownForTests(int index, float value) => weaponCooldowns[index] = value;
+        internal int BarrierChargesForTests => barrierCharges;
         internal void RequestRetaliateForTests() { retaliatePending = true; }
         internal bool RollMagnetDropForTests() => RollMagnetDrop();
 

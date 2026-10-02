@@ -418,8 +418,10 @@ namespace PersonalArena.Core.Survivor
                 PushEnemy(source, AwayFromHero(source), block.BlockPushback);
                 AddEvent(SurvivorEventType.Parry, id: source.Id); return;
             }
+            if (TryAbsorbHit()) return;
             float multiplier = covered ? block.BlockDamageMultiplier : 1f;
             bool killed = ApplyHeroDamage(raw * multiplier, source.Id);
+            if (contact && !killed && stats.ReflectFraction > 0f) reflectPending += lastHeroDamage * stats.ReflectFraction;
             LastHitCause = explosion ? DeathCause.Explosion : source.IsBoss ? DeathCause.Boss : swing && source.TypeIndex == BruteTypeIndex ? DeathCause.Brute : DeathCause.Contact;
             if (covered)
             {
@@ -432,7 +434,7 @@ namespace PersonalArena.Core.Survivor
         private bool ApplyHeroDamage(float raw, int sourceId)
         {
             float damage = MathF.Max(1f, raw - stats.Armor);
-            damage = MathF.Min(damage, Hero.Hp); Hero.Hp -= damage; DamageTaken += damage;
+            damage = MathF.Min(damage, Hero.Hp); Hero.Hp -= damage; DamageTaken += damage; lastHeroDamage = damage;
             float hpRatio = Hero.MaxHp > 0f ? Hero.Hp / Hero.MaxHp : 0f;
             if (hpRatio < MinHpRatio) { MinHpRatio = hpRatio; MinHpTime = Time; }
             AddEvent(SurvivorEventType.HeroDamaged, damage, damage / Hero.MaxHp, sourceId, Hero.Position);

@@ -17,6 +17,7 @@ namespace PersonalArena.Core.Survivor
                 if (def.Pattern == WeaponPattern.Shockwave) { UpdateShockwave(def, level); continue; }
                 if (def.Pattern == WeaponPattern.Combo) { UpdateCombo(def, level); continue; }
                 if (def.Pattern == WeaponPattern.Retaliate) continue;
+                if (def.Pattern == WeaponPattern.Barrier) { UpdateBarrier(def, level); continue; }
                 if (weaponCooldowns[index] > 0f) continue;
                 if (def.Pattern == WeaponPattern.Sweep)
                 {
@@ -50,6 +51,16 @@ namespace PersonalArena.Core.Survivor
                     weaponCooldowns[index] = def.BaseCooldown * stats.CooldownMul;
                     AddEvent(SurvivorEventType.WeaponFired, id: index, point: bombDirection);
                 }
+                else if (def.Pattern == WeaponPattern.Boomerang && ThrowBoomerangs(def, level, out Vec2 boomerangDirection, out int boomerangCount))
+                {
+                    weaponCooldowns[index] = def.BaseCooldown * stats.CooldownMul;
+                    AddEvent(SurvivorEventType.WeaponFired, extra: boomerangCount, id: index, point: boomerangDirection);
+                }
+                else if (def.Pattern == WeaponPattern.Zone && DropZone(def, level, out Vec2 zonePoint))
+                {
+                    weaponCooldowns[index] = def.BaseCooldown * stats.CooldownMul;
+                    AddEvent(SurvivorEventType.WeaponFired, stats.DurationMul * def.Duration, id: index, point: zonePoint);
+                }
                 else if (def.Pattern == WeaponPattern.Aura)
                 {
                     TickAura(def, level);
@@ -79,9 +90,7 @@ namespace PersonalArena.Core.Survivor
         private bool ThrowHammers(ItemDef def, int level, out Vec2 firstDirection)
         {
             firstDirection = Vec2.Zero;
-            IReadOnlyList<int> counts = def.CountByLevel;
-            int count = counts.Count == 0 ? 1 : counts[Math.Max(1, Math.Min(level, counts.Count)) - 1];
-            count = Math.Min(count, hammerTargetIds.Length);
+            int count = Math.Min(VolleyCount(def.CountByLevel, level), hammerTargetIds.Length);
             float speed = def.ProjectileSpeed;
             int fired = 0;
             for (int hammer = 0; hammer < count; hammer++)
@@ -227,14 +236,14 @@ namespace PersonalArena.Core.Survivor
             return hits;
         }
 
-        /// <summary>Deals damage (crit chance doubled against stunned enemies) and knocks the enemy along <paramref name="pushDirection"/>.</summary>
-        private void DamageEnemy(SurvivorEnemy enemy, float baseDamage, float knockback, Vec2 pushDirection)
+        /// <summary>Deals damage (crit chance doubled against stunned enemies; <paramref name="flat"/> skips Might, crit and the crit roll) and knocks the enemy along <paramref name="pushDirection"/>.</summary>
+        private void DamageEnemy(SurvivorEnemy enemy, float baseDamage, float knockback, Vec2 pushDirection, bool flat = false)
         {
             if (IsEnded || enemy == null || !enemy.Active) return;
             if (testEnemiesInvulnerable) return;
-            float damage = baseDamage * stats.Might;
-            float critChance = enemy.StunRemaining > 0f ? MathF.Min(1f, stats.CritChance * 2f) : stats.CritChance;
-            if (rng.NextFloat() < critChance) { damage *= stats.CritDamage; AddEvent(SurvivorEventType.Crit, id: enemy.Id, point: enemy.Position); }
+            float damage = flat ? baseDamage : baseDamage * stats.Might;
+            float critChance = flat ? 0f : enemy.StunRemaining > 0f ? MathF.Min(1f, stats.CritChance * 2f) : stats.CritChance;
+            if (!flat && rng.NextFloat() < critChance) { damage *= stats.CritDamage; AddEvent(SurvivorEventType.Crit, id: enemy.Id, point: enemy.Position); }
             float removed = MathF.Min(enemy.Hp, damage); enemy.Hp -= removed; DamageDealtTotal += removed; enemy.LastHitTime = Time;
             AddEvent(SurvivorEventType.DamageDealt, removed, removed / enemy.MaxHp, enemy.Id, enemy.Position);
             if (enemy.IsBoss) { float fraction = removed / enemy.MaxHp; BossDamageFraction += fraction; AddEvent(SurvivorEventType.BossDamaged, removed, fraction, enemy.Id, enemy.Position); }

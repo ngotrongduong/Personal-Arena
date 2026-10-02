@@ -11,12 +11,14 @@ namespace PersonalArena.Core.Survivor
     /// and one Shockwave weapon (the sim keeps one state for each); likewise at most one Combo and one Retaliate.
     /// Combo: a sweep that strikes three times in a row. Bomb: a thrown projectile that explodes on its first hit
     /// or at max range. Retaliate: no attack of its own; it blasts a ring around the hero when the hero is hit.
+    /// Barrier: no attack; a shield that absorbs hits and returns after a recharge (at most one per hero).
+    /// Boomerang: flies out and back, hitting each enemy once per direction. Zone: drops a damage pool on the ground.
     /// </summary>
-    public enum WeaponPattern { None, Sweep, Thrust, Orbit, Thrown, Aura, Shockwave, Strike, Fan, Combo, Bomb, Retaliate }
+    public enum WeaponPattern { None, Sweep, Thrust, Orbit, Thrown, Aura, Shockwave, Strike, Fan, Combo, Bomb, Retaliate, Barrier, Boomerang, Zone }
     public enum StatId
     {
         MaxHp, Armor, Regen, Might, Crit, CritDamage, Cooldown, Area,
-        MoveSpeed, Magnet, Luck, Greed, Growth, Reserved13, Reserved14, Reserved15
+        MoveSpeed, Magnet, Luck, Greed, Growth, Duration, Amount, Reserved15
     }
 
     public sealed class ItemDef
@@ -100,6 +102,14 @@ namespace PersonalArena.Core.Survivor
         public const int CloverIndex = 59;
         public const int GreedIndex = 60;
         public const int CrownIndex = 61;
+        // M9 wave 1b: Warrior weapons 31..33 and passives for every class 34..37.
+        public const int BarrierIndex = 31;
+        public const int BoomerangIndex = 32;
+        public const int PoisonPoolIndex = 33;
+        public const int DurationCharmIndex = 34;
+        public const int DuplicatorIndex = 35;
+        public const int SpikedArmorIndex = 36;
+        public const int OmniBoxIndex = 37;
         public const int BonusGoldIndex = 62;
         public const int BonusHealIndex = 63;
 
@@ -284,6 +294,26 @@ namespace PersonalArena.Core.Survivor
             CatalogIndex = RetaliateIndex, Id = "retaliate", Name = "Phản đòn", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Retaliate,
             BaseDamage = 20f, DamagePerLevel = 8f, BaseRange = 2.5f, BaseCooldown = 1f, Knockback = 1f
         };
+        private static readonly ItemDef Barrier = new ItemDef
+        {
+            CatalogIndex = BarrierIndex, Id = "barrier", Name = "Vòng bảo hộ", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Barrier,
+            BaseCooldown = 12f, CooldownPerLevel = -1f, CountByLevel = Array.AsReadOnly(new[] { 1, 1, 2, 2, 3 })
+        };
+        private static readonly ItemDef Boomerang = new ItemDef
+        {
+            CatalogIndex = BoomerangIndex, Id = "boomerang", Name = "Boomerang", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Boomerang,
+            BaseDamage = 18f, DamagePerLevel = 6f, BaseRange = 10f, BaseCooldown = 1.8f, Knockback = 0.3f,
+            ProjectileSpeed = 11f, ProjectileRadius = 0.45f, ProjectileRange = 8f, CountByLevel = Array.AsReadOnly(new[] { 1, 1, 2, 2, 3 })
+        };
+        private static readonly ItemDef PoisonPool = new ItemDef
+        {
+            CatalogIndex = PoisonPoolIndex, Id = "poison-pool", Name = "Bình độc", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Zone,
+            BaseDamage = 5f, DamagePerLevel = 2f, BaseRange = 8f, BaseCooldown = 4f, Width = 1.8f, Duration = 3.5f, HitInterval = 0.5f
+        };
+        private static readonly ItemDef DurationCharm = Passive(DurationCharmIndex, "duration-charm", "Bùa thời gian");
+        private static readonly ItemDef Duplicator = Passive(DuplicatorIndex, "duplicator", "Bộ nhân đôi", 2);
+        private static readonly ItemDef SpikedArmor = Passive(SpikedArmorIndex, "spiked-armor", "Giáp phản");
+        private static readonly ItemDef OmniBox = Passive(OmniBoxIndex, "omni-box", "Hộp tổng hợp");
         private static readonly ItemDef Recovery = Passive(RecoveryIndex, "recovery", "Hồi phục");
         private static readonly ItemDef Clover = Passive(CloverIndex, "clover", "Cỏ may mắn");
         private static readonly ItemDef Greed = Passive(GreedIndex, "greed", "Tham lam");
@@ -291,6 +321,10 @@ namespace PersonalArena.Core.Survivor
 
         /// <summary>Combo blade: strikes per swing and seconds between them (the last strike deals <see cref="ComboFinisherMul"/>×).</summary>
         public const int ComboHits = 3;
+        /// <summary>Spiked armor: share of each contact hit taken that is reflected, per level.</summary>
+        public const float SpikedReflectPerLevel = 0.1f;
+        /// <summary>Most projectiles/axes/strikes a volley may have after the duplicator (buffers are sized for it).</summary>
+        public const int MaxVolleyCount = 8;
         public const float ComboHitInterval = 0.25f;
         public const float ComboFinisherMul = 2f;
 
@@ -352,6 +386,13 @@ namespace PersonalArena.Core.Survivor
                 28 => HeavyHammer,
                 29 => Bomb,
                 30 => Retaliate,
+                31 => Barrier,
+                32 => Boomerang,
+                33 => PoisonPool,
+                34 => DurationCharm,
+                35 => Duplicator,
+                36 => SpikedArmor,
+                37 => OmniBox,
                 58 => Recovery,
                 59 => Clover,
                 60 => Greed,
@@ -400,7 +441,8 @@ namespace PersonalArena.Core.Survivor
         /// already cover them): iron-heart +10% max HP, bone-armor +1 armor, might-gauntlet +8% damage,
         /// crit-eye +4% crit chance, hourglass −6% cooldown (returned positive), area-charm +8% area,
         /// wind-boots +8% move speed, magnet-charm +25% pickup radius; M9: recovery +0.2 HP/s, clover +5 Luck
-        /// (one Luck stat point), greed +10% gold, crown +8% EXP. 0 for other rows.
+        /// (one Luck stat point), greed +10% gold, crown +8% EXP; M9 1b: duration-charm +10% duration, duplicator +1 projectile,
+        /// spiked-armor +1 armor (the reflect share is <see cref="SpikedReflectPerLevel"/>), omni-box +4% damage, move speed, duration and area. 0 for other rows.
         /// </summary>
         public static float PassivePerLevel(int index)
         {
@@ -418,12 +460,16 @@ namespace PersonalArena.Core.Survivor
                 CloverIndex => 5f,
                 GreedIndex => 0.1f,
                 CrownIndex => 0.08f,
+                DurationCharmIndex => 0.1f,
+                DuplicatorIndex => 1f,
+                SpikedArmorIndex => 1f,
+                OmniBoxIndex => 0.04f,
                 _ => 0f
             };
         }
 
-        private static ItemDef Passive(int index, string id, string name) =>
-            new ItemDef { CatalogIndex = index, Id = id, Name = name, Kind = ItemKind.Passive, PerLevel = PassivePerLevel(index) };
+        private static ItemDef Passive(int index, string id, string name, int maxLevel = 5) =>
+            new ItemDef { CatalogIndex = index, Id = id, Name = name, Kind = ItemKind.Passive, PerLevel = PassivePerLevel(index), MaxLevel = maxLevel };
 
         private static ItemDef Filler(int index, string id, string name) =>
             new ItemDef { CatalogIndex = index, Id = id, Name = name, Kind = ItemKind.Filler, MaxLevel = 0 };
@@ -588,7 +634,7 @@ namespace PersonalArena.Core.Survivor
                 Id = "warrior", MaxHp = 150f, Regen = 0.2f, Armor = 0f, MoveSpeed = 4.5f,
                 Acceleration = 30f, Radius = 0.5f, PickupRadius = 1.5f, CritChance = 0.05f,
                 CritDamage = 1.5f, MaxEnergy = 100f, EnergyRegen = 15f, Mass = 1f,
-                StartingWeapon = 0, WeaponPool = new[] { 0, 1, 2, 3, 4, 5, 26, 27, 28, 29, 30 }, PassivePool = new[] { 6, 7, 8, 9, 10, 11, 12, 13, 58, 59, 60, 61 },
+                StartingWeapon = 0, WeaponPool = new[] { 0, 1, 2, 3, 4, 5, 26, 27, 28, 29, 30, 31, 32, 33 }, PassivePool = new[] { 6, 7, 8, 9, 10, 11, 12, 13, 58, 59, 60, 61, 34, 35, 36, 37 },
                 ActiveSkills = new[]
                 {
                     new SkillDef { Id = "kick", Kind = SkillKind.Kick, Damage = 10f, Range = 1.8f, ArcDegrees = 100f, StunSeconds = 1.2f, Knockback = 3f, Cooldown = 3f },
@@ -608,7 +654,7 @@ namespace PersonalArena.Core.Survivor
                 Acceleration = 30f, Radius = 0.45f, PickupRadius = 1.8f, CritChance = 0.05f,
                 CritDamage = 1.5f, MaxEnergy = 150f, EnergyRegen = 20f, Mass = 0.9f,
                 StartingWeapon = SurvivorCatalog.MagicBoltIndex, WeaponPool = new[] { 14, 15, 16, 17, 18, 19 },
-                PassivePool = new[] { 6, 7, 8, 9, 10, 11, 12, 13, 58, 59, 60, 61 },
+                PassivePool = new[] { 6, 7, 8, 9, 10, 11, 12, 13, 58, 59, 60, 61, 34, 35, 36, 37 },
                 ActiveSkills = new[]
                 {
                     new SkillDef { Id = "fireball", Kind = SkillKind.Projectile, Damage = 40f, Range = 12f, ProjectileSpeed = 14f, ProjectileRadius = 0.4f, AreaRadius = 2f, Knockback = 1f, Cooldown = 3f, EnergyCost = 25f },
@@ -628,7 +674,7 @@ namespace PersonalArena.Core.Survivor
                 Acceleration = 34f, Radius = 0.45f, PickupRadius = 1.6f, CritChance = 0.08f,
                 CritDamage = 1.6f, MaxEnergy = 100f, EnergyRegen = 15f, Mass = 0.9f,
                 StartingWeapon = SurvivorCatalog.ArrowIndex, WeaponPool = new[] { 20, 21, 22, 23, 24, 25 },
-                PassivePool = new[] { 6, 7, 8, 9, 10, 11, 12, 13, 58, 59, 60, 61 },
+                PassivePool = new[] { 6, 7, 8, 9, 10, 11, 12, 13, 58, 59, 60, 61, 34, 35, 36, 37 },
                 ActiveSkills = new[]
                 {
                     new SkillDef { Id = "power-shot", Kind = SkillKind.Projectile, Damage = 50f, Range = 14f, ProjectileSpeed = 22f, ProjectileRadius = 0.35f, Knockback = 2.5f, Pierce = true, Cooldown = 3.5f, EnergyCost = 20f },

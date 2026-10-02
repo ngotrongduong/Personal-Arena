@@ -94,13 +94,13 @@ namespace PersonalArena.Core.Tests.Meta
             l.Points[(int)StatId.MaxHp] = 25;  // cap 20
             l.Points[(int)StatId.Armor] = -4;  // negative
             l.Points[(int)StatId.Growth] = 8;
-            l.Points[(int)StatId.Reserved13] = 3; // unused slot
+            l.Points[(int)StatId.Reserved15] = 3; // unused slot
             l.Points[18] = 7;                  // beyond the 16 slots: dropped
             l.Name = "  Một cái tên rất dài hơn mười sáu ký tự  ";
             Assert.That(ProfileRules.Sanitize(p), Is.True);
             Assert.That(l.Points, Has.Length.EqualTo(StatInfo.SlotCount));
             Assert.That(l.Points[(int)StatId.MaxHp], Is.EqualTo(20)); Assert.That(l.Points[(int)StatId.Armor], Is.EqualTo(0));
-            Assert.That(l.Points[(int)StatId.Growth], Is.EqualTo(8)); Assert.That(l.Points[(int)StatId.Reserved13], Is.EqualTo(0));
+            Assert.That(l.Points[(int)StatId.Growth], Is.EqualTo(8)); Assert.That(l.Points[(int)StatId.Reserved15], Is.EqualTo(0));
             Assert.That(l.Name.Length, Is.LessThanOrEqualTo(ProfileRules.MaxNameLength)); Assert.That(l.Name, Does.StartWith("Một cái tên"));
 
             // Overspent: 28 points on level 10 -> remove from the highest stat index down.
@@ -163,7 +163,7 @@ namespace PersonalArena.Core.Tests.Meta
             c.Level = 25;
             for (int i = 0; i < 20; i++) Assert.That(ProfileRules.TryAddPoint(c, 0, StatId.Might), Is.True);
             Assert.That(ProfileRules.TryAddPoint(c, 0, StatId.Might), Is.False, "cap 20");
-            Assert.That(ProfileRules.TryAddPoint(c, 0, StatId.Reserved13), Is.False, "unused stat");
+            Assert.That(ProfileRules.TryAddPoint(c, 0, StatId.Reserved15), Is.False, "unused stat");
             Assert.That(ProfileRules.TryAddPoint(c, 0, (StatId)99), Is.False);
             for (int i = 0; i < 5; i++) Assert.That(ProfileRules.TryAddPoint(c, 0, StatId.Luck), Is.True);
             Assert.That(ProfileRules.UnspentPoints(c, 0), Is.EqualTo(0));

@@ -19,6 +19,11 @@ namespace PersonalArena.Core.Survivor
         private int comboHitsLeft;
         private float comboTimer;
         private bool retaliatePending;
+        private float reflectPending;
+        private float lastHeroDamage;
+        private bool barrierInit;
+        private int barrierCharges;
+        private int barrierMax;
         private readonly Vec2[] orbitAxePositions = new Vec2[8];
         /// <summary>Catalog index of the orbit weapon of the current volley (its cooldown waits while it spins).</summary>
         private int orbitWeaponIndex = -1;
@@ -64,13 +69,14 @@ namespace PersonalArena.Core.Survivor
         private void ResetContentState()
         {
             orbitAxeCount = 0; orbitAngle = 0f; orbitRemaining = 0f; orbitRadius = 0f; orbitAxeRadius = 0f; orbitWeaponIndex = -1;
-            comboHitsLeft = 0; comboTimer = 0f; retaliatePending = false;
+            comboHitsLeft = 0; comboTimer = 0f; retaliatePending = false; reflectPending = 0f; lastHeroDamage = 0f;
+            barrierInit = false; barrierCharges = 0; barrierMax = 0;
             shockwaveActive = false; shockwaveId = 0; shockwaveRadius = 0f; shockwaveMaxRadius = 0f; shockwaveCenter = Vec2.Zero;
         }
 
         private bool ThrustSpears(ItemDef def, int level, out Vec2 aim, out int count)
         {
-            aim = Vec2.Zero; count = CountAtLevel(def.CountByLevel, level);
+            aim = Vec2.Zero; count = VolleyCount(def.CountByLevel, level);
             float length = def.BaseRange * stats.AreaMul;
             SurvivorEnemy target = null; float nearest = float.PositiveInfinity;
             for (int i = 0; i < enemyLimit; i++)
@@ -103,9 +109,9 @@ namespace PersonalArena.Core.Survivor
             if (orbitAxeCount == 0)
             {
                 if (weaponCooldowns[def.CatalogIndex] > 0f) return;
-                orbitAxeCount = Math.Min(CountAtLevel(def.CountByLevel, level), orbitAxePositions.Length);
+                orbitAxeCount = Math.Min(VolleyCount(def.CountByLevel, level), orbitAxePositions.Length);
                 orbitWeaponIndex = def.CatalogIndex;
-                orbitAngle = Hero.Facing; orbitRemaining = def.Duration;
+                orbitAngle = Hero.Facing; orbitRemaining = def.Duration * stats.DurationMul;
                 orbitRadius = def.BaseRange * stats.AreaMul; orbitAxeRadius = def.ProjectileRadius * stats.AreaMul;
                 AddEvent(SurvivorEventType.WeaponFired, extra: orbitAxeCount, id: def.CatalogIndex);
                 ApplyOrbitHits(def, level);
@@ -243,7 +249,7 @@ namespace PersonalArena.Core.Survivor
         /// <summary>Strike: <c>count</c> random enemies in range each get a blast of radius Width × area.</summary>
         private bool StrikeTargets(ItemDef def, int level, out int count)
         {
-            count = Math.Min(CountAtLevel(def.CountByLevel, level), hammerTargetIds.Length);
+            count = Math.Min(VolleyCount(def.CountByLevel, level), hammerTargetIds.Length);
             float damage = def.BaseDamage + def.DamagePerLevel * (level - 1);
             float radius = def.Width * stats.AreaMul;
             int fired = 0;
@@ -267,7 +273,7 @@ namespace PersonalArena.Core.Survivor
             if (target == null) return false;
             aim = (target.Position - Hero.Position).Normalized();
             if (aim.LengthSquared < 1e-8f) aim = Vec2.FromAngle(Hero.Facing);
-            int count = CountAtLevel(def.CountByLevel, level);
+            int count = VolleyCount(def.CountByLevel, level);
             float step = count > 1 ? def.ArcDegrees * MathF.PI / 180f / (count - 1) : 0f;
             float damage = def.BaseDamage + def.DamagePerLevel * (level - 1);
             for (int k = 0; k < count; k++)
@@ -373,6 +379,9 @@ namespace PersonalArena.Core.Survivor
             }
             return false;
         }
+
+        /// <summary>Count at a level plus the duplicator's extra, capped at <see cref="SurvivorCatalog.MaxVolleyCount"/> (the size of the shared buffers).</summary>
+        private int VolleyCount(IReadOnlyList<int> counts, int level) => Math.Min(CountAtLevel(counts, level) + stats.Amount, SurvivorCatalog.MaxVolleyCount);
 
         private static int CountAtLevel(IReadOnlyList<int> counts, int level) =>
             counts.Count == 0 ? 1 : counts[Math.Max(1, Math.Min(level, counts.Count)) - 1];

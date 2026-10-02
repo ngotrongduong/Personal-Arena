@@ -44,6 +44,12 @@ namespace PersonalArena.Core.Survivor
         public float GreedMul { get; internal set; }
         public float GrowthMul { get; internal set; }
         public float TierGold { get; internal set; }
+        /// <summary>Multiplier on volley durations (orbit, poison zone); 1 + duration-charm + omni-box.</summary>
+        public float DurationMul { get; internal set; }
+        /// <summary>Extra projectiles per volley from the duplicator (0 without it).</summary>
+        public int Amount { get; internal set; }
+        /// <summary>Share of each contact hit taken that is reflected to touching enemies (spiked armor).</summary>
+        public float ReflectFraction { get; internal set; }
     }
 
     public sealed class SurvivorEnemy
@@ -96,6 +102,40 @@ namespace PersonalArena.Core.Survivor
         /// <summary>A weapon bomb also blows up when its range runs out (a skill fireball just vanishes).</summary>
         internal bool ExplodeOnExpire;
         internal int HitCount;
+    }
+
+    /// <summary>A flying boomerang: out toward its target, then back to the hero. Each enemy is hit at most once per direction.</summary>
+    public sealed class SurvivorBoomerang
+    {
+        public const int HitCapacity = 48;
+        public bool Active { get; internal set; }
+        public Vec2 Position { get; internal set; }
+        public Vec2 Direction { get; internal set; }
+        public float Radius { get; internal set; }
+        public float Damage { get; internal set; }
+        /// <summary>True once it turned around and flies back to the hero.</summary>
+        public bool Returning { get; internal set; }
+        public int SourceIndex { get; internal set; }
+        internal float Travelled;
+        internal float MaxRange;
+        internal float Age;
+        internal int OutCount;
+        internal int BackCount;
+        internal readonly int[] OutIds = new int[HitCapacity];
+        internal readonly int[] BackIds = new int[HitCapacity];
+    }
+
+    /// <summary>A poison pool on the ground: hurts every enemy inside every tick interval until it runs out.</summary>
+    public sealed class SurvivorZone
+    {
+        public bool Active { get; internal set; }
+        public Vec2 Position { get; internal set; }
+        public float Radius { get; internal set; }
+        public float Remaining { get; internal set; }
+        public float Duration { get; internal set; }
+        public float Damage { get; internal set; }
+        public int SourceIndex { get; internal set; }
+        internal float TickTimer;
     }
 
     public sealed class SurvivorEnemyProjectile

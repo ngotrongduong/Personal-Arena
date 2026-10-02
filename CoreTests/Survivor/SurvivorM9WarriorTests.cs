@@ -33,7 +33,7 @@ namespace PersonalArena.Core.Tests.Survivor
             float[] values = new float[SurvivorObservation.Size]; new SurvivorObservation().Write(sim, values);
             foreach (int index in NewWeapons) Assert.That(values[SurvivorObservation.InventoryOffset + index], Is.EqualTo(0.6f).Within(1e-6f), "weapon " + index);
             foreach (int index in NewPassives) Assert.That(values[SurvivorObservation.InventoryOffset + index], Is.EqualTo(1f), "passive " + index);
-            Assert.That(values[SurvivorObservation.InventoryOffset + 31], Is.Zero); Assert.That(values[SurvivorObservation.InventoryOffset + 62], Is.Zero);
+            Assert.That(values[SurvivorObservation.InventoryOffset + 38], Is.Zero); Assert.That(values[SurvivorObservation.InventoryOffset + 62], Is.Zero);
             for (int i = 0; i < values.Length; i++) { Assert.That(float.IsFinite(values[i]), Is.True); Assert.That(values[i], Is.InRange(-1f, 1f)); }
         }
 

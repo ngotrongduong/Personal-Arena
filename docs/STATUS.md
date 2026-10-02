@@ -235,7 +235,10 @@ thưởng theo thứ bậc, nghiệm thu bằng đánh giá 100 seed). Đấu tr
 - CoreTests 286/286 (Linux). Hai golden chỉ-Windows do job Windows của CI kiểm.
 - **Chưa có hình ảnh/HUD trong trình xem** (T-037, cần PC có Unity): HUD 6 + 6 ô, icon, hiệu ứng, âm thanh.
   Não Warrior cũ chỉ dùng skill thứ 4 sau khi train lại. Số cân bằng là số khởi điểm, chưa chỉnh.
-- Đợt 1b (5 phụ kiện/vũ khí nhóm B còn lại, Bùa thời gian, Bộ nhân đôi) và đợt 2 (danh mục 128) chưa làm.
+- **Đợt 1b (T-038)**: Vòng bảo hộ (31), Boomerang (32), Bình độc (33) cho Warrior; phụ kiện Bùa thời gian (34),
+  Bộ nhân đôi (35, tối đa cấp 2), Giáp phản (36), Hộp tổng hợp (37) cho cả 3 class. Hai chỉ số mới `Duration`,
+  `Amount` dùng chỗ `Reserved13/14`. CoreTests 342/342. Danh mục còn trống: 38–39. Chưa có hình ảnh/HUD (T-037).
+- Đợt 2 (danh mục 128, 6 skill, tiến hóa cho vũ khí mới, Mage/Archer) chưa làm.
 
 ### 2026-10-02 — Claude (cloud): CI xanh lại, review M5–M8
 - CI `core-tests` đỏ từ M5: 2 golden băm từng bit float (ghi trên Windows) lệch trên Linux. Nay 2 test đó chỉ
