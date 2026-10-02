@@ -257,6 +257,12 @@ thưởng theo thứ bậc, nghiệm thu bằng đánh giá 100 seed). Đấu tr
 - **T-045 xong**: 16 tiến hóa cho vũ khí mới (ô 112–127; Thanh tẩy không có), cơ chế rương/ghép phụ kiện dùng chung với
   18 tiến hóa cũ (40–57). CoreTests 614/614. Lưu ý: tiến hóa Bóng ma tốc độ có hệ số sàn 0,4 nên sát thương lúc đứng
   yên là ×0,88 (task ghi 0,8; đổi `MomentumFloor` ≈ 0,333 nếu muốn 0,8). Đạn xuyên giờ nhớ tối đa 8 quái.
+- **Đo hiệu năng `Step` với nội dung M9** (máy cloud, Release, 250 quái + 400 ngọc, test mới
+  `SurvivorM9PerformanceTests`): bộ đồ M9 nặng nhất Warrior ≈ 0,058–0,061 ms, Archer ≈ 0,057–0,082 ms (dao động giữa
+  các lần chạy), Mage ≈ 0,024–0,033 ms; bộ 6 vũ khí cũ cấp 5 trên cùng máy ≈ 0,046–0,049 ms. Đo từng vũ khí riêng: chỉ
+  đám quái đã tốn ≈ 0,050 ms, mỗi vũ khí M9 chỉ cộng 0–0,015 ms (Đồng hồ băng còn làm nhanh hơn vì quái đứng yên) →
+  chi phí chính là mô phỏng quái, không phải vũ khí mới. Mục tiêu 0,05 ms đặt cho PC của owner; CI giữ ngưỡng 0,2 ms.
+  Nếu cần nhanh hơn: tối ưu cập nhật/tách quái, không phải vũ khí.
 - Chưa làm:
   toàn bộ phần hiển thị Unity (T-041 + icon/hiệu ứng/âm thanh), cân bằng bằng `SurvivorEval`.
 
