@@ -49,6 +49,10 @@ namespace PersonalArena.Core.Survivor
         public float FacingRange = 12f;
         public float HeroTurnRateDegPerSec = 720f;
 
+        /// <summary>Weapon and passive slots the hero may fill (1..<see cref="SurvivorCatalog.MaxWeapons"/>); M9 default 6 + 6, the old rules used 4 + 4.</summary>
+        public int MaxWeaponSlots = SurvivorCatalog.MaxWeapons;
+        public int MaxPassiveSlots = SurvivorCatalog.MaxPassives;
+
         // Enemy scaling at spawn time (t = run seconds, N = tier).
         /// <summary>HP × (1 + HpPerMinute · t / 60).</summary>
         public float HpPerMinute = 0.12f;
@@ -166,6 +170,8 @@ namespace PersonalArena.Core.Survivor
             Check(DenserSpawnsMul); Check(EarlyEliteSeconds); Check(FastRunnerSpeedMul); Check(LessMeatMul); Check(EarlyBruteFromSeconds);
             Check(RegenDelaySeconds); Check(RegenFractionPerSecond); Check(BossSummonFasterMul); Check(NightmareSpeedMul); Check(NightmareEliteHpMul);
             Check(BossHpMul); Check(XpMul);
+            if (MaxWeaponSlots < 1 || MaxWeaponSlots > SurvivorCatalog.MaxWeapons) throw new ArgumentOutOfRangeException(nameof(MaxWeaponSlots));
+            if (MaxPassiveSlots < 1 || MaxPassiveSlots > SurvivorCatalog.MaxPassives) throw new ArgumentOutOfRangeException(nameof(MaxPassiveSlots));
             if (BossHpMul <= 0f) throw new ArgumentOutOfRangeException(nameof(BossHpMul));
             if (EarlyBruteMinWeight < 0 || DoubleEliteCount < 1 || BossSummonFasterMul <= 0f) throw new ArgumentOutOfRangeException(nameof(DoubleEliteCount));
             if (SpawnRingMax < SpawnRingMin || GoldMax < GoldMin || EliteGoldMax < EliteGoldMin) throw new ArgumentOutOfRangeException(nameof(SpawnRingMax), "A range has max < min.");

@@ -92,7 +92,9 @@ namespace PersonalArena.Core.Survivor
         /// <summary>When above 0 the first hit blows up: every enemy within this radius takes the damage.</summary>
         public float ExplodeRadius { get; internal set; }
         internal float StunSeconds;
-        internal readonly int[] HitIds = new int[3];
+        internal readonly int[] HitIds = new int[4];
+        /// <summary>A weapon bomb also blows up when its range runs out (a skill fireball just vanishes).</summary>
+        internal bool ExplodeOnExpire;
         internal int HitCount;
     }
 
@@ -133,7 +135,7 @@ namespace PersonalArena.Core.Survivor
     public sealed class SurvivorInventory
     {
         private readonly int[] levels = new int[SurvivorCatalog.CatalogSize];
-        // Storage covers test/debug grants beyond the gameplay slot caps; offers still enforce 4 + 4.
+        // Storage covers test/debug grants beyond the gameplay slot caps; offers enforce the tuning slot caps (default 6 + 6).
         private readonly int[] weapons = new int[SurvivorCatalog.CatalogSize];
         private readonly int[] passives = new int[SurvivorCatalog.CatalogSize];
         public int WeaponCount { get; internal set; }

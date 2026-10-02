@@ -15,6 +15,8 @@ namespace PersonalArena.Core.Survivor
                 int level = inventory.Level(index);
                 if (def.Pattern == WeaponPattern.Orbit) { UpdateOrbitAxes(def, level); continue; }
                 if (def.Pattern == WeaponPattern.Shockwave) { UpdateShockwave(def, level); continue; }
+                if (def.Pattern == WeaponPattern.Combo) { UpdateCombo(def, level); continue; }
+                if (def.Pattern == WeaponPattern.Retaliate) continue;
                 if (weaponCooldowns[index] > 0f) continue;
                 if (def.Pattern == WeaponPattern.Sweep)
                 {
@@ -43,6 +45,11 @@ namespace PersonalArena.Core.Survivor
                     weaponCooldowns[index] = def.BaseCooldown * stats.CooldownMul;
                     AddEvent(SurvivorEventType.WeaponFired, id: index, point: fanDirection);
                 }
+                else if (def.Pattern == WeaponPattern.Bomb && ThrowBomb(def, level, out Vec2 bombDirection))
+                {
+                    weaponCooldowns[index] = def.BaseCooldown * stats.CooldownMul;
+                    AddEvent(SurvivorEventType.WeaponFired, id: index, point: bombDirection);
+                }
                 else if (def.Pattern == WeaponPattern.Aura)
                 {
                     TickAura(def, level);
@@ -52,10 +59,10 @@ namespace PersonalArena.Core.Survivor
             }
         }
 
-        private void Sweep(ItemDef def, int level)
+        private void Sweep(ItemDef def, int level, float damageMul = 1f)
         {
             float range = def.BaseRange * (1f + def.RangePerLevel * (level - 1)) * stats.AreaMul;
-            float damage = def.BaseDamage + def.DamagePerLevel * (level - 1);
+            float damage = (def.BaseDamage + def.DamagePerLevel * (level - 1)) * damageMul;
             bool hasBackArc = def.BackArcLevel > 0 && level >= def.BackArcLevel;
             for (int i = 0; i < enemyLimit && !IsEnded; i++)
             {
@@ -127,8 +134,8 @@ namespace PersonalArena.Core.Survivor
 
         private SurvivorProjectile NewProjectile()
         {
-            for (int i = 0; i < projectileLimit; i++) if (!projectiles[i].Active) return projectiles[i];
-            if (projectileLimit < projectiles.Length) return projectiles[projectileLimit++];
+            for (int i = 0; i < projectileLimit; i++) if (!projectiles[i].Active) { projectiles[i].ExplodeOnExpire = false; return projectiles[i]; }
+            if (projectileLimit < projectiles.Length) { SurvivorProjectile fresh = projectiles[projectileLimit++]; fresh.ExplodeOnExpire = false; return fresh; }
             return null;
         }
 
@@ -147,7 +154,17 @@ namespace PersonalArena.Core.Survivor
             {
                 SurvivorProjectile p = projectiles[i]; if (!p.Active) continue;
                 p.Position += p.Velocity * FixedDeltaTime; p.Lifetime -= FixedDeltaTime;
-                if (p.Lifetime <= 0f || MathF.Abs(p.Position.X) > Config.MapHalfSize || MathF.Abs(p.Position.Y) > Config.MapHalfSize) { p.Active = false; continue; }
+                if (p.Lifetime <= 0f || MathF.Abs(p.Position.X) > Config.MapHalfSize || MathF.Abs(p.Position.Y) > Config.MapHalfSize)
+                {
+                    p.Active = false;
+                    if (p.ExplodeOnExpire && p.ExplodeRadius > 0f)
+                    {
+                        AddEvent(SurvivorEventType.StrikeLanded, p.ExplodeRadius, id: p.SourceIndex, point: p.Position);
+                        Blast(p.Position, p.ExplodeRadius, p.Damage, p.Knockback, p.StunSeconds);
+                        if (IsEnded) return;
+                    }
+                    continue;
+                }
                 float query = p.Radius + maxEnemyRadius + hashDrift;
                 int minX = spatialHash.MinCell(p.Position.X - query), maxX = spatialHash.MinCell(p.Position.X + query);
                 int minY = spatialHash.MinCell(p.Position.Y - query), maxY = spatialHash.MinCell(p.Position.Y + query);

@@ -8,9 +8,11 @@ namespace PersonalArena.Core.Survivor
     /// <summary>
     /// How a weapon attacks. Strike: hits random enemies in range with a small instant blast at each.
     /// Fan: a spread of projectiles toward the nearest enemy. A class owns at most one Orbit, one Aura
-    /// and one Shockwave weapon (the sim keeps one state for each).
+    /// and one Shockwave weapon (the sim keeps one state for each); likewise at most one Combo and one Retaliate.
+    /// Combo: a sweep that strikes three times in a row. Bomb: a thrown projectile that explodes on its first hit
+    /// or at max range. Retaliate: no attack of its own; it blasts a ring around the hero when the hero is hit.
     /// </summary>
-    public enum WeaponPattern { None, Sweep, Thrust, Orbit, Thrown, Aura, Shockwave, Strike, Fan }
+    public enum WeaponPattern { None, Sweep, Thrust, Orbit, Thrown, Aura, Shockwave, Strike, Fan, Combo, Bomb, Retaliate }
     public enum StatId
     {
         MaxHp, Armor, Regen, Might, Crit, CritDamage, Cooldown, Area,
@@ -69,8 +71,9 @@ namespace PersonalArena.Core.Survivor
     public static class SurvivorCatalog
     {
         public const int CatalogSize = 64;
-        public const int MaxWeapons = 4;
-        public const int MaxPassives = 4;
+        /// <summary>Gameplay slot caps (M9: 6 + 6). <see cref="SurvivorTuning.MaxWeaponSlots"/> may lower them for old-rule tests.</summary>
+        public const int MaxWeapons = 6;
+        public const int MaxPassives = 6;
 
         public const int SweepIndex = 0;
         public const int SpearThrustIndex = 1;
@@ -87,6 +90,16 @@ namespace PersonalArena.Core.Survivor
         public const int AreaCharmIndex = 11;
         public const int WindBootsIndex = 12;
         public const int MagnetCharmIndex = 13;
+        // M9 wave 1a: Warrior weapons 26..30 and passives for every class 58..61.
+        public const int FlameConeIndex = 26;
+        public const int ComboBladeIndex = 27;
+        public const int HeavyHammerIndex = 28;
+        public const int BombIndex = 29;
+        public const int RetaliateIndex = 30;
+        public const int RecoveryIndex = 58;
+        public const int CloverIndex = 59;
+        public const int GreedIndex = 60;
+        public const int CrownIndex = 61;
         public const int BonusGoldIndex = 62;
         public const int BonusHealIndex = 63;
 
@@ -242,6 +255,45 @@ namespace PersonalArena.Core.Survivor
             Width = 0.25f, CountByLevel = Array.AsReadOnly(new[] { 1, 1, 1, 2, 2 })
         };
 
+        private static readonly ItemDef FlameCone = new ItemDef
+        {
+            CatalogIndex = FlameConeIndex, Id = "flame-cone", Name = "Phun lửa", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Sweep,
+            BaseDamage = 6f, DamagePerLevel = 2f, BaseRange = 3.2f, BaseCooldown = 0.35f, Knockback = 0f, ArcDegrees = 60f
+        };
+        private static readonly ItemDef ComboBlade = new ItemDef
+        {
+            CatalogIndex = ComboBladeIndex, Id = "combo-blade", Name = "Kiếm liên hoàn", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Combo,
+            BaseDamage = 14f, DamagePerLevel = 5f, BaseRange = 2.6f, BaseCooldown = 1.6f, Knockback = 0.3f, ArcDegrees = 90f,
+            HitInterval = ComboHitInterval, CountByLevel = Array.AsReadOnly(new[] { ComboHits })
+        };
+        private static readonly ItemDef HeavyHammer = new ItemDef
+        {
+            CatalogIndex = HeavyHammerIndex, Id = "heavy-hammer", Name = "Búa nặng", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Thrown,
+            BaseDamage = 60f, DamagePerLevel = 15f, BaseRange = 8f, BaseCooldown = 2.6f, Knockback = 1.2f,
+            ProjectileSpeed = 8f, ProjectileRadius = 0.8f, ProjectileRange = 8f, Pierce = 3,
+            CountByLevel = Array.AsReadOnly(new[] { 1, 1, 1, 2, 2 })
+        };
+        private static readonly ItemDef Bomb = new ItemDef
+        {
+            CatalogIndex = BombIndex, Id = "bomb", Name = "Bom", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Bomb,
+            BaseDamage = 30f, DamagePerLevel = 9f, BaseRange = 9f, BaseCooldown = 2f, Knockback = 1f,
+            ProjectileSpeed = 9f, ProjectileRadius = 0.3f, ProjectileRange = 9f, Width = 2f
+        };
+        private static readonly ItemDef Retaliate = new ItemDef
+        {
+            CatalogIndex = RetaliateIndex, Id = "retaliate", Name = "Phản đòn", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Retaliate,
+            BaseDamage = 20f, DamagePerLevel = 8f, BaseRange = 2.5f, BaseCooldown = 1f, Knockback = 1f
+        };
+        private static readonly ItemDef Recovery = Passive(RecoveryIndex, "recovery", "Hồi phục");
+        private static readonly ItemDef Clover = Passive(CloverIndex, "clover", "Cỏ may mắn");
+        private static readonly ItemDef Greed = Passive(GreedIndex, "greed", "Tham lam");
+        private static readonly ItemDef Crown = Passive(CrownIndex, "crown", "Vương miện");
+
+        /// <summary>Combo blade: strikes per swing and seconds between them (the last strike deals <see cref="ComboFinisherMul"/>×).</summary>
+        public const int ComboHits = 3;
+        public const float ComboHitInterval = 0.25f;
+        public const float ComboFinisherMul = 2f;
+
         private static readonly ItemDef[] Evolutions =
         {
             Evolve(Sweep, 40, "storm-blade", "Kiếm bão", MightGauntletIndex),
@@ -295,6 +347,15 @@ namespace PersonalArena.Core.Survivor
                 23 => OrbitKnife,
                 24 => Dagger,
                 25 => Crossbow,
+                26 => FlameCone,
+                27 => ComboBlade,
+                28 => HeavyHammer,
+                29 => Bomb,
+                30 => Retaliate,
+                58 => Recovery,
+                59 => Clover,
+                60 => Greed,
+                61 => Crown,
                 62 => BonusGold,
                 63 => BonusHeal,
                 _ => null
@@ -338,7 +399,8 @@ namespace PersonalArena.Core.Survivor
         /// Effect per level of a passive row (reserved rows included, so the derived-stat formulas
         /// already cover them): iron-heart +10% max HP, bone-armor +1 armor, might-gauntlet +8% damage,
         /// crit-eye +4% crit chance, hourglass −6% cooldown (returned positive), area-charm +8% area,
-        /// wind-boots +8% move speed, magnet-charm +25% pickup radius. 0 for other rows.
+        /// wind-boots +8% move speed, magnet-charm +25% pickup radius; M9: recovery +0.2 HP/s, clover +5 Luck
+        /// (one Luck stat point), greed +10% gold, crown +8% EXP. 0 for other rows.
         /// </summary>
         public static float PassivePerLevel(int index)
         {
@@ -352,6 +414,10 @@ namespace PersonalArena.Core.Survivor
                 AreaCharmIndex => 0.08f,
                 WindBootsIndex => 0.08f,
                 MagnetCharmIndex => 0.25f,
+                RecoveryIndex => 0.2f,
+                CloverIndex => 5f,
+                GreedIndex => 0.1f,
+                CrownIndex => 0.08f,
                 _ => 0f
             };
         }
@@ -522,13 +588,13 @@ namespace PersonalArena.Core.Survivor
                 Id = "warrior", MaxHp = 150f, Regen = 0.2f, Armor = 0f, MoveSpeed = 4.5f,
                 Acceleration = 30f, Radius = 0.5f, PickupRadius = 1.5f, CritChance = 0.05f,
                 CritDamage = 1.5f, MaxEnergy = 100f, EnergyRegen = 15f, Mass = 1f,
-                StartingWeapon = 0, WeaponPool = new[] { 0, 1, 2, 3, 4, 5 }, PassivePool = new[] { 6, 7, 8, 9, 10, 11, 12, 13 },
+                StartingWeapon = 0, WeaponPool = new[] { 0, 1, 2, 3, 4, 5, 26, 27, 28, 29, 30 }, PassivePool = new[] { 6, 7, 8, 9, 10, 11, 12, 13, 58, 59, 60, 61 },
                 ActiveSkills = new[]
                 {
                     new SkillDef { Id = "kick", Kind = SkillKind.Kick, Damage = 10f, Range = 1.8f, ArcDegrees = 100f, StunSeconds = 1.2f, Knockback = 3f, Cooldown = 3f },
                     new SkillDef { Id = "shield-block", Kind = SkillKind.Block, EnergyCost = 10f, EnergyPerSecond = 20f, BlockMoveMultiplier = 0.4f, BlockDamageMultiplier = 0.5f, ParryWindowSeconds = 0.2f, StunSeconds = 1.5f, BlockStaggerSeconds = 0.6f, BlockPushback = 0.8f },
                     new SkillDef { Id = "dash", Kind = SkillKind.Dash, Cooldown = 2.5f, EnergyCost = 15f, DashDistance = 3f, DashSpeed = 18f },
-                    new SkillDef { Id = "none", Kind = SkillKind.None }
+                    new SkillDef { Id = "war-cry", Kind = SkillKind.AreaBurst, Damage = 15f, AreaRadius = 3.5f, StunSeconds = 0.8f, Knockback = 2f, Cooldown = 10f, EnergyCost = 20f }
                 }
             };
         }
@@ -542,7 +608,7 @@ namespace PersonalArena.Core.Survivor
                 Acceleration = 30f, Radius = 0.45f, PickupRadius = 1.8f, CritChance = 0.05f,
                 CritDamage = 1.5f, MaxEnergy = 150f, EnergyRegen = 20f, Mass = 0.9f,
                 StartingWeapon = SurvivorCatalog.MagicBoltIndex, WeaponPool = new[] { 14, 15, 16, 17, 18, 19 },
-                PassivePool = new[] { 6, 7, 8, 9, 10, 11, 12, 13 },
+                PassivePool = new[] { 6, 7, 8, 9, 10, 11, 12, 13, 58, 59, 60, 61 },
                 ActiveSkills = new[]
                 {
                     new SkillDef { Id = "fireball", Kind = SkillKind.Projectile, Damage = 40f, Range = 12f, ProjectileSpeed = 14f, ProjectileRadius = 0.4f, AreaRadius = 2f, Knockback = 1f, Cooldown = 3f, EnergyCost = 25f },
@@ -562,7 +628,7 @@ namespace PersonalArena.Core.Survivor
                 Acceleration = 34f, Radius = 0.45f, PickupRadius = 1.6f, CritChance = 0.08f,
                 CritDamage = 1.6f, MaxEnergy = 100f, EnergyRegen = 15f, Mass = 0.9f,
                 StartingWeapon = SurvivorCatalog.ArrowIndex, WeaponPool = new[] { 20, 21, 22, 23, 24, 25 },
-                PassivePool = new[] { 6, 7, 8, 9, 10, 11, 12, 13 },
+                PassivePool = new[] { 6, 7, 8, 9, 10, 11, 12, 13, 58, 59, 60, 61 },
                 ActiveSkills = new[]
                 {
                     new SkillDef { Id = "power-shot", Kind = SkillKind.Projectile, Damage = 50f, Range = 14f, ProjectileSpeed = 22f, ProjectileRadius = 0.35f, Knockback = 2.5f, Pierce = true, Cooldown = 3.5f, EnergyCost = 20f },

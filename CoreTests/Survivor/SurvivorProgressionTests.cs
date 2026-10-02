@@ -50,7 +50,7 @@ namespace PersonalArena.Core.Tests.Survivor
         [Test]
         public void Offer_FillersWhenFullSlotsAreMaxed()
         {
-            SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.Config(), 4); foreach (int item in new[] { 0, 1, 2, 3, 6, 7, 8, 9 }) sim.GiveItemForTests(item, 5);
+            SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.OldConfig(), 4); foreach (int item in new[] { 0, 1, 2, 3, 6, 7, 8, 9 }) sim.GiveItemForTests(item, 5);
             sim.GiveXpForTests(5f); sim.Step(default); Assert.That(sim.OfferCount, Is.EqualTo(2)); Assert.That(sim.GetOffer(0).CatalogIndex, Is.EqualTo(62)); Assert.That(sim.GetOffer(1).CatalogIndex, Is.EqualTo(63));
         }
 

@@ -41,7 +41,7 @@ namespace PersonalArena.Core.Tests.Survivor
         [Test]
         public void ActionMask_PickOnlyWhenOffer_SkillsMaskedOnCooldownAndEnergy()
         {
-            SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.Config(), 3); bool[] move = new bool[9], skill = new bool[5], pick = new bool[5]; SurvivorActionMask.WriteMask(sim, move, skill, pick);
+            SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.OldConfig(), 3); bool[] move = new bool[9], skill = new bool[5], pick = new bool[5]; SurvivorActionMask.WriteMask(sim, move, skill, pick);
             Assert.That(move, Is.All.True); Assert.That(pick[0], Is.True); Assert.That(pick[1], Is.False); Assert.That(skill[4], Is.False);
             sim.Step(new SurvivorInput(0, 1, 0)); SurvivorActionMask.WriteMask(sim, move, skill, pick); Assert.That(skill[1], Is.False);
             sim.GiveXpForTests(5f); sim.Step(default); SurvivorActionMask.WriteMask(sim, move, skill, pick); Assert.That(move[0], Is.True); Assert.That(move[1], Is.False); Assert.That(skill[0], Is.True); Assert.That(skill[1], Is.False); Assert.That(pick[1], Is.True);

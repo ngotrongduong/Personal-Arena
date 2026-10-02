@@ -225,6 +225,18 @@ thưởng theo thứ bậc, nghiệm thu bằng đánh giá 100 seed). Đấu tr
 
 ## Nhật ký phiên (mới nhất trên cùng)
 
+### 2026-10-02 (sau) — Claude (cloud): M9 đợt 1a, nội dung Warrior (T-036)
+- Owner chốt: chia 2 đợt, ô mang theo 6 + 6 như Vampire Survivors, bắt đầu với Warrior, không ngại AI học lại.
+  Đề xuất đầy đủ ở `docs/CONTENT-PROPOSAL.md`.
+- T-036 (subagent `core-sim-engineer`, Claude review): ô 6 + 6 (`SurvivorTuning.MaxWeaponSlots/MaxPassiveSlots`),
+  5 vũ khí Warrior (Phun lửa, Kiếm liên hoàn, Búa nặng, Bom, Phản đòn: ô 26–30), 4 phụ kiện cho cả 3 class
+  (Hồi phục, May mắn, Tham lam, Vương miện: 58–61), skill Tiếng thét ở ô skill thứ 4 của Warrior. Schema v4 (2264)
+  và hành động 9/5/5 không đổi. Golden cũ chạy bằng `OldRules` (4 + 4, pool cũ), không ghi lại giá trị.
+- CoreTests 286/286 (Linux). Hai golden chỉ-Windows do job Windows của CI kiểm.
+- **Chưa có hình ảnh/HUD trong trình xem** (T-037, cần PC có Unity): HUD 6 + 6 ô, icon, hiệu ứng, âm thanh.
+  Não Warrior cũ chỉ dùng skill thứ 4 sau khi train lại. Số cân bằng là số khởi điểm, chưa chỉnh.
+- Đợt 1b (5 phụ kiện/vũ khí nhóm B còn lại, Bùa thời gian, Bộ nhân đôi) và đợt 2 (danh mục 128) chưa làm.
+
 ### 2026-10-02 — Claude (cloud): CI xanh lại, review M5–M8
 - CI `core-tests` đỏ từ M5: 2 golden băm từng bit float (ghi trên Windows) lệch trên Linux. Nay 2 test đó chỉ
   chạy trên Windows (`Assume`) và CI có thêm job `windows-latest` (PR #7, xanh cả hai).

@@ -83,12 +83,13 @@ namespace PersonalArena.Core.Tests.Survivor
 
         /// <summary>
         /// The goldens were recorded before the T-035 (M8) balance pass; with its three numbers set back they
-        /// still pin every other rule bit for bit.
+        /// still pin every other rule bit for bit. T-036 (M9) also restores the old content: 4 + 4 slots, the old pools and
+        /// no fourth Warrior skill.
         /// </summary>
         internal static SurvivorConfig PreM8(SurvivorConfig config)
         {
             config.Tuning.XpMul = 1f; config.Tuning.BossHpMul = 1f; config.Tuning.GoldChance = 0.03f;
-            return config;
+            return SurvivorTestHelpers.OldRules(config);
         }
 
         internal static long StateHash(SurvivorSim sim)

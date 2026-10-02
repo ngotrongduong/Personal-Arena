@@ -436,6 +436,7 @@ namespace PersonalArena.Core.Survivor
             float hpRatio = Hero.MaxHp > 0f ? Hero.Hp / Hero.MaxHp : 0f;
             if (hpRatio < MinHpRatio) { MinHpRatio = hpRatio; MinHpTime = Time; }
             AddEvent(SurvivorEventType.HeroDamaged, damage, damage / Hero.MaxHp, sourceId, Hero.Position);
+            retaliatePending = true;
             return Hero.Hp <= 0f;
         }
 

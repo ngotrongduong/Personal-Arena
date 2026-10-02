@@ -166,11 +166,11 @@ namespace PersonalArena.Core.Survivor
                 int level = inventory.Level(index);
                 if (level > 0 && level < def.MaxLevel) candidates[count++] = index;
             }
-            if (inventory.WeaponCount < SurvivorCatalog.MaxWeapons)
+            if (inventory.WeaponCount < Config.Tuning.MaxWeaponSlots)
             {
                 for (int i = 0; i < Config.ClassDef.WeaponPool.Length; i++) if (inventory.Level(Config.ClassDef.WeaponPool[i]) == 0 && !EvolvedAway(Config.ClassDef.WeaponPool[i])) candidates[count++] = Config.ClassDef.WeaponPool[i];
             }
-            if (inventory.PassiveCount < SurvivorCatalog.MaxPassives)
+            if (inventory.PassiveCount < Config.Tuning.MaxPassiveSlots)
             {
                 for (int i = 0; i < Config.ClassDef.PassivePool.Length; i++) if (inventory.Level(Config.ClassDef.PassivePool[i]) == 0) candidates[count++] = Config.ClassDef.PassivePool[i];
             }

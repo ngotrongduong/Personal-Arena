@@ -16,6 +16,9 @@ namespace PersonalArena.Core.Survivor
         private float shockwaveRadius;
         private float shockwaveMaxRadius;
         private Vec2 shockwaveCenter;
+        private int comboHitsLeft;
+        private float comboTimer;
+        private bool retaliatePending;
         private readonly Vec2[] orbitAxePositions = new Vec2[8];
         /// <summary>Catalog index of the orbit weapon of the current volley (its cooldown waits while it spins).</summary>
         private int orbitWeaponIndex = -1;
@@ -61,6 +64,7 @@ namespace PersonalArena.Core.Survivor
         private void ResetContentState()
         {
             orbitAxeCount = 0; orbitAngle = 0f; orbitRemaining = 0f; orbitRadius = 0f; orbitAxeRadius = 0f; orbitWeaponIndex = -1;
+            comboHitsLeft = 0; comboTimer = 0f; retaliatePending = false;
             shockwaveActive = false; shockwaveId = 0; shockwaveRadius = 0f; shockwaveMaxRadius = 0f; shockwaveCenter = Vec2.Zero;
         }
 
@@ -152,6 +156,64 @@ namespace PersonalArena.Core.Survivor
             }
         }
 
+        /// <summary>
+        /// Combo blade: when ready, strikes at once, then twice more every <see cref="ItemDef.HitInterval"/> seconds
+        /// (a sweep each time, along the facing at that moment); the last strike deals double. The cooldown starts with
+        /// the first strike. A swing that has begun finishes even if the weapon is replaced.
+        /// </summary>
+        private void UpdateCombo(ItemDef def, int level)
+        {
+            if (comboHitsLeft > 0)
+            {
+                comboTimer -= FixedDeltaTime;
+                if (comboTimer > 1e-6f) return;
+                comboHitsLeft--; comboTimer += def.HitInterval;
+                bool last = comboHitsLeft == 0;
+                Vec2 facing = Vec2.FromAngle(Hero.Facing);
+                Sweep(def, level, last ? SurvivorCatalog.ComboFinisherMul : 1f);
+                AddEvent(SurvivorEventType.WeaponFired, extra: SurvivorCatalog.ComboHits - comboHitsLeft, id: def.CatalogIndex, point: facing);
+                return;
+            }
+            if (weaponCooldowns[def.CatalogIndex] > 0f) return;
+            Vec2 first = Vec2.FromAngle(Hero.Facing);
+            Sweep(def, level);
+            comboHitsLeft = SurvivorCatalog.ComboHits - 1; comboTimer = def.HitInterval;
+            weaponCooldowns[def.CatalogIndex] = def.BaseCooldown * stats.CooldownMul;
+            AddEvent(SurvivorEventType.WeaponFired, extra: 1, id: def.CatalogIndex, point: first);
+        }
+
+        /// <summary>Bomb: a slow projectile at the nearest enemy in range that explodes (radius Width × area, full damage) on its first hit or when its range runs out.</summary>
+        private bool ThrowBomb(ItemDef def, int level, out Vec2 aim)
+        {
+            aim = Vec2.Zero;
+            SurvivorEnemy target = NearestEnemy(def.BaseRange);
+            if (target == null) return false;
+            aim = (target.Position - Hero.Position).Normalized();
+            if (aim.LengthSquared < 1e-8f) aim = Vec2.FromAngle(Hero.Facing);
+            float damage = def.BaseDamage + def.DamagePerLevel * (level - 1);
+            return LaunchProjectile(def.CatalogIndex, aim, def.ProjectileSpeed, def.ProjectileRadius * stats.AreaMul, damage, def.Knockback,
+                def.ProjectileRange, 0, def.Width * stats.AreaMul, 0f, true);
+        }
+
+        /// <summary>
+        /// Retaliate: when the hero lost HP this tick, blasts a ring around the hero (radius BaseRange × area) and starts
+        /// its internal cooldown (BaseCooldown). Resolved after the enemy phase so no enemy dies mid-update.
+        /// </summary>
+        private void ResolveRetaliate()
+        {
+            if (!retaliatePending) return;
+            retaliatePending = false;
+            int index = OwnedWeaponWithPattern(WeaponPattern.Retaliate);
+            if (index < 0 || weaponCooldowns[index] > 0f || !Hero.Alive) return;
+            ItemDef def = SurvivorCatalog.Get(index);
+            float radius = def.BaseRange * stats.AreaMul;
+            float damage = def.BaseDamage + def.DamagePerLevel * (inventory.Level(index) - 1);
+            weaponCooldowns[index] = def.BaseCooldown * stats.CooldownMul;
+            AddEvent(SurvivorEventType.WeaponFired, id: index, point: Hero.Position);
+            AddEvent(SurvivorEventType.StrikeLanded, radius, id: index, point: Hero.Position);
+            Blast(Hero.Position, radius, damage, def.Knockback, 0f);
+        }
+
         private void UpdateShockwave(ItemDef def, int level)
         {
             if (!shockwaveActive)
@@ -231,7 +293,7 @@ namespace PersonalArena.Core.Survivor
         }
 
         private bool LaunchProjectile(int source, Vec2 direction, float speed, float radius, float damage, float knockback,
-            float range, int pierce, float explodeRadius, float stun)
+            float range, int pierce, float explodeRadius, float stun, bool explodeOnExpire = false)
         {
             SurvivorProjectile projectile = NewProjectile();
             if (projectile == null) return false;
@@ -239,7 +301,7 @@ namespace PersonalArena.Core.Survivor
             projectile.Velocity = direction * speed; projectile.Radius = radius; projectile.Damage = damage;
             projectile.Knockback = knockback; projectile.Lifetime = speed > 0f ? range / speed : 0f;
             projectile.PierceRemaining = pierce; projectile.HitCount = 0; projectile.SourceIndex = source;
-            projectile.ExplodeRadius = explodeRadius; projectile.StunSeconds = stun;
+            projectile.ExplodeRadius = explodeRadius; projectile.StunSeconds = stun; projectile.ExplodeOnExpire = explodeOnExpire;
             return true;
         }
 

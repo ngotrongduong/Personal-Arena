@@ -201,6 +201,7 @@ namespace PersonalArena.Core.Survivor
             if (!IsEnded) UpdateEnemies();
             if (!IsEnded) UpdateEnemyProjectiles();
             if (!IsEnded) ResolveBodyCollisions();
+            if (!IsEnded) ResolveRetaliate();
             FinalizeEnemyVelocities();
             Hero.Velocity = (Hero.Position - heroStart - teleportShift) / FixedDeltaTime;
             if (IsEnded) return;
@@ -345,7 +346,7 @@ namespace PersonalArena.Core.Survivor
             SurvivorClassDef c = Config.ClassDef;
             stats.MaxHp = c.MaxHp * (1f + Passive(SurvivorCatalog.IronHeartIndex) + Point(b, StatId.MaxHp));
             stats.Armor = c.Armor + Passive(SurvivorCatalog.BoneArmorIndex) + Point(b, StatId.Armor);
-            stats.Regen = c.Regen + Point(b, StatId.Regen);
+            stats.Regen = c.Regen + Point(b, StatId.Regen) + Passive(SurvivorCatalog.RecoveryIndex);
             stats.Might = 1f + Passive(SurvivorCatalog.MightGauntletIndex) + Point(b, StatId.Might);
             stats.CritChance = MathF.Min(1f, c.CritChance + Passive(SurvivorCatalog.CritEyeIndex) + Point(b, StatId.Crit));
             stats.CritDamage = c.CritDamage + Point(b, StatId.CritDamage);
@@ -354,9 +355,9 @@ namespace PersonalArena.Core.Survivor
             stats.AreaMul = 1f + Passive(SurvivorCatalog.AreaCharmIndex) + Point(b, StatId.Area);
             stats.MoveSpeed = c.MoveSpeed * (1f + Passive(SurvivorCatalog.WindBootsIndex) + Point(b, StatId.MoveSpeed));
             stats.PickupRadius = c.PickupRadius * (1f + Passive(SurvivorCatalog.MagnetCharmIndex) + Point(b, StatId.Magnet));
-            stats.Luck = Point(b, StatId.Luck);
-            stats.GreedMul = 1f + Point(b, StatId.Greed);
-            stats.GrowthMul = 1f + Point(b, StatId.Growth);
+            stats.Luck = Point(b, StatId.Luck) + Passive(SurvivorCatalog.CloverIndex);
+            stats.GreedMul = 1f + Point(b, StatId.Greed) + Passive(SurvivorCatalog.GreedIndex);
+            stats.GrowthMul = 1f + Point(b, StatId.Growth) + Passive(SurvivorCatalog.CrownIndex);
             stats.TierGold = 1f + 0.5f * (b.Tier - 1);
             Hero.MaxHp = stats.MaxHp;
             if (preserveHpGain && stats.MaxHp > oldMax) Hero.Hp += stats.MaxHp - oldMax;
@@ -578,6 +579,7 @@ namespace PersonalArena.Core.Survivor
             SpawnEnemyProjectile(point, velocity, radius, damage, lifetime, sourceId);
         internal float WeaponCooldownForTests(int index) => weaponCooldowns[index];
         internal void SetWeaponCooldownForTests(int index, float value) => weaponCooldowns[index] = value;
+        internal void RequestRetaliateForTests() { retaliatePending = true; }
         internal bool RollMagnetDropForTests() => RollMagnetDrop();
 
         private void CaptureEnemyPositions()

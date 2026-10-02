@@ -22,8 +22,8 @@ namespace PersonalArena.Core.Tests.Survivor
             Assert.That(SurvivorCatalog.Get(2).Duration, Is.EqualTo(4f)); Assert.That(SurvivorCatalog.Get(4).HitInterval, Is.EqualTo(0.4f));
             Assert.That(SurvivorCatalog.Get(5).CooldownPerLevel, Is.EqualTo(-0.3f));
             SurvivorClassDef warrior = SurvivorDefaults.Warrior();
-            Assert.That(warrior.WeaponPool, Is.EqualTo(new[] { 0, 1, 2, 3, 4, 5 }));
-            Assert.That(warrior.PassivePool, Is.EqualTo(new[] { 6, 7, 8, 9, 10, 11, 12, 13 }));
+            Assert.That(warrior.WeaponPool, Is.EqualTo(new[] { 0, 1, 2, 3, 4, 5, 26, 27, 28, 29, 30 }));
+            Assert.That(warrior.PassivePool, Is.EqualTo(new[] { 6, 7, 8, 9, 10, 11, 12, 13, 58, 59, 60, 61 }));
         }
 
         [Test]
@@ -32,12 +32,12 @@ namespace PersonalArena.Core.Tests.Survivor
             bool[] seen = new bool[14];
             for (int seed = 0; seed < 300; seed++)
             {
-                SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.Config(), seed); sim.GiveXpForTests(5f); sim.Step(default);
+                SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.OldConfig(), seed); sim.GiveXpForTests(5f); sim.Step(default);
                 for (int i = 0; i < sim.OfferCount; i++) seen[sim.GetOffer(i).CatalogIndex] = true;
             }
             foreach (int index in new[] { 1, 2, 4, 5, 8, 10, 11, 13 }) Assert.That(seen[index], Is.True, "catalog " + index);
 
-            SurvivorSim capped = new SurvivorSim(SurvivorTestHelpers.Config(), 12);
+            SurvivorSim capped = new SurvivorSim(SurvivorTestHelpers.OldConfig(), 12);
             foreach (int index in new[] { 1, 2, 3, 6, 7, 8, 9 }) capped.GiveItemForTests(index, 1);
             Assert.That(capped.Inventory.WeaponCount, Is.EqualTo(4)); Assert.That(capped.Inventory.PassiveCount, Is.EqualTo(4));
             capped.GiveXpForTests(5f); capped.Step(default);
