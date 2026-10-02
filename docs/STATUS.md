@@ -235,9 +235,10 @@ thưởng theo thứ bậc, nghiệm thu bằng đánh giá 100 seed). Đấu tr
   tạm trùng khi ghi phiên bản, điểm mặc định tính sớm, `RecordRun` nhận giây vô hạn. Phần View (Unity UI) chưa review.
 - **Chưa sửa, cần quyết định/thiết kế:**
   - Rẽ nhánh từ phiên bản lịch sử (champion cũ) không có `training_status.json` → curriculum có thể về lesson 0.
-  - Thưởng hạ quái (`PerKill` 0,004) tổng cả trận lớn hơn thưởng sống sót (≈ 18 so với ≈ 9 ở bậc 1 theo fuzz),
-    trái thứ bậc D-030; Pháp sư xác triệu hồi walker liên tục nên AI có thể học farm. Cần bàn lại cân bằng.
-  - `DoubleElites` (bậc ≥ 7) cũng nhân đôi trùm tinh anh sớm lúc 90 s: đúng ý GDD không?
+  - ~~Thưởng hạ quái lớn hơn thưởng sống sót~~ — **owner quyết định giữ nguyên** (D-040). Lưu ý: "Pháp sư xác"
+    (Necromancer) là **quái địch** M7 (D-038), không phải class của người chơi; nó gọi 3 zombie mỗi 6 s. AI có
+    thể học đứng gần để hạ walker lấy thưởng; owner coi đó là một chiến thuật AI tự đánh giá.
+  - ~~`DoubleElites`~~ — **giữ nguyên** (D-040): bậc ≥ 7 gấp đôi mọi tinh anh, kể cả tinh anh sớm 90 s của bậc 3.
   - Walker triệu hồi có thể nằm ngoài bản đồ 1 tick; sự kiện `EnemySummoned` báo thừa khi pool đầy. Sửa sẽ đổi
     golden M7 (ghi trên Windows) nên chưa làm.
   - `brain_lineage`: khoá khi rẽ nhánh/dọn song song, ghi file trên Windows không retry, `prune` có thể xoá
