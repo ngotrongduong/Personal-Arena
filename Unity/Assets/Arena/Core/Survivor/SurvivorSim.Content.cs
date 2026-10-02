@@ -261,8 +261,9 @@ namespace PersonalArena.Core.Survivor
                 SurvivorEnemy target = RandomTarget(fired, def.BaseRange);
                 if (target == null) break;
                 hammerTargetIds[fired++] = target.Id;
-                Blast(target.Position, radius, damage, def.Knockback, def.StunSeconds);
-                AddEvent(SurvivorEventType.StrikeLanded, radius, id: def.CatalogIndex, point: target.Position);
+                Vec2 center = target.Position; // the blast knocks the target away; the event keeps the blast centre
+                Blast(center, radius, damage, def.Knockback, def.StunSeconds);
+                AddEvent(SurvivorEventType.StrikeLanded, radius, id: def.CatalogIndex, point: center);
             }
             count = fired;
             return fired > 0;
@@ -286,6 +287,71 @@ namespace PersonalArena.Core.Survivor
                     damage, def.Knockback, def.ProjectileRange, def.Pierce, 0f, 0f)) break;
             }
             return true;
+        }
+
+        /// <summary>Trio: <c>count</c> projectiles in a tight spread of ArcDegrees at ONE random enemy in range (the only rng draw).</summary>
+        private bool FireTrio(ItemDef def, int level, out Vec2 aim, out int count)
+        {
+            aim = Vec2.Zero; count = 0;
+            SurvivorEnemy target = RandomTarget(0, def.BaseRange);
+            if (target == null) return false;
+            aim = (target.Position - Hero.Position).Normalized();
+            if (aim.LengthSquared < 1e-8f) aim = Vec2.FromAngle(Hero.Facing);
+            int shots = VolleyCount(def.CountByLevel, level);
+            float step = shots > 1 ? def.ArcDegrees * MathF.PI / 180f / (shots - 1) : 0f;
+            float damage = def.BaseDamage + def.DamagePerLevel * (level - 1);
+            for (int k = 0; k < shots; k++)
+            {
+                if (!LaunchProjectile(def.CatalogIndex, Rotate(aim, (k - (shots - 1) * 0.5f) * step), def.ProjectileSpeed, def.ProjectileRadius * stats.AreaMul,
+                    damage, def.Knockback, def.ProjectileRange, def.Pierce, 0f, 0f)) break;
+                count++;
+            }
+            return count > 0;
+        }
+
+        /// <summary>Quad: fires with or without enemies, <c>count</c> projectiles (staggered) in each of facing, +90, +180, +270 degrees. A full projectile pool skips the rest; nothing fired keeps the cooldown.</summary>
+        private bool FireQuad(ItemDef def, int level, out Vec2 aim, out int perDirection)
+        {
+            aim = Vec2.FromAngle(Hero.Facing); perDirection = VolleyCount(def.CountByLevel, level);
+            float step = SurvivorCatalog.QuadStaggerDegrees * MathF.PI / 180f;
+            float damage = def.BaseDamage + def.DamagePerLevel * (level - 1);
+            int fired = 0;
+            for (int quarter = 0; quarter < 4; quarter++)
+            {
+                Vec2 baseDirection = quarter == 0 ? aim : quarter == 1 ? new Vec2(-aim.Y, aim.X) : quarter == 2 ? new Vec2(-aim.X, -aim.Y) : new Vec2(aim.Y, -aim.X);
+                for (int k = 0; k < perDirection; k++)
+                {
+                    Vec2 direction = perDirection > 1 ? Rotate(baseDirection, (k - (perDirection - 1) * 0.5f) * step) : baseDirection;
+                    if (!LaunchProjectile(def.CatalogIndex, direction, def.ProjectileSpeed, def.ProjectileRadius * stats.AreaMul,
+                        damage, def.Knockback, def.ProjectileRange, def.Pierce, 0f, 0f)) return fired > 0;
+                    fired++;
+                }
+            }
+            return fired > 0;
+        }
+
+        /// <summary>Stone: instant hits on the <c>count</c> nearest distinct enemies in range for fixed damage (flat: no Might, no crit, no rng).</summary>
+        private bool StrikeStones(ItemDef def, int level, out int count)
+        {
+            count = Math.Min(VolleyCount(def.CountByLevel, level), hammerTargetIds.Length);
+            float damage = def.BaseDamage + def.DamagePerLevel * (level - 1);
+            int fired = 0;
+            for (int stone = 0; stone < count && !IsEnded; stone++)
+            {
+                SurvivorEnemy target = null; float nearest = float.PositiveInfinity;
+                for (int i = 0; i < enemyLimit; i++)
+                {
+                    SurvivorEnemy enemy = enemies[i]; if (!enemy.Active || UsedHammerTarget(enemy.Id, fired)) continue;
+                    float distanceSquared = (enemy.Position - Hero.Position).LengthSquared; float reach = def.BaseRange + enemy.Radius;
+                    if (distanceSquared <= reach * reach && distanceSquared < nearest) { nearest = distanceSquared; target = enemy; }
+                }
+                if (target == null) break;
+                hammerTargetIds[fired++] = target.Id;
+                AddEvent(SurvivorEventType.StrikeLanded, 0f, id: def.CatalogIndex, point: target.Position);
+                DamageEnemy(target, damage, def.Knockback, AwayFromHero(target), true);
+            }
+            count = fired;
+            return fired > 0;
         }
 
         private SurvivorEnemy NearestEnemy(float range)

@@ -15,8 +15,9 @@ namespace PersonalArena.Core.Survivor
     /// Boomerang: flies out and back, hitting each enemy once per direction. Zone: drops a damage pool on the ground.
     /// Bounce: a projectile that bounces off walls and obstacles. Momentum: a volley along the hero's movement, stronger the more the hero moves.
     /// Freeze: a chance to stun every non-boss enemy nearby. Purge: kills every normal enemy nearby. BombRing: a salvo of blasts placed on a rotating ring.
+    /// Trio: a very tight fan at ONE random enemy in range. Quad: projectiles in four fixed directions around the hero's body. Stone: instant fixed-damage hits (no Might, no crit) on the nearest enemies.
     /// </summary>
-    public enum WeaponPattern { None, Sweep, Thrust, Orbit, Thrown, Aura, Shockwave, Strike, Fan, Combo, Bomb, Retaliate, Barrier, Boomerang, Zone, Bounce, Momentum, Freeze, Purge, BombRing }
+    public enum WeaponPattern { None, Sweep, Thrust, Orbit, Thrown, Aura, Shockwave, Strike, Fan, Combo, Bomb, Retaliate, Barrier, Boomerang, Zone, Bounce, Momentum, Freeze, Purge, BombRing, Trio, Quad, Stone }
     public enum StatId
     {
         MaxHp, Armor, Regen, Might, Crit, CritDamage, Cooldown, Area,
@@ -129,6 +130,11 @@ namespace PersonalArena.Core.Survivor
         public const int TimeClockIndex = 66;
         public const int PurgeIndex = 67;
         public const int BombRingIndex = 68;
+        // M9 groups A/B for Mage and Archer: weapons 69..72 (fireball-nova and magi-stone Mage; bracelet-trio Mage and Archer; quad-shot Archer).
+        public const int FireballNovaIndex = 69;
+        public const int BraceletTrioIndex = 70;
+        public const int QuadShotIndex = 71;
+        public const int MagiStoneIndex = 72;
         public const int BonusGoldIndex = 62;
         public const int BonusHealIndex = 63;
 
@@ -358,6 +364,30 @@ namespace PersonalArena.Core.Survivor
             BaseDamage = 22f, DamagePerLevel = 7f, BaseRange = 4f, BaseCooldown = 3.5f, Knockback = 0.5f, Width = 1.3f, HitInterval = 0.15f,
             CountByLevel = Array.AsReadOnly(new[] { 4, 4, 5, 5, 6 })
         };
+        private static readonly ItemDef FireballNova = new ItemDef
+        {
+            CatalogIndex = FireballNovaIndex, Id = "fireball-nova", Name = "Hỏa cầu nổ", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Strike,
+            BaseDamage = 45f, DamagePerLevel = 14f, BaseRange = 9f, BaseCooldown = 3f, Knockback = 1.5f, Width = 1.8f,
+            CountByLevel = Array.AsReadOnly(new[] { 1, 1, 1, 2, 2 })
+        };
+        private static readonly ItemDef BraceletTrio = new ItemDef
+        {
+            CatalogIndex = BraceletTrioIndex, Id = "bracelet-trio", Name = "Vòng tay ba mũi", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Trio,
+            BaseDamage = 12f, DamagePerLevel = 4f, BaseRange = 11f, BaseCooldown = 1.4f, Knockback = 0.2f, ArcDegrees = 8f,
+            ProjectileSpeed = 14f, ProjectileRadius = 0.25f, ProjectileRange = 11f, CountByLevel = Array.AsReadOnly(new[] { 3, 3, 3, 3, 3 })
+        };
+        private static readonly ItemDef QuadShot = new ItemDef
+        {
+            CatalogIndex = QuadShotIndex, Id = "quad-shot", Name = "Bắn bốn hướng", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Quad,
+            BaseDamage = 10f, DamagePerLevel = 4f, BaseCooldown = 1.2f, Knockback = 0.2f, Pierce = 1,
+            ProjectileSpeed = 13f, ProjectileRadius = 0.25f, ProjectileRange = 9f, CountByLevel = Array.AsReadOnly(new[] { 1, 1, 2, 2, 3 })
+        };
+        private static readonly ItemDef MagiStone = new ItemDef
+        {
+            CatalogIndex = MagiStoneIndex, Id = "magi-stone", Name = "Đá tụ lực", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Stone,
+            BaseDamage = 20f, DamagePerLevel = 20f, BaseRange = 10f, BaseCooldown = 0.9f,
+            CountByLevel = Array.AsReadOnly(new[] { 1, 1, 2, 2, 3 })
+        };
         private static readonly ItemDef DurationCharm = Passive(DurationCharmIndex, "duration-charm", "Bùa thời gian");
         private static readonly ItemDef Duplicator = Passive(DuplicatorIndex, "duplicator", "Bộ nhân đôi", 2);
         private static readonly ItemDef SpikedArmor = Passive(SpikedArmorIndex, "spiked-armor", "Giáp phản");
@@ -388,6 +418,8 @@ namespace PersonalArena.Core.Survivor
         /// <summary>Bomb ring: the ring turns this many radians every salvo; at most this many blasts wait at once.</summary>
         public const float BombRingRotationStep = 0.5235988f;
         public const int MaxPendingBlasts = 8;
+        /// <summary>Quad shot: angle between the shots of one direction (degrees).</summary>
+        public const float QuadStaggerDegrees = 8f;
 
         private static readonly ItemDef[] Evolutions =
         {
@@ -455,6 +487,10 @@ namespace PersonalArena.Core.Survivor
                 66 => TimeClock,
                 67 => Purge,
                 68 => BombRing,
+                69 => FireballNova,
+                70 => BraceletTrio,
+                71 => QuadShot,
+                72 => MagiStone,
                 34 => DurationCharm,
                 35 => Duplicator,
                 36 => SpikedArmor,
@@ -720,7 +756,7 @@ namespace PersonalArena.Core.Survivor
                 Id = "mage", MaxHp = 110f, Regen = 0.15f, Armor = 0f, MoveSpeed = 4.3f,
                 Acceleration = 30f, Radius = 0.45f, PickupRadius = 1.8f, CritChance = 0.05f,
                 CritDamage = 1.5f, MaxEnergy = 150f, EnergyRegen = 20f, Mass = 0.9f,
-                StartingWeapon = SurvivorCatalog.MagicBoltIndex, WeaponPool = new[] { 14, 15, 16, 17, 18, 19, 64, 66, 67, 68 },
+                StartingWeapon = SurvivorCatalog.MagicBoltIndex, WeaponPool = new[] { 14, 15, 16, 17, 18, 19, 64, 66, 67, 68, 26, 31, 33, 69, 70, 72 },
                 PassivePool = new[] { 6, 7, 8, 9, 10, 11, 12, 13, 58, 59, 60, 61, 34, 35, 36, 37 },
                 ActiveSkills = Skills(
                     new SkillDef { Id = "fireball", Kind = SkillKind.Projectile, Damage = 40f, Range = 12f, ProjectileSpeed = 14f, ProjectileRadius = 0.4f, AreaRadius = 2f, Knockback = 1f, Cooldown = 3f, EnergyCost = 25f },
@@ -741,7 +777,7 @@ namespace PersonalArena.Core.Survivor
                 Id = "archer", MaxHp = 130f, Regen = 0.2f, Armor = 0f, MoveSpeed = 5f,
                 Acceleration = 34f, Radius = 0.45f, PickupRadius = 1.6f, CritChance = 0.08f,
                 CritDamage = 1.6f, MaxEnergy = 100f, EnergyRegen = 15f, Mass = 0.9f,
-                StartingWeapon = SurvivorCatalog.ArrowIndex, WeaponPool = new[] { 20, 21, 22, 23, 24, 25, 64, 65 },
+                StartingWeapon = SurvivorCatalog.ArrowIndex, WeaponPool = new[] { 20, 21, 22, 23, 24, 25, 64, 65, 29, 32, 33, 70, 71 },
                 PassivePool = new[] { 6, 7, 8, 9, 10, 11, 12, 13, 58, 59, 60, 61, 34, 35, 36, 37 },
                 ActiveSkills = Skills(
                     new SkillDef { Id = "power-shot", Kind = SkillKind.Projectile, Damage = 50f, Range = 14f, ProjectileSpeed = 22f, ProjectileRadius = 0.35f, Knockback = 2.5f, Pierce = true, Cooldown = 3.5f, EnergyCost = 20f },

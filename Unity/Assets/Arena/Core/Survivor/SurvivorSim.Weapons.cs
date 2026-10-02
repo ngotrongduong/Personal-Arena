@@ -82,6 +82,21 @@ namespace PersonalArena.Core.Survivor
                     weaponCooldowns[index] = def.BaseCooldown * stats.CooldownMul;
                     AddEvent(SurvivorEventType.WeaponFired, extra: ringCount, id: index, point: Hero.Position);
                 }
+                else if (def.Pattern == WeaponPattern.Trio && FireTrio(def, level, out Vec2 trioDirection, out int trioCount))
+                {
+                    weaponCooldowns[index] = def.BaseCooldown * stats.CooldownMul;
+                    AddEvent(SurvivorEventType.WeaponFired, extra: trioCount, id: index, point: trioDirection);
+                }
+                else if (def.Pattern == WeaponPattern.Quad && FireQuad(def, level, out Vec2 quadDirection, out int quadCount))
+                {
+                    weaponCooldowns[index] = def.BaseCooldown * stats.CooldownMul;
+                    AddEvent(SurvivorEventType.WeaponFired, extra: quadCount, id: index, point: quadDirection);
+                }
+                else if (def.Pattern == WeaponPattern.Stone && StrikeStones(def, level, out int stoneCount))
+                {
+                    weaponCooldowns[index] = def.BaseCooldown * stats.CooldownMul;
+                    AddEvent(SurvivorEventType.WeaponFired, extra: stoneCount, id: index);
+                }
                 else if (def.Pattern == WeaponPattern.Aura)
                 {
                     TickAura(def, level);

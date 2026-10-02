@@ -32,8 +32,8 @@ namespace PersonalArena.Core.Tests.Survivor
         public void Pools_WarriorGetsTheWeapons_EveryClassGetsThePassives_AndOnlyOneBarrierExists()
         {
             foreach (int weapon in NewWeapons) Assert.That(Array.IndexOf(SurvivorDefaults.Warrior().WeaponPool, weapon) >= 0, Is.True, "warrior " + weapon);
-            foreach (SurvivorClassDef kit in new[] { SurvivorDefaults.Mage(), SurvivorDefaults.Archer() })
-                foreach (int weapon in NewWeapons) Assert.That(Array.IndexOf(kit.WeaponPool, weapon), Is.LessThan(0), kit.Id + " " + weapon);
+            // T-044 added barrier + poison pool to the Mage and boomerang + poison pool to the Archer (see SurvivorM9MageArcherTests).
+            Assert.That(Array.IndexOf(SurvivorDefaults.Mage().WeaponPool, 32), Is.LessThan(0)); Assert.That(Array.IndexOf(SurvivorDefaults.Archer().WeaponPool, 31), Is.LessThan(0));
             foreach (SurvivorClassDef kit in new[] { SurvivorDefaults.Warrior(), SurvivorDefaults.Mage(), SurvivorDefaults.Archer() })
                 foreach (int passive in NewPassives) Assert.That(Array.IndexOf(kit.PassivePool, passive) >= 0, Is.True, kit.Id + " " + passive);
             int barriers = 0; foreach (int index in SurvivorDefaults.Warrior().WeaponPool) if (SurvivorCatalog.Get(index).Pattern == WeaponPattern.Barrier) barriers++;

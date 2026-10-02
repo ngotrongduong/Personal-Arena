@@ -49,4 +49,34 @@ stats and facing (e.g. a bomb or boomerang thrown by the Archer, barrier for the
   the facing, stone ignores Might/crit and hits different enemies), scaling per level, the pool-added weapons work for
   the new class, 6 + 6 slots hold, determinism, zero allocation with a full Mage kit and a full Archer kit, offers per class.
 
-## Report (fill in when done). Include the FINAL list of weapons per class pool, for T-045.
+## Report
+
+**Status: review.** `dotnet test CoreTests -c Release`: 495 passed, 0 failed (446 before; 49 new test cases in `CoreTests/Survivor/SurvivorM9MageArcherTests.cs`). The two Windows-only goldens show as skipped on Linux; the Linux goldens pass unchanged, nothing re-recorded. Schema stays v5.
+
+### FINAL weapon pools (for T-045)
+- **Warrior** (unchanged): 0, 1, 2, 3, 4, 5, 26, 27, 28, 29, 30, 31, 32, 33, 64
+- **Mage**: 14, 15, 16, 17, 18, 19, 64, 66, 67, 68, **26, 31, 33, 69, 70, 72** (16 weapons)
+- **Archer**: 20, 21, 22, 23, 24, 25, 64, 65, **29, 32, 33, 70, 71** (13 weapons)
+- Passive pools unchanged for all classes. New patterns: 69 `Strike`, 70 `Trio`, 71 `Quad`, 72 `Stone`. Evolutions of 69-72 do not exist yet (`EvolutionOf` = -1).
+
+### Changes per file
+- `Unity/Assets/Arena/Core/Survivor/SurvivorDefs.cs`: `WeaponPattern` + `Trio, Quad, Stone`; consts `FireballNovaIndex..MagiStoneIndex` (69-72), `QuadStaggerDegrees` (8); rows 69-72 (also in `Get`); Mage and Archer `WeaponPool` appended as above.
+- `Unity/Assets/Arena/Core/Survivor/SurvivorSim.Content.cs`: `FireTrio`, `FireQuad`, `StrikeStones`. In `StrikeTargets` the blast centre is captured before the blast so `StrikeLanded.Point` stays at the blast centre (before, it was the target position after knockback; matters for the nova's knockback 1.5, and shifts the old strike weapons' event Point by their tiny knockback only, no state change).
+- `Unity/Assets/Arena/Core/Survivor/SurvivorSim.Weapons.cs`: `FireWeapons` dispatch for Trio, Quad, Stone.
+- Tests: new `SurvivorM9MageArcherTests.cs`; updated `SurvivorM9WaveBTests` and `SurvivorM9WarriorTests` (they asserted Mage/Archer had none of the Warrior weapons; now only the added ones are allowed), `SurvivorM9GroupCTests` and `SurvivorSchemaV5Tests` (first empty row is now 73). `OldRules` needed no change: it already overwrites the Mage and Archer pools with the old lists (the added entries are excluded; a test proves it).
+
+### Decisions on unspecified details
+- Nova (69): `Strike` pattern, Width (blast radius) 1.8, knockback 1.5, no stun, count 1,1,1,2,2, `StrikeLanded` id 69 Value = radius, plus `WeaponFired` Extra = blasts.
+- Trio (70): needed a new pattern value `Trio` because `Fan` aims at the NEAREST enemy and the table says RANDOM. Target = `RandomTarget(0, 11)` (one rng draw only when the weapon is ready and an enemy is within 11 m); 3 shots over `ArcDegrees` = 8 total (so 4 degrees each side; with a duplicator, 4 shots over the same 8 degrees); count list {3,3,3,3,3}; radius 0.25, knockback 0.2, no pierce. `WeaponFired` Extra = shots, Point = aim.
+- Quad (71): fires whether or not an enemy exists (the table says fixed directions, no target), in facing, +90, +180, +270 (exact vector rotations, no trig error), per-direction stagger 8 degrees centred on the direction, pierce 1 (= hits 2 enemies, existing meaning), radius 0.25, knockback 0.2, range 9 m. Duplicator adds 1 per direction (cap `MaxVolleyCount` 8; pool of 128 never overflows: 4 x 8 = 32). Pool full: remaining shots skipped, cooldown kept only if nothing fired. `WeaponFired` Extra = per-direction count, Point = facing.
+- Stone (72): nearest enemy within 10 m (+ enemy radius), then the next nearest not yet hit, up to `VolleyCount`; damage via `DamageEnemy(..., flat: true)` so no Might, no crit, no rng, and the boss takes it too. Knockback 0. `StrikeLanded` id 72 (Value 0, Point = enemy) per hit, emitted before the damage; `WeaponFired` Extra = hits. Cooldown kept when no enemy is in range.
+- Pool-added weapons use their existing code unchanged; barrier for the Mage is the single Barrier of that pool. Names are exactly as in the table.
+
+### What the Unity viewer needs (View/ML not edited)
+- Icons for 69-72 (HUD, level-up cards; Vietnamese names are in the catalog). `SoundCueMap.WeaponCue` has no case for `Trio`, `Quad`, `Stone`.
+- 69: explosion at each `StrikeLanded` id 69 (Value = radius 1.8, Point = centre), fireball falling optional. 70: three small bolts from projectiles with `SourceIndex` 70. 71: four-way bolts, `SourceIndex` 71 (projectile sprite lookup by index). 72: instant stone/spark on each `StrikeLanded` id 72 at Point (draw a line from the hero or a hit flash), number popups already come from `DamageDealt`.
+- Per-index sprite tables or ML item lists (`SurvivorEpisodeStats`) should be checked for 69-72 (not looked at).
+
+### Not verified / weak tests
+- Windows goldens and Unity EditMode not run; Release `Step` time (0.05 ms) not measured (new code is O(enemies) per cast; the stone is O(count x enemies); `Performance_LateGame` passes).
+- Weak: "rng is never drawn when the weapon is unowned" is proved by the bit-identical run against `OldRules` (1500 ticks, Mage and Archer), not by counting draws; "stone consumes no rng" is only implied by `flat` (the crit test shows no `Crit` event at 100% crit chance). The allocation test is a 1500-tick full-kit run asserting 0 bytes (it proves no leak; the "every weapon acts" test, which excludes the barrier because it only emits events on break, shows each weapon fires). The pool-full test for the quad only checks safety (pool <= 128, no crash), not exact counts. The nova knockback test only checks the target moved outward. Pool-added weapon tests (flame cone, barrier, poison pool, bomb, boomerang for the new class) check the main behaviour, not every number again. Balance numbers are starting points, untuned.

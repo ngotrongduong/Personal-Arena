@@ -110,12 +110,16 @@ namespace PersonalArena.Core.Tests.Survivor
         }
 
         [Test]
-        public void MageAndArcher_GetTheNewPassives_ButNotTheWarriorWeapons()
+        public void MageAndArcher_GetTheNewPassives_AndOnlyTheWarriorWeaponsTheirPoolsAdd()
         {
             foreach (SurvivorClassDef kit in new[] { SurvivorDefaults.Mage(), SurvivorDefaults.Archer(), SurvivorDefaults.Warrior() })
                 foreach (int passive in NewPassives) Assert.That(Array.IndexOf(kit.PassivePool, passive) >= 0, Is.True, kit.Id + " " + passive);
-            foreach (SurvivorClassDef kit in new[] { SurvivorDefaults.Mage(), SurvivorDefaults.Archer() })
-                foreach (int weapon in NewWeapons) Assert.That(Array.IndexOf(kit.WeaponPool, weapon), Is.LessThan(0), kit.Id + " " + weapon);
+            // T-044 gave the Mage flame-cone (26) and the Archer bomb (29); the other warrior weapons stay out.
+            foreach (int weapon in NewWeapons)
+            {
+                Assert.That(Array.IndexOf(SurvivorDefaults.Mage().WeaponPool, weapon) >= 0, Is.EqualTo(weapon == 26), "mage " + weapon);
+                Assert.That(Array.IndexOf(SurvivorDefaults.Archer().WeaponPool, weapon) >= 0, Is.EqualTo(weapon == 29), "archer " + weapon);
+            }
         }
 
         [Test]
