@@ -209,7 +209,7 @@ namespace PersonalArena.Core.Survivor
                 SurvivorEnemy e = enemies[i];
                 if (!e.Active || (e.Position - Hero.Position).LengthSquared > rangeSquared) continue;
                 enemyScratch[total++] = i;
-                if (!UsedHammerTarget(e.Id, usedCount)) fresh++;
+                if (!UsedVolleyTarget(e.Id, usedCount)) fresh++;
             }
             if (total == 0) return null;
             if (fresh == 0) return enemies[enemyScratch[rng.NextInt(total)]];
@@ -217,7 +217,7 @@ namespace PersonalArena.Core.Survivor
             for (int n = 0; n < total; n++)
             {
                 SurvivorEnemy e = enemies[enemyScratch[n]];
-                if (UsedHammerTarget(e.Id, usedCount)) continue;
+                if (UsedVolleyTarget(e.Id, usedCount)) continue;
                 if (pick-- == 0) return e;
             }
             return null;

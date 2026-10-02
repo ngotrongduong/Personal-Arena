@@ -31,7 +31,7 @@ namespace PersonalArena.Core.Survivor
         /// <summary>Strike: <c>count</c> random enemies in range each get a blast of radius Width × area.</summary>
         private bool StrikeTargets(ItemDef def, int level, out int count)
         {
-            count = Math.Min(VolleyCount(def.CountByLevel, level), hammerTargetIds.Length);
+            count = Math.Min(VolleyCount(def.CountByLevel, level), volleyTargetIds.Length);
             float damage = def.BaseDamage + def.DamagePerLevel * (level - 1);
             float radius = def.Width * stats.AreaMul;
             int fired = 0;
@@ -39,7 +39,7 @@ namespace PersonalArena.Core.Survivor
             {
                 SurvivorEnemy target = RandomTarget(fired, def.BaseRange);
                 if (target == null) break;
-                hammerTargetIds[fired++] = target.Id;
+                volleyTargetIds[fired++] = target.Id;
                 Vec2 center = target.Position; // the blast knocks the target away; the event keeps the blast centre
                 Blast(center, radius, damage, def.Knockback, def.StunSeconds);
                 AddEvent(SurvivorEventType.StrikeLanded, radius, id: def.CatalogIndex, point: center);
@@ -51,7 +51,7 @@ namespace PersonalArena.Core.Survivor
         /// <summary>Stone: instant hits on the <c>count</c> nearest distinct enemies in range for fixed damage (flat: no Might, no crit, no rng).</summary>
         private bool StrikeStones(ItemDef def, int level, out int count)
         {
-            count = Math.Min(VolleyCount(def.CountByLevel, level), hammerTargetIds.Length);
+            count = Math.Min(VolleyCount(def.CountByLevel, level), volleyTargetIds.Length);
             float damage = def.BaseDamage + def.DamagePerLevel * (level - 1);
             int fired = 0;
             for (int stone = 0; stone < count && !IsEnded; stone++)
@@ -59,12 +59,12 @@ namespace PersonalArena.Core.Survivor
                 SurvivorEnemy target = null; float nearest = float.PositiveInfinity;
                 for (int i = 0; i < enemyLimit; i++)
                 {
-                    SurvivorEnemy enemy = enemies[i]; if (!enemy.Active || UsedHammerTarget(enemy.Id, fired)) continue;
+                    SurvivorEnemy enemy = enemies[i]; if (!enemy.Active || UsedVolleyTarget(enemy.Id, fired)) continue;
                     float distanceSquared = (enemy.Position - Hero.Position).LengthSquared; float reach = def.BaseRange + enemy.Radius;
                     if (distanceSquared <= reach * reach && distanceSquared < nearest) { nearest = distanceSquared; target = enemy; }
                 }
                 if (target == null) break;
-                hammerTargetIds[fired++] = target.Id;
+                volleyTargetIds[fired++] = target.Id;
                 AddEvent(SurvivorEventType.StrikeLanded, 0f, id: def.CatalogIndex, point: target.Position);
                 DamageEnemy(target, damage, def.Knockback, AwayFromHero(target), true);
             }

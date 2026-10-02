@@ -268,9 +268,9 @@ thưởng theo thứ bậc, nghiệm thu bằng đánh giá 100 seed). Đấu tr
   (logic), `SurvivorCatalog.Items.cs` (mọi dòng dữ liệu + 2 bảng tiến hóa, **phải ở cùng file theo thứ tự phụ thuộc**),
   `SurvivorClassKits.cs`, `SurvivorEnemyDefs.cs`; dispatch thành `switch`. Bỏ `Content/Wave1b/GroupC`. Hash 18 trận dài
   trước/sau khớp từng bit; CoreTests 622/622. Vũ khí mới đặt vào file theo cơ chế của nó.
-  - Nhận thấy nhưng chưa sửa: Đá (`Kick`) gán choáng thẳng nên choáng được trùm (vũ khí thì không); `FireFan` vẫn tính
-    hồi chiêu khi pool đạn đầy; `ThrustSpears` tự tìm quái gần nhất thay vì `NearestEnemy`; mảng `orbitAxePositions`,
-    `hammerTargetIds` dùng số 8 cứng; tên `hammerTargetIds` không còn đúng nghĩa.
+  - Dọn tiếp (sau T-046): Đá không choáng trùm nữa (D-042); Quạt tên (`FireFan`) không tốn hồi chiêu khi pool đạn đầy;
+    `ThrustSpears` dùng `NearestEnemy`; mảng đệm dùng `MaxVolleyCount`; `hammerTargetIds` đổi tên `volleyTargetIds`.
+    Dấu vân tay 18 trận vẫn khớp từng bit; CoreTests 625/625.
 - Chưa làm:
   toàn bộ phần hiển thị Unity (T-041 + icon/hiệu ứng/âm thanh), cân bằng bằng `SurvivorEval`.
 

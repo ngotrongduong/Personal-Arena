@@ -16,7 +16,7 @@ namespace PersonalArena.Core.Survivor
         private float shockwaveRadius;
         private float shockwaveMaxRadius;
         private Vec2 shockwaveCenter;
-        private readonly Vec2[] orbitAxePositions = new Vec2[8];
+        private readonly Vec2[] orbitAxePositions = new Vec2[SurvivorCatalog.MaxVolleyCount];
         /// <summary>Catalog index of the orbit weapon of the current volley (its cooldown waits while it spins).</summary>
         private int orbitWeaponIndex = -1;
 

@@ -44,7 +44,7 @@ namespace PersonalArena.Core.Survivor
         private readonly bool[] skillMask = new bool[SurvivorInput.SkillBranchSize];
         private readonly bool[] pickMask = new bool[SurvivorInput.PickBranchSize];
         private readonly float[] weaponCooldowns = new float[SurvivorCatalog.CatalogSize];
-        private readonly int[] hammerTargetIds = new int[8];
+        private readonly int[] volleyTargetIds = new int[SurvivorCatalog.MaxVolleyCount];
         private readonly int[] enemyScratch = new int[EnemyCapacity];
         private readonly Vec2[] enemyPreviousPositions = new Vec2[EnemyCapacity];
         private Rng rng;
@@ -621,6 +621,16 @@ namespace PersonalArena.Core.Survivor
             SpawnEnemyProjectile(point, velocity, radius, damage, lifetime, sourceId);
         internal float WeaponCooldownForTests(int index) => weaponCooldowns[index];
         internal void SetWeaponCooldownForTests(int index, float value) => weaponCooldowns[index] = value;
+        /// <summary>Fills every projectile slot with an idle shot parked at <paramref name="corner"/> (no speed, long life).</summary>
+        internal void FillProjectilePoolForTests(Vec2 corner)
+        {
+            for (int i = 0; i < projectiles.Length; i++)
+            {
+                SurvivorProjectile p = projectiles[i]; p.Active = true; p.Position = corner; p.Velocity = Vec2.Zero; p.Radius = 0.01f; p.Damage = 0f;
+                p.Lifetime = 1000f; p.PierceRemaining = 0; p.HitCount = 0; p.SourceIndex = -99; p.ExplodeRadius = 0f; p.ExplodeOnExpire = false; p.Bouncing = false;
+            }
+            projectileLimit = projectiles.Length;
+        }
         internal void SetMovementFactorForTests(float value) { movementFactor = value; }
         internal int BarrierChargesForTests => barrierCharges;
         internal void RequestRetaliateForTests() { retaliatePending = true; }

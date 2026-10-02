@@ -30,14 +30,7 @@ namespace PersonalArena.Core.Survivor
         {
             aim = Vec2.Zero; count = VolleyCount(def.CountByLevel, level);
             float length = def.BaseRange * stats.AreaMul;
-            SurvivorEnemy target = null; float nearest = float.PositiveInfinity;
-            for (int i = 0; i < enemyLimit; i++)
-            {
-                SurvivorEnemy enemy = enemies[i]; if (!enemy.Active) continue;
-                Vec2 delta = enemy.Position - Hero.Position; float distanceSquared = delta.LengthSquared;
-                float reach = length + enemy.Radius;
-                if (distanceSquared <= reach * reach && distanceSquared < nearest) { nearest = distanceSquared; target = enemy; }
-            }
+            SurvivorEnemy target = NearestEnemy(length);
             if (target == null) return false;
             aim = (target.Position - Hero.Position).Normalized();
             if (aim.LengthSquared < 1e-8f) aim = Vec2.FromAngle(Hero.Facing);

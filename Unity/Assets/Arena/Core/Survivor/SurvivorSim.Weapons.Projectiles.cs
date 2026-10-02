@@ -154,7 +154,7 @@ namespace PersonalArena.Core.Survivor
         private bool ThrowHammers(ItemDef def, int level, out Vec2 firstDirection)
         {
             firstDirection = Vec2.Zero;
-            int count = Math.Min(VolleyCount(def.CountByLevel, level), hammerTargetIds.Length);
+            int count = Math.Min(VolleyCount(def.CountByLevel, level), volleyTargetIds.Length);
             float speed = def.ProjectileSpeed;
             int fired = 0;
             for (int hammer = 0; hammer < count; hammer++)
@@ -171,12 +171,12 @@ namespace PersonalArena.Core.Survivor
                 projectile.Knockback = def.Knockback; projectile.Lifetime = speed > 0f ? def.ProjectileRange / speed : 0f;
                 projectile.PierceRemaining = def.Pierce; projectile.SourceIndex = def.CatalogIndex;
                 projectile.ExplodeRadius = 0f; projectile.StunSeconds = def.StunSeconds;
-                projectile.HitCount = 0; hammerTargetIds[fired] = target.Id; fired++;
+                projectile.HitCount = 0; volleyTargetIds[fired] = target.Id; fired++;
             }
             return fired > 0;
         }
 
-        private bool UsedHammerTarget(int id, int count) { for (int i = 0; i < count; i++) if (hammerTargetIds[i] == id) return true; return false; }
+        private bool UsedVolleyTarget(int id, int count) { for (int i = 0; i < count; i++) if (volleyTargetIds[i] == id) return true; return false; }
 
         // ---- fan / trio / quad ----
 
@@ -191,13 +191,15 @@ namespace PersonalArena.Core.Survivor
             int count = VolleyCount(def.CountByLevel, level);
             float step = count > 1 ? def.ArcDegrees * MathF.PI / 180f / (count - 1) : 0f;
             float damage = def.BaseDamage + def.DamagePerLevel * (level - 1);
+            int fired = 0;
             for (int k = 0; k < count; k++)
             {
                 Vec2 direction = Rotate(aim, (k - (count - 1) * 0.5f) * step);
                 if (!LaunchProjectile(def.CatalogIndex, direction, def.ProjectileSpeed, def.ProjectileRadius * stats.AreaMul,
                     damage, def.Knockback, def.ProjectileRange, def.Pierce, 0f, 0f)) break;
+                fired++;
             }
-            return true;
+            return fired > 0; // a full projectile pool fires nothing and keeps the cooldown, like the other volleys
         }
 
         /// <summary>Trio: <c>count</c> projectiles in a tight spread of ArcDegrees at ONE random enemy in range (the only rng draw).</summary>

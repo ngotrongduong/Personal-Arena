@@ -70,6 +70,8 @@ namespace PersonalArena.Core.Survivor
         public float BossHpMul = 0.4f;
         /// <summary>Every XP gem dropped by a kill × this.</summary>
         public float XpMul = 1.5f;
+        /// <summary>Pre-M9 rule: the kick skill also stunned the boss. Now off: like weapon stuns, a kick never stuns the boss.</summary>
+        public bool KickStunsBoss = false;
 
         // Elites.
         public float EliteRadiusMul = 1.6f;

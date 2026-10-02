@@ -39,7 +39,9 @@ namespace PersonalArena.Core.Survivor
                 Vec2 delta = e.Position - Hero.Position;
                 float reach = skill.Range + e.Radius;
                 if (delta.LengthSquared > reach * reach || !InArc(Hero.Facing, delta, skill.ArcDegrees)) continue;
-                DamageEnemy(e, skill.Damage, skill.Knockback, AwayFromHero(e)); e.StunRemaining = MathF.Max(e.StunRemaining, skill.StunSeconds); hits++;
+                DamageEnemy(e, skill.Damage, skill.Knockback, AwayFromHero(e));
+                if (!e.IsBoss || Config.Tuning.KickStunsBoss) e.StunRemaining = MathF.Max(e.StunRemaining, skill.StunSeconds);
+                hits++;
             }
             return hits;
         }
