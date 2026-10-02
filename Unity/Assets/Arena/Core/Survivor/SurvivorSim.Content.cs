@@ -377,7 +377,7 @@ namespace PersonalArena.Core.Survivor
             projectile.Knockback = knockback; projectile.Lifetime = speed > 0f ? range / speed : 0f;
             projectile.PierceRemaining = pierce; projectile.HitCount = 0; projectile.SourceIndex = source;
             projectile.ExplodeRadius = explodeRadius; projectile.StunSeconds = stun; projectile.ExplodeOnExpire = explodeOnExpire;
-            projectile.Bouncing = bounces >= 0; projectile.BouncesLeft = bounces; projectile.BounceCount = 0; projectile.BounceNext = 0;
+            projectile.Bouncing = bounces >= 0; projectile.BouncesLeft = bounces; projectile.BounceCount = 0;
             if (projectile.Bouncing) for (int i = 0; i < projectile.BounceIds.Length; i++) { projectile.BounceIds[i] = 0; projectile.BounceUntil[i] = 0f; }
             return true;
         }

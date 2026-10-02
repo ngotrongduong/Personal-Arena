@@ -109,9 +109,8 @@ namespace PersonalArena.Core.Survivor
         internal bool Bouncing;
         internal int BouncesLeft;
         internal int BounceCount;
-        internal int BounceNext;
-        internal readonly int[] BounceIds = new int[8];
-        internal readonly float[] BounceUntil = new float[8];
+        internal readonly int[] BounceIds = new int[16];
+        internal readonly float[] BounceUntil = new float[16];
         /// <summary>Walls and obstacles hit so far (lets the view and tests count bounces).</summary>
         public int Bounces => BounceCount;
     }

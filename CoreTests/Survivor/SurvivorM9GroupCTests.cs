@@ -197,6 +197,21 @@ namespace PersonalArena.Core.Tests.Survivor
             for (int i = 1; i < times.Count; i++) Assert.That(times[i] - times[i - 1], Is.GreaterThanOrEqualTo(0.5f - 0.02f));
         }
 
+        [Test]
+        public void Bounce_RehitMemory_NeverForgetsAnEnemyWhileItsTimerRuns()
+        {
+            // The memory once overwrote its oldest entry even while that timer was still running, so a crowd of more than
+            // eight enemies inside 0.5 s let the first one be hit again. A full memory now refuses new hits instead.
+            SurvivorSim sim = Sim(64, 1, 343); sim.SetTimeForTests(10f);
+            SurvivorProjectile p = new SurvivorProjectile { Bouncing = true }; int capacity = p.BounceIds.Length;
+            Assert.That(capacity, Is.GreaterThanOrEqualTo(16));
+            for (int id = 1; id <= capacity; id++) Assert.That(sim.RecordBounceHit(p, id), Is.True, "slot for enemy " + id);
+            Assert.That(sim.RecordBounceHit(p, capacity + 1), Is.False, "a full memory must not drop a live entry");
+            for (int id = 1; id <= capacity; id++) Assert.That(sim.AlreadyHit(p, id), Is.True, "enemy " + id + " is still remembered");
+            sim.SetTimeForTests(10f + SurvivorCatalog.BounceRehitSeconds);
+            Assert.That(sim.AlreadyHit(p, 1), Is.False); Assert.That(sim.RecordBounceHit(p, capacity + 1), Is.True, "expired slots are reused");
+        }
+
         // ---- momentum spirit ----
 
         [Test]

@@ -249,8 +249,7 @@ namespace PersonalArena.Core.Survivor
                     for (int n = 0; n < found; n++)
                     {
                         SurvivorEnemy e = enemies[enemyScratch[n]];
-                        p.BounceIds[p.BounceNext] = e.Id; p.BounceUntil[p.BounceNext] = Time + SurvivorCatalog.BounceRehitSeconds;
-                        p.BounceNext = (p.BounceNext + 1) % p.BounceIds.Length;
+                        if (!RecordBounceHit(p, e.Id)) continue;
                         DamageEnemy(e, p.Damage, p.Knockback, pushDirection);
                     }
                     if (IsEnded) return;
@@ -268,7 +267,22 @@ namespace PersonalArena.Core.Survivor
             }
         }
 
-        private bool AlreadyHit(SurvivorProjectile p, int enemyId)
+        /// <summary>
+        /// Bounce shot: remembers <paramref name="enemyId"/> for <see cref="SurvivorCatalog.BounceRehitSeconds"/> in a free or
+        /// expired slot. Returns false (no hit) when every slot is still live, so an enemy is never forgotten early.
+        /// </summary>
+        internal bool RecordBounceHit(SurvivorProjectile p, int enemyId)
+        {
+            for (int i = 0; i < p.BounceIds.Length; i++)
+            {
+                if (p.BounceUntil[i] > Time) continue;
+                p.BounceIds[i] = enemyId; p.BounceUntil[i] = Time + SurvivorCatalog.BounceRehitSeconds;
+                return true;
+            }
+            return false;
+        }
+
+        internal bool AlreadyHit(SurvivorProjectile p, int enemyId)
         {
             if (p.Bouncing)
             {
