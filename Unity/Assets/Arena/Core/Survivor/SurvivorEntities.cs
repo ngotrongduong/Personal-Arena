@@ -101,7 +101,7 @@ namespace PersonalArena.Core.Survivor
         /// <summary>When above 0 the first hit blows up: every enemy within this radius takes the damage.</summary>
         public float ExplodeRadius { get; internal set; }
         internal float StunSeconds;
-        internal readonly int[] HitIds = new int[4];
+        internal readonly int[] HitIds = new int[8];
         /// <summary>A weapon bomb also blows up when its range runs out (a skill fireball just vanishes).</summary>
         internal bool ExplodeOnExpire;
         internal int HitCount;

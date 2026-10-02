@@ -78,6 +78,8 @@ namespace PersonalArena.Core.Survivor
         public float ChancePerLevel { get; init; }
         /// <summary>Freeze: stun growth per level above 1 (seconds).</summary>
         public float StunPerLevel { get; init; }
+        /// <summary>Momentum: the movement factor never reads below this (an evolution keeps some damage while idle).</summary>
+        public float MomentumFloor { get; init; }
     }
 
     public static class SurvivorCatalog
@@ -208,9 +210,12 @@ namespace PersonalArena.Core.Survivor
         public const int OrbitKnifeIndex = 23;
         public const int DaggerIndex = 24;
         public const int CrossbowIndex = 25;
-        /// <summary>Evolutions occupy 40..57: evolution of weapon w is <see cref="EvolutionOf"/>(w).</summary>
+        /// <summary>Original evolutions occupy 40..57 (see also <see cref="FirstNewEvolutionIndex"/>): evolution of weapon w is <see cref="EvolutionOf"/>(w).</summary>
         public const int FirstEvolutionIndex = 40;
         public const int EvolutionCount = 18;
+        /// <summary>M9: evolutions of the new weapons (26-33, 64-66, 68-72) occupy 112..127; purge (67) has none.</summary>
+        public const int FirstNewEvolutionIndex = 112;
+        public const int NewEvolutionCount = 16;
 
         private static readonly ItemDef MagicBolt = new ItemDef
         {
@@ -443,9 +448,30 @@ namespace PersonalArena.Core.Survivor
             Evolve(Crossbow, 57, "siege-crossbow", "Nỏ công thành", BoneArmorIndex)
         };
 
+        private static readonly ItemDef[] NewEvolutions =
+        {
+            Evolve(FlameCone, 112, "inferno", "Hỏa ngục", RecoveryIndex),
+            Evolve(ComboBlade, 113, "phantom-blade", "Kiếm vô ảnh", WindBootsIndex),
+            Evolve(HeavyHammer, 114, "mountain-hammer", "Búa núi", BoneArmorIndex),
+            Evolve(Bomb, 115, "carpet-bomb", "Mưa bom", DuplicatorIndex),
+            Evolve(Retaliate, 116, "fury", "Cơn thịnh nộ", SpikedArmorIndex, rangeMul: 1.5f),
+            Evolve(Barrier, 117, "aegis", "Kết giới bất diệt", IronHeartIndex),
+            Evolve(Boomerang, 118, "storm-boomerang", "Boomerang bão", HourglassIndex),
+            Evolve(PoisonPool, 119, "miasma", "Đầm độc", DurationCharmIndex, widthMul: 1.3f, durationMul: 1.3f),
+            Evolve(BounceShot, 120, "chaos-shot", "Đạn hỗn loạn", CloverIndex, extraBounces: 2),
+            Evolve(MomentumSpirit, 121, "wraith", "Bóng ma tốc độ", OmniBoxIndex, momentumFloor: 0.4f),
+            Evolve(TimeClock, 122, "eternal-corridor", "Hành lang vĩnh cửu", HourglassIndex, stunBonus: 0.5f, chanceBonus: 0.1f),
+            Evolve(BombRing, 123, "nebula", "Tinh vân", AreaCharmIndex, extraCount: 2),
+            Evolve(FireballNova, 124, "meteor", "Thiên thạch", MightGauntletIndex),
+            Evolve(BraceletTrio, 125, "twin-bracelet", "Vòng tay song", CritEyeIndex),
+            Evolve(QuadShot, 126, "four-winds", "Tứ phương", MagnetCharmIndex),
+            Evolve(MagiStone, 127, "sage-stone", "Đá hiền triết", GreedIndex)
+        };
+
         public static ItemDef Get(int index)
         {
             if (index >= FirstEvolutionIndex && index < FirstEvolutionIndex + EvolutionCount) return Evolutions[index - FirstEvolutionIndex];
+            if (index >= FirstNewEvolutionIndex && index < FirstNewEvolutionIndex + NewEvolutionCount) return NewEvolutions[index - FirstNewEvolutionIndex];
             return index switch
             {
                 0 => Sweep,
@@ -509,6 +535,7 @@ namespace PersonalArena.Core.Survivor
         public static int EvolutionOf(int weapon)
         {
             for (int i = 0; i < Evolutions.Length; i++) if (Evolutions[i].EvolvesFrom == weapon) return Evolutions[i].CatalogIndex;
+            for (int i = 0; i < NewEvolutions.Length; i++) if (NewEvolutions[i].EvolvesFrom == weapon) return NewEvolutions[i].CatalogIndex;
             return -1;
         }
 
@@ -517,23 +544,35 @@ namespace PersonalArena.Core.Survivor
         /// range ×1.2, cooldown ×0.8, one more projectile, +1 pierce, longer orbit, faster hits.
         /// It has a single level, so the level-scaling fields are folded in and zeroed.
         /// </summary>
-        private static ItemDef Evolve(ItemDef b, int index, string id, string name, int passive)
+        /// <remarks>
+        /// Pattern-specific folding (all other numbers use the generic rule): <paramref name="rangeMul"/> replaces the ×1.2 range (retaliate radius ×1.5),
+        /// <paramref name="widthMul"/>/<paramref name="durationMul"/> replace the ×1.2 width and ×1.25 duration (poison pool ×1.3 both),
+        /// <paramref name="extraCount"/> replaces the +1 volley count (bomb ring +2), <paramref name="extraBounces"/> adds to the level-5 bounces,
+        /// <paramref name="stunBonus"/>/<paramref name="chanceBonus"/> add to the level-5 stun and chance of a Freeze weapon,
+        /// <paramref name="momentumFloor"/> sets the lowest movement factor of a Momentum weapon.
+        /// </remarks>
+        private static ItemDef Evolve(ItemDef b, int index, string id, string name, int passive, float rangeMul = 1.2f, float widthMul = 1.2f,
+            float durationMul = 1.25f, int extraCount = 1, int extraBounces = 0, float stunBonus = 0f, float chanceBonus = 0f, float momentumFloor = 0f)
         {
             int top = b.MaxLevel - 1;
             int topCount = b.CountByLevel.Count == 0 ? 0 : b.CountByLevel[Math.Min(top, b.CountByLevel.Count - 1)];
+            int topBounces = b.BouncesByLevel.Count == 0 ? 0 : b.BouncesByLevel[Math.Min(top, b.BouncesByLevel.Count - 1)];
             return new ItemDef
             {
                 CatalogIndex = index, Id = id, Name = name, Kind = ItemKind.Weapon, Pattern = b.Pattern, MaxLevel = 1,
                 BaseDamage = (b.BaseDamage + b.DamagePerLevel * top) * 1.5f,
-                BaseRange = b.BaseRange * (1f + b.RangePerLevel * top) * 1.2f,
+                BaseRange = b.BaseRange * (1f + b.RangePerLevel * top) * rangeMul,
                 BaseCooldown = (b.BaseCooldown + b.CooldownPerLevel * top) * 0.8f,
                 Knockback = b.Knockback * 1.2f,
                 ArcDegrees = b.ArcDegrees, BackArcLevel = b.BackArcLevel > 0 ? 1 : 0,
                 ProjectileSpeed = b.ProjectileSpeed, ProjectileRadius = b.ProjectileRadius * 1.2f,
                 ProjectileRange = b.ProjectileRange * 1.2f, Pierce = b.ProjectileSpeed > 0f ? b.Pierce + 1 : b.Pierce,
-                CountByLevel = topCount == 0 ? Array.Empty<int>() : Array.AsReadOnly(new[] { topCount + 1 }),
-                Duration = b.Duration * 1.25f, HitInterval = b.HitInterval * 0.8f,
-                AngularSpeedDegrees = b.AngularSpeedDegrees, Width = b.Width * 1.2f, StunSeconds = b.StunSeconds * 1.5f,
+                CountByLevel = topCount == 0 ? Array.Empty<int>() : Array.AsReadOnly(new[] { topCount + extraCount }),
+                Duration = b.Duration * durationMul, HitInterval = b.HitInterval * 0.8f,
+                AngularSpeedDegrees = b.AngularSpeedDegrees, Width = b.Width * widthMul,
+                StunSeconds = b.Pattern == WeaponPattern.Freeze ? b.StunSeconds + b.StunPerLevel * top + stunBonus : b.StunSeconds * 1.5f,
+                BouncesByLevel = topBounces == 0 ? Array.Empty<int>() : Array.AsReadOnly(new[] { topBounces + extraBounces }),
+                Chance = b.Chance > 0f ? MathF.Min(1f, b.Chance + b.ChancePerLevel * top + chanceBonus) : 0f, MomentumFloor = momentumFloor,
                 EvolvesFrom = b.CatalogIndex, EvolutionPassive = passive
             };
         }

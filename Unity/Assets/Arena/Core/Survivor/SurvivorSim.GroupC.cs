@@ -13,6 +13,8 @@ namespace PersonalArena.Core.Survivor
         private readonly float[] pendingBlastTimer = new float[SurvivorCatalog.MaxPendingBlasts];
         private readonly float[] pendingBlastDamage = new float[SurvivorCatalog.MaxPendingBlasts];
         private readonly float[] pendingBlastRadius = new float[SurvivorCatalog.MaxPendingBlasts];
+        private readonly float[] pendingBlastKnockback = new float[SurvivorCatalog.MaxPendingBlasts];
+        private readonly int[] pendingBlastSource = new int[SurvivorCatalog.MaxPendingBlasts];
         private readonly bool[] pendingBlastActive = new bool[SurvivorCatalog.MaxPendingBlasts];
 
         /// <summary>Moving average (0..1, time constant 1.5 s) of "the hero is moving"; scales momentum-spirit damage.</summary>
@@ -99,7 +101,7 @@ namespace PersonalArena.Core.Survivor
             aim = Hero.Velocity.LengthSquared > threshold * threshold ? Hero.Velocity.Normalized() : Vec2.FromAngle(Hero.Facing);
             int count = VolleyCount(def.CountByLevel, level);
             float step = count > 1 ? def.ArcDegrees * MathF.PI / 180f / (count - 1) : 0f;
-            float damage = (def.BaseDamage + def.DamagePerLevel * (level - 1)) * (SurvivorCatalog.MomentumMinMul + SurvivorCatalog.MomentumSpanMul * movementFactor);
+            float damage = (def.BaseDamage + def.DamagePerLevel * (level - 1)) * (SurvivorCatalog.MomentumMinMul + SurvivorCatalog.MomentumSpanMul * MathF.Max(movementFactor, def.MomentumFloor));
             for (int k = 0; k < count; k++)
             {
                 Vec2 direction = Rotate(aim, (k - (count - 1) * 0.5f) * step);
@@ -173,7 +175,7 @@ namespace PersonalArena.Core.Survivor
                 while (pendingBlastActive[slot]) slot++;
                 Vec2 point = Hero.Position + Vec2.FromAngle(bombRingAngle + k * MathF.PI * 2f / count) * ring;
                 pendingBlastPosition[slot] = new Vec2(MathF.Max(-limit, MathF.Min(limit, point.X)), MathF.Max(-limit, MathF.Min(limit, point.Y)));
-                pendingBlastTimer[slot] = k * def.HitInterval; pendingBlastDamage[slot] = damage; pendingBlastRadius[slot] = blast; pendingBlastActive[slot] = true;
+                pendingBlastTimer[slot] = k * def.HitInterval; pendingBlastDamage[slot] = damage; pendingBlastRadius[slot] = blast; pendingBlastKnockback[slot] = def.Knockback; pendingBlastSource[slot] = def.CatalogIndex; pendingBlastActive[slot] = true;
             }
             bombRingAngle = WrapAngle(bombRingAngle + SurvivorCatalog.BombRingRotationStep);
             return true;
@@ -187,8 +189,8 @@ namespace PersonalArena.Core.Survivor
                 pendingBlastTimer[i] -= FixedDeltaTime;
                 if (pendingBlastTimer[i] > PendingBlastEpsilon) continue;
                 pendingBlastActive[i] = false;
-                AddEvent(SurvivorEventType.StrikeLanded, pendingBlastRadius[i], id: SurvivorCatalog.BombRingIndex, point: pendingBlastPosition[i]);
-                Blast(pendingBlastPosition[i], pendingBlastRadius[i], pendingBlastDamage[i], SurvivorCatalog.Get(SurvivorCatalog.BombRingIndex).Knockback, 0f);
+                AddEvent(SurvivorEventType.StrikeLanded, pendingBlastRadius[i], id: pendingBlastSource[i], point: pendingBlastPosition[i]);
+                Blast(pendingBlastPosition[i], pendingBlastRadius[i], pendingBlastDamage[i], pendingBlastKnockback[i], 0f);
                 if (IsEnded) return;
             }
         }

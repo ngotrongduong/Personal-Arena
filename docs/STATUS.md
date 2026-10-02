@@ -254,7 +254,10 @@ thưởng theo thứ bậc, nghiệm thu bằng đánh giá 100 seed). Đấu tr
 - **T-044 xong**: Mage thêm Phun lửa, Vòng bảo hộ, Bình độc + 4 vũ khí mới; Archer thêm Bom, Boomerang, Bình độc;
   vũ khí mới 69 Hỏa cầu nổ (Mage), 70 Vòng tay ba mũi (Mage, Archer), 71 Bắn bốn hướng (Archer), 72 Đá tụ lực
   (Mage). CoreTests 495/495. Danh mục còn trống từ 73.
-- Chưa làm: tiến hóa cho vũ khí mới (ô 112–127; T-045),
+- **T-045 xong**: 16 tiến hóa cho vũ khí mới (ô 112–127; Thanh tẩy không có), cơ chế rương/ghép phụ kiện dùng chung với
+  18 tiến hóa cũ (40–57). CoreTests 614/614. Lưu ý: tiến hóa Bóng ma tốc độ có hệ số sàn 0,4 nên sát thương lúc đứng
+  yên là ×0,88 (task ghi 0,8; đổi `MomentumFloor` ≈ 0,333 nếu muốn 0,8). Đạn xuyên giờ nhớ tối đa 8 quái.
+- Chưa làm:
   toàn bộ phần hiển thị Unity (T-041 + icon/hiệu ứng/âm thanh), cân bằng bằng `SurvivorEval`.
 
 ### 2026-10-02 — Claude (cloud): CI xanh lại, review M5–M8
