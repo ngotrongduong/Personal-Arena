@@ -240,8 +240,10 @@ thưởng theo thứ bậc, nghiệm thu bằng đánh giá 100 seed). Đấu tr
   `Amount` dùng chỗ `Reserved13/14`. CoreTests 342/342. Danh mục còn trống: 38–39. Chưa có hình ảnh/HUD (T-037).
 - **Đợt 2, T-039 (Core) xong**: schema **v5** = 2592 giá trị (self 0..71, túi đồ 72..199 gồm 128 ô, đề nghị 200..719
   = 4 × 130, tia 720..2519, mật độ 2520..2591), hành động 9/7/5 (6 skill chủ động, 2 ô mới tạm là `none`),
-  danh mục 128 (chỉ số cũ không dời). CoreTests 360/360. **Chưa xong**: T-040 (Trainer: `survivor_v5.json`, nâng
-  não v4 → v5; test `JsonSchemaMatchesTheCoreLayout` đang bỏ qua tới khi file đó có), T-041 (Unity, cần PC: thanh
+  danh mục 128 (chỉ số cũ không dời). CoreTests 360/360. **T-040 (Trainer) xong**: `survivor_v5.json`, `SCHEMA_VERSION = 5`,
+  `brain_upgrade` v4 → v5 giữ nguyên đầu ra cho input cũ (cột mới = 0; hai lựa chọn skill mới có bias thấp hơn
+  bias nhỏ nhất cũ 5,0, chưa thử trong train thật), fixture nhị phân sinh bằng numpy nên giống nhau mọi nền tảng;
+  pytest 203/203, CoreTests 361/361. **Chưa xong**: T-041 (Unity, cần PC: thanh
   skill 6 ô ở `SurvivorHud`, build lại, chạy EditMode). Hiện **bản xem/bản train cũ không chạy được với Core mới**
   (khác schema): đừng build hay train từ nhánh này trước khi T-040 và T-041 xong.
 - Nội dung đợt 2 (nhóm C, tiến hóa mới, skill thứ 5–6, Mage/Archer) chưa làm.

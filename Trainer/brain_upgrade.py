@@ -11,6 +11,8 @@ from pathlib import Path
 import shutil
 from typing import Iterable
 
+import numpy as np
+
 from Trainer import arena_trainer, export_brain
 
 
@@ -162,21 +164,28 @@ def _unsupported_state(checkpoint: dict) -> list[str]:
     return unsupported
 
 
+# Bias of every output row that did not exist before, relative to the smallest old bias of its branch.
+# Strongly negative, so a brain that never saw the new skill choices does not start picking them as
+# soon as the action mask opens; PPO can still raise it when the choice proves useful.
+NEW_CHOICE_BIAS_MARGIN = 5.0
+NEW_ROW_SCALE = 0.01
+
+
 def _random_rows(reference, rows: int, columns: int, generator):
+    """Small random output rows from a numpy generator (platform independent, unlike torch's CPU RNG)."""
+    import numpy as np
     import torch
 
-    values = torch.randn(
-        (rows, columns), generator=generator, dtype=torch.float32, device="cpu"
-    ) * 0.01
-    return values.to(device=reference.device, dtype=reference.dtype)
+    values = (generator.standard_normal((rows, columns)).astype(np.float32) * np.float32(NEW_ROW_SCALE)).astype(
+        np.float32
+    )
+    return torch.from_numpy(values).to(device=reference.device, dtype=reference.dtype)
 
 
 def upgrade_state(
     checkpoint: dict, old_schema: dict, new_schema: dict, seed: int = 0
 ) -> dict:
     """Return a checkpoint widened to ``new_schema`` while preserving old outputs."""
-    import torch
-
     columns = column_map(old_schema, new_schema)
     actions = action_map(old_schema, new_schema)
     old_observation_size = _schema_observation_size(old_schema)
@@ -228,8 +237,7 @@ def upgrade_state(
         if key.startswith("action_model._discrete_distribution.branches."):
             del policy[key]
 
-    generator = torch.Generator(device="cpu")
-    generator.manual_seed(seed)
+    generator = np.random.RandomState(seed)
     old_by_new = {new_index: old_index for old_index, (new_index, _) in enumerate(actions)}
     if not old_layers:
         raise UpgradeError("checkpoint has no action branches")
@@ -248,7 +256,7 @@ def upgrade_state(
             bias[:old_size] = old_bias
             if size > old_size:
                 weight[old_size:] = _random_rows(old_weight, size - old_size, hidden, generator)
-                bias[old_size:] = old_bias.min()
+                bias[old_size:] = old_bias.min() - NEW_CHOICE_BIAS_MARGIN
         else:
             weight = _random_rows(reference_weight, size, hidden, generator)
             bias = reference_bias.new_zeros((size,))

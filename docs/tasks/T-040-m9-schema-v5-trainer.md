@@ -59,3 +59,32 @@ Python 3.10 venv with the pinned stack is at `/root/venv310` (`/root/venv310/bin
 - Everything must be deterministic, and no checkpoint, `.pt`, `.onnx`, run folder or results may be created inside the repo.
 
 ## Report (fill in when done)
+
+**Status: review.** `/root/venv310/bin/python -m pytest Trainer -q -p no:cacheprovider`: 203 passed, 0 failed (baseline 196 + 1 failing; 6 new tests).
+`dotnet test CoreTests -c Release`: 361 total, 361 passed, 0 failed. `JsonSchemaMatchesTheCoreLayout` and `UpgradedFixturePreservesEveryOldLogit` were run alone with `-v n` and both report **Passed** (the JSON test is no longer Inconclusive).
+
+### What changed, per file
+- `Trainer/schemas/survivor_v5.json` (new): schema_version 5, observation_size 2592, self = the 64 v4 field names in the same order plus `skill_cooldown_4/5, skill_allowed_4/5, last_skill_5, last_skill_6, reserved_70, reserved_71`; inventory repeat 128; offers 130 fields (`item_00..item_127`, `next_level`, `present`; the first 64 names are identical to v4 so the ordered mapping works); rays and density unchanged; actions 9 / 7 / 5, action_size 21.
+- `Trainer/arena_trainer.py`: `SCHEMA_VERSION = 5`. Everything else (champion, brain_lineage, training_history, train_service, export_brain locators) already reads the constant, so no other source edit was needed; no YAML names a size.
+- `Trainer/brain_upgrade.py`: (1) new output rows of a grown branch now get bias = `old_bias.min() - NEW_CHOICE_BIAS_MARGIN` (5.0; before it was exactly `old_bias.min()`); (2) new random rows (and whole new branches) come from `numpy.random.RandomState(seed)` with explicit float32 casts instead of `torch.Generator`; (3) dropped now-unused torch import in `upgrade_state`. The column/action mapping code is unchanged (generic).
+- `Trainer/export_brain.py`: no change needed. It takes sizes from the weight shapes; nothing hardcodes 2264 (grep clean).
+- Tests: `test_export_brain.py` (2592, branches 9/7/5), `test_arena_trainer.py`, `test_train_service.py`, `test_training_history.py`, `test_champion.py` (schema constant 4 → 5), `test_brain_upgrade.py` (see below).
+- `CoreTests/Fixtures/brain_upgrade/{old.brain,new.brain,map.json}` regenerated with `PA_REGEN_FIXTURES=1`: now the real v4 (2264, 9/5/5) to v5 (2592, 9/7/5) mapping with hidden width 8 (74 KB, 84 KB, 22 KB). No C# change was needed.
+
+### How the v4 to v5 upgrade treats weights and biases
+- Input layer (actor and critic): new matrix zero-filled, old columns copied to the mapped new columns (self 0..63 same; inventory 64..127 to 72..135; offers items +0..63, next-level to +128, present to +129 per slot at 200 + 130 s; rays and density +328). All 8 new self columns, 64 new inventory columns and 4 x 64 new offer columns have exactly zero weight, so the old brain's outputs are function-preserving for inputs that existed.
+- Hidden layers, value head: untouched copies.
+- Action branches: move and pick are copied exactly. Skill branch: rows 0..4 and their biases copied exactly; rows 5 and 6 get small random weights (N(0,1) x 0.01) and bias = (smallest old skill bias) - 5.0. `discrete_act_size_vector` becomes [[9,7,5]], deprecated sum 21. Adam value optimizer state is dropped (as before). Chaining v3 to v4 to v5 is not implemented (the code never chained; `plan_run` upgrades only from the newest older schema directly and falls back to a new run if the old schema JSON is missing; `survivor_v3.json` does not exist in the repo anyway).
+- Behaviour change versus v3 to v4: the old rule gave new rows bias = min (no extra penalty). The task asked for "strongly negative", so I used a 5.0 margin (about 150x lower probability than the weakest old skill). Trade-off: if the mask later opens skill 5/6 for a hero, PPO has to climb 5 logits to use it; 5.0 is my judgement, not measured.
+
+### How the fixture bytes were made platform independent
+`fake_checkpoint` no longer uses torch RNG: weights come from `np.random.RandomState(seed).standard_normal(...)` cast to float32, scaled by `np.float32(0.1)`, cast again. The upgrade's new rows also use `RandomState`. Regenerating twice is idempotent and the fixture test passes here (Linux) against the committed files; `test_fake_checkpoint_bytes_are_pinned_across_platforms` pins a SHA-256 of a small generated weight so a drifting RNG on the owner's PC would fail loudly. Residual risk: `RandomState.standard_normal` uses libm `log`/`sqrt`; a last-ulp difference could in theory survive the float32 cast, but I have no Windows machine to confirm, so that is unverified. The committed files were generated on Linux and the old Windows-generated ones were overwritten.
+
+### New tests (6)
+`test_v4_to_v5_maps_every_block_as_documented` (exact offsets per the table, bijection, new-column set includes 64..71), `test_v5_schema_json_extends_v4_names`, `test_v4_to_v5_upgrade_treats_weights_and_biases` (zero columns, exact copies, bias value, action sizes), `test_v4_to_v5_upgrade_preserves_old_logits_on_real_layout` (forward pass, hidden 16), `test_upgrade_is_deterministic_and_independent_of_torch_rng`, `test_fake_checkpoint_bytes_are_pinned_across_platforms`. The existing `test_current_schema_file...` now asserts 2592 and 9/7/5; the old synthetic-schema upgrade test asserts the new bias formula.
+
+### Not verified / weak spots
+- No real mlagents training checkpoint at 2264 inputs and no Unity run: the real-layout tests use tiny hidden widths (4 to 16) and synthetic weights. The mlagents saver round-trip test (`test_mlagents_saver_upgrade_loader_and_update_round_trip`) still uses the small synthetic schema (12 to 17 inputs), not v4 to v5; it exercises the same code path but not the real sizes or a real 512-wide network.
+- The C# `JsonSchemaMatchesTheCoreLayout` checks segment offsets, totals and action sizes only, not field names; the name check lives in the Python `test_v5_schema_json_extends_v4_names`. The C# fixture test only compares logits through the column map; it does not check the new skill bias.
+- Not done outside my allowed files: Unity `BrainLocator.CurrentSchemaVersion` (== 4 in Unity code, flagged in T-039) and `docs/TRAINING.md` run table (no real run was made). The 5.0 bias margin is untested in actual training.
+- Stale `__pycache__` folders exist under Trainer (pre-existing, not created in git-tracked form by me).

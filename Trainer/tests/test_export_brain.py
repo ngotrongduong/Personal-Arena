@@ -109,7 +109,7 @@ def test_encode_brain_layout_matches_policy_brain_reader():
 
 def test_encode_survivor_network_header_has_three_layers_and_three_branches():
     body, branches = export_brain.extract_actor_layers(
-        actor_state(obs=2264, hidden=512, branches=(9, 5, 5), layers=3)
+        actor_state(obs=2592, hidden=512, branches=(9, 7, 5), layers=3)
     )
     payload = export_brain.encode_brain("Warrior", 1_000_000, body, branches)
 
@@ -132,9 +132,9 @@ def test_encode_survivor_network_header_has_three_layers_and_three_branches():
         branch_sizes.append(branch_outputs)
         offset += 8 + 4 * (branch_inputs * branch_outputs + branch_outputs)
 
-    assert (step, inputs) == (1_000_000, 2264)
-    assert layer_sizes == [(2264, 512), (512, 512), (512, 512)]
-    assert branch_sizes == [9, 5, 5]
+    assert (step, inputs) == (1_000_000, 2592)
+    assert layer_sizes == [(2592, 512), (512, 512), (512, 512)]
+    assert branch_sizes == [9, 7, 5]
 
 
 def test_newest_behavior_dir_and_checkpoint_order(tmp_path: Path):

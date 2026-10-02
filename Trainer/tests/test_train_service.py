@@ -151,7 +151,7 @@ def test_plan_run_does_not_resume_an_unmarked_or_older_schema_run(
 
     plan = train_service.plan_run(tmp_path, "Warrior")
 
-    assert arena_trainer.SCHEMA_VERSION == 4
+    assert arena_trainer.SCHEMA_VERSION == 5
     assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-s001", "new", 0)
 
 
@@ -329,7 +329,7 @@ def write_config(path: Path) -> None:
 
 @pytest.mark.parametrize(
     ("mode", "initial_marker", "expected_marker"),
-    [("new", None, "4"), ("force", "1", "4"), ("resume", "4", "4")],
+    [("new", None, "5"), ("force", "1", "5"), ("resume", "5", "5")],
 )
 def test_service_marks_new_and_forced_runs_without_overwriting_resumed_runs(
     tmp_path: Path, mode: str, initial_marker: str | None, expected_marker: str

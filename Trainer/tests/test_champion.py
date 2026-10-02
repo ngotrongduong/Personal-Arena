@@ -39,13 +39,13 @@ def test_score_formula_and_decision_branches():
     data = summary(median=600, p10=400, wins=0.5, catastrophic=2)
     assert champion.calculate_score(data) == 830
     challenger = {"score": 106, "summary": {"CatastrophicCount": 1}}
-    current = {"score": 100, "schema_version": 4, "summary": {"CatastrophicCount": 1}}
-    assert champion.should_promote(challenger, None, 4)
-    assert champion.should_promote(challenger, {**current, "schema_version": 3}, 4)
-    assert champion.should_promote(challenger, current, 4)
-    assert not champion.should_promote({**challenger, "score": 105}, current, 4)
+    current = {"score": 100, "schema_version": 5, "summary": {"CatastrophicCount": 1}}
+    assert champion.should_promote(challenger, None, 5)
+    assert champion.should_promote(challenger, {**current, "schema_version": 4}, 5)
+    assert champion.should_promote(challenger, current, 5)
+    assert not champion.should_promote({**challenger, "score": 105}, current, 5)
     assert not champion.should_promote(
-        {"score": 200, "summary": {"CatastrophicCount": 2}}, current, 4
+        {"score": 200, "summary": {"CatastrophicCount": 2}}, current, 5
     )
 
 
