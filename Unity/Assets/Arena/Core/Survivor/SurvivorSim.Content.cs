@@ -72,6 +72,7 @@ namespace PersonalArena.Core.Survivor
             comboHitsLeft = 0; comboTimer = 0f; retaliatePending = false; reflectPending = 0f; lastHeroDamage = 0f;
             barrierInit = false; barrierCharges = 0; barrierMax = 0;
             movementFactor = 0f; bombRingAngle = 0f;
+            whirlRemaining = 0f; whirlTimer = 0f; whirlSkill = null; hazardOrder = 0;
             for (int i = 0; i < pendingBlastActive.Length; i++) pendingBlastActive[i] = false;
             shockwaveActive = false; shockwaveId = 0; shockwaveRadius = 0f; shockwaveMaxRadius = 0f; shockwaveCenter = Vec2.Zero;
         }

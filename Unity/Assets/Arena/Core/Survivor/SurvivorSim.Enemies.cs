@@ -162,7 +162,7 @@ namespace PersonalArena.Core.Survivor
             e.Hp = e.MaxHp; e.Damage = def.AttackDamage * damageTime * damageTier * (elite ? tuning.EliteDamageMul : 1f);
             e.KnockbackResist = elite ? MathF.Max(def.KnockbackResist, tuning.EliteMinKnockbackResist) : def.KnockbackResist;
             e.Elite = elite; e.IsBoss = boss; e.WindupRemaining = 0f; e.StunRemaining = 0f;
-            e.OrbitNextHitTime = 0f; e.LastShockwaveId = 0; e.LastHitTime = Time;
+            e.OrbitNextHitTime = 0f; e.LastShockwaveId = 0; e.LastHitTime = Time; e.SlowRemaining = 0f; e.SlowMultiplier = 1f;
             e.RelocatedThisTick = false; e.Separated = false; enemyPreviousPositions[slot] = point;
             e.AttackCooldown = 0f; e.ContactCooldown = 0f; e.SummonCooldown = boss ? EffectiveBossSummonInterval : def.SummonInterval;
             if (e.Radius > maxEnemyRadius) maxEnemyRadius = e.Radius;
@@ -207,6 +207,7 @@ namespace PersonalArena.Core.Survivor
                 if (!e.Active) continue;
                 SurvivorEnemyDef def = SurvivorDefaults.EnemyDef(e.TypeIndex);
                 float speed = EnemyMoveSpeed(e, def);
+                if (e.SlowRemaining > 0f) { speed *= e.SlowMultiplier; e.SlowRemaining = MathF.Max(0f, e.SlowRemaining - FixedDeltaTime); }
                 e.ContactCooldown = MathF.Max(0f, e.ContactCooldown - FixedDeltaTime);
                 e.AttackCooldown = MathF.Max(0f, e.AttackCooldown - FixedDeltaTime);
                 if (regen && !e.IsBoss && e.Hp < e.MaxHp && Time - e.LastHitTime >= tuning.RegenDelaySeconds)

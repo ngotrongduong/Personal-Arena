@@ -12,6 +12,8 @@ namespace PersonalArena.Core.Survivor
         public const int EnemyProjectileCapacity = 64;
         public const int BoomerangCapacity = 6;
         public const int ZoneCapacity = 3;
+        public const int TrapCapacity = 2;
+        public const int WallCapacity = 2;
         public const int PickupCapacity = 600;
         public const int GemCapacity = 400;
         public const int ObstacleCapacity = 64;
@@ -28,6 +30,8 @@ namespace PersonalArena.Core.Survivor
         private readonly SurvivorEnemyProjectile[] enemyProjectiles = CreateEnemyProjectiles();
         private readonly SurvivorBoomerang[] boomerangs = CreateBoomerangs();
         private readonly SurvivorZone[] zones = CreateZones();
+        private readonly SurvivorTrap[] traps = CreateTraps();
+        private readonly SurvivorWall[] walls = CreateWalls();
         private readonly SurvivorPickup[] pickups = CreatePickups();
         private readonly SurvivorObstacle[] obstacles = CreateObstacles();
         private readonly List<SurvivorEvent> events = new List<SurvivorEvent>(4096);
@@ -121,6 +125,8 @@ namespace PersonalArena.Core.Survivor
         public IReadOnlyList<SurvivorEnemyProjectile> EnemyProjectiles => enemyProjectiles;
         public IReadOnlyList<SurvivorBoomerang> Boomerangs => boomerangs;
         public IReadOnlyList<SurvivorZone> Zones => zones;
+        public IReadOnlyList<SurvivorTrap> Traps => traps;
+        public IReadOnlyList<SurvivorWall> Walls => walls;
         public IReadOnlyList<SurvivorPickup> Pickups => pickups;
         public IReadOnlyList<SurvivorObstacle> Obstacles => obstacles;
         public IReadOnlyList<SurvivorEvent> Events => events;
@@ -207,6 +213,9 @@ namespace PersonalArena.Core.Survivor
             if (!IsEnded) UpdateProjectiles();
             if (!IsEnded) UpdateBoomerangs();
             if (!IsEnded) UpdateZones();
+            if (!IsEnded) UpdateWhirlwind();
+            if (!IsEnded) UpdateTraps();
+            if (!IsEnded) UpdateWalls();
             if (!IsEnded) UpdatePendingBlasts();
             if (!IsEnded) UpdateEnemies();
             if (!IsEnded) UpdateEnemyProjectiles();
@@ -277,6 +286,12 @@ namespace PersonalArena.Core.Survivor
             else if (skill.Kind == SkillKind.Projectile) FireSkillProjectile(slot, skill);
             else if (skill.Kind == SkillKind.AreaBurst) hits = AreaBurst(skill);
             else if (skill.Kind == SkillKind.Teleport) Teleport(skill, input.Move);
+            else if (skill.Kind == SkillKind.Leap) StartLeap(skill, input.Move);
+            else if (skill.Kind == SkillKind.Whirlwind) StartWhirlwind(skill);
+            else if (skill.Kind == SkillKind.Trap) DropTrap(skill);
+            else if (skill.Kind == SkillKind.Barrage) hits = FireBarrage(slot, skill);
+            else if (skill.Kind == SkillKind.Wall) RaiseWall(skill);
+            else if (skill.Kind == SkillKind.Chain) hits = ChainLightning(skill);
             AddEvent(SurvivorEventType.SkillUsed, slot, hits);
         }
 
@@ -293,11 +308,16 @@ namespace PersonalArena.Core.Survivor
                 float distance = MathF.Min(Hero.DashRemaining, Hero.DashSkill.DashSpeed * FixedDeltaTime);
                 Hero.Position += Hero.DashDirection * distance;
                 Hero.DashRemaining -= distance;
-                if (Hero.DashRemaining <= 0.0001f) Hero.Dashing = false;
+                if (Hero.DashRemaining <= 0.0001f)
+                {
+                    Hero.Dashing = false;
+                    if (Hero.DashSkill.Kind == SkillKind.Leap) LandLeap(Hero.DashSkill);
+                }
             }
             else
             {
                 Vec2 target = MoveDirection(move) * stats.MoveSpeed * (Hero.Blocking && Hero.BlockSkill != null ? Hero.BlockSkill.BlockMoveMultiplier : 1f);
+                if (whirlRemaining > 0f) target *= whirlSkill.SlowFactor;
                 Vec2 delta = target - Hero.Velocity;
                 float maxChange = Config.ClassDef.Acceleration * FixedDeltaTime;
                 if (delta.Length > maxChange) delta = delta.Normalized() * maxChange;
@@ -387,6 +407,8 @@ namespace PersonalArena.Core.Survivor
             for (int i = 0; i < projectiles.Length; i++) projectiles[i].Active = false;
             for (int i = 0; i < boomerangs.Length; i++) boomerangs[i].Active = false;
             for (int i = 0; i < zones.Length; i++) zones[i].Active = false;
+            for (int i = 0; i < traps.Length; i++) traps[i].Active = false;
+            for (int i = 0; i < walls.Length; i++) walls[i].Active = false;
             for (int i = 0; i < enemyProjectiles.Length; i++) enemyProjectiles[i].Active = false;
             for (int i = 0; i < pickups.Length; i++) pickups[i].Active = false;
             for (int i = 0; i < obstacles.Length; i++) obstacles[i].Active = false;
@@ -538,6 +560,8 @@ namespace PersonalArena.Core.Survivor
         private static SurvivorProjectile[] CreateProjectiles() { SurvivorProjectile[] a = new SurvivorProjectile[ProjectileCapacity]; for (int i = 0; i < a.Length; i++) a[i] = new SurvivorProjectile(); return a; }
         private static SurvivorBoomerang[] CreateBoomerangs() { SurvivorBoomerang[] a = new SurvivorBoomerang[BoomerangCapacity]; for (int i = 0; i < a.Length; i++) a[i] = new SurvivorBoomerang(); return a; }
         private static SurvivorZone[] CreateZones() { SurvivorZone[] a = new SurvivorZone[ZoneCapacity]; for (int i = 0; i < a.Length; i++) a[i] = new SurvivorZone(); return a; }
+        private static SurvivorTrap[] CreateTraps() { SurvivorTrap[] a = new SurvivorTrap[TrapCapacity]; for (int i = 0; i < a.Length; i++) a[i] = new SurvivorTrap(); return a; }
+        private static SurvivorWall[] CreateWalls() { SurvivorWall[] a = new SurvivorWall[WallCapacity]; for (int i = 0; i < a.Length; i++) a[i] = new SurvivorWall(); return a; }
         private static SurvivorEnemyProjectile[] CreateEnemyProjectiles() { SurvivorEnemyProjectile[] a = new SurvivorEnemyProjectile[EnemyProjectileCapacity]; for (int i = 0; i < a.Length; i++) a[i] = new SurvivorEnemyProjectile(); return a; }
         private static SurvivorPickup[] CreatePickups() { SurvivorPickup[] a = new SurvivorPickup[PickupCapacity]; for (int i = 0; i < a.Length; i++) a[i] = new SurvivorPickup(); return a; }
         private static SurvivorObstacle[] CreateObstacles() { SurvivorObstacle[] a = new SurvivorObstacle[ObstacleCapacity]; for (int i = 0; i < a.Length; i++) a[i] = new SurvivorObstacle(); return a; }

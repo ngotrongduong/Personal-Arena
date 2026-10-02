@@ -68,11 +68,12 @@ namespace PersonalArena.Core.Tests.Survivor
         [TestCase("warrior")]
         [TestCase("mage")]
         [TestCase("archer")]
-        public void Classes_KeepTheirFirstFourSkills_AndHaveNoneInSlots4And5(string classId)
+        public void Classes_KeepTheirFirstFourSkills_AndOldRulesHaveNoneInSlots4And5(string classId)
         {
             SurvivorClassDef kit = SurvivorDefaults.ForClass(classId); Assert.That(kit.ActiveSkills.Length, Is.EqualTo(6));
             string[] expected = classId == "warrior" ? new[] { "kick", "shield-block", "dash", "war-cry" } : classId == "mage" ? new[] { "fireball", "mana-shield", "blink", "frost-burst" } : new[] { "power-shot", "roll-back", "kick", "none" };
             for (int i = 0; i < 4; i++) Assert.That(kit.ActiveSkills[i].Id, Is.EqualTo(expected[i]), classId + " slot " + i);
+            SurvivorConfig old = SurvivorTestHelpers.OldConfig(); old.ClassDef = kit; SurvivorTestHelpers.OldRules(old);
             for (int i = 4; i < 6; i++) { Assert.That(kit.ActiveSkills[i], Is.Not.Null); Assert.That(kit.ActiveSkills[i].Kind, Is.EqualTo(SkillKind.None)); }
         }
 
@@ -81,7 +82,7 @@ namespace PersonalArena.Core.Tests.Survivor
         [TestCase("archer")]
         public void NoneInSlots4And5_IsMaskedOut_AndInputFailsWithoutSideEffects(string classId)
         {
-            SurvivorConfig config = SurvivorTestHelpers.Config(); config.ClassDef = SurvivorDefaults.ForClass(classId);
+            SurvivorConfig config = SurvivorTestHelpers.Config(); config.ClassDef = SurvivorDefaults.ForClass(classId); SurvivorTestHelpers.OldRules(config);
             SurvivorSim sim = new SurvivorSim(config, 5); bool[] move = new bool[9], skill = new bool[7], pick = new bool[5];
             SurvivorActionMask.WriteMask(sim, move, skill, pick); Assert.That(skill[0], Is.True); Assert.That(skill[5], Is.False); Assert.That(skill[6], Is.False);
             float energy = sim.Hero.Energy; sim.Step(new SurvivorInput(0, 5, 0));

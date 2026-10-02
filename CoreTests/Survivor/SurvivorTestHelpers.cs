@@ -15,13 +15,14 @@ namespace PersonalArena.Core.Tests.Survivor
         }
 
         /// <summary>
-        /// The pre-M9 rules: 4 + 4 slots, the old item pools and no fourth Warrior skill. Used by the bit-exact goldens and by tests
+        /// The pre-M9 rules: 4 + 4 slots, the old item pools, no fourth Warrior skill and no skills 5-6 for any class. Used by the bit-exact goldens and by tests
         /// of the old slot behaviour; new-content tests use <see cref="Config"/> as is.
         /// </summary>
         public static SurvivorConfig OldRules(SurvivorConfig config)
         {
             config.Tuning.MaxWeaponSlots = 4; config.Tuning.MaxPassiveSlots = 4;
             config.ClassDef.PassivePool = new[] { 6, 7, 8, 9, 10, 11, 12, 13 };
+            for (int slot = 4; slot < SurvivorInput.SkillSlotCount; slot++) config.ClassDef.ActiveSkills[slot] = new SkillDef { Id = "none", Kind = SkillKind.None };
             if (config.ClassDef.Id == "mage") config.ClassDef.WeaponPool = new[] { 14, 15, 16, 17, 18, 19 };
             if (config.ClassDef.Id == "archer") config.ClassDef.WeaponPool = new[] { 20, 21, 22, 23, 24, 25 };
             if (config.ClassDef.Id == "warrior")

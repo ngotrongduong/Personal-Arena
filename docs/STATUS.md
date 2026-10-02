@@ -248,7 +248,10 @@ thưởng theo thứ bậc, nghiệm thu bằng đánh giá 100 seed). Đấu tr
   (khác schema): đừng build hay train từ nhánh này trước khi T-040 và T-041 xong.
 - **T-042 (nhóm vũ khí C) xong** trên schema v5: Đạn nảy (64; cả 3 class), Bóng tốc (65; Archer), Đồng hồ băng (66),
   Thanh tẩy (67), Mưa bom vòng (68) (66–68 cho Mage). CoreTests 395/395. Danh mục còn trống từ 69.
-- Chưa làm: tiến hóa cho vũ khí mới (ô 112–127), skill thứ 5–6 cho cả 3 class, thêm vũ khí nhóm A/B cho Mage/Archer,
+- **T-043 (skill thứ 5 và 6) xong**: Warrior Nhảy đập đất + Xoáy kiếm, Archer Bẫy gai + Mưa tên, Mage Tường lửa +
+  Lôi liên hoàn (6 `SkillKind` mới thêm cuối enum; quái có thể bị làm chậm, trung tính khi không có bẫy).
+  CoreTests 446/446. Cần Unity: thanh skill 6 ô, phím cho skill 5–6, icon, hiệu ứng.
+- Chưa làm: tiến hóa cho vũ khí mới (ô 112–127), thêm vũ khí nhóm A/B cho Mage/Archer,
   toàn bộ phần hiển thị Unity (T-041 + icon/hiệu ứng/âm thanh), cân bằng bằng `SurvivorEval`.
 
 ### 2026-10-02 — Claude (cloud): CI xanh lại, review M5–M8

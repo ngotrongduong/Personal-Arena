@@ -80,6 +80,9 @@ namespace PersonalArena.Core.Survivor
         internal float LastHitTime;
         internal bool RelocatedThisTick;
         internal bool Separated;
+        /// <summary>Seconds of slow left and its speed multiplier (a trap refreshes it every tick while the enemy is inside); 0 = not slowed.</summary>
+        public float SlowRemaining { get; internal set; }
+        public float SlowMultiplier { get; internal set; }
     }
 
     public sealed class SurvivorProjectile
@@ -145,6 +148,40 @@ namespace PersonalArena.Core.Survivor
         public float Damage { get; internal set; }
         public int SourceIndex { get; internal set; }
         internal float TickTimer;
+    }
+
+    /// <summary>A caltrop trap on the ground: hurts and slows every enemy inside until it runs out.</summary>
+    public sealed class SurvivorTrap
+    {
+        public bool Active { get; internal set; }
+        public Vec2 Position { get; internal set; }
+        public float Radius { get; internal set; }
+        public float Remaining { get; internal set; }
+        public float Duration { get; internal set; }
+        public float Damage { get; internal set; }
+        internal float TickTimer;
+        internal float TickSeconds;
+        internal float SlowFactor;
+        internal float SlowSeconds;
+        /// <summary>Creation order; the smallest alive value is the oldest.</summary>
+        internal int Order;
+    }
+
+    /// <summary>A flame wall: a rectangle (Width across, Depth along <see cref="Direction"/>) that hurts every enemy inside.</summary>
+    public sealed class SurvivorWall
+    {
+        public bool Active { get; internal set; }
+        public Vec2 Position { get; internal set; }
+        /// <summary>Unit vector of the hero's facing when cast (the depth axis).</summary>
+        public Vec2 Direction { get; internal set; }
+        public float Width { get; internal set; }
+        public float Depth { get; internal set; }
+        public float Remaining { get; internal set; }
+        public float Duration { get; internal set; }
+        public float Damage { get; internal set; }
+        internal float TickTimer;
+        internal float TickSeconds;
+        internal int Order;
     }
 
     public sealed class SurvivorEnemyProjectile
