@@ -201,11 +201,13 @@ namespace PersonalArena.Core.Survivor
             UpdateFacing();
             ApplySkill(input);
             MoveHero(input.Move);
+            UpdateMovementFactor();
             SpawnScheduledEnemies();
             FireWeapons();
             if (!IsEnded) UpdateProjectiles();
             if (!IsEnded) UpdateBoomerangs();
             if (!IsEnded) UpdateZones();
+            if (!IsEnded) UpdatePendingBlasts();
             if (!IsEnded) UpdateEnemies();
             if (!IsEnded) UpdateEnemyProjectiles();
             if (!IsEnded) ResolveBodyCollisions();
@@ -595,6 +597,7 @@ namespace PersonalArena.Core.Survivor
             SpawnEnemyProjectile(point, velocity, radius, damage, lifetime, sourceId);
         internal float WeaponCooldownForTests(int index) => weaponCooldowns[index];
         internal void SetWeaponCooldownForTests(int index, float value) => weaponCooldowns[index] = value;
+        internal void SetMovementFactorForTests(float value) { movementFactor = value; }
         internal int BarrierChargesForTests => barrierCharges;
         internal void RequestRetaliateForTests() { retaliatePending = true; }
         internal bool RollMagnetDropForTests() => RollMagnetDrop();

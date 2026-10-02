@@ -18,6 +18,7 @@ namespace PersonalArena.Core.Survivor
                 if (def.Pattern == WeaponPattern.Combo) { UpdateCombo(def, level); continue; }
                 if (def.Pattern == WeaponPattern.Retaliate) continue;
                 if (def.Pattern == WeaponPattern.Barrier) { UpdateBarrier(def, level); continue; }
+                if (def.Pattern == WeaponPattern.Freeze) { UpdateFreeze(def, level); continue; }
                 if (weaponCooldowns[index] > 0f) continue;
                 if (def.Pattern == WeaponPattern.Sweep)
                 {
@@ -60,6 +61,26 @@ namespace PersonalArena.Core.Survivor
                 {
                     weaponCooldowns[index] = def.BaseCooldown * stats.CooldownMul;
                     AddEvent(SurvivorEventType.WeaponFired, stats.DurationMul * def.Duration, id: index, point: zonePoint);
+                }
+                else if (def.Pattern == WeaponPattern.Bounce && FireBounce(def, level, out Vec2 bounceDirection, out int bounceCount))
+                {
+                    weaponCooldowns[index] = def.BaseCooldown * stats.CooldownMul;
+                    AddEvent(SurvivorEventType.WeaponFired, extra: bounceCount, id: index, point: bounceDirection);
+                }
+                else if (def.Pattern == WeaponPattern.Momentum && FireMomentum(def, level, out Vec2 momentumDirection, out int momentumCount))
+                {
+                    weaponCooldowns[index] = def.BaseCooldown * stats.CooldownMul;
+                    AddEvent(SurvivorEventType.WeaponFired, movementFactor, momentumCount, index, momentumDirection);
+                }
+                else if (def.Pattern == WeaponPattern.Purge && Purge(def, level, out int purgeKills))
+                {
+                    weaponCooldowns[index] = (def.BaseCooldown + def.CooldownPerLevel * (level - 1)) * stats.CooldownMul;
+                    AddEvent(SurvivorEventType.WeaponFired, def.BaseRange * stats.AreaMul, purgeKills, index, Hero.Position);
+                }
+                else if (def.Pattern == WeaponPattern.BombRing && StartBombRing(def, level, out int ringCount))
+                {
+                    weaponCooldowns[index] = def.BaseCooldown * stats.CooldownMul;
+                    AddEvent(SurvivorEventType.WeaponFired, extra: ringCount, id: index, point: Hero.Position);
                 }
                 else if (def.Pattern == WeaponPattern.Aura)
                 {
@@ -143,8 +164,8 @@ namespace PersonalArena.Core.Survivor
 
         private SurvivorProjectile NewProjectile()
         {
-            for (int i = 0; i < projectileLimit; i++) if (!projectiles[i].Active) { projectiles[i].ExplodeOnExpire = false; return projectiles[i]; }
-            if (projectileLimit < projectiles.Length) { SurvivorProjectile fresh = projectiles[projectileLimit++]; fresh.ExplodeOnExpire = false; return fresh; }
+            for (int i = 0; i < projectileLimit; i++) if (!projectiles[i].Active) { projectiles[i].ExplodeOnExpire = false; projectiles[i].Bouncing = false; return projectiles[i]; }
+            if (projectileLimit < projectiles.Length) { SurvivorProjectile fresh = projectiles[projectileLimit++]; fresh.ExplodeOnExpire = false; fresh.Bouncing = false; return fresh; }
             return null;
         }
 
@@ -163,7 +184,11 @@ namespace PersonalArena.Core.Survivor
             {
                 SurvivorProjectile p = projectiles[i]; if (!p.Active) continue;
                 p.Position += p.Velocity * FixedDeltaTime; p.Lifetime -= FixedDeltaTime;
-                if (p.Lifetime <= 0f || MathF.Abs(p.Position.X) > Config.MapHalfSize || MathF.Abs(p.Position.Y) > Config.MapHalfSize)
+                if (p.Bouncing)
+                {
+                    if (p.Lifetime <= 0f || !BounceProjectile(p)) { p.Active = false; continue; }
+                }
+                else if (p.Lifetime <= 0f || MathF.Abs(p.Position.X) > Config.MapHalfSize || MathF.Abs(p.Position.Y) > Config.MapHalfSize)
                 {
                     p.Active = false;
                     if (p.ExplodeOnExpire && p.ExplodeRadius > 0f)
@@ -204,6 +229,18 @@ namespace PersonalArena.Core.Survivor
                     continue;
                 }
                 Vec2 pushDirection = p.Velocity.Normalized();
+                if (p.Bouncing)
+                {
+                    for (int n = 0; n < found; n++)
+                    {
+                        SurvivorEnemy e = enemies[enemyScratch[n]];
+                        p.BounceIds[p.BounceNext] = e.Id; p.BounceUntil[p.BounceNext] = Time + SurvivorCatalog.BounceRehitSeconds;
+                        p.BounceNext = (p.BounceNext + 1) % p.BounceIds.Length;
+                        DamageEnemy(e, p.Damage, p.Knockback, pushDirection);
+                    }
+                    if (IsEnded) return;
+                    continue;
+                }
                 for (int n = 0; n < found; n++)
                 {
                     SurvivorEnemy e = enemies[enemyScratch[n]];
@@ -216,8 +253,13 @@ namespace PersonalArena.Core.Survivor
             }
         }
 
-        private static bool AlreadyHit(SurvivorProjectile p, int enemyId)
+        private bool AlreadyHit(SurvivorProjectile p, int enemyId)
         {
+            if (p.Bouncing)
+            {
+                for (int i = 0; i < p.BounceIds.Length; i++) if (p.BounceIds[i] == enemyId && p.BounceUntil[i] > Time) return true;
+                return false;
+            }
             for (int i = 0; i < p.HitCount; i++) if (p.HitIds[i] == enemyId) return true;
             return false;
         }

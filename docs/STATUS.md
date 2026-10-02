@@ -246,7 +246,10 @@ thưởng theo thứ bậc, nghiệm thu bằng đánh giá 100 seed). Đấu tr
   pytest 203/203, CoreTests 361/361. **Chưa xong**: T-041 (Unity, cần PC: thanh
   skill 6 ô ở `SurvivorHud`, build lại, chạy EditMode). Hiện **bản xem/bản train cũ không chạy được với Core mới**
   (khác schema): đừng build hay train từ nhánh này trước khi T-040 và T-041 xong.
-- Nội dung đợt 2 (nhóm C, tiến hóa mới, skill thứ 5–6, Mage/Archer) chưa làm.
+- **T-042 (nhóm vũ khí C) xong** trên schema v5: Đạn nảy (64; cả 3 class), Bóng tốc (65; Archer), Đồng hồ băng (66),
+  Thanh tẩy (67), Mưa bom vòng (68) (66–68 cho Mage). CoreTests 395/395. Danh mục còn trống từ 69.
+- Chưa làm: tiến hóa cho vũ khí mới (ô 112–127), skill thứ 5–6 cho cả 3 class, thêm vũ khí nhóm A/B cho Mage/Archer,
+  toàn bộ phần hiển thị Unity (T-041 + icon/hiệu ứng/âm thanh), cân bằng bằng `SurvivorEval`.
 
 ### 2026-10-02 — Claude (cloud): CI xanh lại, review M5–M8
 - CI `core-tests` đỏ từ M5: 2 golden băm từng bit float (ghi trên Windows) lệch trên Linux. Nay 2 test đó chỉ

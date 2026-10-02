@@ -22,7 +22,7 @@ namespace PersonalArena.Core.Tests.Survivor
             Assert.That(SurvivorCatalog.Get(2).Duration, Is.EqualTo(4f)); Assert.That(SurvivorCatalog.Get(4).HitInterval, Is.EqualTo(0.4f));
             Assert.That(SurvivorCatalog.Get(5).CooldownPerLevel, Is.EqualTo(-0.3f));
             SurvivorClassDef warrior = SurvivorDefaults.Warrior();
-            Assert.That(warrior.WeaponPool, Is.EqualTo(new[] { 0, 1, 2, 3, 4, 5, 26, 27, 28, 29, 30, 31, 32, 33 }));
+            Assert.That(warrior.WeaponPool, Is.EqualTo(new[] { 0, 1, 2, 3, 4, 5, 26, 27, 28, 29, 30, 31, 32, 33, 64 }));
             Assert.That(warrior.PassivePool, Is.EqualTo(new[] { 6, 7, 8, 9, 10, 11, 12, 13, 58, 59, 60, 61, 34, 35, 36, 37 }));
         }
 

@@ -22,6 +22,8 @@ namespace PersonalArena.Core.Tests.Survivor
         {
             config.Tuning.MaxWeaponSlots = 4; config.Tuning.MaxPassiveSlots = 4;
             config.ClassDef.PassivePool = new[] { 6, 7, 8, 9, 10, 11, 12, 13 };
+            if (config.ClassDef.Id == "mage") config.ClassDef.WeaponPool = new[] { 14, 15, 16, 17, 18, 19 };
+            if (config.ClassDef.Id == "archer") config.ClassDef.WeaponPool = new[] { 20, 21, 22, 23, 24, 25 };
             if (config.ClassDef.Id == "warrior")
             {
                 config.ClassDef.WeaponPool = new[] { 0, 1, 2, 3, 4, 5 };

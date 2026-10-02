@@ -71,6 +71,8 @@ namespace PersonalArena.Core.Survivor
             orbitAxeCount = 0; orbitAngle = 0f; orbitRemaining = 0f; orbitRadius = 0f; orbitAxeRadius = 0f; orbitWeaponIndex = -1;
             comboHitsLeft = 0; comboTimer = 0f; retaliatePending = false; reflectPending = 0f; lastHeroDamage = 0f;
             barrierInit = false; barrierCharges = 0; barrierMax = 0;
+            movementFactor = 0f; bombRingAngle = 0f;
+            for (int i = 0; i < pendingBlastActive.Length; i++) pendingBlastActive[i] = false;
             shockwaveActive = false; shockwaveId = 0; shockwaveRadius = 0f; shockwaveMaxRadius = 0f; shockwaveCenter = Vec2.Zero;
         }
 
@@ -299,7 +301,7 @@ namespace PersonalArena.Core.Survivor
         }
 
         private bool LaunchProjectile(int source, Vec2 direction, float speed, float radius, float damage, float knockback,
-            float range, int pierce, float explodeRadius, float stun, bool explodeOnExpire = false)
+            float range, int pierce, float explodeRadius, float stun, bool explodeOnExpire = false, int bounces = -1)
         {
             SurvivorProjectile projectile = NewProjectile();
             if (projectile == null) return false;
@@ -308,6 +310,8 @@ namespace PersonalArena.Core.Survivor
             projectile.Knockback = knockback; projectile.Lifetime = speed > 0f ? range / speed : 0f;
             projectile.PierceRemaining = pierce; projectile.HitCount = 0; projectile.SourceIndex = source;
             projectile.ExplodeRadius = explodeRadius; projectile.StunSeconds = stun; projectile.ExplodeOnExpire = explodeOnExpire;
+            projectile.Bouncing = bounces >= 0; projectile.BouncesLeft = bounces; projectile.BounceCount = 0; projectile.BounceNext = 0;
+            if (projectile.Bouncing) for (int i = 0; i < projectile.BounceIds.Length; i++) { projectile.BounceIds[i] = 0; projectile.BounceUntil[i] = 0f; }
             return true;
         }
 

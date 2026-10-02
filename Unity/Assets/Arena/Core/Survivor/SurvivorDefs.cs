@@ -13,8 +13,10 @@ namespace PersonalArena.Core.Survivor
     /// or at max range. Retaliate: no attack of its own; it blasts a ring around the hero when the hero is hit.
     /// Barrier: no attack; a shield that absorbs hits and returns after a recharge (at most one per hero).
     /// Boomerang: flies out and back, hitting each enemy once per direction. Zone: drops a damage pool on the ground.
+    /// Bounce: a projectile that bounces off walls and obstacles. Momentum: a volley along the hero's movement, stronger the more the hero moves.
+    /// Freeze: a chance to stun every non-boss enemy nearby. Purge: kills every normal enemy nearby. BombRing: a salvo of blasts placed on a rotating ring.
     /// </summary>
-    public enum WeaponPattern { None, Sweep, Thrust, Orbit, Thrown, Aura, Shockwave, Strike, Fan, Combo, Bomb, Retaliate, Barrier, Boomerang, Zone }
+    public enum WeaponPattern { None, Sweep, Thrust, Orbit, Thrown, Aura, Shockwave, Strike, Fan, Combo, Bomb, Retaliate, Barrier, Boomerang, Zone, Bounce, Momentum, Freeze, Purge, BombRing }
     public enum StatId
     {
         MaxHp, Armor, Regen, Might, Crit, CritDamage, Cooldown, Area,
@@ -68,6 +70,13 @@ namespace PersonalArena.Core.Survivor
         public int EvolutionPassive { get; init; } = -1;
         /// <summary>Passive: effect per level (see <see cref="SurvivorCatalog.PassivePerLevel"/>).</summary>
         public float PerLevel { get; init; }
+        /// <summary>Bounce: wall/obstacle bounces per projectile, indexed by level − 1.</summary>
+        public IReadOnlyList<int> BouncesByLevel { get; init; } = Array.Empty<int>();
+        /// <summary>Freeze: trigger chance at level 1 and its growth per level above 1.</summary>
+        public float Chance { get; init; }
+        public float ChancePerLevel { get; init; }
+        /// <summary>Freeze: stun growth per level above 1 (seconds).</summary>
+        public float StunPerLevel { get; init; }
     }
 
     public static class SurvivorCatalog
@@ -114,6 +123,12 @@ namespace PersonalArena.Core.Survivor
         public const int DuplicatorIndex = 35;
         public const int SpikedArmorIndex = 36;
         public const int OmniBoxIndex = 37;
+        // M9 group C: weapons 64..68 (Warrior gets bounce-shot; Archer bounce-shot and momentum-spirit; Mage bounce-shot, time-clock, purge, bomb-ring).
+        public const int BounceShotIndex = 64;
+        public const int MomentumSpiritIndex = 65;
+        public const int TimeClockIndex = 66;
+        public const int PurgeIndex = 67;
+        public const int BombRingIndex = 68;
         public const int BonusGoldIndex = 62;
         public const int BonusHealIndex = 63;
 
@@ -314,6 +329,35 @@ namespace PersonalArena.Core.Survivor
             CatalogIndex = PoisonPoolIndex, Id = "poison-pool", Name = "Bình độc", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Zone,
             BaseDamage = 5f, DamagePerLevel = 2f, BaseRange = 8f, BaseCooldown = 4f, Width = 1.8f, Duration = 3.5f, HitInterval = 0.5f
         };
+        private static readonly ItemDef BounceShot = new ItemDef
+        {
+            CatalogIndex = BounceShotIndex, Id = "bounce-shot", Name = "Đạn nảy", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Bounce,
+            BaseDamage = 12f, DamagePerLevel = 4f, BaseRange = 12f, BaseCooldown = 2f, Knockback = 0.2f,
+            ProjectileSpeed = 10f, ProjectileRadius = 0.35f, ProjectileRange = 40f, // 4 s of flight
+            CountByLevel = Array.AsReadOnly(new[] { 1, 1, 2, 2, 3 }), BouncesByLevel = Array.AsReadOnly(new[] { 3, 3, 4, 4, 5 })
+        };
+        private static readonly ItemDef MomentumSpirit = new ItemDef
+        {
+            CatalogIndex = MomentumSpiritIndex, Id = "momentum-spirit", Name = "Bóng tốc", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Momentum,
+            BaseDamage = 10f, DamagePerLevel = 4f, BaseCooldown = 1f, Knockback = 0.2f, ArcDegrees = 20f,
+            ProjectileSpeed = 12f, ProjectileRadius = 0.3f, ProjectileRange = 14f, CountByLevel = Array.AsReadOnly(new[] { 1, 2, 2, 3, 3 })
+        };
+        private static readonly ItemDef TimeClock = new ItemDef
+        {
+            CatalogIndex = TimeClockIndex, Id = "time-clock", Name = "Đồng hồ băng", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Freeze,
+            BaseRange = 14f, BaseCooldown = 6f, CooldownPerLevel = -0.5f, Chance = 0.3f, ChancePerLevel = 0.1f, StunSeconds = 1.2f, StunPerLevel = 0.2f
+        };
+        private static readonly ItemDef Purge = new ItemDef
+        {
+            CatalogIndex = PurgeIndex, Id = "purge", Name = "Thanh tẩy", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Purge,
+            BaseRange = 14f, BaseCooldown = 30f, CooldownPerLevel = -2f
+        };
+        private static readonly ItemDef BombRing = new ItemDef
+        {
+            CatalogIndex = BombRingIndex, Id = "bomb-ring", Name = "Mưa bom vòng", Kind = ItemKind.Weapon, Pattern = WeaponPattern.BombRing,
+            BaseDamage = 22f, DamagePerLevel = 7f, BaseRange = 4f, BaseCooldown = 3.5f, Knockback = 0.5f, Width = 1.3f, HitInterval = 0.15f,
+            CountByLevel = Array.AsReadOnly(new[] { 4, 4, 5, 5, 6 })
+        };
         private static readonly ItemDef DurationCharm = Passive(DurationCharmIndex, "duration-charm", "Bùa thời gian");
         private static readonly ItemDef Duplicator = Passive(DuplicatorIndex, "duplicator", "Bộ nhân đôi", 2);
         private static readonly ItemDef SpikedArmor = Passive(SpikedArmorIndex, "spiked-armor", "Giáp phản");
@@ -331,6 +375,19 @@ namespace PersonalArena.Core.Survivor
         public const int MaxVolleyCount = 8;
         public const float ComboHitInterval = 0.25f;
         public const float ComboFinisherMul = 2f;
+        /// <summary>Bounce shot: an enemy is hit at most once per this many seconds by one projectile.</summary>
+        public const float BounceRehitSeconds = 0.5f;
+        /// <summary>Momentum spirit: the hero counts as moving above this speed (m/s); the factor is an EMA with this time constant (s); damage × (Min + Span × factor).</summary>
+        public const float MomentumSpeedThreshold = 0.5f;
+        public const float MomentumTimeConstant = 1.5f;
+        public const float MomentumMinMul = 0.4f;
+        public const float MomentumSpanMul = 1.2f;
+        /// <summary>Time clock: elites are stunned for this share of the time. Purge: share of max HP elites and the boss lose.</summary>
+        public const float FreezeEliteShare = 0.5f;
+        public const float PurgeBossFraction = 0.05f;
+        /// <summary>Bomb ring: the ring turns this many radians every salvo; at most this many blasts wait at once.</summary>
+        public const float BombRingRotationStep = 0.5235988f;
+        public const int MaxPendingBlasts = 8;
 
         private static readonly ItemDef[] Evolutions =
         {
@@ -393,6 +450,11 @@ namespace PersonalArena.Core.Survivor
                 31 => Barrier,
                 32 => Boomerang,
                 33 => PoisonPool,
+                64 => BounceShot,
+                65 => MomentumSpirit,
+                66 => TimeClock,
+                67 => Purge,
+                68 => BombRing,
                 34 => DurationCharm,
                 35 => Duplicator,
                 36 => SpikedArmor,
@@ -638,7 +700,7 @@ namespace PersonalArena.Core.Survivor
                 Id = "warrior", MaxHp = 150f, Regen = 0.2f, Armor = 0f, MoveSpeed = 4.5f,
                 Acceleration = 30f, Radius = 0.5f, PickupRadius = 1.5f, CritChance = 0.05f,
                 CritDamage = 1.5f, MaxEnergy = 100f, EnergyRegen = 15f, Mass = 1f,
-                StartingWeapon = 0, WeaponPool = new[] { 0, 1, 2, 3, 4, 5, 26, 27, 28, 29, 30, 31, 32, 33 }, PassivePool = new[] { 6, 7, 8, 9, 10, 11, 12, 13, 58, 59, 60, 61, 34, 35, 36, 37 },
+                StartingWeapon = 0, WeaponPool = new[] { 0, 1, 2, 3, 4, 5, 26, 27, 28, 29, 30, 31, 32, 33, 64 }, PassivePool = new[] { 6, 7, 8, 9, 10, 11, 12, 13, 58, 59, 60, 61, 34, 35, 36, 37 },
                 ActiveSkills = Skills(
                     new SkillDef { Id = "kick", Kind = SkillKind.Kick, Damage = 10f, Range = 1.8f, ArcDegrees = 100f, StunSeconds = 1.2f, Knockback = 3f, Cooldown = 3f },
                     new SkillDef { Id = "shield-block", Kind = SkillKind.Block, EnergyCost = 10f, EnergyPerSecond = 20f, BlockMoveMultiplier = 0.4f, BlockDamageMultiplier = 0.5f, ParryWindowSeconds = 0.2f, StunSeconds = 1.5f, BlockStaggerSeconds = 0.6f, BlockPushback = 0.8f },
@@ -656,7 +718,7 @@ namespace PersonalArena.Core.Survivor
                 Id = "mage", MaxHp = 110f, Regen = 0.15f, Armor = 0f, MoveSpeed = 4.3f,
                 Acceleration = 30f, Radius = 0.45f, PickupRadius = 1.8f, CritChance = 0.05f,
                 CritDamage = 1.5f, MaxEnergy = 150f, EnergyRegen = 20f, Mass = 0.9f,
-                StartingWeapon = SurvivorCatalog.MagicBoltIndex, WeaponPool = new[] { 14, 15, 16, 17, 18, 19 },
+                StartingWeapon = SurvivorCatalog.MagicBoltIndex, WeaponPool = new[] { 14, 15, 16, 17, 18, 19, 64, 66, 67, 68 },
                 PassivePool = new[] { 6, 7, 8, 9, 10, 11, 12, 13, 58, 59, 60, 61, 34, 35, 36, 37 },
                 ActiveSkills = Skills(
                     new SkillDef { Id = "fireball", Kind = SkillKind.Projectile, Damage = 40f, Range = 12f, ProjectileSpeed = 14f, ProjectileRadius = 0.4f, AreaRadius = 2f, Knockback = 1f, Cooldown = 3f, EnergyCost = 25f },
@@ -675,7 +737,7 @@ namespace PersonalArena.Core.Survivor
                 Id = "archer", MaxHp = 130f, Regen = 0.2f, Armor = 0f, MoveSpeed = 5f,
                 Acceleration = 34f, Radius = 0.45f, PickupRadius = 1.6f, CritChance = 0.08f,
                 CritDamage = 1.6f, MaxEnergy = 100f, EnergyRegen = 15f, Mass = 0.9f,
-                StartingWeapon = SurvivorCatalog.ArrowIndex, WeaponPool = new[] { 20, 21, 22, 23, 24, 25 },
+                StartingWeapon = SurvivorCatalog.ArrowIndex, WeaponPool = new[] { 20, 21, 22, 23, 24, 25, 64, 65 },
                 PassivePool = new[] { 6, 7, 8, 9, 10, 11, 12, 13, 58, 59, 60, 61, 34, 35, 36, 37 },
                 ActiveSkills = Skills(
                     new SkillDef { Id = "power-shot", Kind = SkillKind.Projectile, Damage = 50f, Range = 14f, ProjectileSpeed = 22f, ProjectileRadius = 0.35f, Knockback = 2.5f, Pierce = true, Cooldown = 3.5f, EnergyCost = 20f },

@@ -102,6 +102,15 @@ namespace PersonalArena.Core.Survivor
         /// <summary>A weapon bomb also blows up when its range runs out (a skill fireball just vanishes).</summary>
         internal bool ExplodeOnExpire;
         internal int HitCount;
+        /// <summary>Bounce shot: bounces off walls and obstacles (BouncesLeft more allowed) and re-hits an enemy only after its BounceUntil time.</summary>
+        internal bool Bouncing;
+        internal int BouncesLeft;
+        internal int BounceCount;
+        internal int BounceNext;
+        internal readonly int[] BounceIds = new int[8];
+        internal readonly float[] BounceUntil = new float[8];
+        /// <summary>Walls and obstacles hit so far (lets the view and tests count bounces).</summary>
+        public int Bounces => BounceCount;
     }
 
     /// <summary>A flying boomerang: out toward its target, then back to the hero. Each enemy is hit at most once per direction.</summary>
