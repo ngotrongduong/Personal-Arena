@@ -103,8 +103,28 @@ set it to `review`. Claude reviews, commits and sets `done`.
 |---|---|
 | Core unit tests | `dotnet test CoreTests` (must pass before any merge; CI runs it on every push) |
 | Trainer tests | `.venv-ml\Scripts\python -m pytest Trainer` |
-| Unity EditMode tests | `"C:\Program Files\Unity\Hub\Editor\6000.3.2f1\Editor\Unity.exe" -batchmode -projectPath Unity -runTests -testPlatform EditMode -testResults results/editmode.xml` (default Hub path; adjust if Unity is elsewhere) |
+| Unity EditMode tests | `powershell -ExecutionPolicy Bypass -File Tools/unity-run.ps1 -Tests EditMode` (prints a summary; raw: `Unity.exe -batchmode -projectPath Unity -runTests -testPlatform EditMode -testResults results/editmode.xml`) |
+| Unity compile check | `powershell -ExecutionPolicy Bypass -File Tools/unity-run.ps1 -Compile` |
+| Unity batchmode method / build | `powershell -ExecutionPolicy Bypass -File Tools/unity-run.ps1 -Method <Namespace.Class.Method> -ExtraArgs "<args>"` |
 | Training | see `docs/TRAINING.md` |
+
+Unity path: `C:\Program Files\Unity\Hub\Editor\6000.3.2f1\Editor\Unity.exe` (or set `UNITY_EXE`).
+
+## 8b. Saving tokens (every agent)
+
+Usage limits are shared, so wasted context is lost work. These rules are mandatory:
+
+- **Never read a whole Unity log or test XML.** Run Unity through `Tools/unity-run.ps1`; it prints one RESULT line
+  and the first distinct errors. Only if that is not enough, search `results/unity-*.log` for a narrow pattern.
+- **Find before you read.** Search (Grep/`rg`/`Select-String`) for the symbol, then read only that line range.
+  Do not open files over ~600 lines in full; a Claude hook blocks it, Codex must follow the same rule.
+- Never read `Library/`, `Temp/`, `Build/`, `obj/`, `bin/`, or large files under `Trainer/runs/` / `results/`.
+- Run tests with quiet output (`dotnet test CoreTests -c Release` prints a summary; `pytest -q`). Re-run only the
+  failing test (`--filter`, `-k`) while fixing, then the full suite once at the end.
+- Keep files small: split new code by function so no file grows past ~700 lines.
+- Keep `docs/STATUS.md` under 200 lines and `docs/tasks/BOARD.md` under 60 (CI checks). Move old session logs to
+  `docs/archive/SESSIONS.md` and done tasks to `docs/archive/BOARD-DONE.md`. Do not read the archive unless needed.
+- Reports in task files: short (changed files, counts, open issues). No pasted logs.
 
 ## 9. Language
 

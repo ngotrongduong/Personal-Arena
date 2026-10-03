@@ -28,6 +28,19 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/read_guard.py\" 2>/dev/null || python \"$CLAUDE_PROJECT_DIR/.claude/hooks/read_guard.py\" 2>/dev/null || true",
+            "timeout": 10
+          }
+        ]
+      }
     ]
-  }
+  },
+  "bashOutputMaxChars": 15000
 }
