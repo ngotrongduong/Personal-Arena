@@ -10,19 +10,18 @@ against rule-based zombies, following Pezzza's "AI Gladiator learns to fight Zom
 Context to read: `docs/PLAN.md` (design), `docs/TRAINING.md` (commands, metrics, run log),
 `Trainer/config/*.yaml`, `AGENTS.md` §6.
 
-Fixed design (D-005, D-013): one `HeroAgent`, 3 discrete branches — move 9, turn 3,
-skill 5 (`HeroInput`); observations are built in Core by `ObservationBuilder` (19 hero values
-+ `RaySensor` 72 rays × 12 = 883 floats, rules v3 / D-024: round platform over an abyss,
-4 zombie types, projectiles; same size for Warrior/Mage/Archer),
-not by Unity sensors; rewards from
-`RewardCalculator` with weights in `RewardConfig`; 12 Hz decisions; each class is its own
-behavior name; owned heroes fine-tune with `--initialize-from`.
+Fixed design: the Survivor mode in `AGENTS.md` §6 (one `HeroAgent`, observation and action layout,
+decision period, rewards from `SurvivorEvent`s through `SurvivorRewardCalculator` with weights in
+`SurvivorRewardConfig`, hierarchy D-030). Observations are built in Core by `SurvivorObservation`,
+not by Unity sensors. Each class is its own behavior name and run (`<class>-sNNN`); a schema change
+upgrades the old brain with `Trainer/brain_upgrade.py` instead of training from scratch.
 
 Rules:
-- Every reward term must have a sign and a unit test (see T-004). When a policy ignores an
+- Every reward term must have a sign and a unit test. When a policy ignores an
   action, suspect a reward sign or a mask first.
-- Curriculum on `zombie_count` 1→2→4→8→16; randomise arena size, kind mix and multipliers
-  around it so any player config works.
+- Curriculum lives in `Trainer/config/<class>_survivor_ppo.yaml` (`run_seconds`,
+  `build_level_max`, `tier_max`, `hard_share`, review and own-build shares); keep it varied enough
+  that any owner build works.
 - Stay compatible with mlagents 1.1.0 YAML schema; check the ml-agents repo `config/` and docs
   before inventing keys.
 - For a diagnosis, cite the metric and value (Cumulative Reward, Entropy, Episode Length,

@@ -33,7 +33,7 @@ This file is the single source of rules. `CLAUDE.md` imports it; Codex reads it 
 | Agent | Does | Never does |
 |---|---|---|
 | **Claude** | Plans, splits work into tasks, reviews, runs git (branch, commit, merge, push), runs Unity batchmode and real training, updates STATUS | — |
-| **Codex** | Implements one task file from `docs/tasks/` at a time (C# Core, tests, Python trainer), runs tests, writes a report in the task file | **Any git command** (commit, branch, push, checkout, stash, reset) |
+| **Codex** | Implements one task file from `docs/tasks/` at a time (C# Core, tests, Python trainer, Unity View/ML code with batchmode tests and builds on the PC), runs tests, writes a report in the task file | **Any git command** (commit, branch, push, checkout, stash, reset) |
 | **Owner (@ngotrongduong)** | Runs things only possible on the Windows PC (Unity Editor GUI, GPU training when Claude is not linked), decides game design questions | — |
 
 Codex workflow: pick the first task with `Owner: Codex` and `Status: todo` on the board →
@@ -73,10 +73,10 @@ set it to `review`. Claude reviews, commits and sets `done`.
   a level-up offer is waiting. Unity code must not assume Unity's fixed timestep equals the sim tick.
 - `Step`, `SurvivorObservation.Write` and `WriteMask` allocate nothing (pooled entities,
   `SpatialHash`). Keep the Release `Step` under about 0.05 ms at the late-game horde.
-- Observations: `SurvivorObservation`, schema v4 = 2264 values in [-1, 1] (self 64, inventory 64,
-  offers 4 × 66, 72 rays × 25, density 3 × 8 × 3). Slots are reserved (64-item catalog, 8 enemy
+- Observations: `SurvivorObservation`, schema v5 = 2592 values in [-1, 1] (self 72, inventory 128,
+  offers 4 × 130, 72 rays × 25, density 3 × 8 × 3). Slots are reserved (128-item catalog, 8 enemy
   kinds) so new content fills slots instead of changing the size. Actions: 3 discrete branches
-  9 / 5 / 5 (move, active skill, level-up pick).
+  9 / 7 / 5 (move, active skill: none + 6, level-up pick).
 - Adaptive brains (D-027): a run records `schema_version.txt`; the trainer resumes any run whose
   schema matches, even after rule changes. Only a change to the observation or action layout
   bumps `SurvivorObservation.SchemaVersion` (then `brain_upgrade.py` grows the old brain,
