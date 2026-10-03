@@ -94,6 +94,8 @@
 - STATUS từ 498 → dưới 200 dòng; lịch sử chuyển `docs/archive/SESSIONS.md`, task xong `docs/archive/BOARD-DONE.md`.
 - Hook chặn đọc file sinh ra / file lớn, CI kiểm STATUS ≤ 200 dòng, `Tools/unity-run.ps1` cho Codex,
   T-041 thêm yêu cầu tách các file View > 700 dòng.
+- Tắt 23 skill claude.ai không dùng cho dự án này (`skillOverrides` trong `.claude/settings.json`), bớt ~4.500 token
+  mỗi tin nhắn. Phiên sau chạy `/skill-doctor` để kiểm tra chúng đã ẩn chưa. CI xanh trên `9ebf35c`.
 
 ### 2026-10-02 (sau) — Claude (cloud): M9 đợt 1a, nội dung Warrior (T-036)
 - Owner chốt: chia 2 đợt, ô mang theo 6 + 6 như Vampire Survivors, bắt đầu với Warrior, không ngại AI học lại.
