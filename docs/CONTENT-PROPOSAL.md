@@ -81,7 +81,7 @@ Skill nằm ở hành động nhánh 2 (không + 4 skill).
 | Nhảy đập đất | Warrior | Bật tới vị trí chỉ định rồi giáng xuống, sát thương vùng | Không |
 | Xoáy kiếm | Warrior | Xoay 360° sát thương liên tục 1–2 s | Không |
 | Bẫy gai | Archer (ô trống) | Thả vùng bẫy tại chỗ làm chậm và gây sát thương | Không |
-| Mưa tên | Archer | Rải loạt tên theo hình nón phía trước | Không |
+| Loạt tên (`arrow-barrage`; đổi tên 2026-10-03 cho khỏi trùng vũ khí Mưa tên) | Archer | Rải loạt tên theo hình nón phía trước | Không |
 | Khói ẩn thân | Archer | Quái mất mục tiêu trong 2 s | Không |
 | Mage thêm 2 skill | Mage | Ví dụ Tường lửa, Triệu hồi bóng | **Có** (nới 4 → 6 skill, đợt 2) |
 

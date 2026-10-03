@@ -569,12 +569,13 @@ namespace PersonalArena.View
             if (visual == WeaponVisual.ArrowRain)
             {
                 Color color = FxColor(e.Id, LightningColor);
-                // A volley: a few streaks falling steeply onto the target, then a ring of the real radius.
-                int arrows = evolved ? 5 : 3;
+                // A rain over the whole blast area: streaks falling steeply on a spiral that fills the radius, then a ring of the real radius.
+                int arrows = Mathf.Clamp(Mathf.RoundToInt(radius * (evolved ? 4f : 3f)), 4, 14);
                 for (int k = 0; k < arrows; k++)
                 {
-                    float a = (k + 0.5f) / arrows * Mathf.PI * 2f + e.Point.X;
-                    Vector3 land = point + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * (radius * 0.55f);
+                    float a = k * 2.399963f + e.Point.X; // golden angle: evenly spread without a pattern
+                    float r = radius * Mathf.Sqrt((k + 0.5f) / arrows) * 0.9f;
+                    Vector3 land = point + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * r;
                     Vector3 top = land + new Vector3(-0.8f, 4.5f, -0.8f);
                     Vector3 fall = land - top;
                     StartStreak(top, fall.normalized, fall.magnitude, color, evolved ? 0.5f : 0.38f, StreakUp(fall), false);

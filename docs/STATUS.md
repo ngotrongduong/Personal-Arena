@@ -2,7 +2,7 @@
 
 > "Bộ nhớ" giữa các phiên. Đọc đầu tiên, cập nhật cuối cùng. **Giữ file dưới 200 dòng** (CI kiểm):
 > nhật ký cũ chuyển sang `docs/archive/SESSIONS.md`, task xong sang `docs/archive/BOARD-DONE.md`.
-> Cập nhật lần cuối: 2026-10-03 (phiên Claude cloud: M9 Core/Trainer xong, cài cơ chế tiết kiệm token).
+> Cập nhật lần cuối: 2026-10-03 (phiên Claude cloud: rà soát vũ khí/skill, sửa Mưa tên và loạt chẵn — D-045).
 
 ## Đang ở đâu (đọc phần này là đủ để bắt đầu)
 
@@ -15,7 +15,7 @@
   `brain_upgrade` v4 → v5. Đá không choáng trùm (D-042). Core chia file theo cơ chế (T-046).
 - **Chưa chạy được:** bản xem/bản train cũ không hợp với Core mới (khác schema) → **đừng build/train từ nhánh này
   trước khi T-041 xong**.
-- **Test:** CoreTests 625/625 (Linux; 2 golden chỉ-Windows do job Windows của CI kiểm), pytest 203/203.
+- **Test:** CoreTests 627/627 (Linux; 2 golden chỉ-Windows do job Windows của CI kiểm), pytest 203/203.
 
 ## Việc tiếp theo (theo thứ tự)
 
@@ -89,6 +89,12 @@
   trước khi phát hành để đảm bảo game không gọi mạng.
 
 ## Nhật ký phiên (mới nhất trên cùng; giữ ~3 mục, cũ hơn → archive)
+
+### 2026-10-03 (sau) — Claude (cloud): rà soát vũ khí và skill (D-045)
+- Owner báo Mưa tên không giống AOE. Đo mọi vũ khí (cấp 1 và 5), mọi tiến hóa, mọi skill trên bãi quái đứng yên (dày và thưa).
+- Sửa Mưa tên: rơi vào chỗ quái đông nhất, vùng 2,6 m, 1–3 vùng theo cấp; hiệu ứng trình xem rải tên khắp vùng.
+- Sửa loạt chẵn (Nỏ, Giáo, Tia ma thuật, Đạn nảy, Boomerang 2 mũi): 1 mũi luôn thẳng vào mục tiêu. Nỏ cấp 5 từ 68 → 234 sát thương/giây khi quái đứng thưa.
+- Skill `arrow-barrage` đổi tên tiếng Việt thành "Loạt tên". CoreTests 627/627. Hiệu ứng Mưa tên mới cần build lại trên PC (T-041).
 
 ### 2026-10-03 — Claude (cloud): cơ chế tiết kiệm token
 - STATUS từ 498 → dưới 200 dòng; lịch sử chuyển `docs/archive/SESSIONS.md`, task xong `docs/archive/BOARD-DONE.md`.

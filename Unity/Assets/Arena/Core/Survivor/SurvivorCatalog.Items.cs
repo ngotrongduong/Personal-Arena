@@ -155,7 +155,7 @@ namespace PersonalArena.Core.Survivor
         {
             CatalogIndex = ArrowRainIndex, Id = "arrow-rain", Name = "Mưa tên", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Strike,
             BaseDamage = 16f, DamagePerLevel = 6f, BaseRange = 10f, BaseCooldown = 2.5f, Knockback = 0.1f,
-            Width = 1.4f, CountByLevel = Array.AsReadOnly(new[] { 2, 2, 3, 3, 4 })
+            Width = 2.6f, Clustered = true, CountByLevel = Array.AsReadOnly(new[] { 1, 1, 2, 2, 3 })
         };
         private static readonly ItemDef OrbitKnife = new ItemDef
         {
@@ -270,7 +270,7 @@ namespace PersonalArena.Core.Survivor
             Evolve(ArcaneBeam, 51, "doom-ray", "Tia hủy diệt", MightGauntletIndex),
             Evolve(Arrow, 52, "wind-arrow", "Tên gió", WindBootsIndex),
             Evolve(MultiShot, 53, "arrow-fan", "Quạt tên", AreaCharmIndex),
-            Evolve(ArrowRain, 54, "sky-arrows", "Thiên tiễn", MagnetCharmIndex),
+            Evolve(ArrowRain, 54, "sky-arrows", "Thiên tiễn", MagnetCharmIndex, extraCount: 0),
             Evolve(OrbitKnife, 55, "blade-dance", "Vũ điệu dao", MightGauntletIndex),
             Evolve(Dagger, 56, "twin-assassin", "Song đao ám sát", CritEyeIndex),
             Evolve(Crossbow, 57, "siege-crossbow", "Nỏ công thành", BoneArmorIndex)

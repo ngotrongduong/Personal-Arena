@@ -28,7 +28,10 @@ namespace PersonalArena.Core.Survivor
 
         // ---- strike / stone ----
 
-        /// <summary>Strike: <c>count</c> random enemies in range each get a blast of radius Width × area.</summary>
+        /// <summary>
+        /// Strike: <c>count</c> blasts of radius Width × area. Lightning-style strikes land on random enemies in range;
+        /// <see cref="ItemDef.Clustered"/> strikes (arrow rain) land on the densest group in range, each away from the previous ones.
+        /// </summary>
         private bool StrikeTargets(ItemDef def, int level, out int count)
         {
             count = Math.Min(VolleyCount(def.CountByLevel, level), volleyTargetIds.Length);
@@ -37,15 +40,54 @@ namespace PersonalArena.Core.Survivor
             int fired = 0;
             for (int strike = 0; strike < count && !IsEnded; strike++)
             {
-                SurvivorEnemy target = RandomTarget(fired, def.BaseRange);
+                SurvivorEnemy target = def.Clustered ? DensestTarget(fired, def.BaseRange, radius) : RandomTarget(fired, def.BaseRange);
                 if (target == null) break;
-                volleyTargetIds[fired++] = target.Id;
                 Vec2 center = target.Position; // the blast knocks the target away; the event keeps the blast centre
+                volleyBlastCenters[fired] = center; volleyTargetIds[fired++] = target.Id;
                 Blast(center, radius, damage, def.Knockback, def.StunSeconds);
                 AddEvent(SurvivorEventType.StrikeLanded, radius, id: def.CatalogIndex, point: center);
             }
             count = fired;
             return fired > 0;
+        }
+
+        /// <summary>
+        /// Enemy in range with the most enemies within <paramref name="radius"/> of it, skipping candidates closer than 1.5 radius to
+        /// an earlier blast of this volley (<c>volleyBlastCenters</c>). At most <see cref="DensestSamples"/> evenly
+        /// spaced candidates are scored, so the cost stays bounded in a full horde. Allocation-free and deterministic.
+        /// </summary>
+        private SurvivorEnemy DensestTarget(int usedCount, float range, float radius)
+        {
+            float rangeSquared = range * range, spacingSquared = radius * radius * 2.25f, radiusSquared = radius * radius;
+            int total = 0;
+            for (int i = 0; i < enemyLimit; i++)
+            {
+                SurvivorEnemy e = enemies[i];
+                if (!e.Active || (e.Position - Hero.Position).LengthSquared > rangeSquared || NearEarlierBlast(e.Position, usedCount, spacingSquared)) continue;
+                enemyScratch[total++] = i;
+            }
+            if (total == 0) return null;
+            int step = Math.Max(1, total / DensestSamples);
+            SurvivorEnemy best = null; int bestCount = -1;
+            for (int n = 0; n < total; n += step)
+            {
+                SurvivorEnemy candidate = enemies[enemyScratch[n]]; int count = 0;
+                for (int i = 0; i < enemyLimit; i++)
+                {
+                    SurvivorEnemy e = enemies[i];
+                    if (e.Active && (e.Position - candidate.Position).LengthSquared <= radiusSquared) count++;
+                }
+                if (count > bestCount) { bestCount = count; best = candidate; }
+            }
+            return best;
+        }
+
+        private const int DensestSamples = 16;
+
+        private bool NearEarlierBlast(Vec2 point, int usedCount, float spacingSquared)
+        {
+            for (int k = 0; k < usedCount; k++) if ((volleyBlastCenters[k] - point).LengthSquared < spacingSquared) return true;
+            return false;
         }
 
         /// <summary>Stone: instant hits on the <c>count</c> nearest distinct enemies in range for fixed damage (flat: no Might, no crit, no rng).</summary>

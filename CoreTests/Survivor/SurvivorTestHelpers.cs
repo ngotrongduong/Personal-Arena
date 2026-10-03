@@ -20,7 +20,7 @@ namespace PersonalArena.Core.Tests.Survivor
         /// </summary>
         public static SurvivorConfig OldRules(SurvivorConfig config)
         {
-            config.Tuning.MaxWeaponSlots = 4; config.Tuning.MaxPassiveSlots = 4; config.Tuning.KickStunsBoss = true;
+            config.Tuning.MaxWeaponSlots = 4; config.Tuning.MaxPassiveSlots = 4; config.Tuning.KickStunsBoss = true; config.Tuning.CenteredEvenVolleys = false;
             config.ClassDef.PassivePool = new[] { 6, 7, 8, 9, 10, 11, 12, 13 };
             for (int slot = 4; slot < SurvivorInput.SkillSlotCount; slot++) config.ClassDef.ActiveSkills[slot] = new SkillDef { Id = "none", Kind = SkillKind.None };
             if (config.ClassDef.Id == "mage") config.ClassDef.WeaponPool = new[] { 14, 15, 16, 17, 18, 19 };

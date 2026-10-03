@@ -45,6 +45,7 @@ namespace PersonalArena.Core.Survivor
         private readonly bool[] pickMask = new bool[SurvivorInput.PickBranchSize];
         private readonly float[] weaponCooldowns = new float[SurvivorCatalog.CatalogSize];
         private readonly int[] volleyTargetIds = new int[SurvivorCatalog.MaxVolleyCount];
+        private readonly Vec2[] volleyBlastCenters = new Vec2[SurvivorCatalog.MaxVolleyCount];
         private readonly int[] enemyScratch = new int[EnemyCapacity];
         private readonly Vec2[] enemyPreviousPositions = new Vec2[EnemyCapacity];
         private Rng rng;

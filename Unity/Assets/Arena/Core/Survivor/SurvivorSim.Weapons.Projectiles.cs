@@ -272,7 +272,7 @@ namespace PersonalArena.Core.Survivor
             float damage = def.BaseDamage + def.DamagePerLevel * (level - 1);
             for (int k = 0; k < count; k++)
             {
-                Vec2 direction = count > 1 ? Rotate(aim, SurvivorCatalog.ThrustAngleOffset(k, count)) : aim;
+                Vec2 direction = count > 1 ? Rotate(aim, SurvivorCatalog.ThrustAngleOffset(k, count, Config.Tuning.CenteredEvenVolleys)) : aim;
                 if (!LaunchProjectile(def.CatalogIndex, direction, def.ProjectileSpeed, def.ProjectileRadius * stats.AreaMul, damage, def.Knockback,
                     def.ProjectileRange, 0, 0f, 0f, false, bounces)) break;
                 fired++;
@@ -369,7 +369,7 @@ namespace PersonalArena.Core.Survivor
                 while (boomerangs[slot].Active) slot++;
                 SurvivorBoomerang b = boomerangs[slot];
                 b.Active = true; b.Returning = false; b.Position = Hero.Position;
-                b.Direction = count > 1 ? Rotate(aim, SurvivorCatalog.ThrustAngleOffset(k, count)) : aim;
+                b.Direction = count > 1 ? Rotate(aim, SurvivorCatalog.ThrustAngleOffset(k, count, Config.Tuning.CenteredEvenVolleys)) : aim;
                 b.Radius = def.ProjectileRadius * stats.AreaMul; b.Damage = damage; b.SourceIndex = def.CatalogIndex;
                 b.Travelled = 0f; b.MaxRange = def.ProjectileRange; b.Age = 0f; b.OutCount = 0; b.BackCount = 0;
                 fired++;
