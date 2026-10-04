@@ -306,7 +306,9 @@ namespace PersonalArena.Core.Tests.Survivor
             for (int phase = 0; phase < SurvivorDefaults.PhaseCount; phase++)
             {
                 SpawnPhase p = SurvivorDefaults.GetPhase(phase);
-                Assert.That(p.Weights.Count, Is.EqualTo(SurvivorDefaults.EnemyTypeCount));
+                Assert.That(p.Weights.Count, Is.EqualTo(SurvivorDefaults.AllEnemyTypeCount));
+                // M11 types: none in the first three minutes.
+                if (p.From < 180f) for (int type = SurvivorDefaults.EnemyTypeCount; type < p.Weights.Count; type++) Assert.That(p.Weights[type], Is.Zero, "phase " + phase);
                 bool hasNew = p.Weights[5] + p.Weights[6] + p.Weights[7] > 0;
                 if (p.From < 300f) Assert.That(hasNew, Is.False, "phase " + phase);
                 Assert.That(p.Weights[4], Is.Zero, "the boss is never scheduled");

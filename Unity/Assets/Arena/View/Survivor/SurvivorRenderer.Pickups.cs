@@ -577,7 +577,7 @@ namespace PersonalArena.View
                         view.Model.localRotation = Quaternion.Euler(0f, spin, 0f) * Quaternion.Euler(-60f, 0f, 0f);
                         break;
                     case KeyShield:
-                        view.Model.localRotation = Quaternion.Euler(0f, spin, 0f) * Quaternion.Euler(90f, 0f, 0f);
+                        view.Model.localRotation = Quaternion.Euler(0f, spin, 0f) * Quaternion.Euler(40f, 0f, 0f);
                         break;
                     case KeyHaste:
                         view.Model.localRotation = Quaternion.Euler(0f, spin, 0f) * Quaternion.Euler(0f, 0f, 70f);
@@ -1049,6 +1049,7 @@ namespace PersonalArena.View
         private void PlayM11Demo(Vector3 center)
         {
             buffAuraDemo = true;
+            PlayEnemyDemo(center);
             if (demoPickups.Count > 0)
             {
                 return;

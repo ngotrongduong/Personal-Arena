@@ -252,7 +252,7 @@ namespace PersonalArena.Core.Survivor
                 EndReason = EndReason.Won; AddEvent(SurvivorEventType.RunWon); return;
             }
             SurvivorEnemyDef def = SurvivorDefaults.EnemyDef(enemy.TypeIndex);
-            SpawnGem(enemy.Position, (enemy.Elite ? tuning.EliteXp : def.Xp) * tuning.XpMul);
+            SpawnGem(enemy.Position, (enemy.Elite ? tuning.EliteXp : enemy.Small ? 1 : def.Xp) * tuning.XpMul);
             Vec2 goldPoint = enemy.Position + Vec2.FromAngle(tuning.GoldDropAngle) * tuning.DropOffset;
             if (enemy.Elite)
             {
@@ -269,6 +269,8 @@ namespace PersonalArena.Core.Survivor
             if (!enemy.Elite && RollMagnetDrop())
                 SpawnPickup(PickupKind.Magnet, enemy.Position + Vec2.FromAngle(SurvivorCatalog.MagnetDropAngle) * tuning.DropOffset, 0f, false);
             if (!enemy.Elite) RollBonusDrop(enemy);
+            if (enemy.Golden) DropGoldenGold(enemy);
+            if (def.SplitCount > 0 && !enemy.Small) Split(enemy, def);
         }
 
         private bool RollMagnetDrop() => rng.NextFloat() < SurvivorCatalog.MagnetChance;

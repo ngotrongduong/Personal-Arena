@@ -51,7 +51,7 @@ namespace PersonalArena.Core.Survivor
                 spawnAccumulator -= 1f;
                 if (aliveNormalCount >= max) continue;
                 int type = WeightedType(phase);
-                if (TrySpawnPoint(tuning.SpawnAttempts, false, SpawnRadius(type, false), out Vec2 point)) SpawnEnemy(type, point, false, false);
+                if (TrySpawnPoint(tuning.SpawnAttempts, false, SpawnRadius(type, false), out Vec2 point)) MaybeMakeGolden(SpawnEnemy(type, point, false, false));
             }
         }
 
@@ -95,6 +95,7 @@ namespace PersonalArena.Core.Survivor
         /// <summary>Spawn weight of <paramref name="type"/> in <paramref name="phase"/> after the EarlyBrutes modifier.</summary>
         internal int SpawnWeight(SpawnPhase phase, int type)
         {
+            if (type >= SurvivorDefaults.EnemyTypeCount && !Config.Tuning.NewEnemies) return 0;
             int weight = phase.Weights[type];
             if (type == BruteTypeIndex && Has(TierModifier.EarlyBrutes) && phase.From >= Config.Tuning.EarlyBruteFromSeconds
                 && phase.From < FirstBrutePhaseSeconds && weight < Config.Tuning.EarlyBruteMinWeight)
@@ -162,9 +163,10 @@ namespace PersonalArena.Core.Survivor
             e.Hp = e.MaxHp; e.Damage = def.AttackDamage * damageTime * damageTier * (elite ? tuning.EliteDamageMul : 1f);
             e.KnockbackResist = elite ? MathF.Max(def.KnockbackResist, tuning.EliteMinKnockbackResist) : def.KnockbackResist;
             e.Elite = elite; e.IsBoss = boss; e.WindupRemaining = 0f; e.StunRemaining = 0f;
+            e.Golden = false; e.Small = false; e.ChargeRemaining = 0f;
             e.OrbitNextHitTime = 0f; e.LastShockwaveId = 0; e.LastHitTime = Time; e.SlowRemaining = 0f; e.SlowMultiplier = 1f;
             e.RelocatedThisTick = false; e.Separated = false; enemyPreviousPositions[slot] = point;
-            e.AttackCooldown = 0f; e.ContactCooldown = 0f; e.SummonCooldown = boss ? EffectiveBossSummonInterval : def.SummonInterval;
+            e.AttackCooldown = 0f; e.ContactCooldown = 0f; e.SummonCooldown = boss ? EffectiveBossSummonInterval : def.SummonInterval > 0f ? def.SummonInterval : def.HealInterval;
             if (e.Radius > maxEnemyRadius) maxEnemyRadius = e.Radius;
             if (boss) { bossEnemy = e; bossSpawned = true; } else aliveNormalCount++;
             aliveEnemyCount++;
@@ -215,8 +217,9 @@ namespace PersonalArena.Core.Survivor
                 if (e.StunRemaining > 0f)
                 {
                     e.StunRemaining = MathF.Max(0f, e.StunRemaining - FixedDeltaTime);
-                    e.WindupRemaining = 0f;
+                    e.WindupRemaining = 0f; e.ChargeRemaining = 0f;
                 }
+                else if (e.ChargeRemaining > 0f) TickCharge(e);
                 else if (e.WindupRemaining > 0f)
                 {
                     e.WindupRemaining -= FixedDeltaTime;
@@ -237,9 +240,9 @@ namespace PersonalArena.Core.Survivor
                         if (e.ContactCooldown <= 0f && toHero.LengthSquared <= contactRange * contactRange)
                         { DamageHero(e.Damage, e, true); e.ContactCooldown = tuning.ContactIntervalSeconds; }
                     }
-                    else if (e.AttackCooldown <= 0f && toHero.LengthSquared <= (def.AttackRange + Hero.Radius) * (def.AttackRange + Hero.Radius) && InArc(e.Facing, toHero, def.AttackArcDegrees))
+                    else if (def.AttackKind != SurvivorAttackKind.Support && e.AttackCooldown <= 0f && toHero.LengthSquared <= (def.AttackRange + Hero.Radius) * (def.AttackRange + Hero.Radius) && InArc(e.Facing, toHero, def.AttackArcDegrees))
                     { e.WindupRemaining = def.WindupSeconds; }
-                    else if (def.AttackKind == SurvivorAttackKind.Ranged)
+                    else if (def.AttackKind == SurvivorAttackKind.Ranged || def.AttackKind == SurvivorAttackKind.Support)
                     {
                         float distance = toHero.Length;
                         if (distance > def.PreferredDistance + 1f) e.Position += moveDirection * speed * FixedDeltaTime;
@@ -270,6 +273,11 @@ namespace PersonalArena.Core.Survivor
                     }
                 }
                 if (!e.Active) continue;
+                if (def.HealInterval > 0f && e.StunRemaining <= 0f)
+                {
+                    e.SummonCooldown -= FixedDeltaTime;
+                    if (e.SummonCooldown <= 0f) { HealAround(e); e.SummonCooldown += def.HealInterval; }
+                }
                 CorrectEnemyPosition(e);
                 if (!e.IsBoss && (e.Position - Hero.Position).LengthSquared > relocationSquared && TrySpawnPoint(tuning.SpawnAttempts, true, e.Radius, out Vec2 relocated))
                 { e.Position = relocated; e.RelocatedThisTick = true; }
@@ -280,6 +288,7 @@ namespace PersonalArena.Core.Survivor
         {
             Vec2 toHero = Hero.Position - e.Position;
             if (def.AttackKind == SurvivorAttackKind.Explode) { ExplodeEnemy(e, def); return; }
+            if (def.AttackKind == SurvivorAttackKind.Charge) { StartCharge(e, def); return; }
             if (def.AttackKind == SurvivorAttackKind.Ranged)
             {
                 Vec2 direction = toHero.Normalized();

@@ -692,6 +692,21 @@ namespace PersonalArena.View
                     case SurvivorEventType.EnemyExploded:
                         OnEnemyExploded(e);
                         break;
+                    case SurvivorEventType.EnemyCharged:
+                        OnEnemyCharged(e);
+                        break;
+                    case SurvivorEventType.EnemySplit:
+                        OnEnemySplit(e);
+                        break;
+                    case SurvivorEventType.EnemyHealed:
+                        OnEnemyHealed(e);
+                        break;
+                    case SurvivorEventType.GoldenSpawned:
+                        OnGoldenSpawned(e);
+                        break;
+                    case SurvivorEventType.GoldenKilled:
+                        OnGoldenKilled(e);
+                        break;
                     case SurvivorEventType.EnemySummoned:
                     {
                         Vector3 point = ArenaSpace.ToWorld(e.Point);

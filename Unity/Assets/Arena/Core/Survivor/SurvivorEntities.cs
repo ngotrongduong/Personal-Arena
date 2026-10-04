@@ -68,6 +68,13 @@ namespace PersonalArena.Core.Survivor
         public float KnockbackResist { get; internal set; }
         public bool Elite { get; internal set; }
         public bool IsBoss { get; internal set; }
+        /// <summary>M11 rare golden enemy: three times the health, always drops five times the gold.</summary>
+        public bool Golden { get; internal set; }
+        /// <summary>M11: a small copy left by a splitter; it does not split again.</summary>
+        public bool Small { get; internal set; }
+        /// <summary>M11: seconds left of a charger's dash.</summary>
+        public float ChargeRemaining { get; internal set; }
+        public bool Charging => ChargeRemaining > 0f;
         public bool WindingUp => WindupRemaining > 0f;
         public float WindupRemaining { get; internal set; }
         public float StunRemaining { get; internal set; }

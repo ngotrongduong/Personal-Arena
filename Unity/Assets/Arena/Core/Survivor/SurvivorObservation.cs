@@ -118,7 +118,7 @@ namespace PersonalArena.Core.Survivor
             for (int i = 0; i < sim.EnemyLimit; i++)
             {
                 SurvivorEnemy enemy = enemies[i];
-                if (enemy.Active) { AccumulateSolid(origin, enemy.Position, enemy.Radius, 2 + enemy.TypeIndex, enemy); AccumulateEnemyDensity(sim, origin, enemy); }
+                if (enemy.Active) { AccumulateSolid(origin, enemy.Position, enemy.Radius, 2 + SurvivorDefaults.ObservedType(enemy.TypeIndex), enemy); AccumulateEnemyDensity(sim, origin, enemy); }
             }
             SurvivorEnemyProjectile[] enemyProjectiles = sim.EnemyProjectilePool;
             for (int i = 0; i < sim.EnemyProjectileLimit; i++)
@@ -143,7 +143,7 @@ namespace PersonalArena.Core.Survivor
                     b[offset + solidKinds[ray]] = 1f; b[offset + 12] = solidDistance / RayRange;
                     if (solidEnemy != null)
                     {
-                        b[offset + 13] = solidEnemy.Elite ? 1f : 0f; b[offset + 14] = solidEnemy.WindingUp ? 1f : 0f; b[offset + 15] = solidEnemy.StunRemaining > 0f ? 1f : 0f;
+                        b[offset + 13] = solidEnemy.Elite || solidEnemy.Golden ? 1f : 0f; b[offset + 14] = solidEnemy.WindingUp ? 1f : 0f; b[offset + 15] = solidEnemy.StunRemaining > 0f ? 1f : 0f;
                         Vec2 towardHero = (origin - solidEnemy.Position).Normalized(); b[offset + 16] = Vec2.Dot(solidEnemy.Velocity - sim.Hero.Velocity, towardHero) / 10f;
                     }
                     else if (solidProjectile != null)

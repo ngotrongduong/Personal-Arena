@@ -33,7 +33,11 @@
   10 s), khiên (−60 % sát thương nhận 8 s), tốc độ (+35 % tốc chạy 8 s) — mỗi món 0,15 %; bình máu 0,5 % → 0,9 %; bán kính diện
   rộng gốc ×1,2 (`AreaBaseMul`). Món mới roll trên dòng ngẫu nhiên riêng (`SurvivorSim.Buffs.cs`), AI đọc bình mana ở kênh vật
   phẩm thứ 7, bốn món còn lại qua kênh nam châm (schema v5 giữ nguyên). HUD chưa có đồng hồ buff (đang báo bằng chữ nổi + hào
-  quang). Bước C (3 quái mới + quái vàng) còn lại.
+  quang). **Bước C xong (Core + trình xem):** 3 quái mới — kẻ lao tới (`charger`, từ phút 3: gồng 0,8 s rồi lao thẳng, né ngang
+  là tránh được), kẻ phân thân (`splitter`, từ phút 5: chết tách 2 con nhỏ), thầy cúng (`shaman`, từ phút 7: 3 s hồi 12 % máu cho
+  quái trong bán kính 5); quái vàng hiếm (1 % quái thường, máu ×3, chắc chắn rơi vàng ×5, dòng ngẫu nhiên riêng). Quan sát giữ
+  schema v5: quái mới mượn kênh của loại gần nhất (`SurvivorDefaults.ObservedType`), quái vàng bật cờ tinh anh. Tắt được bằng
+  `Tuning.NewEnemies` / `GoldenChance` (test vàng dùng luật cũ). Code ở `SurvivorSim.Rares.cs`. **M11 xong cả 3 bước.**
 - **Test:** CoreTests 629/629, pytest 204/204, EditMode 300/300 (PC, 2026-10-04).
 
 ## Việc tiếp theo (theo thứ tự)

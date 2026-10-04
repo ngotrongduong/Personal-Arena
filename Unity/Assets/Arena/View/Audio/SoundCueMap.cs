@@ -51,6 +51,13 @@ namespace PersonalArena.View
                 case SurvivorEventType.GoldCollected: return SoundCue.Coin;
                 case SurvivorEventType.Healed: return SoundCue.Heal;
                 case SurvivorEventType.MagnetPicked: return SoundCue.Magnet;
+                // M11 drops and enemies reuse the closest existing cue.
+                case SurvivorEventType.BuffStarted: return SoundCue.Magnet;
+                case SurvivorEventType.ManaRestored: return SoundCue.Heal;
+                case SurvivorEventType.BombExploded: return SoundCue.Explosion;
+                case SurvivorEventType.EnemyHealed: return SoundCue.Summon;
+                case SurvivorEventType.GoldenSpawned: return SoundCue.EliteSpawn;
+                case SurvivorEventType.GoldenKilled: return SoundCue.EliteKill;
                 case SurvivorEventType.ChestOpened: return SoundCue.Chest;
                 case SurvivorEventType.LevelUp: return SoundCue.LevelUp;
                 case SurvivorEventType.ItemPicked: return SoundCue.CardPick;

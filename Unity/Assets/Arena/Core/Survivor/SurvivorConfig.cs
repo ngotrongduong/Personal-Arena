@@ -130,6 +130,10 @@ namespace PersonalArena.Core.Survivor
         public float ManaChance = 0.009f;
         /// <summary>M11: chance per normal kill of each of bomb, rage, shield and haste.</summary>
         public float PowerUpChance = 0.0015f;
+        /// <summary>M11: chance that a scheduled normal enemy spawns golden.</summary>
+        public float GoldenChance = 0.01f;
+        /// <summary>M11: charger, splitter and shaman join the spawn phases.</summary>
+        public bool NewEnemies = true;
         public float MeatHeal = 30f;
         public float BossGold = 500f;
         public float DropOffset = 0.3f;
@@ -180,7 +184,7 @@ namespace PersonalArena.Core.Survivor
             Check(PickupFlySpeed); Check(CollectMargin); Check(FillerGold); Check(FillerHeal);
             Check(DenserSpawnsMul); Check(EarlyEliteSeconds); Check(FastRunnerSpeedMul); Check(LessMeatMul); Check(EarlyBruteFromSeconds);
             Check(RegenDelaySeconds); Check(RegenFractionPerSecond); Check(BossSummonFasterMul); Check(NightmareSpeedMul); Check(NightmareEliteHpMul);
-            Check(BossHpMul); Check(XpMul); Check(AreaBaseMul); Check(ManaChance); Check(PowerUpChance);
+            Check(BossHpMul); Check(XpMul); Check(AreaBaseMul); Check(ManaChance); Check(PowerUpChance); Check(GoldenChance);
             if (MaxWeaponSlots < 1 || MaxWeaponSlots > SurvivorCatalog.MaxWeapons) throw new ArgumentOutOfRangeException(nameof(MaxWeaponSlots));
             if (MaxPassiveSlots < 1 || MaxPassiveSlots > SurvivorCatalog.MaxPassives) throw new ArgumentOutOfRangeException(nameof(MaxPassiveSlots));
             if (BossHpMul <= 0f) throw new ArgumentOutOfRangeException(nameof(BossHpMul));

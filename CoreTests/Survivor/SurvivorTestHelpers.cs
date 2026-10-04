@@ -16,10 +16,10 @@ namespace PersonalArena.Core.Tests.Survivor
             config.Build.Tier = tier; return config;
         }
 
-        /// <summary>The drop table before M11: meat at 0.5 %, no mana potions and no power-ups.</summary>
+        /// <summary>The drop and spawn tables before M11: meat at 0.5 %, no mana potions, power-ups, new enemies or golden enemies.</summary>
         public static SurvivorConfig PreM11Drops(SurvivorConfig config)
         {
-            config.Tuning.MeatChance = 0.005f; config.Tuning.ManaChance = 0f; config.Tuning.PowerUpChance = 0f; return config;
+            config.Tuning.MeatChance = 0.005f; config.Tuning.ManaChance = 0f; config.Tuning.PowerUpChance = 0f; config.Tuning.NewEnemies = false; config.Tuning.GoldenChance = 0f; return config;
         }
 
         /// <summary>
