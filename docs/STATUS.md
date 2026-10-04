@@ -22,12 +22,14 @@
   Đo lại: 60 FPS ổn định tới 128 quái. **Bước 3 xong (v0.8.154):** Phun lửa có lửa thật, vệt xoáy cho
   Rìu xoay/Xoáy kiếm/Đá, vòng phép cho Hào quang/Thánh địa/Vòng bảo hộ/Dịch chuyển, mũi tên cắm đất cho Mưa tên,
   băng mọc dưới chân quái bị làm chậm, quái tự nổ dùng vụ nổ mới. Âm thanh nổ/băng/sét/lửa đã có sẵn nên không tải thêm.
-  **Chưa làm:** bong bóng khiên, hiệu ứng trúng đòn/chết theo hệ; chưa xem tận mắt bẫy gai, vũng độc, tường lửa trong trận.
+  **Bước 4 xong (v0.8.155):** bong bóng khiên cho Vòng bảo hộ, gai bật lên cho Phản đòn,
+  hiệu ứng trúng đòn/chết theo hệ (lửa, băng, độc, sét) đoán theo vị trí vùng hiệu ứng vì Core không ghi nguồn sát thương.
+  **Chưa xem tận mắt trong trận thật** các hiệu ứng M10 ngoài ảnh `-fxDemo` (não đo thử gần như không nhặt món).
 - **Test:** CoreTests 629/629, pytest 204/204, EditMode 300/300 (PC, 2026-10-04).
 
 ## Việc tiếp theo (theo thứ tự)
 
-1. Owner mở `Xem-AI.cmd` (bản xem v0.8.154) và bấm TRAIN để não học tiếp trên schema v5; theo dõi AI dùng món M9.
+1. Owner mở `Xem-AI.cmd` (bản xem v0.8.155) và bấm TRAIN để não học tiếp trên schema v5; theo dõi AI dùng món M9.
 2. **Trình xem đẹp hơn:** khi AI bị dồn vào góc, nửa màn hình là vùng tối ngoài hàng rào; ngọc EXP rải kín đất
    giữa trận nhìn rối. (Icon M9 đã thay bằng icon riêng từ game-icons.net ngày 2026-10-04.)
 3. **Mượt và đẹp (ưu tiên của owner 2026-10-04):** đo FPS trình xem lúc đông quái, xem tận mắt từng hiệu ứng M9;

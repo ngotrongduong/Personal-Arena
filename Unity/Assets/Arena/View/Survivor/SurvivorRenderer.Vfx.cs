@@ -33,6 +33,7 @@ namespace PersonalArena.View
                 blastFrame = Time.frameCount;
                 blastsThisFrame = 0;
             }
+            MarkElement(point, radius, ElementFire);
             if (blastsThisFrame++ < BlastsPerFrame)
             {
                 effects.Explosion(point, color, radius);
@@ -41,6 +42,182 @@ namespace PersonalArena.View
             {
                 effects.Flash(point + Vector3.up * 0.7f, color, radius * 1.8f, 0.22f);
             }
+        }
+
+        private const int ElementNone = 0;
+        private const int ElementFire = 1;
+        private const int ElementIce = 2;
+        private const int ElementPoison = 3;
+        private const int ElementLightning = 4;
+        private const float ElementMarkSeconds = 0.3f;
+
+        private struct ElementMark
+        {
+            public Vector3 Point;
+            public float RadiusSqr;
+            public float Until;
+            public int Element;
+        }
+
+        private struct PendingHit
+        {
+            public Vector3 Point;
+            public float Height;
+            public bool Kill;
+            public bool Chilled;
+        }
+
+        private readonly ElementMark[] elementMarks = new ElementMark[16];
+        private readonly PendingHit[] pendingHits = new PendingHit[24];
+        private int nextElementMark;
+        private int pendingHitCount;
+        private Transform barrierBubble;
+        private Transform barrierBubbleRing;
+        private Transform barrierBubbleFill;
+        private Material barrierBubbleRingMaterial;
+        private Material barrierBubbleFillMaterial;
+
+        /// <summary>Remembers that a fire, ice or lightning effect just covered this spot, so hits and deaths there match it.</summary>
+        private void MarkElement(Vector3 point, float radius, int element)
+        {
+            float reach = radius + 0.6f;
+            elementMarks[nextElementMark] = new ElementMark
+            {
+                Point = point, RadiusSqr = reach * reach, Until = Time.unscaledTime + ElementMarkSeconds, Element = element
+            };
+            nextElementMark = (nextElementMark + 1) % elementMarks.Length;
+        }
+
+        /// <summary>Hit and death effects wait one frame, so the blast of the same tick is known whatever the event order.</summary>
+        private void QueueElementFx(Vector3 point, float height, bool kill, bool chilled)
+        {
+            if (pendingHitCount >= (kill ? pendingHits.Length : pendingHits.Length / 2))
+            {
+                return;
+            }
+            pendingHits[pendingHitCount++] = new PendingHit { Point = point, Height = height, Kill = kill, Chilled = chilled };
+        }
+
+        private int ElementAt(Vector3 point, bool chilled)
+        {
+            float now = Time.unscaledTime;
+            for (int i = 0; i < elementMarks.Length; i++)
+            {
+                ElementMark mark = elementMarks[i];
+                if (mark.Until < now)
+                {
+                    continue;
+                }
+                Vector3 offset = point - mark.Point;
+                offset.y = 0f;
+                if (offset.sqrMagnitude <= mark.RadiusSqr)
+                {
+                    return mark.Element;
+                }
+            }
+            for (int i = 0; i < wallViews.Length; i++)
+            {
+                if (!wallViews[i].Active)
+                {
+                    continue;
+                }
+                Vector3 local = wallViews[i].Root.InverseTransformPoint(point);
+                if (Mathf.Abs(local.x) <= 0.6f && Mathf.Abs(local.z) <= 0.8f)
+                {
+                    return ElementFire;
+                }
+            }
+            for (int i = 0; i < zoneViews.Length; i++)
+            {
+                if (!zoneViews[i].Active)
+                {
+                    continue;
+                }
+                Vector3 offset = point - zoneViews[i].Root.position;
+                float reach = zoneViews[i].Root.localScale.x / 2.5f + 0.5f;
+                if (offset.x * offset.x + offset.z * offset.z <= reach * reach)
+                {
+                    return ElementPoison;
+                }
+            }
+            return chilled ? ElementIce : ElementNone;
+        }
+
+        private void ResolveElementFx()
+        {
+            for (int i = 0; i < pendingHitCount; i++)
+            {
+                PendingHit hit = pendingHits[i];
+                Vector3 body = hit.Point + Vector3.up * (hit.Height * 0.5f);
+                switch (ElementAt(hit.Point, hit.Chilled))
+                {
+                    case ElementFire:
+                        effects.Flame(hit.Point, WallColor, hit.Kill ? 1.1f : 0.6f, hit.Kill ? 0.6f : 0.35f);
+                        if (hit.Kill)
+                        {
+                            effects.Flame(hit.Point, WallColor, 0.8f, 0.45f);
+                            effects.Smoke(body, new Color(0.12f, 0.11f, 0.11f, 0.45f), 1, 0.9f, 0.9f);
+                        }
+                        break;
+                    case ElementIce:
+                        effects.Shards(hit.Point, FrostColor, hit.Kill ? 6 : 2, hit.Kill ? 3f : 2f, hit.Kill ? 0.4f : 0.28f);
+                        break;
+                    case ElementPoison:
+                        effects.Sparkle(body, PoisonColor, hit.Kill ? 6 : 2, 0.3f, 1.2f, 0.18f);
+                        if (hit.Kill)
+                        {
+                            effects.Smoke(body, PoisonFumeColor, 2, 0.9f, 0.9f);
+                        }
+                        break;
+                    case ElementLightning:
+                        effects.Sparks(body, Vector3.up, LightningColor, hit.Kill ? 8 : 3, 6f, 0.8f);
+                        if (hit.Kill)
+                        {
+                            effects.Flash(body, LightningColor, 1.6f, 0.15f);
+                        }
+                        break;
+                    default:
+                        if (hit.Kill)
+                        {
+                            effects.Smoke(body, new Color(0.25f, 0.22f, 0.26f, 0.35f), 1, 0.8f, 0.7f);
+                        }
+                        break;
+                }
+            }
+            pendingHitCount = 0;
+        }
+
+        /// <summary>A bubble around the hero while the barrier weapon still has charges.</summary>
+        private void BuildBarrierBubble()
+        {
+            barrierBubble = CreateChild("Barrier Bubble", heroRoot);
+            barrierBubble.localPosition = new Vector3(0f, 0.95f, 0f);
+            barrierBubbleRingMaterial = Own(FxAssets.Create("Barrier Bubble Ring", FxAssets.Ring, true));
+            barrierBubbleFillMaterial = Own(FxAssets.Create("Barrier Bubble Fill", FxAssets.RadialGlow, true));
+            barrierBubbleFill = CreateFlatQuad("Fill", barrierBubble, barrierBubbleFillMaterial);
+            barrierBubbleRing = CreateFlatQuad("Ring", barrierBubble, barrierBubbleRingMaterial);
+            barrierBubble.gameObject.SetActive(false);
+        }
+
+        private void PresentBarrierBubble(int charges, bool show)
+        {
+            if (barrierBubble.gameObject.activeSelf != show)
+            {
+                barrierBubble.gameObject.SetActive(show);
+            }
+            if (!show)
+            {
+                return;
+            }
+            Camera camera = ResolveCamera();
+            Vector3 toCamera = camera != null ? -camera.transform.forward : Vector3.up;
+            barrierBubble.rotation = Quaternion.FromToRotation(Vector3.up, toCamera);
+            float pulse = 1f + 0.04f * Mathf.Sin(Time.unscaledTime * 5f);
+            float radius = (1.2f + 0.07f * charges) * pulse;
+            barrierBubbleRing.localScale = new Vector3(radius * RingQuadPerRadius, 1f, radius * RingQuadPerRadius);
+            barrierBubbleFill.localScale = new Vector3(radius * 2.3f, 1f, radius * 2.3f);
+            barrierBubbleRingMaterial.color = new Color(BarrierColor.r, BarrierColor.g, BarrierColor.b, 0.6f);
+            barrierBubbleFillMaterial.color = new Color(BarrierColor.r, BarrierColor.g, BarrierColor.b, 0.16f);
         }
 
         /// <summary>A slowed (chilled) enemy keeps growing small ice crystals at its feet.</summary>
@@ -90,6 +267,7 @@ namespace PersonalArena.View
         /// <summary>Fire walls keep burning and poison pools keep fuming for as long as Core keeps them alive.</summary>
         private void PresentM9Areas(float delta)
         {
+            ResolveElementFx();
             for (int i = 0; i < wallViews.Length; i++)
             {
                 M9View view = wallViews[i];

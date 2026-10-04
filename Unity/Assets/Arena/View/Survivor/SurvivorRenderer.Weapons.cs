@@ -521,6 +521,7 @@ namespace PersonalArena.View
                         effects.Sparkle(center, color, 14, 1.2f, 1.2f, 0.22f);
                         effects.Shards(center, FrostColor, 10, 3f, 0.55f);
                         effects.Crystals(center, FrostColor, 5, 1.1f, 1.3f, 1.6f);
+                        MarkElement(center, 4f, ElementIce);
                         effects.Decal(center, FrostMarkColor, 5f, 3f);
                         PlayHeroOneShot(HeroCast, 1.8f, false);
                     }
@@ -558,6 +559,7 @@ namespace PersonalArena.View
                     effects.Flash(heroPosition + Vector3.up, FrostColor, 5f, 0.25f);
                     effects.Shards(heroPosition, FrostColor, 18, 4.5f, 0.6f);
                     effects.Crystals(heroPosition, FrostColor, 12, 4.5f, 1.5f, 2f);
+                    MarkElement(heroPosition, 14f, ElementIce);
                     effects.Decal(heroPosition, FrostMarkColor, 12f, 4f);
                     effects.Rune(heroPosition, FrostColor, 10f, 1f);
                     break;
@@ -598,6 +600,7 @@ namespace PersonalArena.View
                     effects.Sparkle(heroPosition, FrostColor, 22, radius * 0.7f, 1.4f, 0.26f);
                     effects.Shards(heroPosition, FrostColor, 16, 4f, 0.6f);
                     effects.Crystals(heroPosition, FrostColor, 10, radius * 0.8f, 1.5f, 2f);
+                    MarkElement(heroPosition, radius, ElementIce);
                     effects.Decal(heroPosition, FrostMarkColor, radius * 2.4f, 4f);
                 }
                 else
@@ -646,6 +649,7 @@ namespace PersonalArena.View
                 // Lightning: a vertical bolt from the sky, a flash and a ring of the real radius.
                 Vector3 top = point + Vector3.up * LightningHeight;
                 effects.Bolt(top, point, color, evolved ? 1.5f : 1.1f);
+                MarkElement(point, radius, ElementLightning);
                 effects.Decal(point, new Color(0.05f, 0.05f, 0.08f, 0.6f), radius * 1.6f, 2.5f);
                 effects.Flash(point + Vector3.up * 0.8f, color, radius * 2.2f, 0.18f);
                 effects.Shockwave(point, color, radius * RingQuadPerRadius, 0.35f);
