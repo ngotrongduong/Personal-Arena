@@ -393,3 +393,114 @@ thưởng theo thứ bậc, nghiệm thu bằng đánh giá 100 seed). Đấu tr
 
 ### 2026-09-29 09:42–10:06 — Owner + Claude (PC)
 - Scaffold M0; PR #2 Core M1; PR #3 Unity project + ML-Agents 4.1.0; PR #4 `HeroInput` helpers.
+
+## Chi tiết M10–M14 (chuyển từ STATUS ngày 2026-10-05)
+
+- **M10 (hiệu ứng kỹ năng/vũ khí, chỉ trình xem, không đổi Core/schema):** bước 1–2 xong ngày 2026-10-04 — texture
+  Kenney Particle Pack (CC0) qua `VfxLibrary`; `ArenaEffects.Vfx.cs` có `Explosion`, `Flame`, `Smoke`, `Decal`, `Rune`,
+  `Twirl`, `Shards`, `Crystals`, `Bolt`; tường lửa cháy thật, vũng độc bốc khói, bẫy có chông 3D, nổ có cầu lửa + vết
+  cháy, băng có tinh thể + mảnh vụn, sét là tia gấp khúc. Cờ `-fxDemo` (đi kèm `-perfLog`) chụp ảnh trình diễn.
+  Đo lại: 60 FPS ổn định tới 128 quái. **Bước 3 xong (v0.8.154):** Phun lửa có lửa thật, vệt xoáy cho
+  Rìu xoay/Xoáy kiếm/Đá, vòng phép cho Hào quang/Thánh địa/Vòng bảo hộ/Dịch chuyển, mũi tên cắm đất cho Mưa tên,
+  băng mọc dưới chân quái bị làm chậm, quái tự nổ dùng vụ nổ mới. Âm thanh nổ/băng/sét/lửa đã có sẵn nên không tải thêm.
+  **Bước 4 xong (v0.8.155):** bong bóng khiên cho Vòng bảo hộ, gai bật lên cho Phản đòn,
+  hiệu ứng trúng đòn/chết theo hệ (lửa, băng, độc, sét) đoán theo vị trí vùng hiệu ứng vì Core không ghi nguồn sát thương.
+  **Chưa xem tận mắt trong trận thật** các hiệu ứng M10 ngoài ảnh `-fxDemo` (não đo thử gần như không nhặt món).
+- **M11 (owner yêu cầu 2026-10-04: hiệu ứng nổi bật hơn, vật phẩm rơi mới, quái mới, quái vàng):** kế hoạch 3 bước A → B → C,
+  giữ schema v5 (2592). **Bước A xong (chỉ trình xem):** hiệu ứng diện rộng phủ kín bán kính thật và lâu hơn (`AreaFill`,
+  `AreaLinger`), hiệu ứng nam châm lớn, đạn đúng hình (cầu phép có vòng xoay, cầu lửa, bom có ngòi, pha lê nảy, mũi lao),
+  bình máu/bình mana hình chai, nam châm chữ U, đồng vàng sáng, hào quang buff dưới chân (`SurvivorRenderer.Auras.cs`).
+  **Bước B xong (Core + trình xem):** quái thường rơi thêm bình mana (0,9 %, hồi 50 % năng lượng), bom, cuồng nộ (+50 % sát thương
+  10 s), khiên (−60 % sát thương nhận 8 s), tốc độ (+35 % tốc chạy 8 s) — mỗi món 0,15 %; bình máu 0,5 % → 0,9 %; bán kính diện
+  rộng gốc ×1,2 (`AreaBaseMul`). Món mới roll trên dòng ngẫu nhiên riêng (`SurvivorSim.Buffs.cs`), AI đọc bình mana ở kênh vật
+  phẩm thứ 7, bốn món còn lại qua kênh nam châm (schema v5 giữ nguyên). HUD chưa có đồng hồ buff (đang báo bằng chữ nổi + hào
+  quang). **Bước C xong (Core + trình xem):** 3 quái mới — kẻ lao tới (`charger`, từ phút 3: gồng 0,8 s rồi lao thẳng, né ngang
+  là tránh được), kẻ phân thân (`splitter`, từ phút 5: chết tách 2 con nhỏ), thầy cúng (`shaman`, từ phút 7: 3 s hồi 12 % máu cho
+  quái trong bán kính 5); quái vàng hiếm (1 % quái thường, máu ×3, chắc chắn rơi vàng ×5, dòng ngẫu nhiên riêng). Quan sát giữ
+  schema v5: quái mới mượn kênh của loại gần nhất (`SurvivorDefaults.ObservedType`), quái vàng bật cờ tinh anh. Tắt được bằng
+  `Tuning.NewEnemies` / `GoldenChance` (test vàng dùng luật cũ). Code ở `SurvivorSim.Rares.cs`. **M11 xong cả 3 bước.**
+- **M12 (owner yêu cầu 2026-10-04: dùng 2 gói hiệu ứng Asset Store thay hiệu ứng cũ) — xong, chỉ trình xem:** gói
+  *Magic Effects FREE* (Hovl Studio) cho phép thuật và *52 Special Effects Pack* (GAPH) cho hiệu ứng đặc biệt. **Hai gói theo
+  giấy phép Asset Store nên KHÔNG nằm trong repo công khai** (đã `.gitignore`), chỉ có trên máy owner; máy không có gói (CI) tự
+  dùng lại hiệu ứng Kenney cũ. `StoreVfxBuilder` (chạy trong build trình xem) gom prefab đã chọn vào
+  `Assets/ThirdPartyLocal/Resources/StoreVfxSet.asset`; `ArenaEffects.Store.cs` phát theo pool (`Store`, `StoreAttach`, tối đa
+  6 bản mỗi loại, hết pool thì dùng hiệu ứng cũ); bảng "tình huống → hiệu ứng" ở `SurvivorRenderer.Store.cs` và các chỗ gọi
+  `StoreArea` / `StoreAt`. Đã gắn: nổ lửa/bom, nổ độc của quái tự nổ, băng (nova, đóng băng, bùng băng), sét, thanh tẩy, tiếng
+  thét, nhảy bổ, sóng chấn động, dịch chuyển, lên cấp, nhặt đồ, rương, buff (cuồng nộ/khiên/tốc độ), bình mana, tinh anh/trùm
+  xuất hiện và chết, gọi quái, phân thân, thầy cúng hồi máu, quái vàng, hào quang buff dưới chân, cầu phép và cầu lửa. Cờ
+  `-vfxGallery` (kèm `-perfLog`) chụp lần lượt mọi hiệu ứng của gói để chọn/chỉnh cỡ.
+- **M12b (owner yêu cầu 2026-10-04: thay nốt các hiệu ứng cũ còn lại) — xong, chỉ trình xem:** bộ hiệu ứng gói tăng từ 56
+  lên 116 loại (`StoreVfxSet.Scales` lưu cỡ gốc từng loại). `ArenaEffects.StoreMap.cs` cho các hàm gốc tự chuyển sang hiệu ứng
+  gói theo màu khi có gói: `Sparks` / `Flash` / `Sparkle` / `Shards` → vụ nổ nhỏ đúng màu (gộp các lời gọi chồng nhau trong
+  cùng khung hình thành một, tối đa 4 cái mỗi khung hình), `Puff` → bụi/khói, `Slash` → vệt chém, `Twirl` → vòng xoáy, `Rune`
+  → vòng phép, `Flame` → lửa, `Smoke` → khói/hơi độc, `Crystals` → tinh thể băng. Thêm: đạn nhổ độc, đạn nảy, đạn đà dùng cầu
+  phép của gói; hào quang diện rộng dùng vòng phép; bong bóng khiên cũ ẩn khi có khiên của gói. Giữ nguyên có chủ ý: mũi tên
+  và bom (đã là model), vòng báo bán kính, số sát thương, vết cháy trên đất, tia sét. Không có gói thì mọi thứ về hiệu ứng cũ.
+  Cờ `-vfxGalleryFrom <trang>` để chụp gallery từ trang bất kỳ.
+- **M13 (owner phản hồi 2026-10-04 sau khi xem v0.8.167: quá nhiều hiệu ứng trên thân nhân vật, rối mắt) — xong:**
+  nguyên tắc mới: mỗi đòn một hiệu ứng rõ, đúng cỡ vùng sát thương, đúng hệ. Trình xem: `Sparks` / `Flash` / `Sparkle` /
+  `Shards` / `Slash` về lại hiệu ứng gốc (bỏ các vụ nổ nhỏ của gói và vệt chém Hovl có vòng tụ lực + bay đi làm tưởng kiếm
+  không gây sát thương); dao găm chém màu đỏ; phun lửa là luồng lửa hình nón đúng tầm, không còn vệt chém; mưa tên chỉ còn
+  mũi tên; sét dùng tia sét (bỏ quả cầu xanh); Lôi liên hoàn là dòng sét dày nhảy từ nhân vật qua từng quái; nổ băng bỏ vòng
+  phép tím (vòng phép màu xanh dương giờ dùng vòng băng); mọi vụ nổ (bom, mưa bom, hỏa cầu, cầu lửa, quái tự nổ) chỉ còn vụ
+  nổ đúng bán kính; bỏ vòng/lấp lánh trên người khi vũ khí xoay, hào quang, vòng bảo hộ, mưa bom bắn. **Core:** Đạn nảy trúng
+  quái thì bật sang quái gần nhất chưa trúng (trong 8 m), không có thì dội ngược; không tốn lượt nảy tường
+  (`RicochetOffEnemy`, `BounceRicochetRange`). Schema vẫn v5; cân bằng Đạn nảy đổi nhẹ.
+- **M14 (owner yêu cầu 2026-10-04: "làm sóng kiếm bay cho Kiếm quét") — xong:** Kiếm quét (vũ khí đầu của chiến binh,
+  catalog 0) và bản tiến hóa giờ phóng **sóng kiếm bay**: một lưỡi liềm bay theo hướng mặt (tốc độ 12, nửa bề rộng 1,1 m,
+  bay 6 m, +10 %/cấp, nhân với diện rộng), chém **mọi** quái trên đường bay, mỗi con một lần, đẩy lùi theo hướng bay; từ cấp 5
+  có thêm sóng thứ hai bay ra sau lưng. Vẫn là `WeaponPattern.Sweep` (def có `ProjectileSpeed > 0` → `LaunchSwordWaves`, cờ
+  `SurvivorProjectile.Wave`); dao găm và phun lửa vẫn là đòn quét hình cung. Trình xem: `ProjectileLook.SwordWave` (lưới
+  `FxAssets.WaveCrescent`, rộng đúng bằng vùng chém, vàng khi tiến hóa), bỏ vệt chém đứng yên trên người. Schema vẫn v5;
+  4 golden tier-1 ghi lại; AI cần train tiếp để quen vũ khí mới.
+
+## Nhật ký chuyển từ STATUS ngày 2026-10-05
+
+### 2026-10-02 (sau) — Claude (cloud): M9 đợt 1a, nội dung Warrior (T-036)
+- Owner chốt: chia 2 đợt, ô mang theo 6 + 6 như Vampire Survivors, bắt đầu với Warrior, không ngại AI học lại.
+  Đề xuất đầy đủ ở `docs/CONTENT-PROPOSAL.md`.
+- T-036 (subagent `core-sim-engineer`, Claude review): ô 6 + 6 (`SurvivorTuning.MaxWeaponSlots/MaxPassiveSlots`),
+  5 vũ khí Warrior (Phun lửa, Kiếm liên hoàn, Búa nặng, Bom, Phản đòn: ô 26–30), 4 phụ kiện cho cả 3 class
+  (Hồi phục, May mắn, Tham lam, Vương miện: 58–61), skill Tiếng thét ở ô skill thứ 4 của Warrior. Schema v4 (2264)
+  và hành động 9/5/5 không đổi. Golden cũ chạy bằng `OldRules` (4 + 4, pool cũ), không ghi lại giá trị.
+- CoreTests 286/286 (Linux). Hai golden chỉ-Windows do job Windows của CI kiểm.
+- **Chưa có hình ảnh/HUD trong trình xem** (T-037, cần PC có Unity): HUD 6 + 6 ô, icon, hiệu ứng, âm thanh.
+  Não Warrior cũ chỉ dùng skill thứ 4 sau khi train lại. Số cân bằng là số khởi điểm, chưa chỉnh.
+- **Đợt 1b (T-038)**: Vòng bảo hộ (31), Boomerang (32), Bình độc (33) cho Warrior; phụ kiện Bùa thời gian (34),
+  Bộ nhân đôi (35, tối đa cấp 2), Giáp phản (36), Hộp tổng hợp (37) cho cả 3 class. Hai chỉ số mới `Duration`,
+  `Amount` dùng chỗ `Reserved13/14`. CoreTests 342/342. Danh mục còn trống: 38–39. Chưa có hình ảnh/HUD (T-037).
+- **Đợt 2, T-039 (Core) xong**: schema **v5** = 2592 giá trị (self 0..71, túi đồ 72..199 gồm 128 ô, đề nghị 200..719
+  = 4 × 130, tia 720..2519, mật độ 2520..2591), hành động 9/7/5 (6 skill chủ động, 2 ô mới tạm là `none`),
+  danh mục 128 (chỉ số cũ không dời). CoreTests 360/360. **T-040 (Trainer) xong**: `survivor_v5.json`, `SCHEMA_VERSION = 5`,
+  `brain_upgrade` v4 → v5 giữ nguyên đầu ra cho input cũ (cột mới = 0; hai lựa chọn skill mới có bias thấp hơn
+  bias nhỏ nhất cũ 5,0, chưa thử trong train thật), fixture nhị phân sinh bằng numpy nên giống nhau mọi nền tảng;
+  pytest 203/203, CoreTests 361/361. **Chưa xong**: T-041 (Unity, cần PC: thanh
+  skill 6 ô ở `SurvivorHud`, build lại, chạy EditMode). Hiện **bản xem/bản train cũ không chạy được với Core mới**
+  (khác schema): đừng build hay train từ nhánh này trước khi T-040 và T-041 xong.
+- **T-042 (nhóm vũ khí C) xong** trên schema v5: Đạn nảy (64; cả 3 class), Bóng tốc (65; Archer), Đồng hồ băng (66),
+  Thanh tẩy (67), Mưa bom vòng (68) (66–68 cho Mage). CoreTests 395/395. Danh mục còn trống từ 69.
+- **T-043 (skill thứ 5 và 6) xong**: Warrior Nhảy đập đất + Xoáy kiếm, Archer Bẫy gai + Mưa tên, Mage Tường lửa +
+  Lôi liên hoàn (6 `SkillKind` mới thêm cuối enum; quái có thể bị làm chậm, trung tính khi không có bẫy).
+  CoreTests 446/446. Cần Unity: thanh skill 6 ô, phím cho skill 5–6, icon, hiệu ứng.
+- **T-044 xong**: Mage thêm Phun lửa, Vòng bảo hộ, Bình độc + 4 vũ khí mới; Archer thêm Bom, Boomerang, Bình độc;
+  vũ khí mới 69 Hỏa cầu nổ (Mage), 70 Vòng tay ba mũi (Mage, Archer), 71 Bắn bốn hướng (Archer), 72 Đá tụ lực
+  (Mage). CoreTests 495/495. Danh mục còn trống từ 73.
+- **T-045 xong**: 16 tiến hóa cho vũ khí mới (ô 112–127; Thanh tẩy không có), cơ chế rương/ghép phụ kiện dùng chung với
+  18 tiến hóa cũ (40–57). CoreTests 614/614. Lưu ý: tiến hóa Bóng ma tốc độ có hệ số sàn 0,4 nên sát thương lúc đứng
+  yên là ×0,88 (task ghi 0,8; đổi `MomentumFloor` ≈ 0,333 nếu muốn 0,8). Đạn xuyên giờ nhớ tối đa 8 quái.
+- **Đo hiệu năng `Step` với nội dung M9** (máy cloud, Release, 250 quái + 400 ngọc, test mới
+  `SurvivorM9PerformanceTests`): bộ đồ M9 nặng nhất Warrior ≈ 0,058–0,061 ms, Archer ≈ 0,057–0,082 ms (dao động giữa
+  các lần chạy), Mage ≈ 0,024–0,033 ms; bộ 6 vũ khí cũ cấp 5 trên cùng máy ≈ 0,046–0,049 ms. Đo từng vũ khí riêng: chỉ
+  đám quái đã tốn ≈ 0,050 ms, mỗi vũ khí M9 chỉ cộng 0–0,015 ms (Đồng hồ băng còn làm nhanh hơn vì quái đứng yên) →
+  chi phí chính là mô phỏng quái, không phải vũ khí mới. Mục tiêu 0,05 ms đặt cho PC của owner; CI giữ ngưỡng 0,2 ms.
+  Nếu cần nhanh hơn: tối ưu cập nhật/tách quái, không phải vũ khí.
+- **T-046 xong (chỉ di chuyển code)**: vũ khí chia theo cơ chế (`SurvivorSim.Weapons{,.Melee,.AroundHero,.Projectiles,
+  .Area,.Defense}.cs`, skill gom vào `.Skills.cs`), danh mục tách thành `SurvivorDefs.cs` (kiểu), `SurvivorCatalog.cs`
+  (logic), `SurvivorCatalog.Items.cs` (mọi dòng dữ liệu + 2 bảng tiến hóa, **phải ở cùng file theo thứ tự phụ thuộc**),
+  `SurvivorClassKits.cs`, `SurvivorEnemyDefs.cs`; dispatch thành `switch`. Bỏ `Content/Wave1b/GroupC`. Hash 18 trận dài
+  trước/sau khớp từng bit; CoreTests 622/622. Vũ khí mới đặt vào file theo cơ chế của nó.
+  - Dọn tiếp (sau T-046): Đá không choáng trùm nữa (D-042); Quạt tên (`FireFan`) không tốn hồi chiêu khi pool đạn đầy;
+    `ThrustSpears` dùng `NearestEnemy`; mảng đệm dùng `MaxVolleyCount`; `hammerTargetIds` đổi tên `volleyTargetIds`.
+    Dấu vân tay 18 trận vẫn khớp từng bit; CoreTests 625/625.
+- Chưa làm:
+  toàn bộ phần hiển thị Unity (T-041 + icon/hiệu ứng/âm thanh), cân bằng bằng `SurvivorEval`.
