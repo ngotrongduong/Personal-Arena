@@ -2,7 +2,7 @@
 
 > "Bộ nhớ" giữa các phiên. Đọc đầu tiên, cập nhật cuối cùng. **Giữ file dưới 200 dòng** (CI kiểm):
 > nhật ký cũ chuyển sang `docs/archive/SESSIONS.md`, task xong sang `docs/archive/BOARD-DONE.md`.
-> Cập nhật lần cuối: 2026-10-05 (phiên Claude trên PC: M15 hình ảnh riêng cho vũ khí tiến hóa + đồng hồ buff, bản xem v0.8.175).
+> Cập nhật lần cuối: 2026-10-05 (phiên Claude trên PC: T-048 mở trình xem nhanh hơn, T-049 tách file View, bản xem v0.8.181).
 
 ## Đang ở đâu (đọc phần này là đủ để bắt đầu)
 
@@ -23,19 +23,18 @@
   (`LaunchSwordWaves`, `ProjectileLook.SwordWave`); 4 golden tier-1 ghi lại.
 - **M15:** mỗi vũ khí tiến hóa (34 cái) có **hệ và màu riêng** thay cho màu vàng chung
   (`SurvivorEvolutionStyle.cs`, `SurvivorRenderer.Evolutions.cs`): vệt bay, màu, dấu trên đất ở đúng vùng trúng;
-  chỉ sửa trình xem, điều kiện tiến hóa và Core giữ nguyên. HUD có đồng hồ buff (T-047).
-- **Bản cài (2026-10-05):** `Build/WatchNext` + `Build/TrainingNext` v0.8.175; smoke test 3 class đạt; 60 FPS
-  (riêng khung hình đầu khựng ~3 s do nạp hiệu ứng).
+  chỉ sửa trình xem, điều kiện tiến hóa và Core giữ nguyên. HUD có đồng hồ buff (T-047). Tắt màn logo Unity nên
+  trình xem mở nhanh hơn ~3 s (T-048); mọi file View dưới 700 dòng (T-049).
+- **Bản cài (2026-10-05):** `Build/WatchNext` v0.8.181, `Build/TrainingNext` v0.8.175 (Core không đổi từ đó);
+  smoke test 3 class đạt; 60 FPS, mở app ~0,9 s tới khung hình đầu.
 - **Test:** CoreTests 644/644, pytest 204/204, EditMode 302/302 (PC, 2026-10-05).
 
 ## Việc tiếp theo (theo thứ tự)
 
-1. **Owner:** mở `Xem-AI.cmd` (bản xem v0.8.175), xem hiệu ứng M13–M15 trong trận thật và bấm TRAIN — não cần học
+1. **Owner:** mở `Xem-AI.cmd` (bản xem v0.8.181), xem hiệu ứng M13–M15 trong trận thật và bấm TRAIN — não cần học
    tiếp để quen Kiếm quét mới, quái mới, vật phẩm mới (điểm số sẽ dao động một thời gian).
-2. **Claude — T-048:** giảm khựng ~3 s ở khung hình đầu của trình xem.
-3. **Claude — T-049:** tách (chỉ dời code) các file View > 700 dòng (nợ của T-041).
-4. **Claude:** trình xem đẹp hơn — vùng tối ngoài hàng rào khi AI bị dồn vào góc; ngọc EXP rải kín đất nhìn rối.
-5. Nợ nhỏ (nhật ký 2026-10-02 trong archive): rẽ nhánh từ champion cũ thiếu `training_status.json`,
+2. **Claude:** trình xem đẹp hơn — vùng tối ngoài hàng rào khi AI bị dồn vào góc; ngọc EXP rải kín đất nhìn rối.
+3. Nợ nhỏ (nhật ký 2026-10-02 trong archive): rẽ nhánh từ champion cũ thiếu `training_status.json`,
    khóa `brain_lineage` khi chạy song song, walker triệu hồi ngoài bản đồ 1 tick.
 
 ## Cách tiết kiệm token (áp dụng cho mọi agent)
@@ -73,7 +72,7 @@
 | M8: đánh bóng — âm thanh, cài đặt + phiên bản + smoke test, cân bằng (T-033..T-035, D-039) | code xong — chờ owner nghiệm thu bản build mới |
 | M9: nội dung kiểu Vampire Survivors (6 + 6 ô, vũ khí/phụ kiện/tiến hóa mới, 6 skill, schema v5) | xong (T-036..T-046); tách file View lớn chuyển sang T-049 |
 | M10–M14: hiệu ứng, vật phẩm rơi, quái mới, gói Asset Store, sóng kiếm bay | xong (PR #8–#17) — chờ owner xem bản v0.8.171 và train tiếp |
-| M15: hình ảnh riêng cho 34 vũ khí tiến hóa + đồng hồ buff HUD (T-047) | xong — chờ owner xem bản v0.8.175 |
+| M15: hình ảnh riêng cho 34 vũ khí tiến hóa + đồng hồ buff HUD (T-047), mở app nhanh (T-048), tách file View (T-049) | xong — chờ owner xem bản v0.8.181 |
 
 
 ## Cách làm trên PC (Claude)
@@ -89,6 +88,10 @@
   `CopyFromScreen` bị khóa foreground.
 - Unity batch đôi khi sập lúc khởi động (exit -1073741819) hoặc script build trả exit ≠ 0 dù build xong: chạy lại
   hoặc chạy tiếp bước sau.
+- Build xong thì `git checkout -- Unity/Assets/Scenes/ArenaWatch.unity Unity/ProjectSettings/ProjectSettings.asset`
+  (build tự ghi lại scene và thêm define `SENTIS_ANALYTICS_ENABLED`). `-watchBuildOutput` tương đối tính từ `Unity/`
+  → dùng đường dẫn tuyệt đối `C:\PersonalArena\Build\WatchNext`.
+- Máy không có `gh`: không có GitHub MCP thì merge ở worktree `develop` (`git merge --no-ff`) rồi `git push`.
 - Tránh hộp "Allow": gom lệnh nhiều bước vào file `.ps1` rồi chạy một lệnh đơn.
 - `arena_trainer.py` tìm `.venv-ml` ở gốc repo → chạy từ `C:\PersonalArena`, không từ worktree.
 
@@ -102,6 +105,15 @@
   trước khi phát hành để đảm bảo game không gọi mạng.
 
 ## Nhật ký phiên (mới nhất trên cùng; giữ ~3 mục, cũ hơn → archive)
+
+### 2026-10-05 (sau) — Claude (PC): T-048 mở trình xem nhanh hơn, T-049 tách file View
+- T-048: "khựng 3 s ở khung hình đầu" hóa ra là thời gian mở app (màn logo Unity 2,2 s), bị `-perfLog` tính nhầm
+  thành một khung hình; hiệu ứng không phải thủ phạm (bộ gói nạp trong 22 ms). Tắt logo Unity → khung hình đầu
+  hiện sau ~0,85 s thay vì ~3,9 s. `-perfLog` giờ ghi riêng các bước mở app và mọi khung > 50 ms ra
+  `*_startup.csv` (`PerfTrace.cs`). Trong trận: 60 s ở x8 với 6 vũ khí, khung tệ nhất 50 ms.
+- T-049: 13 file View > 700 dòng tách thành 36 file, file lớn nhất 647 dòng; chỉ dời code (partial class), không
+  đổi logic. Kiểu dữ liệu lineage ra `LineageModels.cs`, enum của trình xem ra `SurvivorViewTypes.cs`.
+- Máy không có `gh` và phiên không có GitHub MCP → gộp bằng git ở worktree `develop` rồi push (không qua PR).
 
 ### 2026-10-05 — Claude (PC): M15 vũ khí tiến hóa có hình ảnh riêng
 - Owner: giữ điều kiện tiến hóa, mỗi bản tiến hóa phải khác hẳn bản thường, không chỉ đổi màu vàng; chỉ sửa trình xem.
@@ -120,8 +132,3 @@
 - M14: Kiếm quét thành sóng kiếm bay (PR #17). Nội dung mới đều giữ schema v5 (D-048).
 - Bản xem + bản train v0.8.171 đã cài; CoreTests 644, EditMode 300, 60 FPS. Chưa train lần nào trong phiên này.
 
-### 2026-10-03 (sau) — Claude (cloud): rà soát vũ khí và skill (D-045)
-- Owner báo Mưa tên không giống AOE. Đo mọi vũ khí (cấp 1 và 5), mọi tiến hóa, mọi skill trên bãi quái đứng yên (dày và thưa).
-- Sửa Mưa tên: rơi vào chỗ quái đông nhất, vùng 2,6 m, 1–3 vùng theo cấp; hiệu ứng trình xem rải tên khắp vùng.
-- Sửa loạt chẵn (Nỏ, Giáo, Tia ma thuật, Đạn nảy, Boomerang 2 mũi): 1 mũi luôn thẳng vào mục tiêu. Nỏ cấp 5 từ 68 → 234 sát thương/giây khi quái đứng thưa.
-- Skill `arrow-barrage` đổi tên tiếng Việt thành "Loạt tên". CoreTests 627/627. Hiệu ứng Mưa tên mới cần build lại trên PC (T-041).
