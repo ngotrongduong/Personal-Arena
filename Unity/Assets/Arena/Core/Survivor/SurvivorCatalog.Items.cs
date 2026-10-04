@@ -328,5 +328,14 @@ namespace PersonalArena.Core.Survivor
             Evolve(QuadShot, 126, "four-winds", "Four Winds", MagnetCharmIndex),
             Evolve(MagiStone, 127, "sage-stone", "Philosopher's Stone", GreedIndex)
         };
+
+        // A ring evolves into a fuller, slightly wider ring (the generic +20% range would crowd the distances).
+        private static readonly ItemDef[] RingEvolutions =
+        {
+            Evolve(SpiritOrbs, 77, "guardian-spirits", "Guardian Spirits", RecoveryIndex, rangeMul: 1.15f, extraCount: 2),
+            Evolve(SawRing, 78, "razor-tempest", "Razor Tempest", SpikedArmorIndex, rangeMul: 1.15f, extraCount: 2),
+            Evolve(FrostHalo, 79, "glacier-crown", "Glacier Crown", DurationCharmIndex, rangeMul: 1.15f),
+            Evolve(Comet, 80, "starfall", "Starfall", CrownIndex, rangeMul: 1.1f)
+        };
     }
 }
