@@ -40,10 +40,35 @@ namespace PersonalArena.Core.Survivor
                 AttackRange = 11f, AttackArcDegrees = 60f, WindupSeconds = 0.6f, RecoverSeconds = 3.5f,
                 ProjectileSpeed = 6f, ProjectileRadius = 0.3f, ProjectileRange = 13f,
                 Xp = 6, KnockbackResist = 0.3f, TurnSpeedDegPerSec = 240f, SummonInterval = 6f, SummonCount = 3
+            },
+            // M11. The AI reads each through the channel of the closest old type, so the observation keeps schema v5.
+            new SurvivorEnemyDef
+            {
+                TypeIndex = ChargerTypeIndex, Id = "charger", BaseHp = 45f, MoveSpeed = 2.6f, Radius = 0.55f, Mass = 2f,
+                AttackKind = SurvivorAttackKind.Charge, AttackDamage = 22f, AttackRange = 6.5f, AttackArcDegrees = 40f,
+                WindupSeconds = 0.8f, RecoverSeconds = 2.2f, Xp = 4, KnockbackResist = 0.4f, TurnSpeedDegPerSec = 200f,
+                ObservedAs = 2
+            },
+            new SurvivorEnemyDef
+            {
+                TypeIndex = SplitterTypeIndex, Id = "splitter", BaseHp = 40f, MoveSpeed = 2.2f, Radius = 0.6f, Mass = 1.5f,
+                AttackKind = SurvivorAttackKind.Contact, AttackDamage = 9f, Xp = 3, KnockbackResist = 0.2f,
+                TurnSpeedDegPerSec = 360f, SplitCount = 2, ObservedAs = 0
+            },
+            new SurvivorEnemyDef
+            {
+                TypeIndex = ShamanTypeIndex, Id = "shaman", BaseHp = 45f, MoveSpeed = 2.2f, Radius = 0.45f, Mass = 1f,
+                AttackKind = SurvivorAttackKind.Support, PreferredDistance = 8f, Xp = 5, KnockbackResist = 0.1f,
+                TurnSpeedDegPerSec = 300f, HealInterval = 3f, ObservedAs = NecromancerTypeIndex
             }
         };
 
+        /// <summary>Enemy types the observation has a channel for (schema v5). M11 types come after and borrow a channel.</summary>
         public const int EnemyTypeCount = 8;
+        public const int ChargerTypeIndex = 8;
+        public const int SplitterTypeIndex = 9;
+        public const int ShamanTypeIndex = 10;
+        public const int AllEnemyTypeCount = 11;
         /// <summary>Elites are only drawn from the four basic types.</summary>
         public const int EliteTypeCount = 4;
         public const int ExploderTypeIndex = 5;
@@ -54,14 +79,22 @@ namespace PersonalArena.Core.Survivor
         private static readonly SpawnPhase[] Phases =
         {
             Phase(0, 60, 1, 0, 0, 0, 30, 1), Phase(60, 180, 3, 1, 0, 0, 60, 2),
-            Phase(180, 300, 3, 2, 1, 0, 90, 3), Phase(300, 420, 2, 2, 1, 1, 120, 4, exploder: 1),
-            Phase(420, 600, 2, 3, 1, 2, 160, 5, exploder: 1, ghost: 1),
-            Phase(600, 720, 1, 3, 2, 2, 200, 6, exploder: 2, ghost: 1, necromancer: 1),
-            Phase(720, 900, 1, 3, 3, 3, 250, 8, exploder: 2, ghost: 2, necromancer: 1)
+            Phase(180, 300, 3, 2, 1, 0, 90, 3, charger: 1), Phase(300, 420, 2, 2, 1, 1, 120, 4, exploder: 1, charger: 1, splitter: 1),
+            Phase(420, 600, 2, 3, 1, 2, 160, 5, exploder: 1, ghost: 1, charger: 1, splitter: 2, shaman: 1),
+            Phase(600, 720, 1, 3, 2, 2, 200, 6, exploder: 2, ghost: 1, necromancer: 1, charger: 2, splitter: 2, shaman: 1),
+            Phase(720, 900, 1, 3, 3, 3, 250, 8, exploder: 2, ghost: 2, necromancer: 1, charger: 2, splitter: 2, shaman: 1)
         };
 
         public static SurvivorEnemyDef EnemyDef(int typeIndex) =>
             typeIndex >= 0 && typeIndex < EnemyDefs.Length ? EnemyDefs[typeIndex] : null;
+
+        /// <summary>Observation channel (0..EnemyTypeCount-1) of an enemy type.</summary>
+        public static int ObservedType(int typeIndex)
+        {
+            if (typeIndex < EnemyTypeCount) return typeIndex;
+            SurvivorEnemyDef def = EnemyDef(typeIndex);
+            return def != null && def.ObservedAs >= 0 ? def.ObservedAs : 0;
+        }
 
         public static SpawnPhase PhaseAt(float seconds)
         {
@@ -87,11 +120,11 @@ namespace PersonalArena.Core.Survivor
         }
 
         private static SpawnPhase Phase(float from, float to, int w, int r, int b, int s, int max, float rate,
-            int exploder = 0, int ghost = 0, int necromancer = 0) =>
+            int exploder = 0, int ghost = 0, int necromancer = 0, int charger = 0, int splitter = 0, int shaman = 0) =>
             new SpawnPhase
             {
                 From = from, To = to, MaxAlive = max, SpawnsPerSecond = rate,
-                Weights = Array.AsReadOnly(new[] { w, r, b, s, 0, exploder, ghost, necromancer })
+                Weights = Array.AsReadOnly(new[] { w, r, b, s, 0, exploder, ghost, necromancer, charger, splitter, shaman })
             };
     }
 }

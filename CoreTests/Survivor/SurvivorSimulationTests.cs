@@ -63,7 +63,7 @@ namespace PersonalArena.Core.Tests.Survivor
             Assert.That(sim.AliveEnemyCount, Is.LessThanOrEqualTo(30));
             for (int i = 0; i < sim.Enemies.Count; i++) if (sim.Enemies[i].Active) Assert.That(sim.Enemies[i].TypeIndex, Is.EqualTo(0));
             sim.SetTimeForTests(200f); SurvivorTestHelpers.Step(sim, 600);
-            for (int i = 0; i < sim.Enemies.Count; i++) if (sim.Enemies[i].Active) Assert.That(sim.Enemies[i].TypeIndex, Is.AnyOf(0, 1, 2));
+            for (int i = 0; i < sim.Enemies.Count; i++) if (sim.Enemies[i].Active) Assert.That(sim.Enemies[i].TypeIndex, Is.AnyOf(0, 1, 2, SurvivorDefaults.ChargerTypeIndex));
         }
 
         [Test]

@@ -16,7 +16,10 @@ namespace PersonalArena.View
         private const int LookExploder = 5;
         private const int LookGhost = 6;
         private const int LookNecromancer = 7;
-        private const int LookCount = 8;
+        private const int LookCharger = 8;
+        private const int LookSplitter = 9;
+        private const int LookShaman = 10;
+        private const int LookCount = 11;
         private const int SpitterTypeIndex = 3;
         private const int MaxCreatesPerFrame = 3;
         private const int MaxDying = 60;
@@ -39,15 +42,21 @@ namespace PersonalArena.View
         private const int TintElite = 4;
         private const int TintBoss = 5;
         private const int TintSlow = 6;
+        private const int TintGolden = 7;
 
         private static readonly bool[] WalkerLoops = { true, true, false, false, false, false, true, false };
-        private static readonly int[] PrewarmCounts = { 40, 20, 10, 1, 8, 6, 6, 2 };
-        private static readonly int[] ReserveCounts = { 16, 10, 6, 1, 4, 4, 4, 2 };
+        private static readonly int[] PrewarmCounts = { 40, 20, 10, 1, 8, 6, 6, 2, 4, 6, 2 };
+        private static readonly int[] ReserveCounts = { 16, 10, 6, 1, 4, 4, 4, 2, 3, 4, 2 };
 
         // Resting colours of the M7 enemies (multiplied into their KayKit textures).
         private static readonly Color ExploderTint = new Color(1.6f, 0.72f, 0.42f, 1f);
         private static readonly Color GhostTint = new Color(0.72f, 0.9f, 1.35f, 0.5f);
         private static readonly Color NecromancerTint = new Color(1f, 0.72f, 1.45f, 1f);
+        // M11 enemies.
+        private static readonly Color ChargerTint = new Color(1.55f, 0.5f, 0.45f, 1f);
+        private static readonly Color SplitterTint = new Color(0.65f, 1.5f, 0.55f, 1f);
+        private static readonly Color ShamanTint = new Color(0.55f, 1.45f, 1.3f, 1f);
+        private static readonly Color ShamanHealColor = new Color(0.4f, 1f, 0.6f);
         private static readonly Color[] TintColors =
         {
             Color.white,
@@ -56,7 +65,8 @@ namespace PersonalArena.View
             new Color(0.7f, 0.9f, 1.5f),
             new Color(1.3f, 0.9f, 1.7f),
             new Color(1.45f, 0.8f, 0.75f),
-            new Color(0.55f, 0.8f, 1.35f)
+            new Color(0.55f, 0.8f, 1.35f),
+            new Color(2.1f, 1.6f, 0.45f)
         };
 
         private readonly Stack<EnemyView>[] enemyPools = new Stack<EnemyView>[LookCount];
@@ -70,6 +80,8 @@ namespace PersonalArena.View
         private Transform enemyPoolRoot;
         private Material eliteAuraMaterial;
         private Material bossAuraMaterial;
+        private Material goldenAuraMaterial;
+        private readonly List<EnemyView> demoEnemies = new List<EnemyView>();
         private Material enemyFallbackMaterial;
 
         private sealed class EnemyView
@@ -78,6 +90,9 @@ namespace PersonalArena.View
             public Transform Body;
             public Transform Shadow;
             public Transform Aura;
+            public MeshRenderer AuraRenderer;
+            public bool Golden;
+            public float Twinkle;
             public Renderer[] Renderers;
             public CharacterAnimator Animator;
             public int Look;
@@ -118,11 +133,17 @@ namespace PersonalArena.View
                 case LookExploder: return SurvivorViewLogic.EnemyWalkerIndex(SurvivorDefaults.ExploderTypeIndex);
                 case LookGhost: return SurvivorViewLogic.EnemyWalkerIndex(SurvivorDefaults.GhostTypeIndex);
                 case LookNecromancer: return SurvivorViewLogic.EnemyWalkerIndex(SurvivorDefaults.NecromancerTypeIndex);
+                case LookCharger: return LookBrute;
+                case LookSplitter: return LookWalker;
+                case LookShaman: return SpitterTypeIndex;
                 default: return look;
             }
         }
 
-        private static bool HasBaseTint(int look) => look == LookExploder || look == LookGhost || look == LookNecromancer;
+        private static bool HasBaseTint(int look) => look == LookExploder || look == LookGhost || look == LookNecromancer || look >= LookCharger;
+
+        /// <summary>Extra body size of a look on top of its walker model.</summary>
+        private static float LookScale(int look) => look == LookSplitter ? 1.35f : look == LookCharger ? 0.9f : 1f;
 
         private static Color BaseTint(int look)
         {
@@ -131,6 +152,9 @@ namespace PersonalArena.View
                 case LookExploder: return ExploderTint;
                 case LookGhost: return GhostTint;
                 case LookNecromancer: return NecromancerTint;
+                case LookCharger: return ChargerTint;
+                case LookSplitter: return SplitterTint;
+                case LookShaman: return ShamanTint;
                 default: return Color.white;
             }
         }
@@ -181,6 +205,8 @@ namespace PersonalArena.View
             eliteAuraMaterial.color = new Color(0.75f, 0.35f, 1f, 0.9f);
             bossAuraMaterial = FxAssets.Create("Boss Aura", FxAssets.Ring, true);
             bossAuraMaterial.color = new Color(1f, 0.2f, 0.15f, 0.95f);
+            goldenAuraMaterial = FxAssets.Create("Golden Aura", VfxLibrary.Texture("magic_02"), true);
+            goldenAuraMaterial.color = new Color(1f, 0.82f, 0.25f, 0.95f);
             for (int look = 0; look < LookCount; look++)
             {
                 enemyPools[look] = new Stack<EnemyView>(64);
@@ -226,7 +252,7 @@ namespace PersonalArena.View
 
             if (body != null && artSet != null)
             {
-                view.BodyScale = artSet.CharacterScale * scale;
+                view.BodyScale = artSet.CharacterScale * scale * LookScale(look);
                 Animator animator = SpawnCharacter(body, view.Body, mainHand, offHand);
                 view.Animator = new CharacterAnimator(animator, new[]
                 {
@@ -270,6 +296,7 @@ namespace PersonalArena.View
             auraRenderer.shadowCastingMode = ShadowCastingMode.Off;
             auraRenderer.receiveShadows = false;
             view.Aura = aura.transform;
+            view.AuraRenderer = auraRenderer;
             aura.SetActive(false);
 
             root.SetActive(false);
@@ -288,6 +315,9 @@ namespace PersonalArena.View
                 case LookExploder: return "Exploder";
                 case LookGhost: return "Ghost";
                 case LookNecromancer: return "Necromancer";
+                case LookCharger: return "Charger";
+                case LookSplitter: return "Splitter";
+                case LookShaman: return "Shaman";
                 default: return "Walker";
             }
         }
@@ -322,6 +352,18 @@ namespace PersonalArena.View
             if (type == SurvivorDefaults.NecromancerTypeIndex)
             {
                 return LookNecromancer;
+            }
+            if (type == SurvivorDefaults.ChargerTypeIndex)
+            {
+                return LookCharger;
+            }
+            if (type == SurvivorDefaults.SplitterTypeIndex)
+            {
+                return LookSplitter;
+            }
+            if (type == SurvivorDefaults.ShamanTypeIndex)
+            {
+                return LookShaman;
             }
             return LookWalker;
         }
@@ -453,6 +495,8 @@ namespace PersonalArena.View
                     view.Slot = i;
                     view.Elite = enemy.Elite;
                     view.Boss = enemy.IsBoss;
+                    view.Golden = enemy.Golden;
+                    view.Twinkle = 0f;
                     view.Previous = position;
                     view.Current = position;
                     view.PreviousYaw = yaw;
@@ -464,18 +508,20 @@ namespace PersonalArena.View
                     view.Dying = false;
                     view.PendingAnimation = 0f;
                     view.AppliedTint = -1;
-                    float scale = view.BodyScale * (view.Elite ? eliteScale : 1f);
+                    float scale = view.BodyScale * (view.Elite ? eliteScale : 1f)
+                        * (enemy.Small ? SurvivorSim.SplitRadiusMul : 1f) * (enemy.Golden ? SurvivorSim.GoldenRadiusMul : 1f);
                     view.HeightScale = scale / Mathf.Max(0.01f, artSet != null ? artSet.CharacterScale : 1f);
                     view.Body.localScale = Vector3.one * scale;
                     view.Body.localPosition = Vector3.zero;
                     view.DisplayScale = scale;
                     view.Pulsing = false;
                     view.Shadow.localScale = Vector3.one * (view.Elite ? eliteScale : 1f) * (view.Boss ? 3.6f : view.Look == LookBrute ? 1.5f : 1.05f);
-                    bool aura = view.Elite || view.Boss;
+                    bool aura = view.Elite || view.Boss || view.Golden;
                     view.Aura.gameObject.SetActive(aura);
                     if (aura)
                     {
-                        float auraSize = enemy.Radius * 2.8f;
+                        view.AuraRenderer.sharedMaterial = view.Golden ? goldenAuraMaterial : view.Boss ? bossAuraMaterial : eliteAuraMaterial;
+                        float auraSize = enemy.Radius * (view.Golden ? 5f : 2.8f);
                         view.Aura.localScale = new Vector3(auraSize, 1f, auraSize);
                     }
                     view.Root.SetPositionAndRotation(position, Quaternion.Euler(0f, yaw, 0f));
@@ -513,6 +559,12 @@ namespace PersonalArena.View
         {
             CharacterAnimator animator = view.Animator;
             bool winding = enemy.WindingUp;
+            if (winding && !view.WasWinding && view.Look == LookCharger)
+            {
+                // A charger announces its dash.
+                effects.Shockwave(view.Current, HurtColor, 3.2f, 0.7f);
+                effects.Text(view.Current + Vector3.up * 2.6f, "!", HurtColor, 1.8f, 0.8f);
+            }
             if (animator == null)
             {
                 view.WasWinding = winding;
@@ -530,7 +582,7 @@ namespace PersonalArena.View
             view.WasWinding = winding;
 
             view.Claw -= SurvivorSim.FixedDeltaTime;
-            if (!winding && view.Look != LookSpitter && view.Look != LookNecromancer && view.Claw <= 0f && enemy.StunRemaining <= 0f && sim.Hero.Alive && animator.OneShot < 0)
+            if (!winding && view.Look != LookSpitter && view.Look != LookNecromancer && view.Look != LookShaman && view.Claw <= 0f && enemy.StunRemaining <= 0f && sim.Hero.Alive && animator.OneShot < 0)
             {
                 float reach = heroRadius + enemy.Radius + 0.35f;
                 float dx = view.Current.x - hero.x;
@@ -548,7 +600,7 @@ namespace PersonalArena.View
             {
                 animator.SetBase(WalkerIdle, 1f);
             }
-            else if (view.Runs || enemy.TypeIndex == 1)
+            else if (view.Runs || enemy.TypeIndex == 1 || enemy.Charging)
             {
                 animator.SetBase(WalkerRun, Mathf.Clamp(speed / 4f, 0.6f, 1.4f));
             }
@@ -582,8 +634,12 @@ namespace PersonalArena.View
                 view.Root.SetPositionAndRotation(position, Quaternion.Euler(0f, yaw, 0f));
                 if (view.Aura.gameObject.activeSelf)
                 {
-                    float auraSize = enemy.Radius * 2.8f * pulse;
+                    float auraSize = enemy.Radius * (view.Golden ? 5f : 2.8f) * pulse;
                     view.Aura.localScale = new Vector3(auraSize, 1f, auraSize);
+                    if (view.Golden)
+                    {
+                        view.Aura.localRotation = Quaternion.Euler(0f, (Time.unscaledTime * 70f) % 360f, 0f);
+                    }
                 }
 
                 view.Flash = Mathf.Max(0f, view.Flash - realDelta);
@@ -592,6 +648,7 @@ namespace PersonalArena.View
                     : enemy.WindingUp ? TintWindup
                     : enemy.StunRemaining > 0f ? TintStun
                     : enemy.SlowRemaining > 0f ? TintSlow
+                    : view.Golden ? TintGolden
                     : view.Boss ? TintBoss
                     : view.Elite ? TintElite
                     : TintNone;
@@ -610,6 +667,19 @@ namespace PersonalArena.View
                 if (onScreen)
                 {
                     visible++;
+                    if (view.Golden)
+                    {
+                        view.Twinkle -= realDelta;
+                        if (view.Twinkle <= 0f)
+                        {
+                            view.Twinkle = 0.1f;
+                            effects.Sparkle(position + Vector3.up * 0.5f, GoldColor, 1, 0.6f, 1.6f, 0.26f);
+                        }
+                    }
+                    if (enemy.Charging)
+                    {
+                        effects.Puff(position, new Color(0.75f, 0.6f, 0.5f, 0.5f), 1, 0.8f, 0.4f, 0.5f, 0.3f);
+                    }
                     if (enemy.SlowRemaining > 0f)
                     {
                         PresentChill(position, view.HeightScale, realDelta);
@@ -720,6 +790,83 @@ namespace PersonalArena.View
             }
         }
 
+        private void OnEnemyCharged(SurvivorEvent e)
+        {
+            Vector3 point = ArenaSpace.ToWorld(e.Point);
+            effects.Shockwave(point, HurtColor, 2.4f, 0.4f);
+            effects.Puff(point, new Color(0.75f, 0.6f, 0.5f, 0.6f), 6, 0.9f, 1f, 0.6f, 0.4f);
+        }
+
+        private void OnEnemySplit(SurvivorEvent e)
+        {
+            Vector3 point = ArenaSpace.ToWorld(e.Point);
+            effects.Shockwave(point, SplitterTint, 3f, 0.5f);
+            effects.Puff(point, new Color(0.45f, 0.9f, 0.4f, 0.6f), 8, 0.9f, 1.4f, 0.7f, 0.6f);
+        }
+
+        private void OnEnemyHealed(SurvivorEvent e)
+        {
+            Vector3 point = ArenaSpace.ToWorld(e.Point);
+            float radius = Mathf.Max(1f, e.Value);
+            if (enemiesById.TryGetValue(e.Id, out EnemyView shaman))
+            {
+                shaman.Animator?.PlayOneShot(WalkerThrowState, 1.2f, false);
+            }
+            effects.AreaFill(point, ShamanHealColor, radius, 0.7f);
+            effects.Shockwave(point, ShamanHealColor, radius * RingQuadPerRadius, 0.7f);
+            effects.Sparkle(point, ShamanHealColor, 14, radius * 0.7f, 1.8f, 0.22f);
+        }
+
+        private void OnGoldenSpawned(SurvivorEvent e)
+        {
+            Vector3 point = ArenaSpace.ToWorld(e.Point);
+            effects.Shockwave(point, GoldColor, 4f, 0.7f);
+            effects.Sparkle(point, GoldColor, 16, 0.8f, 2.4f, 0.28f);
+            effects.Text(point + Vector3.up * 2.8f, "QUÁI VÀNG!", GoldColor, 1.3f, 1.4f);
+        }
+
+        private void OnGoldenKilled(SurvivorEvent e)
+        {
+            Vector3 point = ArenaSpace.ToWorld(e.Point);
+            effects.Shockwave(point, GoldColor, 6f, 0.8f);
+            effects.Flash(point + Vector3.up, GoldColor, 4f, 0.3f);
+            effects.Sparkle(point, GoldColor, 36, 1.5f, 3f, 0.32f);
+            effects.Text(point + Vector3.up * 2.8f, "VÀNG x5!", GoldColor, 1.4f, 1.4f);
+        }
+
+        /// <summary>-fxDemo: the three M11 enemy looks and a golden walker standing below the hero.</summary>
+        private void PlayEnemyDemo(Vector3 center)
+        {
+            if (demoEnemies.Count > 0)
+            {
+                return;
+            }
+            int[] looks = { LookCharger, LookSplitter, LookShaman, LookWalker };
+            for (int i = 0; i < looks.Length; i++)
+            {
+                EnemyView view = CreateEnemyView(looks[i]);
+                view.Golden = i == looks.Length - 1;
+                Vector3 point = center + new Vector3(2.6f + i * 2.2f, 0f, -3.6f);
+                view.Root.SetPositionAndRotation(point, Quaternion.Euler(0f, 180f, 0f));
+                view.Root.gameObject.SetActive(true);
+                if (view.Animator != null)
+                {
+                    view.Animator.ResetTo(WalkerIdle);
+                    view.Animator.Tick(0.1f);
+                }
+                view.AppliedTint = -1;
+                ApplyEnemyTint(view, view.Golden ? TintGolden : TintNone);
+                if (view.Golden)
+                {
+                    view.AuraRenderer.sharedMaterial = goldenAuraMaterial;
+                    view.Aura.localScale = new Vector3(2.4f, 1f, 2.4f);
+                    view.Aura.gameObject.SetActive(true);
+                    effects.Sparkle(point + Vector3.up * 0.5f, GoldColor, 10, 0.7f, 1.6f, 0.26f);
+                }
+                demoEnemies.Add(view);
+            }
+        }
+
         private void DisposeEnemyAnimators()
         {
             for (int i = 0; i < allEnemyViews.Count; i++)
@@ -728,6 +875,7 @@ namespace PersonalArena.View
             }
             DestroyUnityObject(eliteAuraMaterial);
             DestroyUnityObject(bossAuraMaterial);
+            DestroyUnityObject(goldenAuraMaterial);
             DestroyUnityObject(enemyFallbackMaterial);
         }
     }

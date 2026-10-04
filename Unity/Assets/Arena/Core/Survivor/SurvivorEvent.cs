@@ -22,7 +22,16 @@ namespace PersonalArena.Core.Survivor
         /// <summary>A bomb pickup went off around the hero at Point; Value = blast radius.</summary>
         BombExploded,
         /// <summary>A mana potion restored Value energy.</summary>
-        ManaRestored
+        ManaRestored,
+        /// <summary>M11: a charger starts its dash (Id = enemy, Point = start).</summary>
+        EnemyCharged,
+        /// <summary>M11: a splitter died and left small copies (Value = count).</summary>
+        EnemySplit,
+        /// <summary>M11: a shaman healed the enemies around it (Value = radius).</summary>
+        EnemyHealed,
+        GoldenSpawned,
+        /// <summary>M11: a golden enemy died (Value = gold dropped).</summary>
+        GoldenKilled
     }
 
     public readonly struct SurvivorEvent

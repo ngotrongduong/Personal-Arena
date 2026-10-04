@@ -114,7 +114,8 @@ namespace PersonalArena.Core.Survivor
     }
 
     /// <summary>Explode: winds up next to the hero, then blows up (area damage) and dies without drops.</summary>
-    public enum SurvivorAttackKind { Contact, Melee, Ranged, Explode }
+    /// <summary>Charge (M11): winds up, then dashes straight ahead. Support (M11): keeps its distance and never attacks.</summary>
+    public enum SurvivorAttackKind { Contact, Melee, Ranged, Explode, Charge, Support }
 
     public sealed class SurvivorEnemyDef
     {
@@ -145,6 +146,12 @@ namespace PersonalArena.Core.Survivor
         /// <summary>Seconds between walker summons (0 = never; the boss uses the tuning instead).</summary>
         public float SummonInterval { get; init; }
         public int SummonCount { get; init; }
+        /// <summary>M11: number of small copies left behind on death (0 = none).</summary>
+        public int SplitCount { get; init; }
+        /// <summary>M11: seconds between heals of the enemies around it (0 = never).</summary>
+        public float HealInterval { get; init; }
+        /// <summary>Observation channel (one of the eight schema v5 enemy types) this type is read through.</summary>
+        public int ObservedAs { get; init; } = -1;
     }
 
     public sealed class SpawnPhase

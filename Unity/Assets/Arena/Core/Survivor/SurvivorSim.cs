@@ -157,7 +157,7 @@ namespace PersonalArena.Core.Survivor
         {
             Config.Validate();
             rng = new Rng(seed);
-            ResetBuffs(seed);
+            ResetBuffs(seed); ResetRares(seed);
             if (MathF.Abs(Config.MapHalfSize * 2f / SpatialHash.CellSize - spatialHash.Side) > 0.01f)
                 spatialHash = new SpatialHash(Config.MapHalfSize, EnemyCapacity);
             ClearPools();
