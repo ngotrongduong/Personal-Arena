@@ -23,6 +23,10 @@ namespace PersonalArena.View
         private float perfWorst;
         private int perfFrames;
         private int perfShotIndex;
+        private bool fxDemo;
+        private float fxDemoAt = -1f;
+        private int fxDemoShots;
+        private int fxDemoRound;
         private readonly StringBuilder perfLine = new StringBuilder(160);
 
         private void BeginPerfLog()
@@ -40,6 +44,7 @@ namespace PersonalArena.View
                 perfQuitAfter = seconds;
             }
             perfNextShot = perfShotEvery;
+            fxDemo = HasArgument("-fxDemo");
             File.WriteAllText(perfLogPath, "simTime,enemies,avgFps,worstMs,weapons\n");
         }
 
@@ -85,6 +90,29 @@ namespace PersonalArena.View
                     perfShotIndex++;
                     Capture(SiblingPath(Path.ChangeExtension(perfLogPath, ".png"),
                         "_" + perfShotIndex.ToString("00", CultureInfo.InvariantCulture)));
+                }
+            }
+
+            // -fxDemo: every new effect at once around the hero, captured shortly after it starts and again mid-way.
+            if (fxDemo && !sim.IsEnded && !highlight.BlocksSim)
+            {
+                float real = Time.realtimeSinceStartup;
+                if (fxDemoAt < 0f && sim.Time >= 4f)
+                {
+                    fxDemoAt = real;
+                    fxDemoShots = 0;
+                    survivorRenderer.PlayFxDemo(survivorRenderer.HeroWorldPosition);
+                }
+                else if (fxDemoAt >= 0f && fxDemoShots < 2 && real - fxDemoAt >= (fxDemoShots == 0 ? 0.05f : 0.3f))
+                {
+                    fxDemoShots++;
+                    Capture(SiblingPath(Path.ChangeExtension(perfLogPath, ".png"),
+                        "_fx" + fxDemoRound.ToString(CultureInfo.InvariantCulture) + (fxDemoShots == 1 ? "a" : "b")));
+                }
+                else if (fxDemoAt >= 0f && fxDemoShots >= 2 && real - fxDemoAt >= 2.5f && fxDemoRound < 1)
+                {
+                    fxDemoRound++;
+                    fxDemoAt = -1f;
                 }
             }
 
