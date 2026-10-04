@@ -929,6 +929,10 @@ namespace PersonalArena.View
             {
                 return;
             }
+            if (view != null)
+            {
+                QueueElementFx(point, 1.5f * view.HeightScale, false, view.Chilled);
+            }
             numbersLeft--;
             float height = view != null ? 1.5f * view.HeightScale : 1.6f;
             effects.Text(point + Vector3.up * height, NumberText(Mathf.Max(1, Mathf.RoundToInt(e.Value))),
@@ -945,6 +949,10 @@ namespace PersonalArena.View
             Vector3 point = ArenaSpace.ToWorld(e.Point);
             if (enemiesById.TryGetValue(e.Id, out EnemyView view))
             {
+                if ((point - heroCurrent).sqrMagnitude < 900f)
+                {
+                    QueueElementFx(point, 1.5f * view.HeightScale, true, view.Chilled);
+                }
                 StartDying(view);
             }
             if (puffsLeft > 0 && (point - heroCurrent).sqrMagnitude < 900f)

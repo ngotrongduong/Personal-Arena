@@ -82,6 +82,7 @@ namespace PersonalArena.View
             barrierRoot = CreateFlatQuad("Barrier", heroRoot, barrierMaterial);
             barrierRoot.localPosition = new Vector3(0f, 0.06f, 0f);
             barrierRoot.gameObject.SetActive(false);
+            BuildBarrierBubble();
 
             whirlRoot = CreateChild("Whirlwind", heroRoot);
             for (int i = 0; i < 3; i++)
@@ -115,6 +116,7 @@ namespace PersonalArena.View
             HideM9Views(trapViews, false);
             HideM9Views(wallViews, false);
             if (barrierRoot != null) barrierRoot.gameObject.SetActive(false);
+            if (barrierBubble != null) barrierBubble.gameObject.SetActive(false);
             if (whirlRoot != null) whirlRoot.gameObject.SetActive(false);
         }
 
@@ -170,6 +172,7 @@ namespace PersonalArena.View
 
             int charges = sim.BarrierCharges;
             barrierRoot.gameObject.SetActive(charges > 0 && sim.Hero.Alive);
+            PresentBarrierBubble(charges, charges > 0 && sim.Hero.Alive);
             if (charges > 0)
             {
                 float pulse = 1f + 0.05f * Mathf.Sin(animationClock * 6f);
@@ -268,6 +271,9 @@ namespace PersonalArena.View
                     case WeaponVisual.Retaliate:
                         effects.Shockwave(heroPosition, color, radius * RingQuadPerRadius, 0.4f);
                         effects.Sparks(heroPosition + Vector3.up * 0.6f, Vector3.up, color, 10, 6f, 1f);
+                        // Spikes burst out of the ground around the hero.
+                        effects.Crystals(heroPosition, SpikeColor, 9, Mathf.Max(1.2f, radius * 0.7f), 1.1f, 0.5f, 0.16f);
+                        effects.Shards(heroPosition, SpikeColor, 8, 3.5f, 0.4f);
                         return true;
                     case WeaponVisual.Purge:
                         effects.Shockwave(point, Color.white, radius * RingQuadPerRadius, 0.7f);
@@ -327,6 +333,7 @@ namespace PersonalArena.View
                     if (delta.sqrMagnitude > 0.01f)
                     {
                         effects.Bolt(from, to, LightningColor, 0.8f);
+                        MarkElement(to, 0.8f, ElementLightning);
                         effects.Sparks(to, Vector3.up, LightningColor, 4, 5f, 1f);
                     }
                     effects.Flash(to, LightningColor, 1.4f, 0.14f);

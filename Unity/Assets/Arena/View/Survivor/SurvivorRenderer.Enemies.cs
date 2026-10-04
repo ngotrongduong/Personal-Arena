@@ -95,6 +95,7 @@ namespace PersonalArena.View
             public bool Walking;
             public bool WasWinding;
             public float Flash;
+            public bool Chilled;
             public float Claw;
             public bool Dying;
             public float DeadSeconds;
@@ -586,6 +587,7 @@ namespace PersonalArena.View
                 }
 
                 view.Flash = Mathf.Max(0f, view.Flash - realDelta);
+                view.Chilled = enemy.SlowRemaining > 0f;
                 int tint = view.Flash > 0f ? TintFlash
                     : enemy.WindingUp ? TintWindup
                     : enemy.StunRemaining > 0f ? TintStun
