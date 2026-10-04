@@ -33,7 +33,7 @@ This file is the single source of rules. `CLAUDE.md` imports it; Codex reads it 
 | Agent | Does | Never does |
 |---|---|---|
 | **Claude** | Plans, splits work into tasks, reviews, runs git (branch, commit, merge, push), runs Unity batchmode and real training, updates STATUS | — |
-| **Codex** | Implements one task file from `docs/tasks/` at a time (C# Core, tests, Python trainer), runs tests, writes a report in the task file | **Any git command** (commit, branch, push, checkout, stash, reset) |
+| **Codex** | Implements one task file from `docs/tasks/` at a time (C# Core, tests, Python trainer, Unity View/ML code with batchmode tests and builds on the PC), runs tests, writes a report in the task file | **Any git command** (commit, branch, push, checkout, stash, reset) |
 | **Owner (@ngotrongduong)** | Runs things only possible on the Windows PC (Unity Editor GUI, GPU training when Claude is not linked), decides game design questions | — |
 
 Codex workflow: pick the first task with `Owner: Codex` and `Status: todo` on the board →
@@ -73,10 +73,10 @@ set it to `review`. Claude reviews, commits and sets `done`.
   a level-up offer is waiting. Unity code must not assume Unity's fixed timestep equals the sim tick.
 - `Step`, `SurvivorObservation.Write` and `WriteMask` allocate nothing (pooled entities,
   `SpatialHash`). Keep the Release `Step` under about 0.05 ms at the late-game horde.
-- Observations: `SurvivorObservation`, schema v4 = 2264 values in [-1, 1] (self 64, inventory 64,
-  offers 4 × 66, 72 rays × 25, density 3 × 8 × 3). Slots are reserved (64-item catalog, 8 enemy
+- Observations: `SurvivorObservation`, schema v5 = 2592 values in [-1, 1] (self 72, inventory 128,
+  offers 4 × 130, 72 rays × 25, density 3 × 8 × 3). Slots are reserved (128-item catalog, 8 enemy
   kinds) so new content fills slots instead of changing the size. Actions: 3 discrete branches
-  9 / 5 / 5 (move, active skill, level-up pick).
+  9 / 7 / 5 (move, active skill: none + 6, level-up pick).
 - Adaptive brains (D-027): a run records `schema_version.txt`; the trainer resumes any run whose
   schema matches, even after rule changes. Only a change to the observation or action layout
   bumps `SurvivorObservation.SchemaVersion` (then `brain_upgrade.py` grows the old brain,
@@ -103,8 +103,28 @@ set it to `review`. Claude reviews, commits and sets `done`.
 |---|---|
 | Core unit tests | `dotnet test CoreTests` (must pass before any merge; CI runs it on every push) |
 | Trainer tests | `.venv-ml\Scripts\python -m pytest Trainer` |
-| Unity EditMode tests | `"C:\Program Files\Unity\Hub\Editor\6000.3.2f1\Editor\Unity.exe" -batchmode -projectPath Unity -runTests -testPlatform EditMode -testResults results/editmode.xml` (default Hub path; adjust if Unity is elsewhere) |
+| Unity EditMode tests | `powershell -ExecutionPolicy Bypass -File Tools/unity-run.ps1 -Tests EditMode` (prints a summary; raw: `Unity.exe -batchmode -projectPath Unity -runTests -testPlatform EditMode -testResults results/editmode.xml`) |
+| Unity compile check | `powershell -ExecutionPolicy Bypass -File Tools/unity-run.ps1 -Compile` |
+| Unity batchmode method / build | `powershell -ExecutionPolicy Bypass -File Tools/unity-run.ps1 -Method <Namespace.Class.Method> -ExtraArgs "<args>"` |
 | Training | see `docs/TRAINING.md` |
+
+Unity path: `C:\Program Files\Unity\Hub\Editor\6000.3.2f1\Editor\Unity.exe` (or set `UNITY_EXE`).
+
+## 8b. Saving tokens (every agent)
+
+Usage limits are shared, so wasted context is lost work. These rules are mandatory:
+
+- **Never read a whole Unity log or test XML.** Run Unity through `Tools/unity-run.ps1`; it prints one RESULT line
+  and the first distinct errors. Only if that is not enough, search `results/unity-*.log` for a narrow pattern.
+- **Find before you read.** Search (Grep/`rg`/`Select-String`) for the symbol, then read only that line range.
+  Do not open files over ~600 lines in full; a Claude hook blocks it, Codex must follow the same rule.
+- Never read `Library/`, `Temp/`, `Build/`, `obj/`, `bin/`, or large files under `Trainer/runs/` / `results/`.
+- Run tests with quiet output (`dotnet test CoreTests -c Release` prints a summary; `pytest -q`). Re-run only the
+  failing test (`--filter`, `-k`) while fixing, then the full suite once at the end.
+- Keep files small: split new code by function so no file grows past ~700 lines.
+- Keep `docs/STATUS.md` under 200 lines and `docs/tasks/BOARD.md` under 60 (CI checks). Move old session logs to
+  `docs/archive/SESSIONS.md` and done tasks to `docs/archive/BOARD-DONE.md`. Do not read the archive unless needed.
+- Reports in task files: short (changed files, counts, open issues). No pasted logs.
 
 ## 9. Language
 

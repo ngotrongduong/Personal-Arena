@@ -72,6 +72,8 @@ namespace PersonalArena.Core.Survivor
         public float XpMul = 1.5f;
         /// <summary>Pre-M9 rule: the kick skill also stunned the boss. Now off: like weapon stuns, a kick never stuns the boss.</summary>
         public bool KickStunsBoss = false;
+        /// <summary>Even volleys (2 or 4 spears, beams, bouncing shots, boomerangs) keep one member on the target (D-045). False = old symmetric spread.</summary>
+        public bool CenteredEvenVolleys = true;
 
         // Elites.
         public float EliteRadiusMul = 1.6f;

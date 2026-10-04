@@ -40,6 +40,8 @@ arena, and a sound. Today they run correctly in Core but use fallback visuals.
 
 - Each effect must read Core state/events only (no game rules in the view, AGENTS.md §6).
 - Keep the frame rate: pool any new effect objects like the existing ones; no per-frame allocations in hot paths.
+- Run Unity only via `Tools/unity-run.ps1` (summary output; AGENTS.md §8b). Put new effect code in new files by
+  feature (e.g. `SurvivorRenderer.M9Weapons.cs`), keeping every file under ~700 lines.
 - Rebuild the viewer at the end into `Build/WatchNext` (`-watchBuildOutput Build/WatchNext`, as in T-041; never the default `Build/Watch`).
 
 ## Done when

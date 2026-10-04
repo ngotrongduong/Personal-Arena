@@ -54,11 +54,27 @@ Graphics for the new items are T-037, not this task (missing icons may use the e
    `Trainer/brain_upgrade.py` into a TEMP folder (never modify `Trainer/runs/` in place) if the smoke test needs a brain,
    or report what the smoke test does without one.
 
+7. **Split the large View files** (after 1–6 work, same task). These files are too big to read cheaply; split each
+   into `partial class` files (or small helper classes) **by function**, moving code only, no behaviour change:
+
+   | File (lines) | Split idea |
+   |---|---|
+   | `SurvivorWatchController.cs` (1719) | `.Brains` (load/swap brain), `.Input` (keys), `.Panels` (menus/panels wiring), `.Training` (service client) |
+   | `BrainLineagePanel.cs` (1277) | `.Build` (UI creation), `.Tree` (branch tree), `.Actions` (buttons) |
+   | `SurvivorRenderer.cs` (1051) | by drawn thing: hero, pickups, effects pool (weapons/enemies are already separate) |
+   | `LineageStore.cs` (1034) | `.Read`, `.Write`, `.Model` |
+   | `SurvivorHud.Build.cs` (930), `SurvivorHud.cs` (888) | `.SkillBar`, `.Items`, `.LevelUp`, `.EndScreen` |
+   | `TrainingHistoryPanel.cs` (828), `SurvivorRenderer.Weapons.cs` (798), `ArenaEffects.cs` (754), `SurvivorRenderer.Enemies.cs` (725), `BehaviorProfilePanel.cs` (720) | split by section so each part is under ~500 lines |
+
+   Target: no file in `Unity/Assets/Arena/View` or `Unity/Assets/Arena/ML` above ~700 lines. Each new `.cs` needs a
+   `.meta` (let Unity generate it in the compile run). Proof: compile clean and the same EditMode count passes as
+   before the split. Use search to find each region; do not read these files whole.
+
 ## Hard rules
 
 - No git commands. No changes to `Trainer/runs/` (the owner's trained brains). Do not stop the owner's running training.
-- Unity headless: `"C:\Program Files\Unity\Hub\Editor\6000.3.2f1\Editor\Unity.exe" -batchmode -nographics -quit -projectPath Unity -executeMethod <X> -logFile <log>`.
-  EditMode tests: `... -batchmode -projectPath Unity -runTests -testPlatform EditMode -testResults results/editmode.xml` (no `-quit`).
+- Run Unity only through `Tools/unity-run.ps1` (AGENTS.md §8, §8b): `-Compile`, `-Tests EditMode`,
+  `-Method <X> -ExtraArgs "..."`. It prints a short summary; never read whole Unity logs or test XML.
 - Every new Unity asset gets its `.meta`. Do not commit (you cannot) `Library/`, builds, `results/`.
 - Do not change `ProjectSettings.asset` scripting defines (the EditMode run can remove `SENTIS_ANALYTICS_ENABLED`: restore it).
 
@@ -68,6 +84,9 @@ Graphics for the new items are T-037, not this task (missing icons may use the e
 - [x] Unity EditMode tests all pass (296/296)
 - [x] `Build/TrainingNext` and `Build/WatchNext` built without errors
 - [x] HUD render captures at 1920×1080 and 1280×720 for Warrior, Mage and Archer; all rows fit without overlap
+- [ ] No View/ML file above ~700 lines — **not done** (added to the task after Codex started): `SurvivorWatchController.cs`
+      1719, `SurvivorRenderer.cs` 1107, `SurvivorHud.Build.cs` 933, `SurvivorHud.cs` 900, `SurvivorRenderer.Weapons.cs` 836,
+      `SurvivorRenderer.Enemies.cs` 728. Move-only split, left for a later task.
 - [x] Report filled
 
 ## Report (filled by the implementer)

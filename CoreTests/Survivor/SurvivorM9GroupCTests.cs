@@ -104,7 +104,8 @@ namespace PersonalArena.Core.Tests.Survivor
                 sim.Step(default); List<SurvivorProjectile> shots = Shots(sim, 64);
                 Assert.That(shots.Count, Is.EqualTo(counts[level - 1]), "level " + level); Assert.That(Find(sim.Events, SurvivorEventType.WeaponFired, 64).Extra, Is.EqualTo(counts[level - 1]));
                 float sumY = 0f; foreach (SurvivorProjectile s in shots) { Assert.That(s.Velocity.X, Is.GreaterThan(0f)); Assert.That(s.Velocity.Length, Is.EqualTo(10f).Within(1e-3f)); Assert.That(s.Radius, Is.EqualTo(0.35f).Within(1e-5f)); Assert.That(s.Bounces, Is.Zero); sumY += s.Velocity.Y; }
-                Assert.That(sumY, Is.EqualTo(0f).Within(1e-3f));
+                if (shots.Count % 2 == 1) Assert.That(sumY, Is.EqualTo(0f).Within(1e-3f));
+                Assert.That(shots.Exists(shot => MathF.Abs(shot.Velocity.Y) < 1e-3f), Is.True, "one shot flies straight at the target (level " + level + ")");
             }
         }
 

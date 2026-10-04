@@ -62,7 +62,11 @@ namespace PersonalArena.Core.Tests.Survivor
             SurvivorEvent fired = Find(sim.Events, SurvivorEventType.WeaponFired, 1);
             Assert.That(fired.Extra, Is.EqualTo(3)); Assert.That(sim.WeaponCooldownForTests(1), Is.EqualTo(1.8f).Within(1e-5f));
             Assert.That(SurvivorCatalog.ThrustAngleOffset(0, 3), Is.EqualTo(-20f * MathF.PI / 180f).Within(1e-6f));
-            Assert.That(SurvivorCatalog.ThrustAngleOffset(1, 2), Is.EqualTo(10f * MathF.PI / 180f).Within(1e-6f));
+            Assert.That(SurvivorCatalog.ThrustAngleOffset(1, 2, false), Is.EqualTo(10f * MathF.PI / 180f).Within(1e-6f));
+            Assert.That(SurvivorCatalog.ThrustAngleOffset(0, 2), Is.Zero, "even volleys keep one member on the target");
+            Assert.That(SurvivorCatalog.ThrustAngleOffset(1, 2), Is.EqualTo(20f * MathF.PI / 180f).Within(1e-6f));
+            Assert.That(SurvivorCatalog.ThrustAngleOffset(3, 4), Is.EqualTo(40f * MathF.PI / 180f).Within(1e-6f));
+            Assert.That(SurvivorCatalog.ThrustAngleOffset(0, 3), Is.EqualTo(SurvivorCatalog.ThrustAngleOffset(0, 3, false)), "odd volleys unchanged");
         }
 
         [Test]

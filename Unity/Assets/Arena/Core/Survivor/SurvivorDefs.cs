@@ -63,6 +63,8 @@ namespace PersonalArena.Core.Survivor
         public float CooldownPerLevel { get; init; }
         /// <summary>Half-width of an instant capsule weapon, or a Strike's blast radius, before the area multiplier.</summary>
         public float Width { get; init; }
+        /// <summary>Strike only: each blast lands on the densest group of enemies in range instead of a random enemy (arrow rain).</summary>
+        public bool Clustered { get; init; }
         /// <summary>Stun applied to each enemy hit by a Shockwave or Strike weapon (0 = none).</summary>
         public float StunSeconds { get; init; }
         /// <summary>Evolution: the weapon it replaces (−1 for a normal item).</summary>

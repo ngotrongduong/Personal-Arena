@@ -38,7 +38,7 @@ namespace PersonalArena.Core.Survivor
             float halfWidth = def.Width * stats.AreaMul;
             for (int spear = 0; spear < count && !IsEnded; spear++)
             {
-                Vec2 direction = Rotate(aim, SurvivorCatalog.ThrustAngleOffset(spear, count));
+                Vec2 direction = Rotate(aim, SurvivorCatalog.ThrustAngleOffset(spear, count, Config.Tuning.CenteredEvenVolleys));
                 for (int i = 0; i < enemyLimit && !IsEnded; i++)
                 {
                     SurvivorEnemy enemy = enemies[i]; if (!enemy.Active) continue;

@@ -214,7 +214,7 @@ namespace PersonalArena.Core.Survivor
                 ProjectileRange = b.ProjectileRange * 1.2f, Pierce = b.ProjectileSpeed > 0f ? b.Pierce + 1 : b.Pierce,
                 CountByLevel = topCount == 0 ? Array.Empty<int>() : Array.AsReadOnly(new[] { topCount + extraCount }),
                 Duration = b.Duration * durationMul, HitInterval = b.HitInterval * 0.8f,
-                AngularSpeedDegrees = b.AngularSpeedDegrees, Width = b.Width * widthMul,
+                AngularSpeedDegrees = b.AngularSpeedDegrees, Width = b.Width * widthMul, Clustered = b.Clustered,
                 StunSeconds = b.Pattern == WeaponPattern.Freeze ? b.StunSeconds + b.StunPerLevel * top + stunBonus : b.StunSeconds * 1.5f,
                 BouncesByLevel = topBounces == 0 ? Array.Empty<int>() : Array.AsReadOnly(new[] { topBounces + extraBounces }),
                 Chance = b.Chance > 0f ? MathF.Min(1f, b.Chance + b.ChancePerLevel * top + chanceBonus) : 0f, MomentumFloor = momentumFloor,
@@ -261,7 +261,19 @@ namespace PersonalArena.Core.Survivor
             new ItemDef { CatalogIndex = index, Id = id, Name = name, Kind = ItemKind.Filler, MaxLevel = 0 };
 
         /// <summary>Angular offset of spear k in an n-spear fan, in radians.</summary>
-        public static float ThrustAngleOffset(int k, int n) =>
-            (k - (n - 1) * 0.5f) * 20f * MathF.PI / 180f;
+        public static float ThrustAngleOffset(int k, int n) => ThrustAngleOffset(k, n, true);
+
+        /// <summary>
+        /// Angle of volley member <paramref name="k"/> of <paramref name="n"/>, 20 degrees apart. Odd volleys are symmetric around
+        /// the aim (-20, 0, +20). Even volleys keep the first member on the aim and alternate sides (0, +20, -20, +40) when
+        /// <paramref name="centered"/>; the old rule (pre-2026-10-03, <see cref="SurvivorTuning.CenteredEvenVolleys"/> off) spread
+        /// them symmetrically (-10, +10), so no member flew at the target and anything behind it was missed.
+        /// </summary>
+        public static float ThrustAngleOffset(int k, int n, bool centered)
+        {
+            if (!centered || n % 2 == 1) return (k - (n - 1) * 0.5f) * 20f * MathF.PI / 180f;
+            int step = (k + 1) / 2;
+            return (k % 2 == 1 ? step : -step) * 20f * MathF.PI / 180f;
+        }
     }
 }

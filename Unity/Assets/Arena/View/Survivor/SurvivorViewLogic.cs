@@ -626,7 +626,7 @@ namespace PersonalArena.View
                 case SurvivorCatalog.ArcaneBeamIndex: return "Bắn tia ma thuật xuyên thẳng hàng quái";
                 case SurvivorCatalog.ArrowIndex: return "Bắn tên xuyên 1 quái";
                 case SurvivorCatalog.MultiShotIndex: return "Bắn chùm 3 mũi tên tỏa ra";
-                case SurvivorCatalog.ArrowRainIndex: return "Mưa tên trút xuống quái gần";
+                case SurvivorCatalog.ArrowRainIndex: return "Mưa tên trút xuống chỗ quái đông nhất";
                 case SurvivorCatalog.OrbitKnifeIndex: return "Dao bay vòng quanh người";
                 case SurvivorCatalog.DaggerIndex: return "Chém nhanh nửa vòng trước mặt";
                 case SurvivorCatalog.CrossbowIndex: return "Bắn nỏ xuyên thẳng, sát thương lớn";
