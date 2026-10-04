@@ -9,7 +9,7 @@
 - **Hướng đi:** chỉ làm Personal Arena (D-016), game giống **Vampire Survivors** nhất có thể; AI tự học chơi
   (owner chỉ xem, D-019). Repo public để CI miễn phí (D-015) → không bao giờ commit secret.
 - **Milestone:** M0–M8 xong (lịch sử ở `docs/archive/SESSIONS.md`). **M9 (D-041)** đang làm trên nhánh
-  `claude/serene-sagan-3a70q5` (PR #7): Core + Trainer + Unity xong (T-041, T-037), chờ merge vào `develop`.
+  `claude/serene-sagan-3a70q5` (PR #7) đã merge vào `develop` ngày 2026-10-04: Core + Trainer + Unity xong (T-041, T-037).
 - **M9 đã có trong Core:** 6 + 6 ô mang theo; vũ khí mới 26–33, 64–72; phụ kiện 34–37, 58–61; tiến hóa 112–127;
   6 skill chủ động mỗi class; schema **v5** (quan sát 2592, hành động 9/7/5, danh mục 128);
   `brain_upgrade` v4 → v5. Đá không choáng trùm (D-042). Core chia file theo cơ chế (T-046).
@@ -19,7 +19,7 @@
 
 ## Việc tiếp theo (theo thứ tự)
 
-1. Merge PR #7 vào `develop` khi CI xanh.
+1. Owner mở `Xem-AI.cmd` (bản xem v0.8.150) và bấm TRAIN để não học tiếp trên schema v5; theo dõi AI dùng món M9.
 2. **Trình xem đẹp hơn:** khi AI bị dồn vào góc, nửa màn hình là vùng tối ngoài hàng rào; ngọc EXP rải kín đất
    giữa trận nhìn rối. (Icon M9 đã thay bằng icon riêng từ game-icons.net ngày 2026-10-04.)
 3. **Mượt và đẹp (ưu tiên của owner 2026-10-04):** đo FPS trình xem lúc đông quái, xem tận mắt từng hiệu ứng M9;
