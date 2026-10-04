@@ -171,6 +171,12 @@ thưởng theo thứ bậc, nghiệm thu bằng đánh giá 100 seed). Đấu tr
 
 ## Nhật ký phiên cũ (mới nhất trên cùng)
 
+### 2026-10-03 (sau) — Claude (cloud): rà soát vũ khí và skill (D-045)
+- Owner báo Mưa tên không giống AOE. Đo mọi vũ khí (cấp 1 và 5), mọi tiến hóa, mọi skill trên bãi quái đứng yên (dày và thưa).
+- Sửa Mưa tên: rơi vào chỗ quái đông nhất, vùng 2,6 m, 1–3 vùng theo cấp; hiệu ứng trình xem rải tên khắp vùng.
+- Sửa loạt chẵn (Nỏ, Giáo, Tia ma thuật, Đạn nảy, Boomerang 2 mũi): 1 mũi luôn thẳng vào mục tiêu. Nỏ cấp 5 từ 68 → 234 sát thương/giây khi quái đứng thưa.
+- Skill `arrow-barrage` đổi tên tiếng Việt thành "Loạt tên". CoreTests 627/627. Hiệu ứng Mưa tên mới cần build lại trên PC (T-041).
+
 ### 2026-10-03 — Claude (cloud): cơ chế tiết kiệm token
 - STATUS từ 498 → dưới 200 dòng; lịch sử chuyển `docs/archive/SESSIONS.md`, task xong `docs/archive/BOARD-DONE.md`.
 - Hook chặn đọc file sinh ra / file lớn, CI kiểm STATUS ≤ 200 dòng, `Tools/unity-run.ps1` cho Codex,
