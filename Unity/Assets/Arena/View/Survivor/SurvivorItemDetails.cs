@@ -36,7 +36,13 @@ namespace PersonalArena.View
             if (def.EvolvesFrom >= 0)
             {
                 ItemDef baseDef = SurvivorCatalog.Get(def.EvolvesFrom);
-                return baseDef == null ? string.Empty : "The evolved " + baseDef.Name + ": far stronger, with longer reach and a shorter cooldown.";
+                if (baseDef == null)
+                {
+                    return string.Empty;
+                }
+                return baseDef.Pattern == WeaponPattern.Ring
+                    ? "The evolved " + baseDef.Name + ": more bodies, harder hits and a wider circle."
+                    : "The evolved " + baseDef.Name + ": far stronger, with longer reach and a shorter cooldown.";
             }
             if (def.Kind == ItemKind.Passive)
             {

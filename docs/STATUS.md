@@ -2,7 +2,7 @@
 
 > "Bộ nhớ" giữa các phiên. Đọc đầu tiên, cập nhật cuối cùng. **Giữ file dưới 200 dòng** (CI kiểm):
 > nhật ký cũ chuyển sang `docs/archive/SESSIONS.md`, task xong sang `docs/archive/BOARD-DONE.md`.
-> Cập nhật lần cuối: 2026-10-05 (phiên Claude trên PC: M16 — game tiếng Anh, HUD mới, Codex, vũ khí vòng xoay; bản xem + train v0.8.192).
+> Cập nhật lần cuối: 2026-10-05 (phiên Claude trên PC: M16 — game tiếng Anh, HUD mới, Codex, vũ khí vòng xoay + tiến hóa của chúng; bản xem + train v0.8.194).
 
 ## Đang ở đâu (đọc phần này là đủ để bắt đầu)
 
@@ -31,16 +31,19 @@
 - **M16 (T-051, T-052):** bảng **Codex** (phím K) liệt kê mọi vũ khí/bị động/tiến hóa/skill kèm số liệu từng cấp và
   công thức; 4 vũ khí **vòng xoay** dùng chung cả 3 class (`WeaponPattern.Ring`, catalog 73–76: Spirit Orbs, Saw
   Ring, Frost Halo, Comet — D-051), cầm nhiều vòng cùng lúc được; hiệu ứng Purge chỉ còn một vòng đúng bán kính.
-- **Bản cài (2026-10-05):** `Build/WatchNext` + `Build/TrainingNext` v0.8.192 (bản train có vũ khí vòng, tự tráo ở
+- **M16 (T-053):** 4 vũ khí vòng có **tiến hóa** (catalog 77–80: Guardian Spirits ← Recovery, Razor Tempest ←
+  Thorn Armor, Glacier Crown ← Time Charm, Starfall ← Crown; thêm vật thể, vòng rộng hơn 10–15%) và **icon riêng**
+  (glyph tự vẽ bằng script, không tải về); catalog dùng tới ô 80, schema vẫn v5.
+- **Bản cài (2026-10-05):** `Build/WatchNext` + `Build/TrainingNext` v0.8.194 (bản train có vũ khí vòng + tiến hóa, tự tráo ở
   lần bấm TRAIN kế tiếp); smoke test 3 class đạt; 60 FPS, mở app ~0,9 s tới khung hình đầu.
-- **Test:** CoreTests 651/651, pytest 204/204, EditMode 313/313 (PC, 2026-10-05).
+- **Test:** CoreTests 653/653, pytest 204/204, EditMode 315/315 (PC, 2026-10-05).
 
 ## Việc tiếp theo (theo thứ tự)
 
-1. **Owner:** mở `Xem-AI.cmd` (bản xem v0.8.192), xem HUD mới, Codex (K), vũ khí vòng xoay, rồi bấm TRAIN (dừng rồi
-   bấm lại nếu đang train) — não chưa từng thấy vũ khí 73–76 nên cần học tiếp (điểm số sẽ dao động một thời gian).
-2. **Claude:** tiến hóa + icon riêng cho 4 vũ khí vòng (hiện dùng lại glyph cũ, chưa có bản tiến hóa); cân bằng lại
-   sau khi có số liệu train; ngọc EXP rải kín đất — chưa thấy với não Chiến binh, cần xem với não yếu rồi mới sửa.
+1. **Owner:** mở `Xem-AI.cmd` (bản xem v0.8.194), xem HUD mới, Codex (K), vũ khí vòng xoay, rồi bấm TRAIN (dừng rồi
+   bấm lại nếu đang train) — não chưa từng thấy vũ khí 73–80 nên cần học tiếp (điểm số sẽ dao động một thời gian).
+2. **Claude:** cân bằng lại vũ khí vòng sau khi có số liệu train (bản tiến hóa mới chỉ xem qua cờ `-ringDemoEvolved`,
+   chưa thấy trong trận thật); ngọc EXP rải kín đất — chưa thấy với não Chiến binh, cần xem với não yếu rồi mới sửa.
 3. Nợ nhỏ (nhật ký 2026-10-02 trong archive): rẽ nhánh từ champion cũ thiếu `training_status.json`,
    khóa `brain_lineage` khi chạy song song, walker triệu hồi ngoài bản đồ 1 tick.
 
@@ -80,7 +83,7 @@
 | M9: nội dung kiểu Vampire Survivors (6 + 6 ô, vũ khí/phụ kiện/tiến hóa mới, 6 skill, schema v5) | xong (T-036..T-046); tách file View lớn chuyển sang T-049 |
 | M10–M14: hiệu ứng, vật phẩm rơi, quái mới, gói Asset Store, sóng kiếm bay | xong (PR #8–#17) — chờ owner xem bản v0.8.171 và train tiếp |
 | M15: hình ảnh riêng cho 34 vũ khí tiến hóa + đồng hồ buff HUD (T-047), mở app nhanh (T-048), tách file View (T-049) | xong |
-| M16: rừng quanh bản đồ, game tiếng Anh, HUD mới + tooltip (T-050), Codex (T-051), vũ khí vòng xoay + Purge (T-052) | xong — chờ owner xem bản v0.8.192 và train tiếp |
+| M16: rừng quanh bản đồ, game tiếng Anh, HUD mới + tooltip (T-050), Codex (T-051), vũ khí vòng xoay + Purge (T-052), tiến hóa + icon vòng (T-053) | xong — chờ owner xem bản v0.8.194 và train tiếp |
 
 
 ## Cách làm trên PC (Claude)
@@ -130,6 +133,8 @@
   chung 3 class → `WeaponPattern.Ring` + 4 món 73–76 trong mọi pool (D-051), Orbit cũ và golden không đổi.
   Bản đầu có vệt đuôi và hiệu ứng gói trên vật thể: ở x8 vệt thành vòng tròn kín, hiệu ứng gói rơi hạt lại → bỏ cả hai.
 - Unity `-runTests` khi có lỗi biên dịch thì treo ~10 phút mới thoát → chạy `unity-run.ps1 -Compile` trước.
+- Cuối phiên (T-053): tiến hóa 77–80 + 4 glyph riêng cho vũ khí vòng; vòng tiến hóa giữ hình, đổi màu theo hệ,
+  thêm một chi tiết (quầng sáng, vệt đất, cụm băng, đuôi dài). Cờ `-ringDemoEvolved` mời thẳng bản tiến hóa.
 
 ### 2026-10-05 (sau) — Claude (PC): T-048 mở trình xem nhanh hơn, T-049 tách file View
 - T-048: "khựng 3 s ở khung hình đầu" hóa ra là thời gian mở app (màn logo Unity 2,2 s), bị `-perfLog` tính nhầm

@@ -189,7 +189,7 @@ namespace PersonalArena.View.Tests
                 // No two evolutions share both element and colour.
                 Assert.That(seen.Add(style.Element + "/" + style.Color), Is.True, definition.Name);
             }
-            Assert.That(evolutions, Is.EqualTo(34));
+            Assert.That(evolutions, Is.EqualTo(38));
         }
 
         [Test]

@@ -93,6 +93,9 @@ namespace PersonalArena.Core.Survivor
         /// <summary>M9: evolutions of the new weapons (26-33, 64-66, 68-72) occupy 112..127; purge (67) has none.</summary>
         public const int FirstNewEvolutionIndex = 112;
         public const int NewEvolutionCount = 16;
+        /// <summary>Evolutions of the ring weapons occupy 77..80.</summary>
+        public const int FirstRingEvolutionIndex = 77;
+        public const int RingEvolutionCount = 4;
 
         /// <summary>Combo blade: strikes per swing and seconds between them (the last strike deals <see cref="ComboFinisherMul"/>×).</summary>
         public const int ComboHits = 3;
@@ -124,6 +127,7 @@ namespace PersonalArena.Core.Survivor
         {
             if (index >= FirstEvolutionIndex && index < FirstEvolutionIndex + EvolutionCount) return Evolutions[index - FirstEvolutionIndex];
             if (index >= FirstNewEvolutionIndex && index < FirstNewEvolutionIndex + NewEvolutionCount) return NewEvolutions[index - FirstNewEvolutionIndex];
+            if (index >= FirstRingEvolutionIndex && index < FirstRingEvolutionIndex + RingEvolutionCount) return RingEvolutions[index - FirstRingEvolutionIndex];
             return index switch
             {
                 0 => Sweep,
@@ -192,6 +196,7 @@ namespace PersonalArena.Core.Survivor
         {
             for (int i = 0; i < Evolutions.Length; i++) if (Evolutions[i].EvolvesFrom == weapon) return Evolutions[i].CatalogIndex;
             for (int i = 0; i < NewEvolutions.Length; i++) if (NewEvolutions[i].EvolvesFrom == weapon) return NewEvolutions[i].CatalogIndex;
+            for (int i = 0; i < RingEvolutions.Length; i++) if (RingEvolutions[i].EvolvesFrom == weapon) return RingEvolutions[i].CatalogIndex;
             return -1;
         }
 

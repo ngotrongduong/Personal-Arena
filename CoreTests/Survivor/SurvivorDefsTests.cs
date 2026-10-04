@@ -37,7 +37,7 @@ namespace PersonalArena.Core.Tests.Survivor
             }
             for (int i = 0; i < SurvivorCatalog.EvolutionCount; i++) Assert.That(SurvivorCatalog.Get(SurvivorCatalog.FirstEvolutionIndex + i), Is.Not.Null);
             for (int i = 0; i < SurvivorCatalog.NewEvolutionCount; i++) Assert.That(SurvivorCatalog.Get(SurvivorCatalog.FirstNewEvolutionIndex + i), Is.Not.Null);
-            Assert.That(evolutions, Is.EqualTo(SurvivorCatalog.EvolutionCount + SurvivorCatalog.NewEvolutionCount));
+            Assert.That(evolutions, Is.EqualTo(SurvivorCatalog.EvolutionCount + SurvivorCatalog.NewEvolutionCount + SurvivorCatalog.RingEvolutionCount));
         }
 
         [Test]

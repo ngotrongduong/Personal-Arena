@@ -85,6 +85,10 @@ namespace PersonalArena.View
                 case 125: return Style(EvolutionElement.Star, 1f, 0.75f, 0.9f);       // Vòng tay song
                 case 126: return Style(EvolutionElement.Ice, 0.65f, 0.9f, 1f);        // Tứ phương
                 case 127: return Style(EvolutionElement.Arcane, 0.9f, 0.5f, 1f);      // Đá hiền triết
+                case 77: return Style(EvolutionElement.Holy, 1f, 0.93f, 0.62f);       // Guardian Spirits: golden spirits
+                case 78: return Style(EvolutionElement.Fire, 1f, 0.38f, 0.2f);        // Razor Tempest: red-hot saws
+                case 79: return Style(EvolutionElement.Ice, 0.8f, 0.96f, 1f);         // Glacier Crown: white ice
+                case 80: return Style(EvolutionElement.Star, 0.62f, 0.78f, 1f);       // Starfall: blue-white stars
                 default: return NoStyle;
             }
         }

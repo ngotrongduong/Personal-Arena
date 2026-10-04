@@ -25,7 +25,7 @@ namespace PersonalArena.Core.Tests.Survivor
             Assert.That(p.Id, Is.EqualTo("purge")); Assert.That(p.Pattern, Is.EqualTo(WeaponPattern.Purge)); Assert.That(p.BaseCooldown, Is.EqualTo(30f)); Assert.That(p.CooldownPerLevel, Is.EqualTo(-2f)); Assert.That(p.BaseRange, Is.EqualTo(14f));
             Assert.That(r.Id, Is.EqualTo("bomb-ring")); Assert.That(r.Pattern, Is.EqualTo(WeaponPattern.BombRing)); Assert.That(r.CountByLevel, Is.EqualTo(new[] { 4, 4, 5, 5, 6 })); Assert.That(r.Width, Is.EqualTo(1.3f)); Assert.That(r.BaseDamage, Is.EqualTo(22f)); Assert.That(r.DamagePerLevel, Is.EqualTo(7f)); Assert.That(r.BaseCooldown, Is.EqualTo(3.5f)); Assert.That(r.BaseRange, Is.EqualTo(4f)); Assert.That(r.HitInterval, Is.EqualTo(0.15f));
             foreach (int index in NewWeapons) { ItemDef def = SurvivorCatalog.Get(index); Assert.That(def.Kind, Is.EqualTo(ItemKind.Weapon)); Assert.That(def.MaxLevel, Is.EqualTo(5)); Assert.That(def.CatalogIndex, Is.EqualTo(index)); Assert.That(def.Name, Is.Not.Empty); Assert.That(SurvivorCatalog.EvolutionOf(index), index == 67 ? Is.EqualTo(-1) : Is.GreaterThanOrEqualTo(112)); }
-            Assert.That(SurvivorCatalog.Get(77), Is.Null); Assert.That(SurvivorObservation.Size, Is.EqualTo(2592)); Assert.That(SurvivorInput.SkillBranchSize, Is.EqualTo(7));
+            Assert.That(SurvivorCatalog.Get(81), Is.Null); Assert.That(SurvivorObservation.Size, Is.EqualTo(2592)); Assert.That(SurvivorInput.SkillBranchSize, Is.EqualTo(7));
         }
 
         [Test]

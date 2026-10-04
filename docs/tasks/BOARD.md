@@ -11,3 +11,4 @@ Cập nhật mỗi khi đổi trạng thái. Chi tiết ở từng file task. Ta
 | [T-050](T-050-viewer-polish-english-hud.md) | Rừng quanh bản đồ, toàn bộ chữ tiếng Anh (D-049), HUD gọn + tooltip chi tiết vũ khí/skill (D-050) | Claude (PC) | done | M16 | |
 | [T-051](T-051-codex-panel.md) | Bảng Codex (phím K): mọi vũ khí, bị động, tiến hóa, skill kèm số liệu và công thức | Claude (PC) | done | M16 | |
 | [T-052](T-052-ring-weapons.md) | 4 vũ khí "vòng xoay" dùng chung cả 3 class (`WeaponPattern.Ring`, D-051); hiệu ứng Purge đúng cỡ | Claude (PC) | done | M16 | |
+| [T-053](T-053-ring-evolutions-icons.md) | Tiến hóa (catalog 77–80) + icon riêng cho 4 vũ khí vòng | Claude (PC) | done | M16 | |

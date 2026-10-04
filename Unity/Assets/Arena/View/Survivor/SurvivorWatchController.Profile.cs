@@ -71,19 +71,26 @@ namespace PersonalArena.View
             }
 
             // Checks of the build (with -perfLog only): -startWeapon <catalog index> starts the hero with that weapon;
-            // -ringDemo offers nothing but the ring weapons, so all four circle the hero within a few minutes.
+            // -ringDemo offers nothing but the ring weapons, so all four circle the hero within a few minutes;
+            // -ringDemoEvolved offers their evolutions instead.
             if (int.TryParse(CommandLineValue("-startWeapon"), NumberStyles.Integer, CultureInfo.InvariantCulture, out int weapon) &&
                 SurvivorCatalog.Get(weapon) != null && SurvivorCatalog.Get(weapon).Kind == ItemKind.Weapon)
             {
                 kit.StartingWeapon = weapon;
             }
-            if (HasArgument("-ringDemo"))
+            bool evolvedRings = HasArgument("-ringDemoEvolved");
+            if (evolvedRings || HasArgument("-ringDemo"))
             {
-                kit.WeaponPool = new[]
+                int[] rings =
                 {
-                    kit.StartingWeapon, SurvivorCatalog.SpiritOrbsIndex, SurvivorCatalog.SawRingIndex, SurvivorCatalog.FrostHaloIndex,
-                    SurvivorCatalog.CometIndex
+                    SurvivorCatalog.SpiritOrbsIndex, SurvivorCatalog.SawRingIndex, SurvivorCatalog.FrostHaloIndex, SurvivorCatalog.CometIndex
                 };
+                kit.WeaponPool = new int[rings.Length + 1];
+                kit.WeaponPool[0] = kit.StartingWeapon;
+                for (int i = 0; i < rings.Length; i++)
+                {
+                    kit.WeaponPool[i + 1] = evolvedRings ? SurvivorCatalog.EvolutionOf(rings[i]) : rings[i];
+                }
                 kit.PassivePool = Array.Empty<int>();
             }
             return kit;

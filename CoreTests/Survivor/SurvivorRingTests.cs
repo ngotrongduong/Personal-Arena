@@ -103,6 +103,40 @@ namespace PersonalArena.Core.Tests.Survivor
             Assert.That(sim.RingRadius(0), Is.EqualTo(2.4f * 1.08f).Within(1e-4f)); Assert.That(sim.RingBodyCount(0), Is.EqualTo(4), "3 shards + 1 from the duplicator");
         }
 
+        [Test]
+        public void Rings_EvolveIntoFullerWiderRings()
+        {
+            int[] passives = { SurvivorCatalog.RecoveryIndex, SurvivorCatalog.SpikedArmorIndex, SurvivorCatalog.DurationCharmIndex, SurvivorCatalog.CrownIndex };
+            int[] bodies = { 6, 6, 6, 3 };
+            HashSet<float> distances = new HashSet<float>();
+            for (int i = 0; i < Rings.Length; i++)
+            {
+                ItemDef ring = SurvivorCatalog.Get(Rings[i]); ItemDef evolved = SurvivorCatalog.Get(SurvivorCatalog.EvolutionOf(Rings[i]));
+                Assert.That(evolved, Is.Not.Null, ring.Id); Assert.That(evolved.CatalogIndex, Is.EqualTo(SurvivorCatalog.FirstRingEvolutionIndex + i));
+                Assert.That(evolved.Pattern, Is.EqualTo(WeaponPattern.Ring)); Assert.That(evolved.EvolvesFrom, Is.EqualTo(Rings[i])); Assert.That(evolved.MaxLevel, Is.EqualTo(1));
+                Assert.That(evolved.EvolutionPassive, Is.EqualTo(passives[i]));
+                foreach (string cls in new[] { "warrior", "mage", "archer" })
+                    Assert.That(Array.IndexOf(SurvivorDefaults.ForClass(cls).PassivePool, passives[i]), Is.GreaterThanOrEqualTo(0), cls + " can own the passive of " + evolved.Id);
+                Assert.That(evolved.BaseDamage, Is.EqualTo((ring.BaseDamage + ring.DamagePerLevel * 4f) * 1.5f).Within(1e-3f));
+                Assert.That(evolved.BaseRange, Is.GreaterThan(ring.BaseRange)); Assert.That(evolved.BaseCooldown, Is.Zero);
+                Assert.That(evolved.CountByLevel[0], Is.EqualTo(bodies[i]), evolved.Id);
+                Assert.That(distances.Add(ring.BaseRange), Is.True); Assert.That(distances.Add(evolved.BaseRange), Is.True, evolved.Id + " shares a distance");
+            }
+        }
+
+        [Test]
+        public void AChest_EvolvesAMaxedRingThatHasItsPassive_AndItKeepsTurning()
+        {
+            SurvivorSim sim = RingSim(SurvivorCatalog.SawRingIndex, 5, 306); sim.GiveItemForTests(SurvivorCatalog.SpikedArmorIndex, 1);
+            sim.Step(default); Assert.That(sim.RingBodyCount(0), Is.EqualTo(4));
+            sim.SpawnPickupForTests(PickupKind.Chest, sim.Hero.Position, 0f);
+            for (int tick = 0; tick < 10; tick++) sim.Step(default);
+            Assert.That(sim.Inventory.WeaponAt(0), Is.EqualTo(SurvivorCatalog.EvolutionOf(SurvivorCatalog.SawRingIndex)));
+            Assert.That(sim.RingBodyCount(0), Is.EqualTo(6)); Assert.That(sim.RingRadius(0), Is.EqualTo(1.6f * 1.15f).Within(1e-4f));
+            Vec2 before = sim.GetRingBodyPosition(0, 0); sim.Step(default);
+            Assert.That(Vec2.Distance(before, sim.GetRingBodyPosition(0, 0)), Is.GreaterThan(0.01f), "the evolved ring still turns");
+        }
+
         private static SurvivorSim RingSim(int item, int level, int seed)
         {
             SurvivorConfig config = SurvivorTestHelpers.Config(); config.ClassDef.CritChance = 0f; config.ClassDef.StartingWeapon = item;

@@ -26,7 +26,7 @@ namespace PersonalArena.Core.Tests.Survivor
             Assert.That(quad.Id, Is.EqualTo("quad-shot")); Assert.That(quad.Name, Is.EqualTo("Four-Way Shot")); Assert.That(quad.Pattern, Is.EqualTo(WeaponPattern.Quad)); Assert.That(quad.BaseDamage, Is.EqualTo(10f)); Assert.That(quad.DamagePerLevel, Is.EqualTo(4f)); Assert.That(quad.ProjectileSpeed, Is.EqualTo(13f)); Assert.That(quad.ProjectileRange, Is.EqualTo(9f)); Assert.That(quad.BaseCooldown, Is.EqualTo(1.2f)); Assert.That(quad.Pierce, Is.EqualTo(1)); Assert.That(quad.CountByLevel, Is.EqualTo(new[] { 1, 1, 2, 2, 3 })); Assert.That(SurvivorCatalog.QuadStaggerDegrees, Is.EqualTo(8f));
             Assert.That(stone.Id, Is.EqualTo("magi-stone")); Assert.That(stone.Name, Is.EqualTo("Charged Stone")); Assert.That(stone.Pattern, Is.EqualTo(WeaponPattern.Stone)); Assert.That(stone.BaseDamage, Is.EqualTo(20f)); Assert.That(stone.DamagePerLevel, Is.EqualTo(20f)); Assert.That(stone.BaseRange, Is.EqualTo(10f)); Assert.That(stone.BaseCooldown, Is.EqualTo(0.9f)); Assert.That(stone.CountByLevel, Is.EqualTo(new[] { 1, 1, 2, 2, 3 }));
             foreach (int index in NewWeapons) { ItemDef def = SurvivorCatalog.Get(index); Assert.That(def.Kind, Is.EqualTo(ItemKind.Weapon)); Assert.That(def.MaxLevel, Is.EqualTo(5)); Assert.That(def.CatalogIndex, Is.EqualTo(index)); }
-            Assert.That(SurvivorCatalog.Get(77), Is.Null); Assert.That(SurvivorObservation.Size, Is.EqualTo(2592)); Assert.That(SurvivorObservation.SchemaVersion, Is.EqualTo(5));
+            Assert.That(SurvivorCatalog.Get(81), Is.Null); Assert.That(SurvivorObservation.Size, Is.EqualTo(2592)); Assert.That(SurvivorObservation.SchemaVersion, Is.EqualTo(5));
         }
 
         [Test]
