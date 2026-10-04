@@ -163,8 +163,11 @@ namespace PersonalArena.Core.Tests.Survivor
             SurvivorSim hourglass = WeaponSim(1, 1, 52); hourglass.GiveItemForTests(10, 1); hourglass.SpawnEnemyForTests(2, new Vec2(3f, 0f)); hourglass.Step(default);
             Assert.That(hourglass.WeaponCooldownForTests(1), Is.EqualTo(1.8f * 0.94f).Within(1e-5f));
 
-            SurvivorSim sweep = new SurvivorSim(NoCritConfig(), 53); SurvivorEnemy narrowMiss = sweep.SpawnEnemyForTests(3, new Vec2(3f, 0f)); sweep.Step(default); Assert.That(narrowMiss.Hp, Is.EqualTo(narrowMiss.MaxHp));
-            SurvivorSim area = new SurvivorSim(NoCritConfig(), 53); area.GiveItemForTests(11, 1); SurvivorEnemy wideHit = area.SpawnEnemyForTests(3, new Vec2(3f, 0f)); area.Step(default); Assert.That(wideHit.Hp, Is.LessThan(wideHit.MaxHp));
+            // Area widens the sword wave and lets it fly further.
+            SurvivorSim sweep = new SurvivorSim(NoCritConfig(), 53); sweep.Step(default); SurvivorProjectile narrow = FirstHeroProjectile(sweep);
+            SurvivorSim area = new SurvivorSim(NoCritConfig(), 53); area.GiveItemForTests(11, 1); area.Step(default); SurvivorProjectile wide = FirstHeroProjectile(area);
+            Assert.That(narrow.Radius, Is.EqualTo(1.1f).Within(1e-4f)); Assert.That(wide.Radius, Is.EqualTo(1.1f * area.DerivedStats.AreaMul).Within(1e-4f));
+            Assert.That(wide.Radius, Is.GreaterThan(narrow.Radius)); Assert.That(wide.Lifetime, Is.GreaterThan(narrow.Lifetime));
 
             SurvivorSim magnet = new SurvivorSim(NoCritConfig(), 54); float pickup = magnet.DerivedStats.PickupRadius; magnet.GiveItemForTests(13, 1);
             Assert.That(magnet.DerivedStats.PickupRadius, Is.EqualTo(pickup * 1.25f).Within(1e-5f));
@@ -177,7 +180,8 @@ namespace PersonalArena.Core.Tests.Survivor
             SurvivorSim closeSim = new SurvivorSim(NoCritConfig(), 61); SurvivorEnemy close = closeSim.SpawnEnemyForTests(3, new Vec2(5f, 0f)); close.AttackCooldown = 10f; closeSim.Step(default); Assert.That(close.Position.X, Is.GreaterThan(5f));
             SurvivorSim bandSim = new SurvivorSim(NoCritConfig(), 62); SurvivorEnemy band = bandSim.SpawnEnemyForTests(3, new Vec2(7f, 0f)); band.AttackCooldown = 10f; bandSim.Step(default); Assert.That(band.Position.X, Is.EqualTo(7f).Within(1e-5f));
 
-            SurvivorSim attack = new SurvivorSim(NoCritConfig(), 63); SurvivorEnemy spitter = attack.SpawnEnemyForTests(3, new Vec2(7f, 0f)); attack.Step(default);
+            // 7.9 m: inside the band and out of reach of the hero's sword wave.
+            SurvivorSim attack = new SurvivorSim(NoCritConfig(), 63); SurvivorEnemy spitter = attack.SpawnEnemyForTests(3, new Vec2(7.9f, 0f)); attack.Step(default);
             Assert.That(spitter.WindingUp, Is.True); SurvivorTestHelpers.Step(attack, 31);
             Assert.That(ActiveEnemyProjectiles(attack), Is.EqualTo(1)); SurvivorEnemyProjectile projectile = FirstEnemyProjectile(attack);
             Assert.That(projectile.Position.X, Is.LessThan(spitter.Position.X)); Assert.That(projectile.SourceId, Is.EqualTo(spitter.Id));
@@ -318,6 +322,12 @@ namespace PersonalArena.Core.Tests.Survivor
         private static SurvivorConfig NoCritConfig()
         {
             SurvivorConfig config = SurvivorTestHelpers.Config(); config.ClassDef.CritChance = 0f; return config;
+        }
+
+        private static SurvivorProjectile FirstHeroProjectile(SurvivorSim sim)
+        {
+            for (int i = 0; i < sim.Projectiles.Count; i++) if (sim.Projectiles[i].Active) return sim.Projectiles[i];
+            return null;
         }
 
         private static SurvivorSim WeaponSim(int item, int level, int seed)

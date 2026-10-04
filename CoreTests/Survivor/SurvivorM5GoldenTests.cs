@@ -11,10 +11,11 @@ namespace PersonalArena.Core.Tests.Survivor
     /// </summary>
     public sealed class SurvivorM5GoldenTests
     {
-        private const long ScriptedGolden = -1118288171824513550L;
-        private const long InvulnerableFirst300Golden = -9118142893328684146L;
-        private const long InvulnerableGolden = -2939688974014092448L;
-        private const long EvaluatorGolden = -3686507806682452368L;
+        // Re-recorded for the sword wave (the warrior's starting sword now throws a flying wave instead of an instant arc).
+        private const long ScriptedGolden = 8083976984068779899L;
+        private const long InvulnerableFirst300Golden = 3316066975718045987L;
+        private const long InvulnerableGolden = 1550448328795120658L;
+        private const long EvaluatorGolden = -1410093660554504573L;
 
         [Test]
         public void Tier1_ScriptedRun_MatchesPreM5Golden()

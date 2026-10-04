@@ -114,6 +114,8 @@ namespace PersonalArena.Core.Survivor
         internal int HitCount;
         /// <summary>Bounce shot: bounces off walls and obstacles (BouncesLeft more allowed) and re-hits an enemy only after its BounceUntil time.</summary>
         internal bool Bouncing;
+        /// <summary>Sword wave: passes through every enemy on its path, hitting each once (same re-hit memory as the bounce shot).</summary>
+        internal bool Wave;
         internal int BouncesLeft;
         internal int BounceCount;
         internal readonly int[] BounceIds = new int[16];

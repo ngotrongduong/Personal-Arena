@@ -119,17 +119,50 @@ namespace PersonalArena.Core.Tests.Survivor
         public void Sweep_ArcAndL5BackArc_OnCooldown()
         {
             SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.Config(), 2); sim.SetHeroStateForTests(Vec2.Zero, Vec2.Zero, 0f);
-            SurvivorEnemy front = sim.SpawnEnemyForTests(2, new Vec2(2, 0)); SurvivorEnemy back = sim.SpawnEnemyForTests(2, new Vec2(-2, 0)); sim.Step(default);
-            Assert.That(front.Hp, Is.LessThan(front.MaxHp)); Assert.That(back.Hp, Is.EqualTo(back.MaxHp)); float hp = front.Hp; sim.Step(default); Assert.That(front.Hp, Is.EqualTo(hp));
-            SurvivorSim maxed = new SurvivorSim(SurvivorTestHelpers.Config(), 2); maxed.GiveItemForTests(0, 5); SurvivorEnemy rear = maxed.SpawnEnemyForTests(2, new Vec2(-2, 0)); maxed.Step(default); Assert.That(rear.Hp, Is.LessThan(rear.MaxHp));
+            // The sword throws a wave along the facing: it reaches the front enemy a few ticks later and cuts it once.
+            SurvivorEnemy front = sim.SpawnEnemyForTests(2, new Vec2(2, 0)); SurvivorEnemy back = sim.SpawnEnemyForTests(2, new Vec2(-2, 0)); sim.SetHeroInvulnerableForTests(); SurvivorTestHelpers.Step(sim, 10);
+            Assert.That(front.Hp, Is.LessThan(front.MaxHp)); Assert.That(back.Hp, Is.EqualTo(back.MaxHp)); float hp = front.Hp; SurvivorTestHelpers.Step(sim, 10); Assert.That(front.Hp, Is.EqualTo(hp));
+            SurvivorSim maxed = new SurvivorSim(SurvivorTestHelpers.Config(), 2); maxed.SetHeroInvulnerableForTests(); maxed.GiveItemForTests(0, 5); SurvivorEnemy rear = maxed.SpawnEnemyForTests(2, new Vec2(-2, 0)); SurvivorTestHelpers.Step(maxed, 10); Assert.That(rear.Hp, Is.LessThan(rear.MaxHp));
+        }
+
+        [Test]
+        public void SwordWave_CutsEveryEnemyOnItsPathOnce_AndStopsAtItsRange()
+        {
+            SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.Config(), 2); sim.SetHeroInvulnerableForTests(); sim.SetHeroStateForTests(Vec2.Zero, Vec2.Zero, 0f);
+            SurvivorEnemy near = sim.SpawnEnemyForTests(2, new Vec2(2.5f, 0f)); SurvivorEnemy mid = sim.SpawnEnemyForTests(2, new Vec2(4.5f, 0f)); SurvivorEnemy side = sim.SpawnEnemyForTests(2, new Vec2(3f, 4f));
+            SurvivorEnemy beyond = sim.SpawnEnemyForTests(3, new Vec2(12f, 0f)); beyond.AttackCooldown = 100f;
+            sim.Step(default); Assert.That(ActiveProjectiles(sim), Is.EqualTo(1), "one wave at level 1");
+            SurvivorProjectile wave = null; for (int i = 0; i < sim.Projectiles.Count; i++) if (sim.Projectiles[i].Active) wave = sim.Projectiles[i];
+            Assert.That(wave.SourceIndex, Is.EqualTo(0)); Assert.That(wave.Radius, Is.EqualTo(1.1f).Within(1e-4f)); Assert.That(wave.Velocity.X, Is.EqualTo(12f).Within(1e-3f));
+            SurvivorTestHelpers.Step(sim, 40);
+            // Brutes have 80 health and the wave deals 20: both in the lane were cut exactly once, the others never.
+            Assert.That(near.MaxHp - near.Hp, Is.EqualTo(mid.MaxHp - mid.Hp).Within(1e-3f)); Assert.That(near.Hp, Is.LessThan(near.MaxHp));
+            Assert.That(side.Hp, Is.EqualTo(side.MaxHp)); Assert.That(beyond.Hp, Is.EqualTo(beyond.MaxHp));
+            Assert.That(wave.Active, Is.False, "the wave ends after its range");
+        }
+
+        [Test]
+        public void SwordWave_RangeGrowsWithLevel_AndL5ThrowsASecondWaveBackwards()
+        {
+            SurvivorSim low = new SurvivorSim(SurvivorTestHelpers.Config(), 2); low.SetHeroInvulnerableForTests(); low.SetHeroStateForTests(Vec2.Zero, Vec2.Zero, 0f); low.Step(default);
+            SurvivorSim high = new SurvivorSim(SurvivorTestHelpers.Config(), 2); high.SetHeroInvulnerableForTests(); high.SetHeroStateForTests(Vec2.Zero, Vec2.Zero, 0f); high.GiveItemForTests(0, 5); high.Step(default);
+            Assert.That(ActiveProjectiles(low), Is.EqualTo(1)); Assert.That(ActiveProjectiles(high), Is.EqualTo(2));
+            float lowLife = 0f, highLife = 0f; bool forward = false, backward = false;
+            for (int i = 0; i < low.Projectiles.Count; i++) if (low.Projectiles[i].Active) lowLife = low.Projectiles[i].Lifetime;
+            for (int i = 0; i < high.Projectiles.Count; i++)
+            {
+                SurvivorProjectile p = high.Projectiles[i]; if (!p.Active) continue;
+                highLife = p.Lifetime; if (p.Velocity.X > 0f) forward = true; else backward = true;
+            }
+            Assert.That(forward && backward, Is.True); Assert.That(highLife, Is.EqualTo(lowLife * 1.4f).Within(0.03f));
         }
 
         [Test]
         public void Hammer_PierceOne_NoFireWithoutTarget_CountByLevel()
         {
-            SurvivorSim empty = new SurvivorSim(SurvivorTestHelpers.Config(), 4); empty.GiveItemForTests(3, 5); empty.Step(default); Assert.That(ActiveProjectiles(empty), Is.Zero);
-            SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.Config(), 4); sim.GiveItemForTests(3, 5); sim.SpawnEnemyForTests(2, new Vec2(6, 0)); sim.Step(default); Assert.That(ActiveProjectiles(sim), Is.EqualTo(3));
-            SurvivorProjectile p = null; for (int i = 0; i < sim.Projectiles.Count; i++) if (sim.Projectiles[i].Active) { p = sim.Projectiles[i]; break; }
+            SurvivorSim empty = new SurvivorSim(SurvivorTestHelpers.Config(), 4); empty.GiveItemForTests(3, 5); empty.Step(default); Assert.That(ActiveProjectiles(empty, 3), Is.Zero);
+            SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.Config(), 4); sim.GiveItemForTests(3, 5); sim.SpawnEnemyForTests(2, new Vec2(6, 0)); sim.Step(default); Assert.That(ActiveProjectiles(sim, 3), Is.EqualTo(3));
+            SurvivorProjectile p = null; for (int i = 0; i < sim.Projectiles.Count; i++) if (sim.Projectiles[i].Active && sim.Projectiles[i].SourceIndex == 3) { p = sim.Projectiles[i]; break; }
             Assert.That(p.PierceRemaining, Is.EqualTo(1));
         }
 
@@ -219,10 +252,12 @@ namespace PersonalArena.Core.Tests.Survivor
         {
             SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.Config(), 2); sim.SetHeroInvulnerableForTests(); sim.GiveItemForTests(0, 5);
             sim.SetHeroStateForTests(Vec2.Zero, Vec2.Zero, 0f);
-            SurvivorEnemy rear = sim.SpawnEnemyForTests(2, new Vec2(-2f, 0f)); sim.Step(default);
+            SurvivorEnemy rear = sim.SpawnEnemyForTests(2, new Vec2(-2f, 0f));
+            // The backward sword wave reaches it a few ticks later and pushes it along its flight (-x), away from the hero.
+            float before = rear.Position.X;
+            for (int i = 0; i < 30 && rear.Hp >= rear.MaxHp; i++) { before = rear.Position.X; sim.Step(default); }
             Assert.That(rear.Hp, Is.LessThan(rear.MaxHp));
-            // Pushed 0.5 x (1 - 0.6) = 0.2 m along -x, then walks 1.6/60 m back toward the hero.
-            Assert.That(rear.Position.X, Is.LessThan(-2.1f)); Assert.That(MathF.Abs(rear.Position.Y), Is.LessThan(0.01f));
+            Assert.That(rear.Position.X, Is.LessThan(before - 0.1f)); Assert.That(MathF.Abs(rear.Position.Y), Is.LessThan(0.2f));
         }
 
         [Test]
@@ -336,5 +371,6 @@ namespace PersonalArena.Core.Tests.Survivor
         private static SurvivorSim NewLethal(int seed) { SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.Config(), seed); sim.SetHeroHpForTests(1f); return sim; }
         private static SurvivorEnemy FindEnemy(SurvivorSim sim, bool elite, bool boss) { for (int i = 0; i < sim.Enemies.Count; i++) if (sim.Enemies[i].Active && sim.Enemies[i].Elite == elite && sim.Enemies[i].IsBoss == boss) return sim.Enemies[i]; return null; }
         private static int ActiveProjectiles(SurvivorSim sim) { int count = 0; for (int i = 0; i < sim.Projectiles.Count; i++) if (sim.Projectiles[i].Active) count++; return count; }
+        private static int ActiveProjectiles(SurvivorSim sim, int source) { int count = 0; for (int i = 0; i < sim.Projectiles.Count; i++) if (sim.Projectiles[i].Active && sim.Projectiles[i].SourceIndex == source) count++; return count; }
     }
 }

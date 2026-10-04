@@ -776,13 +776,18 @@ namespace PersonalArena.View
                 case WeaponVisual.Sweep:
                 case WeaponVisual.Dagger:
                 {
-                    // Sword, dagger and their evolutions: a crescent the size of the real hit arc.
+                    // Dagger and its evolution: a crescent the size of the real hit arc.
                     bool dagger = visual == WeaponVisual.Dagger;
                     int level = Mathf.Max(1, sim.Inventory.Level(e.Id));
                     float reach = SurvivorViewLogic.SweepRange(e.Id, level, sim.DerivedStats.AreaMul) / 1.25f;
                     bool mirror = (strikeCount & 1) == 1;
                     PlayHeroOneShot(mirror ? HeroStrikeB : HeroStrikeA, dagger ? 2.3f : 1.7f, false);
                     strikeCount++;
+                    if (!dagger)
+                    {
+                        // The sword throws a flying wave (a projectile draws it): nothing is painted on the hero.
+                        break;
+                    }
                     Color color = dagger ? DaggerSlashColor : FxColor(e.Id, StrikeColor);
                     float life = dagger ? 0.16f : 0.22f;
                     Vector3 origin = heroPosition + Vector3.up * 0.85f;

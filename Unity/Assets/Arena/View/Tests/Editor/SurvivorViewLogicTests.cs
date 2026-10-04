@@ -188,6 +188,8 @@ namespace PersonalArena.View.Tests
             Assert.That(SurvivorViewLogic.ProjectileLookOf(SurvivorCatalog.MultiShotIndex, archer), Is.EqualTo(ProjectileLook.Arrow));
             Assert.That(SurvivorViewLogic.ProjectileLookOf(SurvivorCatalog.EvolutionOf(SurvivorCatalog.ArrowIndex), archer),
                 Is.EqualTo(ProjectileLook.Arrow));
+            Assert.That(SurvivorViewLogic.ProjectileLookOf(0, SurvivorDefaults.Warrior()), Is.EqualTo(ProjectileLook.SwordWave), "the sword throws a wave");
+            Assert.That(SurvivorViewLogic.ProjectileLookOf(SurvivorCatalog.EvolutionOf(0), SurvivorDefaults.Warrior()), Is.EqualTo(ProjectileLook.SwordWave));
             Assert.That(SurvivorViewLogic.ProjectileLookOf(SurvivorCatalog.ThrownHammerIndex, SurvivorDefaults.Warrior()),
                 Is.EqualTo(ProjectileLook.Hammer));
         }

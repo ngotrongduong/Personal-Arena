@@ -33,7 +33,7 @@ namespace PersonalArena.Core.Survivor
                     case WeaponPattern.Sweep:
                     {
                         Vec2 facing = Vec2.FromAngle(Hero.Facing);
-                        Sweep(def, level);
+                        if (def.ProjectileSpeed > 0f) LaunchSwordWaves(def, level, facing); else Sweep(def, level);
                         weaponCooldowns[index] = def.BaseCooldown * stats.CooldownMul;
                         AddEvent(SurvivorEventType.WeaponFired, id: index, point: facing);
                         break;
