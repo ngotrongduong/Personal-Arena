@@ -20,8 +20,8 @@
 ## Việc tiếp theo (theo thứ tự)
 
 1. Merge PR #7 vào `develop` khi CI xanh.
-2. **Icon M9:** 32 icon mới đang là bản chép icon cũ (nhiều món trùng hình). Thay bằng icon riêng từ game-icons.net
-   (CC BY 3.0; script sẵn ở scratchpad `m9_icons.py`, lần chạy đầu bị chặn quyền tải — cần owner cho phép).
+2. **Trình xem đẹp hơn:** khi AI bị dồn vào góc, nửa màn hình là vùng tối ngoài hàng rào; ngọc EXP rải kín đất
+   giữa trận nhìn rối. (Icon M9 đã thay bằng icon riêng từ game-icons.net ngày 2026-10-04.)
 3. **Mượt và đẹp (ưu tiên của owner 2026-10-04):** đo FPS trình xem lúc đông quái, xem tận mắt từng hiệu ứng M9;
    tách (chỉ dời code) các file View > 700 dòng còn lại của T-041.
 4. Owner bấm TRAIN: não Warrior/Mage/Archer tự nâng v4 → v5 (`brain_upgrade`) và học tiếp. Theo dõi AI có dùng

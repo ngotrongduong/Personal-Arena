@@ -60,10 +60,10 @@ arena, and a sound. Today they run correctly in Core but use fallback visuals.
   tint); `SoundCueMap.cs` (a cue for every M9 weapon pattern, strike pattern and new `SkillKind`, existing Kenney
   sounds only); `SkillIconFactory.cs`; `SurvivorViewLogic.cs`; tests `SkillIconFactoryTests`, `SoundCueMapTests`,
   `SurvivorViewLogicTests`. No Core, CoreTests or Trainer file changed.
-- Icons added (id → source, author, licence): 32 files, one per M9 item/skill id. They are **copies of glyphs already
-  in the project** (game-icons.net, Lorc / Delapouite, CC BY 3.0); the id → glyph table is in
-  `ThirdParty/GameIcons/License.txt`. Several ids share one glyph (e.g. bomb, bomb-ring and war-cry). Distinct
-  glyphs are a follow-up (STATUS "Việc tiếp theo" 2).
+- Icons added (id → source, author, licence): 32 files, one per M9 item/skill id. Each id has its own glyph from
+  game-icons.net (Lorc, Delapouite, Skoll; CC BY 3.0), white on transparent, same size as the older icons; the
+  id → glyph → author table is in `ThirdParty/GameIcons/License.txt`. (Codex first used copies of older glyphs;
+  replaced on 2026-10-04.)
 - EditMode result: 299/299 after merging the branch head (a42d598). CoreTests 629/629.
 - Build and smoke: viewer v0.8.147 and training build made from a42d598 and installed in `Build/WatchNext` and
   `Build/TrainingNext`. Smoke test passed in 61 s (3 classes, panels C/F/V/L/G/P/O, auto farm, 0 errors) with the
