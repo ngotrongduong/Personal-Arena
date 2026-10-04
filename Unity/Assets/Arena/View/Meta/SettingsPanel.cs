@@ -40,7 +40,7 @@ namespace PersonalArena.View
         /// <summary>Raised after a display setting changed (the HUD shows or hides the FPS counter).</summary>
         public event Action DisplayChanged;
 
-        protected override string Title => "CÀI ĐẶT";
+        protected override string Title => "SETTINGS";
         protected override Vector2 CardSize => new Vector2(980f, 720f);
 
         public ViewerSettings Viewer => viewer;
@@ -108,8 +108,8 @@ namespace PersonalArena.View
         protected override void BuildContent(RectTransform card)
         {
             Text soundHeader = PlaceText("Sound Header", card, 22, TextAnchor.UpperLeft, Gold, 40f, -84f, 600f, 30f, true);
-            soundHeader.text = "Âm thanh";
-            string[] names = { "Âm lượng chung", "Nhạc", "Hiệu ứng" };
+            soundHeader.text = "Audio";
+            string[] names = { "Master volume", "Music", "Effects" };
             for (int i = 0; i < names.Length; i++)
             {
                 int index = i;
@@ -127,17 +127,17 @@ namespace PersonalArena.View
             soundNote = PlaceText("Sound Note", card, 16, TextAnchor.UpperLeft, Muted, 40f, -352f, 900f, 24f);
 
             Text displayHeader = PlaceText("Display Header", card, 22, TextAnchor.UpperLeft, Gold, 40f, -390f, 600f, 30f, true);
-            displayHeader.text = "Hiển thị";
+            displayHeader.text = "Display";
 
             Text windowLabel = PlaceText("Window Label", card, 20, TextAnchor.MiddleLeft, Color.white, 40f, -428f, 230f, 46f);
-            windowLabel.text = "Chế độ hiển thị";
+            windowLabel.text = "Display mode";
             windowedButton = CreateButton("Windowed", card, ViewerSettings.WindowModeLabel(ViewerWindowMode.Windowed), 18,
                 280f, -428f, 200f, 46f, () => SetWindowMode(ViewerWindowMode.Windowed));
             borderlessButton = CreateButton("Borderless", card, ViewerSettings.WindowModeLabel(ViewerWindowMode.Borderless), 18,
                 492f, -428f, 220f, 46f, () => SetWindowMode(ViewerWindowMode.Borderless));
 
             Text qualityLabel = PlaceText("Quality Label", card, 20, TextAnchor.MiddleLeft, Color.white, 40f, -486f, 230f, 46f);
-            qualityLabel.text = "Chất lượng đồ họa";
+            qualityLabel.text = "Graphics quality";
             for (int i = 0; i < ViewerSettings.QualityCount; i++)
             {
                 int quality = i;
@@ -146,14 +146,14 @@ namespace PersonalArena.View
             }
 
             Text fpsLabel = PlaceText("Fps Label", card, 20, TextAnchor.MiddleLeft, Color.white, 40f, -544f, 230f, 46f);
-            fpsLabel.text = "Hiện FPS";
+            fpsLabel.text = "Show FPS";
             fpsButton = CreateButton("Fps", card, string.Empty, 18, 280f, -544f, 200f, 46f, ToggleFps);
 
-            quitButton = CreateButton("Quit", card, "Thoát game", 22, 40f, -626f, 260f, 56f, () => SetConfirm(true));
+            quitButton = CreateButton("Quit", card, "Quit game", 22, 40f, -626f, 260f, 56f, () => SetConfirm(true));
             confirmText = PlaceText("Confirm Text", card, 20, TextAnchor.MiddleLeft, Warn, 320f, -626f, 260f, 56f, true);
-            confirmText.text = "Chắc chắn thoát?";
-            confirmQuitButton = CreateButton("Confirm Quit", card, "Thoát", 20, 560f, -626f, 170f, 56f, QuitGame);
-            cancelQuitButton = CreateButton("Cancel Quit", card, "Ở lại", 20, 744f, -626f, 170f, 56f, () => SetConfirm(false));
+            confirmText.text = "Quit for sure?";
+            confirmQuitButton = CreateButton("Confirm Quit", card, "Quit", 20, 560f, -626f, 170f, 56f, QuitGame);
+            cancelQuitButton = CreateButton("Cancel Quit", card, "Stay", 20, 744f, -626f, 170f, 56f, () => SetConfirm(false));
             Refresh();
         }
 
@@ -280,11 +280,11 @@ namespace PersonalArena.View
             }
 
             bool muted = hasSound && sound.Muted;
-            muteButton.Set("Tắt tiếng (M): " + (muted ? "BẬT" : "TẮT"), muted ? ButtonStop : ButtonColor, hasSound);
+            muteButton.Set("Mute (M): " + (muted ? "ON" : "OFF"), muted ? ButtonStop : ButtonColor, hasSound);
             bool background = hasSound && sound.MuteInBackground;
-            backgroundButton.Set("Im khi cửa sổ ở nền: " + (background ? "BẬT" : "TẮT"), background ? ButtonActive : ButtonColor, hasSound);
-            soundNote.text = !hasSound ? "Bản này không có âm thanh."
-                : audioSource.ForcedSilent ? "Đang chạy tự động (chụp ảnh / kiểm tra): luôn im lặng." : string.Empty;
+            backgroundButton.Set("Mute in background: " + (background ? "ON" : "OFF"), background ? ButtonActive : ButtonColor, hasSound);
+            soundNote.text = !hasSound ? "This build has no sound."
+                : audioSource.ForcedSilent ? "Automated run (screenshots / checks): always silent." : string.Empty;
 
             ViewerSettings settings = viewer ?? new ViewerSettings();
             bool bound = viewer != null;
@@ -294,7 +294,7 @@ namespace PersonalArena.View
             {
                 qualityButtons[i].Set(null, settings.Quality == i ? ButtonActive : ButtonColor, bound);
             }
-            fpsButton.Set(settings.ShowFps ? "BẬT" : "TẮT", settings.ShowFps ? ButtonActive : ButtonColor, bound);
+            fpsButton.Set(settings.ShowFps ? "ON" : "OFF", settings.ShowFps ? ButtonActive : ButtonColor, bound);
 
             quitButton.Set(null, ButtonStop, !confirmingQuit);
             confirmText.gameObject.SetActive(confirmingQuit);

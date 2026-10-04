@@ -299,12 +299,12 @@ namespace PersonalArena.View
             {
                 effects.Sparkle(point, GoldColor, 26, 1f, 3f, 0.3f);
             }
-            string label = "RƯƠNG! +" + NumberText(Mathf.RoundToInt(e.Value)) + " vàng";
+            string label = "CHEST! +" + NumberText(Mathf.RoundToInt(e.Value)) + " gold";
             effects.Text(point + Vector3.up * 2.6f, label, GoldColor, 1.3f, 1.6f);
             if (e.Id >= 0 && e.Extra > 0f)
             {
                 Color color = SurvivorViewLogic.ItemColor(e.Id);
-                effects.Text(point + Vector3.up * 1.9f, "Nâng cấp Lv " + NumberText(Mathf.RoundToInt(e.Extra)), color, 1.1f, 1.6f);
+                effects.Text(point + Vector3.up * 1.9f, "Upgraded to Lv " + NumberText(Mathf.RoundToInt(e.Extra)), color, 1.1f, 1.6f);
             }
         }
 
@@ -327,7 +327,7 @@ namespace PersonalArena.View
                 effects.Sparks(heroPosition + rim * reach + Vector3.up * 0.6f, -rim, MagnetColor, 3, reach * 2.6f, 0.08f);
             }
             effects.Sparkle(heroPosition, MagnetColor, 34, 2.4f, 2.6f, 0.3f);
-            effects.Text(heroPosition + Vector3.up * 2.4f, "NAM CHÂM!", MagnetColor, 1.2f, 1.1f);
+            effects.Text(heroPosition + Vector3.up * 2.4f, "MAGNET!", MagnetColor, 1.2f, 1.1f);
         }
     }
 }

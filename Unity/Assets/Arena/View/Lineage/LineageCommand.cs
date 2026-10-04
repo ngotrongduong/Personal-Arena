@@ -59,21 +59,21 @@ namespace PersonalArena.View
         /// <summary>Caller data of the running command (e.g. the name to give a new branch).</summary>
         public object RunningTag { get; private set; }
 
-        /// <summary>Vietnamese text for the panel while the command runs.</summary>
+        /// <summary>Text for the panel while the command runs.</summary>
         public string BusyText { get; private set; }
 
         public double ElapsedSeconds => IsRunning ? (DateTime.UtcNow - startedUtc).TotalSeconds : 0.0;
 
-        /// <summary>Null when the command can run, otherwise what is missing (Vietnamese).</summary>
+        /// <summary>Null when the command can run, otherwise what is missing.</summary>
         public string MissingPiece()
         {
             if (!File.Exists(PythonPath))
             {
-                return "Chưa cài Python để huấn luyện (.venv-ml).";
+                return "Python for training is not installed (.venv-ml).";
             }
             if (!File.Exists(ScriptPath))
             {
-                return "Thiếu Trainer/" + ScriptFileName + ".";
+                return "Missing Trainer/" + ScriptFileName + ".";
             }
             return null;
         }
@@ -87,13 +87,13 @@ namespace PersonalArena.View
 
         /// <summary>
         /// Starts a command (e.g. "sync", "snapshot --run-id warrior-s001", "fork --version ID"). Returns an error
-        /// (Vietnamese) or null. Only one command runs at a time.
+        /// or null. Only one command runs at a time.
         /// </summary>
         public string Start(string kind, string commandArguments, string busyText, double timeout, object tag = null)
         {
             if (IsRunning)
             {
-                return "Đang chạy một lệnh khác, chờ một chút.";
+                return "Another command is running, please wait.";
             }
 
             string missing = MissingPiece();
@@ -130,7 +130,7 @@ namespace PersonalArena.View
                 if (!started.Start())
                 {
                     started.Dispose();
-                    return "Không chạy được lệnh lịch sử não.";
+                    return "Could not run the brain history tool.";
                 }
 
                 started.BeginOutputReadLine();
@@ -146,7 +146,7 @@ namespace PersonalArena.View
             catch (Exception exception) when (exception is IOException || exception is InvalidOperationException ||
                 exception is System.ComponentModel.Win32Exception || exception is UnauthorizedAccessException)
             {
-                return "Không chạy được lệnh lịch sử não: " + exception.Message;
+                return "Could not run the brain history tool: " + exception.Message;
             }
         }
 
@@ -186,7 +186,7 @@ namespace PersonalArena.View
                 result = new LineageResult
                 {
                     ok = false,
-                    error = "Lệnh chạy quá lâu nên đã dừng (" + Math.Round(timeoutSeconds / 60.0) + " phút)."
+                    error = "The command took too long and was stopped (" + Math.Round(timeoutSeconds / 60.0) + " min)."
                 };
             }
             else
@@ -274,7 +274,7 @@ namespace PersonalArena.View
 
                     if (!parsed.ok && string.IsNullOrWhiteSpace(parsed.error))
                     {
-                        parsed.error = "Lệnh lịch sử não báo lỗi (mã " + exitCode + ").";
+                        parsed.error = "The brain history tool failed (code " + exitCode + ").";
                     }
 
                     return parsed;
@@ -284,7 +284,7 @@ namespace PersonalArena.View
             return new LineageResult
             {
                 ok = false,
-                error = "Lệnh lịch sử não không trả lời đúng (mã " + exitCode + ")."
+                error = "The brain history tool gave a bad answer (code " + exitCode + ")."
             };
         }
 

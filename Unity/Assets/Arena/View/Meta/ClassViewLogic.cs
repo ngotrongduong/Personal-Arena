@@ -78,11 +78,11 @@ namespace PersonalArena.View
             switch (Normalize(classId))
             {
                 case ProfileRules.MageId:
-                    return "Pháp sư";
+                    return "Mage";
                 case ProfileRules.ArcherId:
-                    return "Cung thủ";
+                    return "Archer";
                 default:
-                    return "Chiến binh";
+                    return "Warrior";
             }
         }
 
@@ -92,11 +92,11 @@ namespace PersonalArena.View
             switch (Normalize(classId))
             {
                 case ProfileRules.MageId:
-                    return "PHÁP SƯ";
+                    return "MAGE";
                 case ProfileRules.ArcherId:
-                    return "CUNG THỦ";
+                    return "ARCHER";
                 default:
-                    return "CHIẾN BINH";
+                    return "WARRIOR";
             }
         }
 
@@ -106,11 +106,11 @@ namespace PersonalArena.View
             switch (Normalize(classId))
             {
                 case ProfileRules.MageId:
-                    return "Phép tầm xa và vùng nổ, máu mỏng; có khiên phép, dịch chuyển và nổ băng.";
+                    return "Ranged spells and blast areas, low HP; has a magic shield, a blink and a frost nova.";
                 case ProfileRules.ArcherId:
-                    return "Bắn tên từ xa, chạy nhanh; lộn ra sau để giữ khoảng cách, bắn xuyên hàng.";
+                    return "Shoots from afar and runs fast; rolls back to keep distance and pierces lines of enemies.";
                 default:
-                    return "Cận chiến bền bỉ, giáp dày; đỡ khiên, lướt và đá để thoát vòng vây.";
+                    return "Sturdy melee fighter with heavy armor; blocks, dashes and kicks to break out of a crowd.";
             }
         }
 
@@ -155,11 +155,11 @@ namespace PersonalArena.View
             return gold >= ProfileRules.ClassPrice(classId) ? ClassShopState.Buyable : ClassShopState.TooExpensive;
         }
 
-        /// <summary>"Mua (1.500 vàng)".</summary>
+        /// <summary>"Buy (1,500 gold)".</summary>
         public static string BuyLabel(string classId)
         {
             long price = Math.Max(0, ProfileRules.ClassPrice(classId));
-            return "Mua (" + MetaViewLogic.FormatGold(price) + " vàng)";
+            return "Buy (" + MetaViewLogic.FormatGold(price) + " gold)";
         }
 
         /// <summary>The state line under a class card.</summary>
@@ -168,16 +168,16 @@ namespace PersonalArena.View
             switch (ShopState(profile, classId))
             {
                 case ClassShopState.Selected:
-                    return "Đang dùng";
+                    return "Active";
                 case ClassShopState.Owned:
-                    return "Đã có — bấm Chọn để xem và huấn luyện";
+                    return "Owned — press Select to watch and train it";
                 case ClassShopState.Buyable:
-                    return "Giá " + MetaViewLogic.FormatGold(ProfileRules.ClassPrice(classId)) + " vàng";
+                    return "Price " + MetaViewLogic.FormatGold(ProfileRules.ClassPrice(classId)) + " gold";
                 case ClassShopState.TooExpensive:
                     long gold = profile != null ? profile.Gold : 0;
-                    return "Thiếu " + MetaViewLogic.FormatGold(ProfileRules.ClassPrice(classId) - gold) + " vàng";
+                    return "Short by " + MetaViewLogic.FormatGold(ProfileRules.ClassPrice(classId) - gold) + " gold";
                 default:
-                    return "Chưa mở";
+                    return "Locked";
             }
         }
 
@@ -190,7 +190,7 @@ namespace PersonalArena.View
         public static bool CanSelect(ClassShopState state) => state == ClassShopState.Owned;
 
         /// <summary>The "Chọn" button label.</summary>
-        public static string SelectLabel(ClassShopState state) => state == ClassShopState.Selected ? "Đang dùng" : "Chọn";
+        public static string SelectLabel(ClassShopState state) => state == ClassShopState.Selected ? "Active" : "Select";
 
         // ------------------------------------------------------------------ training
 
@@ -254,22 +254,22 @@ namespace PersonalArena.View
         }
 
         /// <summary>The TRAIN label while another class trains: "HUẤN LUYỆN PHÁP SƯ".</summary>
-        public static string SwitchTrainLabel(string classId) => "HUẤN LUYỆN " + UpperName(classId);
+        public static string SwitchTrainLabel(string classId) => "TRAIN " + UpperName(classId);
 
         /// <summary>Notice while switching training to another class.</summary>
         public static string SwitchNotice(string runningBehavior, string classId)
         {
             string from = ClassIdOfBehavior(runningBehavior);
-            return "Đang lưu tiến độ " + (from != null ? DisplayName(from) : runningBehavior) +
-                " rồi chuyển sang huấn luyện " + DisplayName(classId) + "...";
+            return "Saving the progress of " + (from != null ? DisplayName(from) : runningBehavior) +
+                ", then switching to train " + DisplayName(classId) + "...";
         }
 
         /// <summary>Training panel line when the running training is for another class than the watched one.</summary>
         public static string OtherClassTrainingLine(string runningBehavior, string classId)
         {
             string from = ClassIdOfBehavior(runningBehavior);
-            return "Đang huấn luyện " + (from != null ? DisplayName(from) : runningBehavior) + ", không phải " + DisplayName(classId) +
-                ".\nBấm để chuyển sang " + DisplayName(classId) + ".";
+            return "Training " + (from != null ? DisplayName(from) : runningBehavior) + ", not " + DisplayName(classId) +
+                ".\nPress to switch to " + DisplayName(classId) + ".";
         }
 
         /// <summary>"Chưa có não Mage — bấm HUẤN LUYỆN AI" (the Warrior keeps its older wording).</summary>
@@ -279,16 +279,16 @@ namespace PersonalArena.View
             if (id == ProfileRules.WarriorId)
             {
                 return canTrain
-                    ? "Chiến binh chưa có bộ não nên đứng chờ.\nBấm HUẤN LUYỆN AI để bắt đầu dạy nó."
-                    : "Đang chờ AI lưu bộ não đầu tiên...";
+                    ? "The Warrior has no brain yet, so it stands idle.\nPress TRAIN AI to start teaching it."
+                    : "Waiting for the AI to save its first brain...";
             }
 
-            return "Chưa có não " + BehaviorName(id) + " (" + DisplayName(id) + ")" +
-                (canTrain ? " — bấm HUẤN LUYỆN AI\nđể bắt đầu dạy nó." : ".\nĐang chờ AI lưu bộ não đầu tiên...");
+            return "No brain for " + BehaviorName(id) + " (" + DisplayName(id) + ")" +
+                (canTrain ? " yet — press TRAIN AI\nto start teaching it." : ".\nWaiting for the AI to save its first brain...");
         }
 
         /// <summary>The info header: "AI PHÁP SƯ".</summary>
-        public static string AiTitle(string classId) => "AI " + UpperName(classId);
+        public static string AiTitle(string classId) => UpperName(classId) + " AI";
 
         private static string Normalize(string classId)
         {

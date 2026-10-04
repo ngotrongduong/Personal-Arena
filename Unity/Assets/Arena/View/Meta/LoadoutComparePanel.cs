@@ -20,7 +20,7 @@ namespace PersonalArena.View
 
         private static readonly string[] Headings =
         {
-            "Bộ", "Điểm chỉ số", "Trận", "Tỉ lệ thắng", "Sống (trung vị)", "Vàng / phút", "Kỷ lục"
+            "Loadout", "Stat points", "Runs", "Win rate", "Survival (median)", "Gold / min", "Record"
         };
 
         private static readonly float[] ColumnX = { 0f, 260f, 700f, 820f, 960f, 1120f, 1260f };
@@ -33,7 +33,7 @@ namespace PersonalArena.View
         /// <summary>Raised after a row made its loadout the active one (saved).</summary>
         public event Action ProfileChanged;
 
-        protected override string Title => "SO SÁNH BUILD";
+        protected override string Title => "COMPARE BUILDS";
         protected override Vector2 CardSize => new Vector2(1600f, 820f);
 
         public void Bind(ProfileStore profileStore)
@@ -75,15 +75,15 @@ namespace PersonalArena.View
                 bool active = i == warrior.ActiveLoadout;
                 Loadout loadout = warrior.Loadouts[i];
                 row.Background.color = active ? new Color(0.13f, 0.2f, 0.33f, 1f) : Panel;
-                row.Cells[0].text = MetaViewLogic.LoadoutName(warrior, i) + (active ? "\n(đang dùng)" : string.Empty);
+                row.Cells[0].text = MetaViewLogic.LoadoutName(warrior, i) + (active ? "\n(active)" : string.Empty);
                 row.Cells[0].color = active ? Gold : Color.white;
                 row.Cells[1].text = MetaViewLogic.CompactPoints(loadout != null ? loadout.Points : null, 4);
                 row.Cells[1].color = Color.white;
-                row.Use.Set(active ? "Đang dùng" : "Dùng bộ này", active ? ButtonActive : ButtonColor, !active);
+                row.Use.Set(active ? "Active" : "Use this loadout", active ? ButtonActive : ButtonColor, !active);
 
                 if (summary.Runs <= 0)
                 {
-                    row.Cells[2].text = "chưa có trận";
+                    row.Cells[2].text = "no runs yet";
                     row.Cells[2].color = Muted;
                     for (int c = 3; c < Columns; c++)
                     {
@@ -95,15 +95,15 @@ namespace PersonalArena.View
 
                 played++;
                 SetCell(row.Cells[2], summary.Runs.ToString(), i == bestRuns);
-                SetCell(row.Cells[3], MetaViewLogic.Percent(summary.WinRate) + "\n(" + summary.Wins + " thắng)", i == bestWinRate);
+                SetCell(row.Cells[3], MetaViewLogic.Percent(summary.WinRate) + "\n(" + summary.Wins + " won)", i == bestWinRate);
                 SetCell(row.Cells[4], SurvivorViewLogic.FormatClock(summary.MedianSeconds), i == bestMedian);
                 SetCell(row.Cells[5], MetaViewLogic.FormatDecimal(summary.GoldPerMinute, "0.0"), i == bestGold);
                 SetCell(row.Cells[6], SurvivorViewLogic.FormatClock(summary.BestSeconds), i == bestTime);
             }
 
             summaryText.text = played >= 2
-                ? "Ô vàng là bộ tốt nhất ở cột đó. Trung vị tính trên tối đa " + ProfileRules.RecentCap + " trận gần nhất của mỗi bộ."
-                : "Cho AI chơi (xem hoặc FARM VÀNG) với nhiều bộ khác nhau để so sánh. Ô vàng là bộ tốt nhất ở cột đó.";
+                ? "A gold cell is the best loadout in that column. Medians use up to the last " + ProfileRules.RecentCap + " runs of each loadout."
+                : "Let the AI play (watching or GOLD FARM) with several loadouts to compare them. A gold cell is the best loadout in that column.";
         }
 
         protected override void OnOpened()
@@ -114,7 +114,7 @@ namespace PersonalArena.View
         protected override void BuildContent(RectTransform card)
         {
             Text intro = PlaceText("Intro", card, 18, TextAnchor.UpperLeft, Muted, TableX, -76f, 1530f, 26f);
-            intro.text = "Mỗi bộ chỉ số ghi lại các trận AI đã chơi với nó (xem và farm). Đổi bộ trong NHÂN VẬT (C) hoặc bấm \"Dùng bộ này\".";
+            intro.text = "Each loadout records the runs the AI played with it (watched and farmed). Switch loadouts in CHARACTER (C) or press \"Use this loadout\".";
 
             for (int c = 0; c < Columns; c++)
             {
@@ -129,7 +129,7 @@ namespace PersonalArena.View
 
             summaryText = PlaceText("Summary", card, 17, TextAnchor.UpperLeft, Muted, TableX, -676f, 1530f, 60f, false, true);
             Text footer = PlaceText("Footer", card, 16, TextAnchor.UpperLeft, Muted, TableX, -752f, 1530f, 40f, false, true);
-            footer.text = "Vàng / phút = tổng vàng chia tổng thời gian chơi. Kỷ lục = trận sống lâu nhất.";
+            footer.text = "Gold / min = total gold divided by total play time. Record = the longest survival.";
         }
 
         private Row BuildRow(Transform card, int index, float y)
@@ -146,7 +146,7 @@ namespace PersonalArena.View
             }
 
             int loadout = index;
-            row.Use = CreateButton("Use", background, "Dùng bộ này", 15, 1380f, -24f, 136f, 44f, () => OnUse(loadout));
+            row.Use = CreateButton("Use", background, "Use this loadout", 15, 1380f, -24f, 136f, 44f, () => OnUse(loadout));
             return row;
         }
 

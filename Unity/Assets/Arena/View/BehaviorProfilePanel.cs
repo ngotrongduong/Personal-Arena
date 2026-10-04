@@ -30,19 +30,19 @@ namespace PersonalArena.View
 
         private static readonly Trait[] Traits =
         {
-            new Trait("Tấn công", "Lúc có quái gần: tỉ lệ thời gian lao thẳng vào đám quái",
+            new Trait("Offense", "With enemies near: share of time spent charging into the pack",
                 new Color(1f, 0.45f, 0.35f), b => b.Aggression),
-            new Trait("Thận trọng", "Khi máu dưới 35% và quái sát bên: tỉ lệ thời gian chạy lùi",
+            new Trait("Cautious", "Below 35% HP with enemies close: share of time spent backing away",
                 new Color(0.35f, 0.75f, 1f), b => b.Caution),
-            new Trait("Ham đồ", "Tỉ lệ ngọc EXP, vàng và đồ rớt đã nhặt được",
+            new Trait("Looter", "Share of EXP gems, gold and drops picked up",
                 new Color(1f, 0.83f, 0.28f), b => b.Greed),
-            new Trait("Khám phá", "Phần bản đồ đã đi qua trong một trận",
+            new Trait("Explorer", "Share of the map visited in a run",
                 new Color(0.45f, 0.9f, 0.6f), b => b.Exploration),
-            new Trait("Khống chế đám đông", "Tỉ lệ cú đá trúng từ 3 quái trở lên",
+            new Trait("Crowd control", "Share of kicks that hit 3 or more enemies",
                 new Color(0.75f, 0.5f, 1f), b => b.CrowdControl),
-            new Trait("Săn boss", "Khi boss ở gần: tỉ lệ thời gian lao về phía boss",
+            new Trait("Boss hunter", "With the boss near: share of time spent moving toward it",
                 new Color(1f, 0.5f, 0.75f), b => b.BossHunting),
-            new Trait("Dùng chiêu khéo", "Tỉ lệ lần đá / khiên / lướt thật sự có tác dụng",
+            new Trait("Skill use", "Share of kicks, blocks and dashes that had an effect",
                 new Color(0.4f, 0.9f, 0.95f), b => b.SkillDiscipline)
         };
 
@@ -105,12 +105,12 @@ namespace PersonalArena.View
                 new Vector2(CardWidth, 860f), new Vector2(0.5f, 0.5f));
 
             Text title = CreateText("Title", card, 34, TextAnchor.UpperLeft, Color.white);
-            title.text = "HỒ SƠ AI — não giỏi nhất và phong cách đánh";
+            title.text = "AI PROFILE — best brain and play style";
             title.fontStyle = FontStyle.Bold;
             Place(title.rectTransform, 34f, -22f, 1250f, 44f);
 
             subtitle = CreateText("Subtitle", card, 17, TextAnchor.UpperLeft, Muted);
-            subtitle.text = "Cứ mỗi 2 triệu bước, AI được chấm 100 trận; não giỏi nhất luôn được giữ lại";
+            subtitle.text = "Every 2M steps the AI is scored over 100 runs; the best brain is always kept";
             Place(subtitle.rectTransform, 36f, -68f, 1320f, 28f);
 
             RectTransform closeRect = CreateImage("Close", card, new Color(0.14f, 0.16f, 0.21f, 1f),
@@ -138,9 +138,9 @@ namespace PersonalArena.View
             Place(emptyRect, 110f, -225f, 1280f, 420f);
             Text emptyText = CreateText("Message", emptyRect, 27, TextAnchor.MiddleCenter,
                 new Color(0.82f, 0.86f, 0.93f, 1f));
-            emptyText.text = "Hồ sơ xuất hiện sau 2 triệu bước huấn luyện.\n" +
-                "Khi đó AI được chấm 100 trận và não giỏi nhất được giữ lại.\n" +
-                "Bấm TRAIN THE AI để huấn luyện.";
+            emptyText.text = "The profile appears after 2M training steps.\n" +
+                "The AI is then scored over 100 runs and the best brain is kept.\n" +
+                "Press TRAIN AI to start training.";
             emptyText.horizontalOverflow = HorizontalWrapMode.Wrap;
             SetStretch(emptyText.rectTransform, 30f, 30f, 30f, 30f);
 
@@ -235,7 +235,7 @@ namespace PersonalArena.View
         {
             RectTransform card = CreateImage("Champion Card", parent, Panel, UiSprites.RoundedSprite(), Image.Type.Sliced);
             Place(card, 34f, -112f, 560f, 300f);
-            Header(card, "NÃO GIỎI NHẤT");
+            Header(card, "BEST BRAIN");
 
             badge = CreateImage("M4A Badge", card, Good, UiSprites.RoundedSprite(), Image.Type.Sliced).GetComponent<Image>();
             SetRect(badge.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-18f, -12f),
@@ -268,7 +268,7 @@ namespace PersonalArena.View
         {
             RectTransform card = CreateImage("Last Evaluation Card", parent, Panel, UiSprites.RoundedSprite(), Image.Type.Sliced);
             Place(card, 34f, -428f, 560f, 140f);
-            Header(card, "LẦN CHẤM GẦN NHẤT");
+            Header(card, "LATEST EVALUATION");
             lastEvalResult = CreateText("Result", card, 19, TextAnchor.UpperLeft, Color.white);
             lastEvalResult.fontStyle = FontStyle.Bold;
             Place(lastEvalResult.rectTransform, 18f, -52f, 524f, 26f);
@@ -281,7 +281,7 @@ namespace PersonalArena.View
         {
             RectTransform card = CreateImage("Death Card", parent, Panel, UiSprites.RoundedSprite(), Image.Type.Sliced);
             Place(card, 34f, -584f, 560f, 248f);
-            deathHeader = Header(card, "VÌ SAO CHẾT");
+            deathHeader = Header(card, "CAUSES OF DEATH");
             deathNone = CreateText("None", card, 17, TextAnchor.UpperLeft, Good);
             Place(deathNone.rectTransform, 18f, -56f, 524f, 26f);
 
@@ -304,7 +304,7 @@ namespace PersonalArena.View
         {
             RectTransform card = CreateImage("Style Card", parent, Panel, UiSprites.RoundedSprite(), Image.Type.Sliced);
             Place(card, 618f, -112f, 848f, 720f);
-            Header(card, "PHONG CÁCH ĐÁNH  (0–100%)");
+            Header(card, "PLAY STYLE  (0–100%)");
             styleCompare = CreateText("Compare", card, 15, TextAnchor.UpperRight, Muted);
             SetRect(styleCompare.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-18f, -18f),
                 new Vector2(430f, 22f), new Vector2(1f, 1f));
@@ -360,60 +360,60 @@ namespace PersonalArena.View
         {
             ChampionSummary summary = champion.summary;
             badge.color = champion.passes_m4a ? Good : Warn;
-            badgeLabel.text = champion.passes_m4a ? "ĐẠT MỤC TIÊU M4A" : "CHƯA ĐẠT M4A";
-            identity.text = champion.run_id + "  •  " + FormatSteps(champion.step) + " bước  •  chấm lúc " +
+            badgeLabel.text = champion.passes_m4a ? "M4A TARGET MET" : "M4A NOT MET";
+            identity.text = champion.run_id + "  •  " + FormatSteps(champion.step) + " steps  •  scored at " +
                 FormatTime(champion.When);
 
             int runs = Math.Max(1, summary.Runs);
             int wins = Mathf.RoundToInt(summary.WinRate * runs);
-            SetTile(0, "Sống (trận giữa)", FormatSeconds(summary.MedianSurvivedSeconds),
-                "mục tiêu " + FormatSeconds(ChampionInfo.TargetMedianSeconds),
+            SetTile(0, "Survival (median run)", FormatSeconds(summary.MedianSurvivedSeconds),
+                "target " + FormatSeconds(ChampionInfo.TargetMedianSeconds),
                 summary.MedianSurvivedSeconds >= ChampionInfo.TargetMedianSeconds ? Good : Warn);
-            SetTile(1, "Sống (10% trận tệ nhất)", FormatSeconds(summary.P10SurvivedSeconds),
-                "mục tiêu " + FormatSeconds(ChampionInfo.TargetP10Seconds),
+            SetTile(1, "Survival (worst 10%)", FormatSeconds(summary.P10SurvivedSeconds),
+                "target " + FormatSeconds(ChampionInfo.TargetP10Seconds),
                 summary.P10SurvivedSeconds >= ChampionInfo.TargetP10Seconds ? Good : Warn);
-            SetTile(2, "Hạ boss, thắng trận", Percent(summary.WinRate),
-                wins + " / " + summary.Runs + " trận", wins > 0 ? Good : Color.white);
-            SetTile(3, "Chết sớm (trước 3 phút)", summary.CatastrophicCount.ToString(CultureInfo.InvariantCulture),
-                "mục tiêu 0 trận", summary.CatastrophicCount == 0 ? Good : Bad);
+            SetTile(2, "Boss kills (wins)", Percent(summary.WinRate),
+                wins + " / " + summary.Runs + " runs", wins > 0 ? Good : Color.white);
+            SetTile(3, "Early deaths (before 3:00)", summary.CatastrophicCount.ToString(CultureInfo.InvariantCulture),
+                "target 0 runs", summary.CatastrophicCount == 0 ? Good : Bad);
         }
 
         private void ApplyLastEvaluation(ChampionRecord last)
         {
             if (last == null || last.summary == null)
             {
-                lastEvalResult.text = "Chưa có lần chấm nào";
+                lastEvalResult.text = "No evaluation yet";
                 lastEvalResult.color = Muted;
                 lastEvalDetail.text = string.Empty;
                 return;
             }
 
-            string when = FormatSteps(last.step) + " bước: ";
+            string when = FormatSteps(last.step) + " steps: ";
             if (last.restored)
             {
-                lastEvalResult.text = when + "khôi phục não cũ";
+                lastEvalResult.text = when + "old brain restored";
                 lastEvalResult.color = Warn;
             }
             else if (last.won)
             {
-                lastEvalResult.text = when + "THẮNG — thành não giỏi nhất";
+                lastEvalResult.text = when + "WON — now the best brain";
                 lastEvalResult.color = Good;
             }
             else
             {
-                lastEvalResult.text = when + "chưa hơn — giữ não giỏi nhất cũ";
+                lastEvalResult.text = when + "not better — best brain kept";
                 lastEvalResult.color = Warn;
             }
 
-            lastEvalDetail.text = "Sống trận giữa " + FormatSeconds(last.summary.MedianSurvivedSeconds) +
-                "  •  10% tệ nhất " + FormatSeconds(last.summary.P10SurvivedSeconds) +
-                "  •  thắng " + Percent(last.summary.WinRate) + "\nchấm lúc " + FormatTime(last.When);
+            lastEvalDetail.text = "Median survival " + FormatSeconds(last.summary.MedianSurvivedSeconds) +
+                "  •  worst 10% " + FormatSeconds(last.summary.P10SurvivedSeconds) +
+                "  •  wins " + Percent(last.summary.WinRate) + "\nscored at " + FormatTime(last.When);
         }
 
         private void ApplyDeaths(ChampionRecord champion)
         {
             int runs = Math.Max(1, champion.summary.Runs);
-            deathHeader.text = "VÌ SAO CHẾT  (" + champion.summary.Runs + " trận chấm)";
+            deathHeader.text = "CAUSES OF DEATH  (" + champion.summary.Runs + " scored runs)";
             List<KeyValuePair<string, int>> causes = new List<KeyValuePair<string, int>>();
             for (int i = 0; i < DeathOrder.Length; i++)
             {
@@ -425,7 +425,7 @@ namespace PersonalArena.View
 
             causes.Sort((a, b) => b.Value.CompareTo(a.Value));
             deathNone.gameObject.SetActive(causes.Count == 0);
-            deathNone.text = "Không chết trận nào — sống tới hết giờ hoặc hạ boss";
+            deathNone.text = "No deaths — survived to the end or killed the boss";
             for (int i = 0; i < deathRows.Length; i++)
             {
                 bool visible = i < causes.Count;
@@ -440,7 +440,7 @@ namespace PersonalArena.View
                 }
 
                 deathRows[i].Name.text = DeathCauseName(causes[i].Key);
-                deathRows[i].Count.text = causes[i].Value + " trận";
+                deathRows[i].Count.text = causes[i].Value + " runs";
                 deathRows[i].Fill.rectTransform.sizeDelta =
                     new Vector2(DeathBarWidth * Mathf.Clamp01(causes[i].Value / (float)runs), 16f);
             }
@@ -451,8 +451,8 @@ namespace PersonalArena.View
             ChampionBehavior now = champion.behavior;
             ChampionBehavior before = previous?.behavior;
             styleCompare.text = previous != null
-                ? "so với não giỏi trước (" + FormatSteps(previous.step) + " bước)"
-                : "chưa có não giỏi trước để so sánh";
+                ? "vs the previous best brain (" + FormatSteps(previous.step) + " steps)"
+                : "no previous best brain to compare with";
 
             for (int i = 0; i < traitRows.Length; i++)
             {
@@ -463,7 +463,7 @@ namespace PersonalArena.View
                     row.Value.text = "—";
                     row.Value.color = Muted;
                     row.Fill.rectTransform.sizeDelta = new Vector2(0f, 18f);
-                    row.Delta.text = "chưa có";
+                    row.Delta.text = "none yet";
                     row.Delta.color = Muted;
                     continue;
                 }
@@ -486,15 +486,15 @@ namespace PersonalArena.View
             }
 
             int runs = Math.Max(1, champion.summary.Runs);
-            string distance = "Khoảng cách tới quái gần nhất: thường " + Metres(now.PreferredRange) +
-                ", trung bình " + Metres(now.KeepDistance);
-            string skills = "Chiêu mỗi trận:  " +
-                SkillLine("Đá", now.KickUses, now.EffectiveKicks, runs) + "   •   " +
-                SkillLine("Khiên", now.BlockUses, now.EffectiveBlocks, runs) + "   •   " +
-                SkillLine("Lướt", now.DashUses, now.EffectiveDashes, runs);
-            string economy = "Mỗi phút: " + champion.summary.XpPerMinute.ToString("0", CultureInfo.InvariantCulture) +
+            string distance = "Distance to the nearest enemy: typically " + Metres(now.PreferredRange) +
+                ", average " + Metres(now.KeepDistance);
+            string skills = "Skills per run:  " +
+                SkillLine("Kick", now.KickUses, now.EffectiveKicks, runs) + "   •   " +
+                SkillLine("Block", now.BlockUses, now.EffectiveBlocks, runs) + "   •   " +
+                SkillLine("Dash", now.DashUses, now.EffectiveDashes, runs);
+            string economy = "Per minute: " + champion.summary.XpPerMinute.ToString("0", CultureInfo.InvariantCulture) +
                 " EXP, " + champion.summary.GoldPerMinute.ToString("0.#", CultureInfo.InvariantCulture) +
-                " vàng  •  cấp trung bình " + champion.summary.MeanLevel.ToString("0.#", CultureInfo.InvariantCulture);
+                " gold  •  average level " + champion.summary.MeanLevel.ToString("0.#", CultureInfo.InvariantCulture);
             styleDetail.text = distance + "\n" + skills + "\n" + economy;
         }
 

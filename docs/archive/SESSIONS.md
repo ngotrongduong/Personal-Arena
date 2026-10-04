@@ -171,6 +171,15 @@ thưởng theo thứ bậc, nghiệm thu bằng đánh giá 100 seed). Đấu tr
 
 ## Nhật ký phiên cũ (mới nhất trên cùng)
 
+### 2026-10-04 → 05 — Claude (PC): M10–M14
+- M9 Unity làm nốt (T-037, T-041; Codex hết token), PR #7 merge vào `develop`.
+- M10 hiệu ứng Kenney; M11 hiệu ứng nổi bật hơn + vật phẩm rơi mới + 3 quái mới + quái vàng (PR #8–#13).
+- M12/M12b: dùng 2 gói Asset Store của owner, gói không commit (D-046) (PR #14, #15).
+- M13: owner chê rối mắt → bỏ hiệu ứng chồng trên thân, mỗi đòn một hiệu ứng đúng cỡ đúng hệ (D-047); Đạn nảy
+  bật sang quái khác (PR #16).
+- M14: Kiếm quét thành sóng kiếm bay (PR #17). Nội dung mới đều giữ schema v5 (D-048).
+- Bản xem + bản train v0.8.171 đã cài; CoreTests 644, EditMode 300, 60 FPS. Chưa train lần nào trong phiên này.
+
 ### 2026-10-03 (sau) — Claude (cloud): rà soát vũ khí và skill (D-045)
 - Owner báo Mưa tên không giống AOE. Đo mọi vũ khí (cấp 1 và 5), mọi tiến hóa, mọi skill trên bãi quái đứng yên (dày và thưa).
 - Sửa Mưa tên: rơi vào chỗ quái đông nhất, vùng 2,6 m, 1–3 vùng theo cấp; hiệu ứng trình xem rải tên khắp vùng.

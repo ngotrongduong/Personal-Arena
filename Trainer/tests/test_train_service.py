@@ -199,8 +199,8 @@ def test_plan_run_upgrades_the_newest_older_schema(tmp_path: Path, monkeypatch):
     assert calls == [("warrior-s001", "Warrior", "warrior-s002", 4, 5)]
     assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-s002", "resume", 800)
     assert plan.message == (
-        "Não AI được nâng cấp lên luật mới (schema v4 → v5) "
-        "và học tiếp từ bước 800."
+        "The AI brain was upgraded to the new rules (schema v4 → v5) "
+        "and continues from step 800."
     )
 
 
@@ -226,7 +226,7 @@ def test_plan_run_upgrades_when_the_viewer_requests_the_older_schema_run(tmp_pat
 
     assert calls == [("warrior-s001", "Warrior", "warrior-s002", 4, 5)]
     assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-s002", "resume", 800)
-    assert "học tiếp từ bước 800" in plan.message
+    assert "continues from step 800" in plan.message
 
     # The next TRAIN still names the old run: it resumes the upgraded run, with no second upgrade.
     again = train_service.plan_run(tmp_path, "Warrior", "warrior-s001")
@@ -246,8 +246,8 @@ def test_plan_run_missing_old_schema_falls_back_to_new(tmp_path: Path, monkeypat
     plan = train_service.plan_run(tmp_path, "Warrior")
 
     assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-s002", "new", 0)
-    assert "thiếu schema v4" in plan.message
-    assert "học lại từ đầu" in plan.message
+    assert "missing schema v4" in plan.message
+    assert "starts from scratch" in plan.message
 
 
 def test_plan_run_failed_upgrade_falls_back_to_new(tmp_path: Path, monkeypatch):
@@ -267,7 +267,7 @@ def test_plan_run_failed_upgrade_falls_back_to_new(tmp_path: Path, monkeypatch):
     plan = train_service.plan_run(tmp_path, "Warrior")
 
     assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-s002", "new", 0)
-    assert "Không thể nâng cấp" in plan.message
+    assert "could not be upgraded" in plan.message
     assert "disk full" in plan.message
 
 
@@ -926,5 +926,5 @@ def test_plan_run_rejects_run_names_that_could_leave_the_runs_folder(tmp_path: P
     plan = train_service.plan_run(tmp_path, "Warrior", name)
 
     assert (plan.run_id, plan.mode) == ("warrior-s001", "new")
-    assert "không hợp lệ" in plan.message
+    assert "is not valid" in plan.message
     assert victim.is_dir()

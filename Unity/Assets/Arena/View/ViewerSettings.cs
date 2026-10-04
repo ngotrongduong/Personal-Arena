@@ -29,7 +29,7 @@ namespace PersonalArena.View
         public const int DefaultQuality = QualityHigh;
         public const ViewerWindowMode DefaultWindowMode = ViewerWindowMode.Windowed;
 
-        private static readonly string[] QualityLabels = { "Thấp", "Vừa", "Cao" };
+        private static readonly string[] QualityLabels = { "Low", "Medium", "High" };
 
         private int quality = DefaultQuality;
         private ViewerWindowMode windowMode = DefaultWindowMode;
@@ -84,7 +84,7 @@ namespace PersonalArena.View
 
         public static string WindowModeLabel(ViewerWindowMode mode)
         {
-            return mode == ViewerWindowMode.Borderless ? "Toàn màn hình" : "Cửa sổ";
+            return mode == ViewerWindowMode.Borderless ? "Fullscreen" : "Windowed";
         }
 
         public static string QualityLabel(int quality)

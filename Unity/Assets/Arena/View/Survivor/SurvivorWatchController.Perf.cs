@@ -31,6 +31,7 @@ namespace PersonalArena.View
         private int fxDemoShots;
         private int fxDemoRound;
         private bool vfxGallery;
+        private bool hudDemo;
         private readonly StringBuilder perfLine = new StringBuilder(160);
 
         private void BeginPerfLog()
@@ -48,11 +49,25 @@ namespace PersonalArena.View
                 perfQuitAfter = seconds;
             }
             perfNextShot = perfShotEvery;
+            hudDemo = HasArgument("-hudDemo");
             vfxGallery = HasArgument("-vfxGallery");
             fxDemo = vfxGallery || HasArgument("-fxDemo");
             if (vfxGallery && int.TryParse(CommandLineValue("-vfxGalleryFrom"), NumberStyles.Integer, CultureInfo.InvariantCulture, out int firstPage))
             {
                 fxDemoRound = Mathf.Max(0, firstPage);
+            }
+            // -cameraAt x,z[,distance]: hold the camera on a map point (e.g. a corner) for the screenshots.
+            string[] cameraAt = (CommandLineValue("-cameraAt") ?? string.Empty).Split(',');
+            if (cameraAt.Length >= 2 &&
+                float.TryParse(cameraAt[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float cameraX) &&
+                float.TryParse(cameraAt[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float cameraZ))
+            {
+                float cameraDistance = 24f;
+                if (cameraAt.Length >= 3)
+                {
+                    float.TryParse(cameraAt[2], NumberStyles.Float, CultureInfo.InvariantCulture, out cameraDistance);
+                }
+                followCamera.LookAtForChecks(new Vector3(cameraX, 0f, cameraZ), cameraDistance);
             }
             File.WriteAllText(perfLogPath, "simTime,enemies,avgFps,worstMs,weapons\n");
             File.WriteAllText(SiblingPath(perfLogPath, "_startup"), "step,atMs,tookMs\n");
@@ -114,6 +129,11 @@ namespace PersonalArena.View
                 {
                     perfNextShot += perfShotEvery;
                     perfShotIndex++;
+                    if (hudDemo)
+                    {
+                        // -hudDemo: each shot shows the next tooltip (item, skill) or the key help.
+                        hud.ShowForChecks(perfShotIndex - 1);
+                    }
                     Capture(SiblingPath(Path.ChangeExtension(perfLogPath, ".png"),
                         "_" + perfShotIndex.ToString("00", CultureInfo.InvariantCulture)));
                 }

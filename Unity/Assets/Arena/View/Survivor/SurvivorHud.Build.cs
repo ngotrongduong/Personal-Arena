@@ -11,7 +11,7 @@ namespace PersonalArena.View
     public sealed partial class SurvivorHud
     {
         private const int TrainingBarCount = 64;
-        private const float TrainingGraphHeight = 64f;
+        private const float TrainingGraphHeight = 36f;
         private const int CardCount = PickHighlight.MaximumOffers;
 
         private static readonly Color PanelColor = new Color(0.05f, 0.055f, 0.085f, 0.86f);
@@ -96,7 +96,7 @@ namespace PersonalArena.View
         private RectTransform skillsPanel;
         private Text heroName;
 
-        // M7: "TIẾN HÓA: <tên>" banner shown for a few seconds when a weapon evolves.
+        // M7: "EVOLVED: <name>" banner shown for a few seconds when a weapon evolves.
         private const float ToastSeconds = 2.6f;
         private Text toastText;
         private float toastClock;
@@ -130,10 +130,10 @@ namespace PersonalArena.View
         private TrainingHistoryPanel historyPanel;
         private BehaviorProfilePanel profilePanel;
 
-        // Right column: info (wallet included), the M5 buttons, then the training panel.
-        private const float InfoHeight = 236f;
-        private const float MetaButtonsTop = -288f;
-        private const float TrainingTop = -360f;
+        // Right column: the AI info card, the training card, then the menu card.
+        private const float InfoHeight = 170f;
+        private const float MenuHeight = 86f;
+        private const float TrainingHeight = 272f;
 
         // M5: floating spectator tag above the hero, end-screen reward and story, out-of-run panels.
         private const float HeroLabelHeight = 2.7f;
@@ -153,9 +153,9 @@ namespace PersonalArena.View
         private AutoFarmPanel farmPanel;
         private LoadoutComparePanel comparePanel;
 
-        // M6: the brain lineage panel ("Lịch sử não", key L) and its button in the training panel.
+        // M6: the brain lineage panel ("Brain history", key L) and its button in the training panel.
         private BrainLineagePanel lineagePanel;
-        private const float TrainingHeight = 506f;
+        private const float OfferCardHeight = 384f;
 
         // M8: settings panel (O / gear button), version label and the optional FPS counter.
         private SettingsPanel settingsPanel;
@@ -183,6 +183,13 @@ namespace PersonalArena.View
             canvasObject.AddComponent<GraphicRaycaster>();
             canvasRoot = canvasObject.transform;
 
+            // Buttons and the hover tooltips need an event system, with or without the training panel.
+            if (FindFirstObjectByType<EventSystem>() == null)
+            {
+                GameObject events = new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
+                events.transform.SetParent(transform, false);
+            }
+
             BuildHeroLabel();
             BuildTop();
             BuildVitals();
@@ -193,6 +200,7 @@ namespace PersonalArena.View
             BuildEnd();
             BuildMetaPanels();
             BuildCornerWidgets();
+            BuildTooltip();
         }
 
         /// <summary>The spectator tag; built first so every other HUD element draws over it.</summary>
@@ -225,86 +233,85 @@ namespace PersonalArena.View
 
         private void BuildTop()
         {
-            // Full-width EXP bar along the top edge.
+            // A thin EXP bar along the top edge; the level sits in a pill left of the clock.
             RectTransform xpTrack = CreateSliced("EXP Bar", canvasRoot, new Color(0.04f, 0.05f, 0.08f, 0.92f));
             xpTrack.anchorMin = new Vector2(0f, 1f);
             xpTrack.anchorMax = new Vector2(1f, 1f);
             xpTrack.pivot = new Vector2(0.5f, 1f);
-            xpTrack.anchoredPosition = new Vector2(0f, -4f);
-            xpTrack.sizeDelta = new Vector2(-8f, 26f);
+            xpTrack.anchoredPosition = new Vector2(0f, -5f);
+            xpTrack.sizeDelta = new Vector2(-2f * Margin, 14f);
             RectTransform xpInner = CreateUiObject("Inner", xpTrack).GetComponent<RectTransform>();
-            SetStretch(xpInner, 3f, 3f, 3f, 3f);
+            SetStretch(xpInner, 2f, 2f, 2f, 2f);
             xpFill = CreateSliced("Fill", xpInner, XpColor);
             SetStretch(xpFill, 0f, 0f, 0f, 0f);
-            RectTransform xpShine = CreateSliced("Shine", xpFill, new Color(1f, 1f, 1f, 0.2f));
-            xpShine.anchorMin = new Vector2(0f, 0.55f);
-            xpShine.anchorMax = Vector2.one;
-            xpShine.offsetMin = new Vector2(2f, 0f);
-            xpShine.offsetMax = new Vector2(-2f, -1f);
-            levelText = CreateText("Level", xpTrack, 19, TextAnchor.MiddleCenter, Color.white);
+
+            RectTransform clock = CreatePanel("Clock", canvasRoot, PanelColor);
+            SetRect(clock, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -TopOffset), new Vector2(ClockWidth, 82f), new Vector2(0.5f, 1f));
+            clockText = CreateText("Clock Text", clock, 42, TextAnchor.UpperCenter, Color.white);
+            clockText.fontStyle = FontStyle.Bold;
+            AddShadow(clockText);
+            SetRect(clockText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -3f), new Vector2(ClockWidth - 10f, 50f), new Vector2(0.5f, 1f));
+            clockGoal = CreateText("Clock Goal", clock, 14, TextAnchor.UpperCenter, MutedText);
+            SetRect(clockGoal.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -56f), new Vector2(ClockWidth - 10f, 20f), new Vector2(0.5f, 1f));
+
+            RectTransform level = CreatePanel("Level", canvasRoot, PanelColor);
+            SetRect(level, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(-(ClockWidth * 0.5f + CardGap), -TopOffset), new Vector2(96f, 40f), new Vector2(1f, 1f));
+            levelText = CreateText("Level Text", level, 21, TextAnchor.MiddleCenter, XpColor);
             levelText.fontStyle = FontStyle.Bold;
             AddShadow(levelText);
             SetStretch(levelText.rectTransform, 0f, 0f, 0f, 0f);
 
-            RectTransform clock = CreatePanel("Clock", canvasRoot, PanelColor);
-            SetRect(clock, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -38f), new Vector2(300f, 90f), new Vector2(0.5f, 1f));
-            clockText = CreateText("Clock Text", clock, 46, TextAnchor.UpperCenter, Color.white);
-            clockText.fontStyle = FontStyle.Bold;
-            AddShadow(clockText);
-            SetRect(clockText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -4f), new Vector2(290f, 54f), new Vector2(0.5f, 1f));
-            clockGoal = CreateText("Clock Goal", clock, 15, TextAnchor.UpperCenter, new Color(0.75f, 0.8f, 0.92f));
-            SetRect(clockGoal.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -60f), new Vector2(290f, 22f), new Vector2(0.5f, 1f));
-
             RectTransform boss = CreatePanel("Boss", canvasRoot, PanelColor);
-            SetRect(boss, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -138f), new Vector2(780f, 52f), new Vector2(0.5f, 1f));
+            SetRect(boss, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -(TopOffset + 82f + CardGap)), new Vector2(760f, 46f), new Vector2(0.5f, 1f));
             bossPanel = boss.gameObject;
-            CreateBar(boss, "Boss Bar", new Vector2(10f, -9f), 760f, 34f, BossColor, out bossFill, out _, out bossText);
+            CreateBar(boss, "Boss Bar", new Vector2(8f, -7f), 744f, 32f, BossColor, out bossFill, out _, out bossText);
             bossPanel.SetActive(false);
         }
 
         private void BuildVitals()
         {
+            const float inner = HeroCardWidth - 32f;
             RectTransform vitals = CreatePanel("Vitals", canvasRoot, PanelColor);
-            SetRect(vitals, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -40f), new Vector2(440f, 304f), new Vector2(0f, 1f));
-            heroName = CreateText("Name", vitals, 17, TextAnchor.UpperLeft, GoldText);
+            SetRect(vitals, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(Margin, -TopOffset), new Vector2(HeroCardWidth, HeroCardHeight), new Vector2(0f, 1f));
+            heroName = CreateText("Name", vitals, 16, TextAnchor.UpperLeft, GoldText);
             heroName.text = SurvivorViewLogic.HeroNameLine(null);
             heroName.fontStyle = FontStyle.Bold;
-            SetRect(heroName.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -10f), new Vector2(400f, 22f), new Vector2(0f, 1f));
+            SetRect(heroName.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(16f, -10f), new Vector2(inner, 22f), new Vector2(0f, 1f));
 
-            CreateBar(vitals, "HP Bar", new Vector2(18f, -36f), 404f, 36f, HpColor, out hpFill, out hpTrail, out hpText);
+            CreateBar(vitals, "HP Bar", new Vector2(16f, -36f), inner, 30f, HpColor, out hpFill, out hpTrail, out hpText);
             hpFillImage = hpFill.GetComponent<Image>();
-            CreateBar(vitals, "Energy Bar", new Vector2(18f, -78f), 404f, 24f, EnergyColor, out energyFill, out RectTransform energyTrail, out energyText);
+            CreateBar(vitals, "Energy Bar", new Vector2(16f, -70f), inner, 20f, EnergyColor, out energyFill, out RectTransform energyTrail, out energyText);
             energyTrail.gameObject.SetActive(false);
-            energyText.fontSize = 15;
+            energyText.fontSize = 13;
 
             RectTransform coin = CreateUiObject("Gold Icon", vitals).GetComponent<RectTransform>();
             Image coinImage = coin.gameObject.AddComponent<Image>();
             coinImage.sprite = UiSprites.Circle();
             coinImage.color = new Color(1f, 0.8f, 0.25f);
             coinImage.raycastTarget = false;
-            SetRect(coin, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(22f, -112f), new Vector2(20f, 20f), new Vector2(0f, 1f));
-            goldText = CreateText("Gold", vitals, 20, TextAnchor.MiddleLeft, GoldText);
+            SetRect(coin, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -101f), new Vector2(16f, 16f), new Vector2(0f, 1f));
+            goldText = CreateText("Gold", vitals, 18, TextAnchor.MiddleLeft, GoldText);
             goldText.fontStyle = FontStyle.Bold;
-            SetRect(goldText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(50f, -110f), new Vector2(150f, 24f), new Vector2(0f, 1f));
-            Text killsLabel = CreateText("Kills Label", vitals, 16, TextAnchor.MiddleLeft, new Color(0.75f, 0.8f, 0.9f));
-            killsLabel.text = "HẠ GỤC";
-            SetRect(killsLabel.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(210f, -110f), new Vector2(80f, 24f), new Vector2(0f, 1f));
-            killsText = CreateText("Kills", vitals, 20, TextAnchor.MiddleLeft, Color.white);
+            SetRect(goldText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(42f, -97f), new Vector2(150f, 24f), new Vector2(0f, 1f));
+            Text killsLabel = CreateText("Kills Label", vitals, 13, TextAnchor.MiddleRight, MutedText);
+            killsLabel.text = "KILLS";
+            SetRect(killsLabel.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(200f, -97f), new Vector2(70f, 24f), new Vector2(0f, 1f));
+            killsText = CreateText("Kills", vitals, 18, TextAnchor.MiddleLeft, Color.white);
             killsText.fontStyle = FontStyle.Bold;
-            SetRect(killsText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(290f, -110f), new Vector2(130f, 24f), new Vector2(0f, 1f));
+            SetRect(killsText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(280f, -97f), new Vector2(104f, 24f), new Vector2(0f, 1f));
 
-            // Running pickup buffs: one chip each to the right of the panel, shown only while the buff lasts.
+            // Running pickup buffs: a row of chips under the card, each shown only while its buff lasts.
             for (int i = 0; i < BuffChipCount; i++)
             {
                 RectTransform chip = CreatePanel("Buff Chip " + i, canvasRoot, PanelColor);
-                SetRect(chip, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(470f, -40f - i * 38f), new Vector2(170f, 32f), new Vector2(0f, 1f));
+                SetRect(chip, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(Margin + i * 134f, -(TopOffset + HeroCardHeight + CardGap)),
+                    new Vector2(128f, 28f), new Vector2(0f, 1f));
                 RectTransform fill = CreateSliced("Fill", chip, BuffChipColors[i]);
                 fill.anchorMin = Vector2.zero;
                 fill.anchorMax = Vector2.one;
                 fill.offsetMin = Vector2.zero;
                 fill.offsetMax = Vector2.zero;
-                fill.GetComponent<Image>().raycastTarget = false;
-                Text label = CreateText("Label", chip, 16, TextAnchor.MiddleCenter, Color.white);
+                Text label = CreateText("Label", chip, 14, TextAnchor.MiddleCenter, Color.white);
                 label.fontStyle = FontStyle.Bold;
                 label.rectTransform.anchorMin = Vector2.zero;
                 label.rectTransform.anchorMax = Vector2.one;
@@ -316,33 +323,36 @@ namespace PersonalArena.View
                 buffTexts[i] = label;
             }
 
-            Text weaponsLabel = CreateText("Weapons Label", vitals, 13, TextAnchor.UpperLeft, new Color(0.65f, 0.7f, 0.8f));
-            weaponsLabel.text = "VŨ KHÍ";
-            SetRect(weaponsLabel.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -144f), new Vector2(120f, 18f), new Vector2(0f, 1f));
-            Text passivesLabel = CreateText("Passives Label", vitals, 13, TextAnchor.UpperLeft, new Color(0.65f, 0.7f, 0.8f));
-            passivesLabel.text = "BỊ ĐỘNG";
-            SetRect(passivesLabel.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -226f), new Vector2(120f, 18f), new Vector2(0f, 1f));
+            // Two rows of six slots; hovering a slot shows what the item does and its numbers.
+            float step = (inner - ItemSlotSize) / (WeaponSlots - 1);
+            Text weaponsLabel = CreateText("Weapons Label", vitals, 12, TextAnchor.UpperLeft, MutedText);
+            weaponsLabel.text = "WEAPONS";
+            SetRect(weaponsLabel.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(16f, -130f), new Vector2(160f, 16f), new Vector2(0f, 1f));
+            Text passivesLabel = CreateText("Passives Label", vitals, 12, TextAnchor.UpperLeft, MutedText);
+            passivesLabel.text = "PASSIVES";
+            SetRect(passivesLabel.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(16f, -206f), new Vector2(160f, 16f), new Vector2(0f, 1f));
             for (int i = 0; i < WeaponSlots; i++)
             {
-                itemSlots[i] = CreateItemSlot(vitals, "Weapon " + (i + 1), new Vector2(20f + i * 64f, -162f));
+                itemSlots[i] = CreateItemSlot(vitals, "Weapon " + (i + 1), new Vector2(16f + i * step, -148f), i);
             }
             for (int i = 0; i < PassiveSlots; i++)
             {
-                itemSlots[WeaponSlots + i] = CreateItemSlot(vitals, "Passive " + (i + 1), new Vector2(20f + i * 64f, -244f));
+                itemSlots[WeaponSlots + i] = CreateItemSlot(vitals, "Passive " + (i + 1), new Vector2(16f + i * step, -224f), WeaponSlots + i);
             }
         }
 
-        private ItemSlotView CreateItemSlot(Transform parent, string objectName, Vector2 position)
+        private ItemSlotView CreateItemSlot(Transform parent, string objectName, Vector2 position, int slot)
         {
             RectTransform frame = CreateSliced(objectName, parent, new Color(1f, 1f, 1f, 0.06f));
-            SetRect(frame, new Vector2(0f, 1f), new Vector2(0f, 1f), position, new Vector2(54f, 54f), new Vector2(0f, 1f));
+            SetRect(frame, new Vector2(0f, 1f), new Vector2(0f, 1f), position, new Vector2(ItemSlotSize, ItemSlotSize), new Vector2(0f, 1f));
+            AddHover(frame, HudHoverKind.Item, slot);
             GameObject iconObject = CreateUiObject("Icon", frame);
             Image icon = iconObject.AddComponent<Image>();
             icon.preserveAspect = true;
             icon.raycastTarget = false;
             icon.enabled = false;
             SetStretch(icon.rectTransform, 3f, 3f, 3f, 3f);
-            Text level = CreateText("Level", frame, 14, TextAnchor.LowerRight, Color.white);
+            Text level = CreateText("Level", frame, 13, TextAnchor.LowerRight, Color.white);
             level.fontStyle = FontStyle.Bold;
             Outline outline = level.gameObject.AddComponent<Outline>();
             outline.effectColor = new Color(0f, 0f, 0f, 0.9f);
@@ -354,8 +364,8 @@ namespace PersonalArena.View
         private void BuildSkills()
         {
             RectTransform skills = CreatePanel("Skills", canvasRoot, PanelColor);
-            SetRect(skills, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 18f),
-                new Vector2(SurvivorViewLogic.SkillPanelWidth(SkillSlots), 150f), new Vector2(0.5f, 0f));
+            SetRect(skills, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, Margin),
+                new Vector2(SurvivorViewLogic.SkillPanelWidth(SkillSlots), 122f), new Vector2(0.5f, 0f));
             skillsPanel = skills;
             for (int i = 0; i < SkillSlots; i++)
             {
@@ -403,10 +413,12 @@ namespace PersonalArena.View
 
         private SkillSlotView CreateSkillSlot(Transform parent, int index, float x)
         {
+            const float iconSize = 62f;
             SkillSlotView view = new SkillSlotView { LastCooldown = 0f };
             RectTransform slot = CreatePanel("Skill " + (index + 1), parent, new Color(0.1f, 0.11f, 0.16f, 1f));
-            SetRect(slot, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(x, 0f), new Vector2(132f, 132f), new Vector2(0.5f, 0.5f));
+            SetRect(slot, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(x, 0f), new Vector2(104f, 106f), new Vector2(0.5f, 0.5f));
             view.Root = slot;
+            AddHover(slot, HudHoverKind.Skill, index);
 
             RectTransform glow = CreateSliced("Glow", slot, Color.clear);
             SetStretch(glow, 0f, 0f, 0f, 0f);
@@ -416,19 +428,26 @@ namespace PersonalArena.View
             accent.anchorMin = new Vector2(0f, 1f);
             accent.anchorMax = new Vector2(1f, 1f);
             accent.pivot = new Vector2(0.5f, 1f);
-            accent.anchoredPosition = new Vector2(0f, -4f);
-            accent.sizeDelta = new Vector2(-24f, 4f);
+            accent.anchoredPosition = new Vector2(0f, -3f);
+            accent.sizeDelta = new Vector2(-20f, 3f);
             view.Accent = accent.GetComponent<Image>();
 
             GameObject iconObject = CreateUiObject("Icon", slot);
             view.Icon = iconObject.AddComponent<Image>();
             view.Icon.preserveAspect = true;
             view.Icon.raycastTarget = false;
-            SetRect(view.Icon.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -14f), new Vector2(72f, 72f), new Vector2(0.5f, 1f));
+            SetRect(view.Icon.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -10f), new Vector2(iconSize, iconSize), new Vector2(0.5f, 1f));
 
-            view.Title = CreateText("Title", slot, 17, TextAnchor.UpperCenter, Color.white);
+            // The slot number the AI's action uses (1..6), small in the corner.
+            Text number = CreateText("Number", slot, 12, TextAnchor.UpperLeft, MutedText);
+            number.text = (index + 1).ToString();
+            SetRect(number.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(7f, -8f), new Vector2(20f, 16f), new Vector2(0f, 1f));
+
+            view.Title = CreateText("Title", slot, 13, TextAnchor.UpperCenter, Color.white);
             view.Title.fontStyle = FontStyle.Bold;
-            SetRect(view.Title.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, -92f), new Vector2(0f, 24f), new Vector2(0.5f, 1f));
+            view.Title.horizontalOverflow = HorizontalWrapMode.Wrap;
+            view.Title.lineSpacing = 0.9f;
+            SetRect(view.Title.rectTransform, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, -74f), new Vector2(-6f, 30f), new Vector2(0.5f, 1f));
 
             GameObject shadeObject = CreateUiObject("Cooldown", slot);
             view.Shade = shadeObject.AddComponent<Image>();
@@ -441,44 +460,59 @@ namespace PersonalArena.View
             view.Shade.fillClockwise = false;
             view.Shade.fillAmount = 0f;
             view.Shade.raycastTarget = false;
-            SetRect(view.Shade.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -14f), new Vector2(72f, 72f), new Vector2(0.5f, 1f));
+            SetRect(view.Shade.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -10f), new Vector2(iconSize, iconSize), new Vector2(0.5f, 1f));
 
-            view.Cooldown = CreateText("Cooldown Time", slot, 28, TextAnchor.MiddleCenter, new Color(1f, 0.9f, 0.35f));
+            view.Cooldown = CreateText("Cooldown Time", slot, 24, TextAnchor.MiddleCenter, new Color(1f, 0.9f, 0.35f));
             view.Cooldown.fontStyle = FontStyle.Bold;
             Outline outline = view.Cooldown.gameObject.AddComponent<Outline>();
             outline.effectColor = new Color(0f, 0f, 0f, 0.85f);
             outline.effectDistance = new Vector2(2f, -2f);
-            SetRect(view.Cooldown.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -14f), new Vector2(128f, 72f), new Vector2(0.5f, 1f));
+            SetRect(view.Cooldown.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -10f), new Vector2(100f, iconSize), new Vector2(0.5f, 1f));
             return view;
         }
 
         private void BuildSidePanels()
         {
-            RectTransform help = CreatePanel("Help", canvasRoot, new Color(0.03f, 0.035f, 0.055f, 0.62f));
-            SetRect(help, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -356f), new Vector2(440f, 60f), new Vector2(0f, 1f));
+            // Key help: hidden until H is pressed, so it does not sit on the play field.
+            RectTransform help = CreatePanel("Help", canvasRoot, new Color(0.03f, 0.035f, 0.055f, 0.94f));
+            SetRect(help, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 40f), new Vector2(620f, 60f), new Vector2(0.5f, 0.5f));
             VerticalLayoutGroup helpLayout = help.gameObject.AddComponent<VerticalLayoutGroup>();
-            helpLayout.padding = new RectOffset(16, 14, 10, 12);
+            helpLayout.padding = new RectOffset(28, 28, 20, 22);
+            helpLayout.spacing = 10f;
             helpLayout.childControlWidth = true;
             helpLayout.childControlHeight = true;
             helpLayout.childForceExpandWidth = true;
             helpLayout.childForceExpandHeight = false;
             ContentSizeFitter helpFitter = help.gameObject.AddComponent<ContentSizeFitter>();
             helpFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            helpText = CreateText("Help Text", help, 15, TextAnchor.UpperLeft, new Color(0.8f, 0.83f, 0.9f));
+            Text helpTitle = CreateText("Help Title", help, 22, TextAnchor.UpperLeft, GoldText);
+            helpTitle.text = "KEYS";
+            helpTitle.fontStyle = FontStyle.Bold;
+            helpText = CreateText("Help Text", help, 17, TextAnchor.UpperLeft, new Color(0.86f, 0.89f, 0.95f));
             helpText.horizontalOverflow = HorizontalWrapMode.Wrap;
-            helpText.lineSpacing = 1.1f;
+            helpText.lineSpacing = 1.25f;
+            helpPanel = help.gameObject;
+            helpPanel.SetActive(false);
+
+            hintText = CreateText("Hint", canvasRoot, 13, TextAnchor.LowerLeft, new Color(0.7f, 0.74f, 0.82f, 0.85f));
+            hintText.text = "H  keys      Tab  hide panels";
+            AddShadow(hintText);
+            SetRect(hintText.rectTransform, Vector2.zero, Vector2.zero, new Vector2(Margin + 4f, 12f), new Vector2(320f, 20f), Vector2.zero);
 
             RectTransform info = CreatePanel("Info", canvasRoot, PanelColor);
-            SetRect(info, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20f, -40f), new Vector2(430f, InfoHeight), new Vector2(1f, 1f));
-            infoText = CreateText("Info Text", info, 15, TextAnchor.UpperLeft, new Color(0.9f, 0.93f, 0.97f));
-            infoText.lineSpacing = 1.1f;
+            SetRect(info, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-Margin, -TopOffset), new Vector2(SideWidth, InfoHeight), new Vector2(1f, 1f));
+            infoPanel = info;
+            infoText = CreateText("Info Text", info, 14, TextAnchor.UpperLeft, new Color(0.9f, 0.93f, 0.97f));
+            infoText.lineSpacing = 1.12f;
+            infoText.supportRichText = true;
             infoText.horizontalOverflow = HorizontalWrapMode.Wrap;
-            SetStretch(infoText.rectTransform, 18f, 14f, 12f, 10f);
+            infoText.verticalOverflow = VerticalWrapMode.Truncate;
+            SetStretch(infoText.rectTransform, 16f, 12f, 10f, 8f);
 
             RectTransform pause = CreatePanel("Paused", canvasRoot, new Color(0.03f, 0.03f, 0.05f, 0.8f));
             SetRect(pause, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 180f), new Vector2(380f, 96f), new Vector2(0.5f, 0.5f));
             Text pauseText = CreateText("Label", pause, 46, TextAnchor.MiddleCenter, GoldText);
-            pauseText.text = "TẠM DỪNG";
+            pauseText.text = "PAUSED";
             pauseText.fontStyle = FontStyle.Bold;
             SetStretch(pauseText.rectTransform, 0f, 0f, 0f, 0f);
             pausePanel = pause.gameObject;
@@ -505,7 +539,7 @@ namespace PersonalArena.View
             offerPanel = dimObject;
 
             Text title = CreateText("Title", dimRect, 52, TextAnchor.MiddleCenter, GoldText);
-            title.text = "LÊN CẤP!";
+            title.text = "LEVEL UP!";
             title.fontStyle = FontStyle.Bold;
             Outline titleOutline = title.gameObject.AddComponent<Outline>();
             titleOutline.effectColor = new Color(0.25f, 0.12f, 0f, 0.9f);
@@ -526,10 +560,11 @@ namespace PersonalArena.View
 
         private OfferCard CreateCard(Transform parent, int index)
         {
+            const float width = OfferCardWidth - 24f;
             OfferCard card = new OfferCard();
             GameObject rootObject = CreateUiObject("Card " + (index + 1), parent);
             card.Root = rootObject.GetComponent<RectTransform>();
-            SetRect(card.Root, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(256f, 340f), new Vector2(0.5f, 0.5f));
+            SetRect(card.Root, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(OfferCardWidth, OfferCardHeight), new Vector2(0.5f, 0.5f));
             card.Group = rootObject.AddComponent<CanvasGroup>();
             card.Group.interactable = false;
             card.Group.blocksRaycasts = false;
@@ -548,27 +583,38 @@ namespace PersonalArena.View
             RectTransform body = CreateSliced("Body", card.Root, new Color(0.07f, 0.075f, 0.11f, 0.98f));
             SetStretch(body, 0f, 0f, 0f, 0f);
 
-            card.Kind = CreateText("Kind", card.Root, 14, TextAnchor.UpperCenter, new Color(0.65f, 0.7f, 0.82f));
-            SetRect(card.Kind.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -12f), new Vector2(240f, 20f), new Vector2(0.5f, 1f));
+            card.Kind = CreateText("Kind", card.Root, 13, TextAnchor.UpperCenter, MutedText);
+            SetRect(card.Kind.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -12f), new Vector2(width, 18f), new Vector2(0.5f, 1f));
 
             GameObject iconObject = CreateUiObject("Icon", card.Root);
             card.Icon = iconObject.AddComponent<Image>();
             card.Icon.preserveAspect = true;
             card.Icon.raycastTarget = false;
-            SetRect(card.Icon.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -38f), new Vector2(108f, 108f), new Vector2(0.5f, 1f));
+            SetRect(card.Icon.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -36f), new Vector2(92f, 92f), new Vector2(0.5f, 1f));
 
-            card.Name = CreateText("Name", card.Root, 24, TextAnchor.UpperCenter, Color.white);
+            // Long names ("Assassin's Twin Blades") shrink to stay on one line.
+            card.Name = CreateText("Name", card.Root, 22, TextAnchor.MiddleCenter, Color.white);
             card.Name.fontStyle = FontStyle.Bold;
-            SetRect(card.Name.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -156f), new Vector2(240f, 32f), new Vector2(0.5f, 1f));
+            card.Name.resizeTextForBestFit = true;
+            card.Name.resizeTextMinSize = 14;
+            card.Name.resizeTextMaxSize = 22;
+            card.Name.horizontalOverflow = HorizontalWrapMode.Wrap;
+            card.Name.verticalOverflow = VerticalWrapMode.Truncate;
+            SetRect(card.Name.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -134f), new Vector2(width, 30f), new Vector2(0.5f, 1f));
 
-            card.Level = CreateText("Level", card.Root, 20, TextAnchor.UpperCenter, GoldText);
+            card.Level = CreateText("Level", card.Root, 17, TextAnchor.UpperCenter, GoldText);
             card.Level.fontStyle = FontStyle.Bold;
-            SetRect(card.Level.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -192f), new Vector2(240f, 26f), new Vector2(0.5f, 1f));
+            SetRect(card.Level.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -166f), new Vector2(width, 22f), new Vector2(0.5f, 1f));
 
-            card.Description = CreateText("Description", card.Root, 17, TextAnchor.UpperCenter, new Color(0.85f, 0.88f, 0.95f));
+            RectTransform rule = CreateSliced("Rule", card.Root, new Color(1f, 1f, 1f, 0.1f));
+            SetRect(rule, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -194f), new Vector2(width - 40f, 2f), new Vector2(0.5f, 1f));
+
+            // What a new item does with its key numbers, or what the upgrade changes (one change per line).
+            card.Description = CreateText("Description", card.Root, 15, TextAnchor.UpperCenter, new Color(0.85f, 0.88f, 0.95f));
             card.Description.horizontalOverflow = HorizontalWrapMode.Wrap;
-            card.Description.lineSpacing = 1.1f;
-            SetRect(card.Description.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -228f), new Vector2(220f, 100f), new Vector2(0.5f, 1f));
+            card.Description.verticalOverflow = VerticalWrapMode.Truncate;
+            card.Description.lineSpacing = 1.12f;
+            SetRect(card.Description.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -204f), new Vector2(width, 170f), new Vector2(0.5f, 1f));
 
             // Darkens the cards that were not chosen while keeping them opaque (a see-through card shows the busy world).
             RectTransform shade = CreateSliced("Shade", card.Root, Color.clear);
@@ -579,7 +625,7 @@ namespace PersonalArena.View
 
         private void BuildEnd()
         {
-            // Two columns: the run (stats, reward, items) on the left, "Câu chuyện trận đấu" on the right.
+            // Two columns: the run (stats, reward, items) on the left, "Run story" on the right.
             // 1000 wide keeps it between the left and right HUD columns at 16:9 (1920×1080 and 1280×720).
             const float leftCenter = -250f;
             const float rightCenter = 250f;
@@ -611,7 +657,7 @@ namespace PersonalArena.View
             SetRect(divider, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -132f), new Vector2(2f, 390f), new Vector2(0.5f, 1f));
 
             Text storyTitle = CreateText("Story Title", end, 21, TextAnchor.UpperLeft, GoldText);
-            storyTitle.text = "Câu chuyện trận đấu";
+            storyTitle.text = "Run story";
             storyTitle.fontStyle = FontStyle.Bold;
             SetRect(storyTitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(rightCenter, -136f), new Vector2(columnWidth - 20f, 30f), new Vector2(0.5f, 1f));
             endStory = CreateText("Story", end, 17, TextAnchor.UpperLeft, new Color(0.88f, 0.9f, 0.96f));

@@ -171,14 +171,14 @@ def test_fork_refuses_versions_it_cannot_train(tmp_path: Path):
     folder = brain_lineage.versions_directory(runs, BEHAVIOR) / "warrior-s001-1000000"
 
     (folder / "checkpoint.pt").unlink()
-    with pytest.raises(brain_lineage.LineageError, match="chỉ còn não để xem"):
+    with pytest.raises(brain_lineage.LineageError, match="Only the brain is left"):
         brain_lineage.fork(runs, BEHAVIOR, version="warrior-s001-1000000")
 
     (folder / "checkpoint.pt").write_bytes(b"x")
     data = version(runs, "warrior-s001-1000000")
     data["schema_version"] = 3
     (folder / "version.json").write_text(json.dumps(data), encoding="utf-8")
-    with pytest.raises(brain_lineage.LineageError, match="luật cũ"):
+    with pytest.raises(brain_lineage.LineageError, match="old rules"):
         brain_lineage.fork(runs, BEHAVIOR, version="warrior-s001-1000000")
 
     with pytest.raises(brain_lineage.LineageError):
@@ -267,10 +267,10 @@ def test_snapshot_evaluates_without_touching_the_champion(tmp_path: Path, monkey
 
 def test_snapshot_refuses_missing_or_old_runs(tmp_path: Path):
     runs = tmp_path / "runs"
-    with pytest.raises(brain_lineage.LineageError, match="Không tìm thấy"):
+    with pytest.raises(brain_lineage.LineageError, match="not found"):
         brain_lineage.snapshot(runs, BEHAVIOR, "warrior-s009", evaluate=False)
     make_run(runs, "warrior-s001", schema=3)
-    with pytest.raises(brain_lineage.LineageError, match="luật cũ"):
+    with pytest.raises(brain_lineage.LineageError, match="old rules"):
         brain_lineage.snapshot(runs, BEHAVIOR, "warrior-s001", evaluate=False)
 
 
@@ -390,9 +390,9 @@ def test_snapshot_is_ok_with_a_warning_when_evaluation_fails(tmp_path: Path, mon
 @pytest.mark.parametrize("bad", ["..", "../x", "a/b", "a\\b", ".hidden", "champions", "", "x" * 65])
 def test_ids_that_could_escape_the_runs_folder_are_refused(tmp_path: Path, bad: str, capsys):
     runs = tmp_path / "runs"
-    with pytest.raises(brain_lineage.LineageError, match="không hợp lệ"):
+    with pytest.raises(brain_lineage.LineageError, match="is not valid"):
         brain_lineage.fork(runs, BEHAVIOR, version=bad)
-    with pytest.raises(brain_lineage.LineageError, match="không hợp lệ"):
+    with pytest.raises(brain_lineage.LineageError, match="is not valid"):
         brain_lineage.snapshot(runs, BEHAVIOR, bad, evaluate=False)
     assert brain_lineage.main(["--results-dir", str(runs), "fork", "--run-id", bad]) == 1
     assert json.loads(capsys.readouterr().out.strip().splitlines()[-1])["ok"] is False
@@ -411,13 +411,13 @@ def test_cli_prints_json_on_success_and_error(tmp_path: Path, capsys):
     assert brain_lineage.main(["--results-dir", str(runs), "fork", "--version", "missing"]) == 1
     error = json.loads(capsys.readouterr().out.strip().splitlines()[-1])
     assert error["ok"] is False
-    assert "Không tìm thấy" in error["error"]
+    assert "not found" in error["error"]
 
 
 @pytest.mark.parametrize("name", ["abc\n", "warrior-s001.", "warrior-s001 ", "../x", "Champions"])
 def test_check_id_rejects_aliasing_names(name: str):
     with pytest.raises(brain_lineage.LineageError):
-        brain_lineage.check_id(name, "nhánh")
+        brain_lineage.check_id(name, "branch")
 
 
 def test_version_metadata_keeps_a_stored_score_without_scoring_the_summary():

@@ -77,33 +77,33 @@ namespace PersonalArena.View
             CultureInfo culture = CultureInfo.InvariantCulture;
             string text;
             PolicyBrain brain = pilot.Brain;
-            string title = ClassViewLogic.AiTitle(classId);
+            // The card's heading in gold; the lines under it stay short so the card stays small.
+            string title = "<b><color=#FFDB73>" + ClassViewLogic.AiTitle(classId) + "</color></b>";
+            const string dot = "  ·  ";
             if (brain == null)
             {
-                text = title + "\nChưa có bộ não";
+                text = title + "\nNo brain yet";
             }
             else
             {
+                string steps = LineageStore.FormatStep(brain.Step) + " steps";
                 if (loadedIsVersion && watchedVersion != null)
                 {
-                    text = title + "\nNão: " + watchedVersion.Name + " (" + watchedBranchName + ")" +
-                        "\nĐã học " + brain.Step.ToString("N0", culture) + " bước" +
-                        "   Phiên bản đã lưu   (B: não mới nhất)";
+                    text = title + "   " + watchedVersion.Name + " (" + watchedBranchName + ")" +
+                        "\n" + steps + dot + "saved version" + dot + "B: newest brain";
                 }
                 else if (loadedIsChampion)
                 {
-                    text = title + "   NÃO GIỎI NHẤT" +
+                    text = title + "   BEST BRAIN" +
                         (loadedChampion != null ? "   " + loadedChampion.run_id : string.Empty) +
-                        "\nĐã học " + brain.Step.ToString("N0", culture) + " bước" +
-                        (loadedChampion != null ? (loadedChampion.passes_m4a ? "   đạt M4A" : "   chưa đạt M4A") : string.Empty) +
-                        "\nĐổi khi có não chấm điểm cao hơn   (B: não mới nhất)";
+                        "\n" + steps +
+                        (loadedChampion != null ? dot + (loadedChampion.passes_m4a ? "M4A met" : "M4A not met") : string.Empty) +
+                        dot + "B: newest brain";
                 }
                 else
                 {
                     text = title + "   " + BrainLocator.RunName(loadedPath) +
-                        "\nĐã học " + brain.Step.ToString("N0", culture) + " bước" +
-                        "   (nạp lúc " + loadedAt.ToString("HH:mm", culture) + ")" +
-                        "\nNão mới nhất, tự cập nhật   (B: não giỏi nhất)";
+                        "\n" + steps + dot + "newest brain, loaded " + loadedAt.ToString("HH:mm", culture) + dot + "B: best brain";
                 }
                 if (!string.IsNullOrEmpty(brainStatus))
                 {
@@ -111,8 +111,8 @@ namespace PersonalArena.View
                 }
             }
 
-            text += "\nTrận " + run + "   Tốc độ xem x" + SpeedSteps[speedIndex] +
-                "   Chọn: " + (pilot.Deterministic ? "tốt nhất" : "ngẫu nhiên");
+            text += "\nRun " + run + dot + "Speed x" + SpeedSteps[speedIndex] +
+                dot + "Picks: " + (pilot.Deterministic ? "best" : "random");
             if (recent.Count > 0)
             {
                 float time = 0f;
@@ -125,13 +125,13 @@ namespace PersonalArena.View
                     gold += result.Gold;
                 }
 
-                text += "\n" + recent.Count + " trận gần nhất (TB): sống " + SurvivorViewLogic.FormatClock(time / recent.Count) +
-                    ", cấp " + (level / recent.Count).ToString("0.0", culture) +
-                    ", vàng " + (gold / recent.Count).ToString("0", culture);
+                text += "\nLast " + recent.Count + (recent.Count == 1 ? " run: " : " runs: ") + SurvivorViewLogic.FormatClock(time / recent.Count) +
+                    dot + "Lv " + (level / recent.Count).ToString("0.0", culture) +
+                    dot + (gold / recent.Count).ToString("0", culture) + " gold";
             }
             else
             {
-                text += "\nTrung bình 10 trận gần nhất: chưa có trận nào xong";
+                text += "\nNo run finished yet";
             }
 
             // M5: wallet, a build change waiting for the next run, and the Auto Farm progress.
@@ -140,7 +140,7 @@ namespace PersonalArena.View
                 text += "\n" + MetaViewLogic.WalletText(store.Profile);
                 if (IsBuildChangePending())
                 {
-                    text += "\nThay đổi build: áp dụng từ trận sau";
+                    text += "\nBuild change: applies from the next run";
                 }
             }
             string farmLine = farmPanel != null ? farmPanel.StatusLine : null;

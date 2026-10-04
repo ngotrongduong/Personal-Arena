@@ -22,7 +22,7 @@ namespace PersonalArena.Core.Tests.Meta
             Assert.That(c.Loadouts, Has.Length.EqualTo(ProfileRules.LoadoutCount));
             for (int i = 0; i < ProfileRules.LoadoutCount; i++)
             {
-                Assert.That(c.Loadouts[i].Name, Is.EqualTo("Bộ " + (i + 1)));
+                Assert.That(c.Loadouts[i].Name, Is.EqualTo("Loadout " + (i + 1)));
                 Assert.That(c.Loadouts[i].Points, Has.Length.EqualTo(StatInfo.SlotCount)); Assert.That(c.Loadouts[i].Points, Is.All.EqualTo(0));
                 Assert.That(c.Loadouts[i].Record, Is.Not.Null); Assert.That(c.Loadouts[i].Record.RecentSeconds, Is.Empty);
             }
@@ -56,6 +56,18 @@ namespace PersonalArena.Core.Tests.Meta
         }
 
         [Test]
+        public void Sanitize_RenamesTheOldDefaultLoadoutNames_AndKeepsTheOwnersNames()
+        {
+            PlayerProfile p = ProfileRules.NewProfile(); Loadout[] loadouts = p.Characters[0].Loadouts;
+            loadouts[0].Name = "Bộ 1"; loadouts[1].Name = "Bộ 5"; loadouts[2].Name = "Đánh boss";
+            Assert.That(ProfileRules.Sanitize(p), Is.True);
+            Assert.That(loadouts[0].Name, Is.EqualTo("Loadout 1"), "the default name of before the game went English");
+            Assert.That(loadouts[1].Name, Is.EqualTo("Bộ 5"), "not this slot's old default, so a name the owner typed");
+            Assert.That(loadouts[2].Name, Is.EqualTo("Đánh boss"));
+            Assert.That(ProfileRules.Sanitize(p), Is.False, "idempotent");
+        }
+
+        [Test]
         public void Sanitize_RepairsCharacters()
         {
             CharacterProfile mage = ProfileRules.NewCharacter("mage");
@@ -74,7 +86,7 @@ namespace PersonalArena.Core.Tests.Meta
             Assert.That(broken.BrainRunId, Is.EqualTo("warrior-s001")); Assert.That(broken.Loadouts, Has.Length.EqualTo(5));
             for (int i = 0; i < 5; i++)
             {
-                Assert.That(broken.Loadouts[i], Is.Not.Null); Assert.That(broken.Loadouts[i].Name, Is.EqualTo("Bộ " + (i + 1)));
+                Assert.That(broken.Loadouts[i], Is.Not.Null); Assert.That(broken.Loadouts[i].Name, Is.EqualTo("Loadout " + (i + 1)));
                 Assert.That(broken.Loadouts[i].Points, Has.Length.EqualTo(StatInfo.SlotCount)); Assert.That(broken.Loadouts[i].Record, Is.Not.Null);
             }
 

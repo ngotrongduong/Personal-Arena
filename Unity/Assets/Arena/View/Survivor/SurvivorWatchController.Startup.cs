@@ -88,13 +88,14 @@ namespace PersonalArena.View
             }
 
             hud.SetHelpText(
-                "AI tự chơi - bạn chỉ cần xem\n" +
-                "Space tốc độ xem   T kiểu chọn   Esc tạm dừng\n" +
-                "R trận mới   G biểu đồ học   P hồ sơ AI\n" +
-                "C nhân vật   F farm vàng   V so sánh build\n" +
-                "B đổi não mới nhất / giỏi nhất   L lịch sử não\n" +
-                "M tắt/bật tiếng   O cài đặt\n" +
-                "Lăn chuột: phóng to / thu nhỏ");
+                "The AI plays by itself - you only watch.\n" +
+                "Space   watch speed          T   pick mode (random / best)\n" +
+                "Esc   pause                        R   new run\n" +
+                "B   newest brain / best brain\n" +
+                "C   character      F   gold farm      V   compare builds\n" +
+                "G   charts      P   AI profile      L   brain history\n" +
+                "M   mute      O   settings      Tab   hide the side panels\n" +
+                "Mouse wheel   zoom      Hover an icon   details      H   close");
 
             // M8 settings: quality and window mode apply at start (automated runs keep their window as launched).
             PlayerPrefsSoundStorage prefs = new PlayerPrefsSoundStorage();
@@ -181,7 +182,7 @@ namespace PersonalArena.View
             PollBrain();
             PerfTrace.Mark("brain polled");
 
-            // -watchVersion <id> (checks the build): start on a saved lineage version, as "Xem ngay" does.
+            // -watchVersion <id> (checks the build): start on a saved lineage version, as "Watch now" does.
             string startVersion = CommandLineValue("-watchVersion");
             if (!string.IsNullOrWhiteSpace(startVersion) && !string.IsNullOrWhiteSpace(runsDirectory))
             {
@@ -200,13 +201,13 @@ namespace PersonalArena.View
             switch (outcome)
             {
                 case ProfileLoadOutcome.RecoveredFromBackup:
-                    text = "Hồ sơ bị hỏng nên đã dùng bản sao lưu gần nhất.";
+                    text = "The profile was damaged, so the latest backup was used.";
                     break;
                 case ProfileLoadOutcome.RecoveredNew:
-                    text = "Hồ sơ bị hỏng và không có bản sao lưu:\nđã tạo hồ sơ mới (bản hỏng vẫn được giữ lại).";
+                    text = "The profile was damaged and there is no backup:\na new profile was created (the damaged file is kept).";
                     break;
                 case ProfileLoadOutcome.ReadError:
-                    text = "Không đọc được hồ sơ (tệp đang bị khóa?).\nVàng kiếm được lần này sẽ không được lưu.";
+                    text = "The profile could not be read (file locked?).\nGold earned this time will not be saved.";
                     break;
                 default:
                     return;

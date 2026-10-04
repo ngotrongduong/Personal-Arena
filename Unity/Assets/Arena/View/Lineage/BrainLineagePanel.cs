@@ -86,13 +86,13 @@ namespace PersonalArena.View
         /// <summary>Raised after the active branch (profile BrainRunId) changed and was saved.</summary>
         public event Action ProfileChanged;
 
-        /// <summary>"Xem ngay": the controller should watch this version (version, branch display name).</summary>
+        /// <summary>"Watch now": the controller should watch this version (version, branch display name).</summary>
         public event Action<LineageVersion, string> WatchVersionRequested;
 
         /// <summary>Bound to a runs folder (the panel can only open then).</summary>
         public bool IsBound => store != null && !string.IsNullOrEmpty(runsDirectory);
 
-        protected override string Title => "LỊCH SỬ NÃO";
+        protected override string Title => "BRAIN HISTORY";
         protected override Vector2 CardSize => new Vector2(1800f, 1000f);
 
         public void Bind(ProfileStore profileStore, string runs, string behaviorName, Func<TrainingSnapshot> training)
@@ -192,7 +192,7 @@ namespace PersonalArena.View
         private void Reload()
         {
             index = IsBound ? LineageStore.Load(runsDirectory, behavior) : new LineageIndex();
-            commandMissing = command == null ? "Không tìm thấy thư mục huấn luyện." : command.MissingPiece();
+            commandMissing = command == null ? "Training folder not found." : command.MissingPiece();
 
             if (index.FindBranch(selectedRunId) == null)
             {
@@ -272,10 +272,10 @@ namespace PersonalArena.View
             {
                 SetRowCount(branchRows, 0);
                 SetRowCount(versionRows, 0);
-                branchesEmpty.text = "Không tìm thấy thư mục huấn luyện (Trainer/runs).";
+                branchesEmpty.text = "Training folder not found (Trainer/runs).";
                 branchesEmpty.gameObject.SetActive(true);
                 versionsEmpty.gameObject.SetActive(false);
-                versionsHeader.text = "PHIÊN BẢN";
+                versionsHeader.text = "VERSIONS";
                 RefreshCompare();
                 return;
             }
@@ -295,7 +295,7 @@ namespace PersonalArena.View
 
             if (IsBusy)
             {
-                statusText.text = command.BusyText + "  (đã chạy " + BehaviorProfilePanel.FormatSeconds((float)command.ElapsedSeconds) + ")";
+                statusText.text = command.BusyText + "  (elapsed " + BehaviorProfilePanel.FormatSeconds((float)command.ElapsedSeconds) + ")";
                 statusText.color = Warn;
             }
             else if (!string.IsNullOrEmpty(message))
@@ -305,12 +305,12 @@ namespace PersonalArena.View
             }
             else if (commandMissing != null)
             {
-                statusText.text = "Chỉ xem được: " + commandMissing + " Cần nó để lưu phiên bản, rẽ nhánh và nhân bản.";
+                statusText.text = "Read-only: " + commandMissing + " It is needed to save versions, fork and clone.";
                 statusText.color = Muted;
             }
             else
             {
-                statusText.text = "Mỗi phiên bản là một bộ não đã lưu. \"Xem ngay\" để xem nó chơi, \"Rẽ nhánh\" để huấn luyện tiếp theo hướng khác.";
+                statusText.text = "Each version is a saved brain. \"Watch now\" shows it playing, \"Fork\" trains on from it in another direction.";
                 statusText.color = Muted;
             }
         }
@@ -336,45 +336,45 @@ namespace PersonalArena.View
                 StringBuilder badges = new StringBuilder();
                 if (active)
                 {
-                    AppendBadge(badges, "ĐANG DÙNG", Good);
+                    AppendBadge(badges, "ACTIVE", Good);
                 }
                 if (training)
                 {
-                    AppendBadge(badges, "ĐANG HỌC", Warn);
+                    AppendBadge(badges, "TRAINING", Warn);
                 }
                 if (selected)
                 {
-                    AppendBadge(badges, "ĐANG CHỌN", ColorA);
+                    AppendBadge(badges, "SELECTED", ColorA);
                 }
                 if (!branch.OnDisk)
                 {
-                    AppendBadge(badges, "chỉ còn phiên bản đã lưu", Muted);
+                    AppendBadge(badges, "saved versions only", Muted);
                 }
                 row.Badges.text = badges.ToString();
 
                 int versionCount = index.VersionsOf(branch.RunId).Count;
-                string step = branch.CurrentStep > 0 ? LineageStore.DefaultVersionName(branch.CurrentStep) : "chưa học bước nào";
-                row.Info.text = branch.RunId + " · " + step + " · " + versionCount + " phiên bản" +
-                    (branch.OnDisk && !branch.HasCheckpoint ? " · chưa có checkpoint" : string.Empty);
+                string step = branch.CurrentStep > 0 ? LineageStore.DefaultVersionName(branch.CurrentStep) : "no steps trained yet";
+                row.Info.text = branch.RunId + " · " + step + " · " + versionCount + " versions" +
+                    (branch.OnDisk && !branch.HasCheckpoint ? " · no checkpoint" : string.Empty);
                 row.Parent.text = branch.HasParent
-                    ? "rẽ từ " + index.BranchName(branch.ParentRun) + " · bước " + LineageStore.FormatStep(branch.ParentStep)
-                    : "nhánh gốc";
+                    ? "forked from " + index.BranchName(branch.ParentRun) + " · step " + LineageStore.FormatStep(branch.ParentStep)
+                    : "root branch";
 
-                row.Use.Set(active ? "Đang dùng" : "Dùng nhánh này", active ? ButtonActive : ButtonGo, !active && branch.OnDisk);
-                row.Rename.Set("Đổi tên", ButtonColor, true);
-                row.Clone.Set("Nhân bản", ButtonColor, branch.OnDisk && !commandsBlocked);
-                row.Snapshot.Set("Lưu phiên bản hiện tại", ButtonColor, branch.OnDisk && !commandsBlocked);
+                row.Use.Set(active ? "Active" : "Use this branch", active ? ButtonActive : ButtonGo, !active && branch.OnDisk);
+                row.Rename.Set("Rename", ButtonColor, true);
+                row.Clone.Set("Clone", ButtonColor, branch.OnDisk && !commandsBlocked);
+                row.Snapshot.Set("Save current version", ButtonColor, branch.OnDisk && !commandsBlocked);
             }
 
             SetContentHeight(branchContent, branches.Count, BranchRowHeight);
-            branchesEmpty.text = "Chưa có nhánh nào. Bấm HUẤN LUYỆN để bắt đầu nhánh đầu tiên.";
+            branchesEmpty.text = "No branches yet. Press TRAIN to start the first one.";
             branchesEmpty.gameObject.SetActive(branches.Count == 0);
         }
 
         private void RefreshVersions(bool commandsBlocked)
         {
             LineageBranch branch = index.FindBranch(selectedRunId);
-            versionsHeader.text = branch == null ? "PHIÊN BẢN" : "PHIÊN BẢN CỦA \"" + branch.Name + "\"  (mới nhất ở trên)";
+            versionsHeader.text = branch == null ? "VERSIONS" : "VERSIONS OF \"" + branch.Name + "\"  (newest first)";
             List<LineageVersion> versions = branch == null ? new List<LineageVersion>() : index.VersionsOf(branch.RunId);
             EnsureVersionRows(versions.Count);
             SetRowCount(versionRows, versions.Count);
@@ -392,23 +392,23 @@ namespace PersonalArena.View
                 StringBuilder badges = new StringBuilder();
                 if (version.IsCurrentChampion)
                 {
-                    AppendBadge(badges, "GIỎI NHẤT", Gold);
+                    AppendBadge(badges, "BEST", Gold);
                 }
                 else if (version.WasChampion)
                 {
-                    AppendBadge(badges, "từng giỏi nhất", Good);
+                    AppendBadge(badges, "former best", Good);
                 }
                 if (version.Pinned)
                 {
-                    AppendBadge(badges, "ĐÃ GHIM", ColorA);
+                    AppendBadge(badges, "PINNED", ColorA);
                 }
                 if (!version.HasCheckpoint)
                 {
-                    AppendBadge(badges, "chỉ xem", Muted);
+                    AppendBadge(badges, "watch only", Muted);
                 }
                 if (pick >= 0)
                 {
-                    AppendBadge(badges, pick == 0 ? "SO SÁNH A" : "SO SÁNH B", pick == 0 ? ColorA : ColorB);
+                    AppendBadge(badges, pick == 0 ? "COMPARE A" : "COMPARE B", pick == 0 ? ColorA : ColorB);
                 }
                 row.Badges.text = badges.ToString();
 
@@ -416,31 +416,31 @@ namespace PersonalArena.View
                 string stats = LineageStore.DefaultVersionName(version.Step) + (date.Length > 0 ? " · " + date : string.Empty);
                 if (version.HasEvaluation)
                 {
-                    stats += " · Sống " + MetricText(LineageMetric.MedianSurvival, version) +
-                        " · Thắng " + MetricText(LineageMetric.WinRate, version) +
-                        " · " + MetricText(LineageMetric.GoldPerMinute, version) + " vàng/phút" +
-                        " · Cấp TB " + MetricText(LineageMetric.MeanLevel, version);
+                    stats += " · Survival " + MetricText(LineageMetric.MedianSurvival, version) +
+                        " · Wins " + MetricText(LineageMetric.WinRate, version) +
+                        " · " + MetricText(LineageMetric.GoldPerMinute, version) + " gold/min" +
+                        " · Avg Lv " + MetricText(LineageMetric.MeanLevel, version);
                 }
                 else
                 {
-                    stats += " · chưa chấm";
+                    stats += " · not scored";
                 }
                 row.Stats.text = stats;
 
                 bool oldSchema = version.SchemaVersion > 0 && version.SchemaVersion != BrainLocator.CurrentSchemaVersion;
-                row.Watch.Set("Xem ngay", ButtonGo, !oldSchema);
-                row.Compare.Set(pick < 0 ? "So sánh" : (pick == 0 ? "Bỏ A" : "Bỏ B"), pick < 0 ? ButtonColor : ButtonActive, true);
-                row.Pin.Set(version.Pinned ? "Bỏ ghim" : "Ghim", ButtonColor, true);
-                row.Rename.Set("Đổi tên", ButtonColor, true);
-                row.Fork.Set("Rẽ nhánh", ButtonColor, version.HasCheckpoint && !oldSchema && !commandsBlocked);
+                row.Watch.Set("Watch now", ButtonGo, !oldSchema);
+                row.Compare.Set(pick < 0 ? "Compare" : (pick == 0 ? "Drop A" : "Drop B"), pick < 0 ? ButtonColor : ButtonActive, true);
+                row.Pin.Set(version.Pinned ? "Unpin" : "Pin", ButtonColor, true);
+                row.Rename.Set("Rename", ButtonColor, true);
+                row.Fork.Set("Fork", ButtonColor, version.HasCheckpoint && !oldSchema && !commandsBlocked);
 
                 if (oldSchema)
                 {
-                    row.Reason.text = "Não này dùng kiểu dữ liệu cũ, không xem hay học tiếp được.";
+                    row.Reason.text = "This brain uses an old data format and cannot be watched or trained further.";
                 }
                 else if (!version.HasCheckpoint)
                 {
-                    row.Reason.text = "Bản này chỉ còn não để xem, không học tiếp được";
+                    row.Reason.text = "Only the brain is left: it can be watched but not trained further";
                 }
                 else
                 {
@@ -450,8 +450,8 @@ namespace PersonalArena.View
 
             SetContentHeight(versionContent, versions.Count, VersionRowHeight);
             versionsEmpty.text = branch == null
-                ? "Chọn một nhánh bên trái."
-                : "Nhánh này chưa có phiên bản nào. Bấm \"Lưu phiên bản hiện tại\" để lưu bộ não hiện tại của nhánh.";
+                ? "Select a branch on the left."
+                : "This branch has no versions yet. Press \"Save current version\" to save the branch's current brain.";
             versionsEmpty.gameObject.SetActive(versions.Count == 0);
         }
 
@@ -469,10 +469,10 @@ namespace PersonalArena.View
 
             compareNameA.text = a != null
                 ? "A: " + a.Name + " (" + index.BranchName(a.RunId) + ")"
-                : "A: bấm \"So sánh\" ở một phiên bản";
+                : "A: press \"Compare\" on a version";
             compareNameB.text = b != null
                 ? "B: " + b.Name + " (" + index.BranchName(b.RunId) + ")"
-                : "B: bấm \"So sánh\" ở một phiên bản khác";
+                : "B: press \"Compare\" on another version";
 
             for (int i = 0; i < metricRows.Count; i++)
             {
@@ -502,7 +502,7 @@ namespace PersonalArena.View
 
             if (!version.HasEvaluation)
             {
-                return "chưa chấm";
+                return "not scored";
             }
 
             return value < 0f ? "—" : LineageCompare.Percent(value);
@@ -520,7 +520,7 @@ namespace PersonalArena.View
 
             if (!LineageCompare.TryValue(metric, version, out float value))
             {
-                cell.text = "chưa chấm";
+                cell.text = "not scored";
                 cell.color = Muted;
                 cell.fontStyle = FontStyle.Italic;
                 return;

@@ -288,7 +288,7 @@ namespace PersonalArena.View
             {
                 effects.Sparkle(point, GoldColor, 16, 0.8f, 2.4f, 0.28f);
             }
-            effects.Text(point + Vector3.up * 2.8f, "QUÁI VÀNG!", GoldColor, 1.3f, 1.4f);
+            effects.Text(point + Vector3.up * 2.8f, "GOLDEN ENEMY!", GoldColor, 1.3f, 1.4f);
         }
 
         private void OnGoldenKilled(SurvivorEvent e)
@@ -300,7 +300,7 @@ namespace PersonalArena.View
             {
                 effects.Sparkle(point, GoldColor, 36, 1.5f, 3f, 0.32f);
             }
-            effects.Text(point + Vector3.up * 2.8f, "VÀNG x5!", GoldColor, 1.4f, 1.4f);
+            effects.Text(point + Vector3.up * 2.8f, "GOLD x5!", GoldColor, 1.4f, 1.4f);
         }
 
         /// <summary>-fxDemo: the three M11 enemy looks and a golden walker standing below the hero.</summary>

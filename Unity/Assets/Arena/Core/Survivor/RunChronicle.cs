@@ -17,7 +17,7 @@ namespace PersonalArena.Core.Survivor
         public DeathCause Cause;
     }
 
-    /// <summary>The data of the post-run story. Core gives data only; the View writes the Vietnamese text.</summary>
+    /// <summary>The data of the post-run story. Core gives data only; the View writes the text.</summary>
     public sealed class RunChronicle
     {
         /// <summary>Entries in time order (at most <see cref="RunChronicleRecorder.Cap"/>).</summary>

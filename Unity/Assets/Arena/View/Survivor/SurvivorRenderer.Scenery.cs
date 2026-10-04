@@ -13,8 +13,12 @@ namespace PersonalArena.View
         private const float OuterRingMin = 53f;
         private const float OuterRingMax = 74f;
         private const float GroundTile = 7f;
-        private const int OuterTreeCount = 72;
-        private const int OuterDecorCount = 36;
+        private const int OuterDecorCount = 90;
+        // Rows of trees outside the fence: distance of each row from the map centre and the gap between its trees.
+        private static readonly float[] BeltRows = { 53.6f, 57.5f, 62f, 67.5f, 74f };
+        private static readonly float[] BeltGaps = { 4.2f, 4.6f, 5.2f, 6f, 7f };
+        private const int BeltShadowRows = 2;
+        private const float GroundPastFence = 60f;
         private const int InnerDecorCount = 45;
         private const int PatchCount = 28;
         private const float MaxTreeHeight = 5.5f;
@@ -58,7 +62,7 @@ namespace PersonalArena.View
 
             System.Random random = new System.Random(20260930);
             BuildFence(half + FenceInset);
-            ScatterRing(survivorArt.OuterTrees, OuterTreeCount, random, 0.9f, 1.5f, true);
+            ScatterBelt(survivorArt.OuterTrees, random, 0.9f, 1.5f);
             ScatterRing(survivorArt.Decor, OuterDecorCount, random, 0.8f, 1.2f, false);
             ScatterInside(survivorArt.SmallDecor, InnerDecorCount, random, half - 2f, 0.55f, 0.8f, false);
             ScatterInside(survivorArt.GroundPatches, PatchCount, random, half - 3f, 1f, 1.7f, true);
@@ -74,7 +78,7 @@ namespace PersonalArena.View
             ground.EnableKeyword("_GLOSSYREFLECTIONS_OFF");
             ground.SetFloat("_SpecularHighlights", 0f);
             ground.EnableKeyword("_SPECULARHIGHLIGHTS_OFF");
-            float size = half * 2f + 50f;
+            float size = (half + GroundPastFence) * 2f;
             ground.mainTextureScale = new Vector2(size / GroundTile, size / GroundTile);
 
             Mesh quad = Own(BuildLitQuad());
@@ -244,6 +248,52 @@ namespace PersonalArena.View
                 Vector3 position = direction * (radius * Mathf.Min(squareFactor, 1.35f));
                 float scale = SceneryScale * Mathf.Lerp(minScale, maxScale, (float)random.NextDouble());
                 PlaceScenery(prefab, root, position, (float)random.NextDouble() * 360f, scale, castShadows);
+            }
+        }
+
+        /// <summary>
+        /// A wood around the map: rows of trees along the outside of the fence, so the view past the fence
+        /// (a cornered hero, a zoomed-out camera) shows trees instead of an empty dark field.
+        /// </summary>
+        private void ScatterBelt(GameObject[] prefabs, System.Random random, float minScale, float maxScale)
+        {
+            if (prefabs == null || prefabs.Length == 0)
+            {
+                return;
+            }
+            Transform root = CreateChild("Outer Wood", sceneryRoot);
+            for (int row = 0; row < BeltRows.Length; row++)
+            {
+                float half = BeltRows[row];
+                float gap = BeltGaps[row];
+                int count = Mathf.RoundToInt(half * 8f / gap);
+                for (int i = 0; i < count; i++)
+                {
+                    GameObject prefab = prefabs[random.Next(prefabs.Length)];
+                    if (prefab == null)
+                    {
+                        continue;
+                    }
+                    // Even steps along the square with some jitter, so no gap opens and no two trunks overlap.
+                    float along = (i + 0.15f + 0.7f * (float)random.NextDouble()) / count * half * 8f;
+                    float depth = half + ((float)random.NextDouble() - 0.5f) * gap * 0.5f;
+                    float scale = SceneryScale * Mathf.Lerp(minScale, maxScale, (float)random.NextDouble());
+                    PlaceScenery(prefab, root, PointOnSquare(depth, along / half), (float)random.NextDouble() * 360f, scale, row < BeltShadowRows);
+                }
+            }
+        }
+
+        /// <summary>Point on the square of half-side <paramref name="half"/>; <paramref name="t"/> runs 0..8 around it.</summary>
+        private static Vector3 PointOnSquare(float half, float t)
+        {
+            t = Mathf.Repeat(t, 8f);
+            float u = (t % 2f - 1f) * half;
+            switch ((int)(t / 2f))
+            {
+                case 0: return new Vector3(u, 0f, half);
+                case 1: return new Vector3(half, 0f, -u);
+                case 2: return new Vector3(-u, 0f, -half);
+                default: return new Vector3(-half, 0f, u);
             }
         }
 

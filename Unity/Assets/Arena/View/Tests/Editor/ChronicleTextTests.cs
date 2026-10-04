@@ -19,7 +19,7 @@ namespace PersonalArena.View.Tests
         }
 
         [Test]
-        public void LinesHaveTheClockAndVietnameseText()
+        public void LinesHaveTheClockAndTheText()
         {
             RunChronicle chronicle = new RunChronicle { EndReason = EndReason.Won };
             chronicle.Entries.Add(Entry(65f, ChronicleKind.EliteKilled));
@@ -30,10 +30,10 @@ namespace PersonalArena.View.Tests
             string[] lines = ChronicleText.Format(chronicle).Split('\n');
 
             Assert.That(lines.Length, Is.EqualTo(4));
-            Assert.That(lines[0], Is.EqualTo("01:05  Hạ một tinh anh"));
-            Assert.That(lines[1], Does.EndWith("Trùm xuất hiện"));
-            Assert.That(lines[2], Does.EndWith("Hạ trùm!"));
-            Assert.That(lines[3], Does.EndWith("Chiến thắng!"));
+            Assert.That(lines[0], Is.EqualTo("01:05  Killed an elite"));
+            Assert.That(lines[1], Does.EndWith("The boss appeared"));
+            Assert.That(lines[2], Does.EndWith("Boss killed!"));
+            Assert.That(lines[3], Does.EndWith("Victory!"));
         }
 
         [Test]
@@ -43,7 +43,7 @@ namespace PersonalArena.View.Tests
             entry.Value = 0.12f;
             entry.Cause = DeathCause.Surrounded;
 
-            Assert.That(ChronicleText.Describe(entry, EndReason.None), Is.EqualTo("Suýt chết (còn 12% máu, bị vây)"));
+            Assert.That(ChronicleText.Describe(entry, EndReason.None), Is.EqualTo("Near death (12% HP, surrounded)"));
         }
 
         [Test]
@@ -52,7 +52,7 @@ namespace PersonalArena.View.Tests
             ChronicleEntry entry = Entry(120f, ChronicleKind.StyleChange);
             entry.Label = SpectatorLabel.Kiting;
 
-            Assert.That(ChronicleText.Describe(entry, EndReason.None), Is.EqualTo("Chuyển sang " + SpectatorLabels.DisplayName(SpectatorLabel.Kiting)));
+            Assert.That(ChronicleText.Describe(entry, EndReason.None), Is.EqualTo("Switched to " + SpectatorLabels.DisplayName(SpectatorLabel.Kiting)));
         }
 
         [Test]

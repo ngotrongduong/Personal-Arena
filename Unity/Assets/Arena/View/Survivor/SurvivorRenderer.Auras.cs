@@ -155,9 +155,9 @@ namespace PersonalArena.View
             string label;
             switch ((BuffKind)e.Id)
             {
-                case BuffKind.Rage: color = RageColor; label = "CUỒNG NỘ!"; break;
-                case BuffKind.Shield: color = ShieldBuffColor; label = "KHIÊN!"; break;
-                default: color = HasteColor; label = "TỐC ĐỘ!"; break;
+                case BuffKind.Rage: color = RageColor; label = "RAGE!"; break;
+                case BuffKind.Shield: color = ShieldBuffColor; label = "SHIELD!"; break;
+                default: color = HasteColor; label = "HASTE!"; break;
             }
             effects.Shockwave(heroPosition, color, 9f, 0.6f);
             effects.Rune(heroPosition, color, 6f, 0.8f);
@@ -194,7 +194,7 @@ namespace PersonalArena.View
             {
                 effects.Sparkle(heroPosition, ManaColor, 18, 0.8f, 2.2f, 0.24f);
             }
-            effects.Text(heroPosition + Vector3.up * 2.2f, "+" + NumberText(Mathf.RoundToInt(e.Value)) + " năng lượng", ManaColor, 1.1f, 1f);
+            effects.Text(heroPosition + Vector3.up * 2.2f, "+" + NumberText(Mathf.RoundToInt(e.Value)) + " energy", ManaColor, 1.1f, 1f);
         }
     }
 }

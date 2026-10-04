@@ -22,12 +22,12 @@ namespace PersonalArena.Core.Tests.Meta
         {
             CharacterBuild build = new CharacterBuild { Tier = 3 };
             build.Points[(int)StatId.MaxHp] = 4; build.Points[(int)StatId.Greed] = 2; build.Points[(int)StatId.Growth] = 1;
-            string line = EconomyLog.Line(new DateTime(2026, 9, 30, 14, 5, 9, DateTimeKind.Utc), EconomyLog.FarmMode, "warrior", 3, "Bộ 1", build, Stats());
+            string line = EconomyLog.Line(new DateTime(2026, 9, 30, 14, 5, 9, DateTimeKind.Utc), EconomyLog.FarmMode, "warrior", 3, "Loadout 1", build, Stats());
             string[] fields = line.Split(',');
             Assert.That(fields, Has.Length.EqualTo(EconomyLog.Header.Split(',').Length));
             Assert.That(fields, Is.EqualTo(new[]
             {
-                "2026-09-30T14:05:09Z", "farm", "warrior", "3", "Bộ 1", "312.5", "Died", "Brute", "17", "420", "250.125",
+                "2026-09-30T14:05:09Z", "farm", "warrior", "3", "Loadout 1", "312.5", "Died", "Brute", "17", "420", "250.125",
                 "200", "30", "0", "20.125", "0", "1234.5", "48.024", "4;0;0;0;0;0;0;0;0;0;0;2;1"
             }));
             Assert.That(fields[18].Split(';'), Has.Length.EqualTo(StatInfo.UsedCount));

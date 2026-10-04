@@ -413,6 +413,7 @@ namespace PersonalArena.View
             UpdateHeroLabel(Time.unscaledDeltaTime);
             UpdateToast(Time.unscaledDeltaTime);
             UpdateFps(Time.unscaledDeltaTime);
+            UpdateTooltip();
             PerfTrace.Span("hud late update", at, 20.0);
         }
 
@@ -484,9 +485,10 @@ namespace PersonalArena.View
             {
                 BuildTrainingPanel();
             }
-            if (trainingPanel != null)
+            if (trainingShown != show)
             {
-                trainingPanel.SetActive(show);
+                trainingShown = show;
+                LayoutRightColumn();
             }
         }
 
