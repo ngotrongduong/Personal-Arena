@@ -13,7 +13,7 @@ namespace PersonalArena.View
     public static class ChronicleText
     {
         public const int DefaultMaxLines = 10;
-        public const string EmptyText = "Chưa có sự kiện nào.";
+        public const string EmptyText = "No events yet.";
 
         /// <summary>Lower is more important.</summary>
         public static int Priority(ChronicleKind kind)
@@ -104,22 +104,22 @@ namespace PersonalArena.View
             switch (entry.Kind)
             {
                 case ChronicleKind.NewItem:
-                    return "Nhặt " + ItemName(entry.ItemIndex);
+                    return "Got " + ItemName(entry.ItemIndex);
                 case ChronicleKind.ItemMaxed:
-                    return ItemName(entry.ItemIndex) + " đạt cấp tối đa";
+                    return ItemName(entry.ItemIndex) + " reached max level";
                 case ChronicleKind.StyleChange:
                     string label = SpectatorLabels.DisplayName(entry.Label);
-                    return string.IsNullOrEmpty(label) ? "Đổi lối đánh" : "Chuyển sang " + label;
+                    return string.IsNullOrEmpty(label) ? "Changed play style" : "Switched to " + label;
                 case ChronicleKind.NearDeath:
                     return NearDeathText(entry);
                 case ChronicleKind.EliteKilled:
-                    return "Hạ một tinh anh";
+                    return "Killed an elite";
                 case ChronicleKind.ChestOpened:
                     return ChestText(entry);
                 case ChronicleKind.BossSpawned:
-                    return "Trùm xuất hiện";
+                    return "The boss appeared";
                 case ChronicleKind.BossKilled:
-                    return "Hạ trùm!";
+                    return "Boss killed!";
                 case ChronicleKind.End:
                     return EndText(endReason, entry.Cause);
                 default:
@@ -137,19 +137,19 @@ namespace PersonalArena.View
             }
 
             string cause = NearDeathCause(entry.Cause);
-            return "Suýt chết (còn " + percent + "% máu" + (cause.Length > 0 ? ", " + cause : string.Empty) + ")";
+            return "Near death (" + percent + "% HP" + (cause.Length > 0 ? ", " + cause : string.Empty) + ")";
         }
 
         private static string NearDeathCause(DeathCause cause)
         {
             switch (cause)
             {
-                case DeathCause.Surrounded: return "bị vây";
-                case DeathCause.Boss: return "trúng đòn Trùm";
-                case DeathCause.Brute: return "trúng đòn Đồ tể";
-                case DeathCause.Contact: return "bị quái cào";
-                case DeathCause.Projectile: return "trúng đạn";
-                case DeathCause.Explosion: return "dính Bom xác nổ";
+                case DeathCause.Surrounded: return "surrounded";
+                case DeathCause.Boss: return "hit by the Boss";
+                case DeathCause.Brute: return "hit by a Brute";
+                case DeathCause.Contact: return "clawed by enemies";
+                case DeathCause.Projectile: return "hit by a projectile";
+                case DeathCause.Explosion: return "caught by an Exploder";
                 default: return string.Empty;
             }
         }
@@ -157,31 +157,31 @@ namespace PersonalArena.View
         private static string ChestText(ChronicleEntry entry)
         {
             ItemDef def = SurvivorCatalog.Get(entry.ItemIndex);
-            string gold = entry.Value > 0f ? "+" + MetaViewLogic.FormatGold((long)Math.Floor(entry.Value)) + " vàng" : string.Empty;
+            string gold = entry.Value > 0f ? "+" + MetaViewLogic.FormatGold((long)Math.Floor(entry.Value)) + " gold" : string.Empty;
             if (def != null && def.Kind != ItemKind.Filler && entry.Level > 0)
             {
-                return "Mở rương — " + def.Name + " cấp " + entry.Level + (gold.Length > 0 ? " (" + gold + ")" : string.Empty);
+                return "Opened a chest — " + def.Name + " level " + entry.Level + (gold.Length > 0 ? " (" + gold + ")" : string.Empty);
             }
 
-            return "Mở rương" + (gold.Length > 0 ? " — " + gold : string.Empty);
+            return "Opened a chest" + (gold.Length > 0 ? " — " + gold : string.Empty);
         }
 
         private static string EndText(EndReason reason, DeathCause cause)
         {
             switch (reason)
             {
-                case EndReason.Won: return "Chiến thắng!";
-                case EndReason.Died: return "Gục ngã (" + SurvivorViewLogic.DeathCauseText(cause) + ")";
-                case EndReason.TimeUp: return "Hết giờ";
-                case EndReason.Expired: return "Trùm còn sống — hết giờ";
-                default: return "Trận kết thúc";
+                case EndReason.Won: return "Victory!";
+                case EndReason.Died: return "Defeated (" + SurvivorViewLogic.DeathCauseText(cause) + ")";
+                case EndReason.TimeUp: return "Time up";
+                case EndReason.Expired: return "Boss still alive — time up";
+                default: return "Run ended";
             }
         }
 
         private static string ItemName(int index)
         {
             ItemDef def = SurvivorCatalog.Get(index);
-            return def != null && !string.IsNullOrEmpty(def.Name) ? def.Name : "trang bị";
+            return def != null && !string.IsNullOrEmpty(def.Name) ? def.Name : "gear";
         }
     }
 }

@@ -19,7 +19,7 @@ namespace PersonalArena.View
             statusText.supportRichText = false;
 
             Text branchesTitle = PlaceText("Branches Title", card, 22, TextAnchor.UpperLeft, Color.white, LeftX, -110f, LeftWidth, 30f, true);
-            branchesTitle.text = "NHÁNH";
+            branchesTitle.text = "BRANCHES";
             branchContent = CreateScrollList("Branches", card, LeftX, ListTop, LeftWidth, BranchListHeight);
             branchesEmpty = PlaceText("Branches Empty", card, 17, TextAnchor.UpperLeft, Muted, LeftX + 14f, ListTop - 14f,
                 LeftWidth - 40f, 80f, false, true);
@@ -111,10 +111,10 @@ namespace PersonalArena.View
                 row.Parent.supportRichText = false;
 
                 float buttonWidth = (width - 28f - 3f * 6f) / 4f;
-                row.Use = CreateButton("Use", background, "Dùng nhánh này", 13, 14f, -114f, buttonWidth, 42f, () => OnUseBranch(row));
-                row.Rename = CreateButton("Rename", background, "Đổi tên", 13, 14f + (buttonWidth + 6f), -114f, buttonWidth, 42f, () => OnRenameBranch(row));
-                row.Clone = CreateButton("Clone", background, "Nhân bản", 13, 14f + 2f * (buttonWidth + 6f), -114f, buttonWidth, 42f, () => OnCloneBranch(row));
-                row.Snapshot = CreateButton("Snapshot", background, "Lưu phiên bản hiện tại", 13, 14f + 3f * (buttonWidth + 6f), -114f,
+                row.Use = CreateButton("Use", background, "Use this branch", 13, 14f, -114f, buttonWidth, 42f, () => OnUseBranch(row));
+                row.Rename = CreateButton("Rename", background, "Rename", 13, 14f + (buttonWidth + 6f), -114f, buttonWidth, 42f, () => OnRenameBranch(row));
+                row.Clone = CreateButton("Clone", background, "Clone", 13, 14f + 2f * (buttonWidth + 6f), -114f, buttonWidth, 42f, () => OnCloneBranch(row));
+                row.Snapshot = CreateButton("Snapshot", background, "Save current version", 13, 14f + 3f * (buttonWidth + 6f), -114f,
                     buttonWidth, 42f, () => OnSnapshotBranch(row));
                 branchRows.Add(row);
             }
@@ -141,14 +141,14 @@ namespace PersonalArena.View
                 row.Stats = PlaceText("Stats", background, 15, TextAnchor.UpperLeft, Muted, 14f, -60f, textWidth, 40f, false, true);
                 row.Stats.supportRichText = false;
 
-                row.Watch = CreateButton("Watch", background, "Xem ngay", 14, buttonsX, -12f, buttonWidth, 40f, () => OnWatchVersion(row));
-                row.Compare = CreateButton("Compare", background, "So sánh", 14, buttonsX + (buttonWidth + buttonGap), -12f, buttonWidth, 40f,
+                row.Watch = CreateButton("Watch", background, "Watch now", 14, buttonsX, -12f, buttonWidth, 40f, () => OnWatchVersion(row));
+                row.Compare = CreateButton("Compare", background, "Compare", 14, buttonsX + (buttonWidth + buttonGap), -12f, buttonWidth, 40f,
                     () => OnCompareVersion(row));
-                row.Pin = CreateButton("Pin", background, "Ghim", 14, buttonsX + 2f * (buttonWidth + buttonGap), -12f, buttonWidth, 40f,
+                row.Pin = CreateButton("Pin", background, "Pin", 14, buttonsX + 2f * (buttonWidth + buttonGap), -12f, buttonWidth, 40f,
                     () => OnPinVersion(row));
-                row.Rename = CreateButton("Rename", background, "Đổi tên", 14, buttonsX + 3f * (buttonWidth + buttonGap), -12f, buttonWidth, 40f,
+                row.Rename = CreateButton("Rename", background, "Rename", 14, buttonsX + 3f * (buttonWidth + buttonGap), -12f, buttonWidth, 40f,
                     () => OnRenameVersion(row));
-                row.Fork = CreateButton("Fork", background, "Rẽ nhánh", 14, buttonsX + 4f * (buttonWidth + buttonGap), -12f, buttonWidth, 40f,
+                row.Fork = CreateButton("Fork", background, "Fork", 14, buttonsX + 4f * (buttonWidth + buttonGap), -12f, buttonWidth, 40f,
                     () => OnForkVersion(row));
                 row.Reason = PlaceText("Reason", background, 13, TextAnchor.UpperRight, Muted, buttonsX, -58f,
                     5f * buttonWidth + 4f * buttonGap, 40f, false, true);
@@ -179,7 +179,7 @@ namespace PersonalArena.View
 
             Text placeholder = CreateText("Placeholder", rect, 17, TextAnchor.MiddleLeft, TextDisabled);
             placeholder.fontStyle = FontStyle.Italic;
-            placeholder.text = "Tên mới (tối đa " + LineageStore.MaxNameLength + " ký tự)";
+            placeholder.text = "New name (up to " + LineageStore.MaxNameLength + " characters)";
             placeholder.horizontalOverflow = HorizontalWrapMode.Wrap;
             placeholder.verticalOverflow = VerticalWrapMode.Truncate;
             SetStretch(placeholder.rectTransform, 10f, 10f, 2f, 2f);
@@ -197,11 +197,11 @@ namespace PersonalArena.View
         private void BuildCompare(RectTransform card, float x, float y, float width, float height)
         {
             RectTransform section = CreateCard("Compare", card, x, y, width, height);
-            Header(section, "SO SÁNH HAI PHIÊN BẢN");
+            Header(section, "COMPARE TWO VERSIONS");
 
             compareHint = PlaceText("Hint", section, 17, TextAnchor.UpperLeft, Muted, 18f, -56f, width - 36f, 80f, false, true);
-            compareHint.text = "Bấm \"So sánh\" ở hai phiên bản (có thể ở hai nhánh khác nhau) để so sánh chúng. " +
-                "Bấm lần thứ ba sẽ thay cho lựa chọn cũ hơn.";
+            compareHint.text = "Press \"Compare\" on two versions (they can be on different branches) to compare them. " +
+                "A third press replaces the older pick.";
 
             compareBody = CreateUiObject("Body", section);
             RectTransform body = (RectTransform)compareBody.transform;
@@ -216,7 +216,7 @@ namespace PersonalArena.View
             const float valueAX = 250f;
             const float valueBX = 400f;
             Text metricHeading = PlaceText("Metric Heading", body, 15, TextAnchor.MiddleLeft, Muted, labelX, -78f, 220f, 24f, true);
-            metricHeading.text = "Chỉ số (ô vàng: tốt hơn)";
+            metricHeading.text = "Metric (gold cell: better)";
             Text headingA = PlaceText("Heading A", body, 15, TextAnchor.MiddleLeft, ColorA, valueAX, -78f, 140f, 24f, true);
             headingA.text = "A";
             Text headingB = PlaceText("Heading B", body, 15, TextAnchor.MiddleLeft, ColorB, valueBX, -78f, 140f, 24f, true);
@@ -228,7 +228,7 @@ namespace PersonalArena.View
                 float rowY = -106f - i * 29f;
                 MetricRow row = new MetricRow { Metric = metrics[i] };
                 Text label = PlaceText("Metric " + i, body, 16, TextAnchor.MiddleLeft, Color.white, labelX, rowY, 230f, 28f);
-                label.text = LineageCompare.Label(metrics[i]) + (LineageCompare.LowerIsBetter(metrics[i]) ? " (thấp tốt hơn)" : string.Empty);
+                label.text = LineageCompare.Label(metrics[i]) + (LineageCompare.LowerIsBetter(metrics[i]) ? " (lower is better)" : string.Empty);
                 row.ValueA = PlaceText("A " + i, body, 16, TextAnchor.MiddleLeft, Color.white, valueAX, rowY, 145f, 28f);
                 row.ValueB = PlaceText("B " + i, body, 16, TextAnchor.MiddleLeft, Color.white, valueBX, rowY, 145f, 28f);
                 metricRows.Add(row);
@@ -236,7 +236,7 @@ namespace PersonalArena.View
 
             const float traitX = 580f;
             Text traitHeading = PlaceText("Trait Heading", body, 15, TextAnchor.MiddleLeft, Muted, traitX, -78f, 540f, 24f, true);
-            traitHeading.text = "Cách chơi (thanh trên: A, thanh dưới: B)";
+            traitHeading.text = "Play style (top bar: A, bottom bar: B)";
             for (int i = 0; i < BehaviorProfilePanel.TraitCount; i++)
             {
                 float rowY = -106f - i * 36f;

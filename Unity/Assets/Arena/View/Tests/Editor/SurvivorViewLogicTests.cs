@@ -99,7 +99,7 @@ namespace PersonalArena.View.Tests
         [Test]
         public void LevelLabel_MarksNewItemsUpgradesAndRewards()
         {
-            Assert.That(SurvivorViewLogic.LevelLabel(3, 1), Is.EqualTo("MỚI"));
+            Assert.That(SurvivorViewLogic.LevelLabel(3, 1), Is.EqualTo("NEW"));
             Assert.That(SurvivorViewLogic.LevelLabel(3, 4), Is.EqualTo("Lv 4"));
             Assert.That(SurvivorViewLogic.LevelLabel(62, 1), Is.Empty, "one-off rewards have no level");
         }
@@ -126,7 +126,7 @@ namespace PersonalArena.View.Tests
             {
                 Assert.That(SurvivorViewLogic.DeathCauseText(cause), Is.Not.EqualTo(SurvivorViewLogic.DeathCauseText(DeathCause.None)), cause.ToString());
             }
-            Assert.That(SurvivorViewLogic.DeathCauseText(DeathCause.Explosion), Is.EqualTo("bị Bom xác nổ"));
+            Assert.That(SurvivorViewLogic.DeathCauseText(DeathCause.Explosion), Is.EqualTo("blown up by an Exploder"));
         }
 
         // ------------------------------------------------------------------ M7
@@ -195,9 +195,9 @@ namespace PersonalArena.View.Tests
         [Test]
         public void BuffChip_ShowsNameAndSecondsLeft_AndHidesWhenOver()
         {
-            Assert.That(SurvivorViewLogic.BuffChipText(BuffKind.Rage, 9.2f), Is.EqualTo("CUỒNG NỘ  10s"));
-            Assert.That(SurvivorViewLogic.BuffChipText(BuffKind.Shield, 0.1f), Is.EqualTo("KHIÊN  1s"));
-            Assert.That(SurvivorViewLogic.BuffChipText(BuffKind.Haste, 3f), Is.EqualTo("TỐC ĐỘ  3s"));
+            Assert.That(SurvivorViewLogic.BuffChipText(BuffKind.Rage, 9.2f), Is.EqualTo("RAGE  10s"));
+            Assert.That(SurvivorViewLogic.BuffChipText(BuffKind.Shield, 0.1f), Is.EqualTo("SHIELD  1s"));
+            Assert.That(SurvivorViewLogic.BuffChipText(BuffKind.Haste, 3f), Is.EqualTo("HASTE  3s"));
             Assert.That(SurvivorViewLogic.BuffChipText(BuffKind.Haste, 0f), Is.Null);
             Assert.That(SurvivorViewLogic.BuffChipText(BuffKind.Rage, float.NaN), Is.Null);
             Assert.That(SurvivorViewLogic.BuffSeconds(BuffKind.Rage), Is.EqualTo(SurvivorSim.RageSeconds));
@@ -255,10 +255,10 @@ namespace PersonalArena.View.Tests
         [Test]
         public void EvolvedToast_NamesTheEvolution()
         {
-            Assert.That(SurvivorViewLogic.EvolvedToast(40), Is.EqualTo("TIẾN HÓA: Kiếm bão"));
+            Assert.That(SurvivorViewLogic.EvolvedToast(40), Is.EqualTo("EVOLVED: Storm Blade"));
             Assert.That(SurvivorViewLogic.EvolvedToast(SurvivorCatalog.EvolutionOf(SurvivorCatalog.CrossbowIndex)),
-                Is.EqualTo("TIẾN HÓA: Nỏ công thành"));
-            Assert.That(SurvivorViewLogic.EvolvedToast(-5), Is.EqualTo("TIẾN HÓA!"));
+                Is.EqualTo("EVOLVED: Siege Crossbow"));
+            Assert.That(SurvivorViewLogic.EvolvedToast(-5), Is.EqualTo("EVOLVED!"));
             Assert.That(SurvivorViewLogic.EvolvedToast(40), Does.Not.Contain("★"));
         }
 
@@ -309,9 +309,9 @@ namespace PersonalArena.View.Tests
         [Test]
         public void HeroNameLine_NamesTheSelectedClass()
         {
-            Assert.That(SurvivorViewLogic.HeroNameLine("mage"), Is.EqualTo("PHÁP SƯ  (AI điều khiển)"));
-            Assert.That(SurvivorViewLogic.HeroNameLine("archer"), Is.EqualTo("CUNG THỦ  (AI điều khiển)"));
-            Assert.That(SurvivorViewLogic.HeroNameLine("warrior"), Is.EqualTo("CHIẾN BINH  (AI điều khiển)"));
+            Assert.That(SurvivorViewLogic.HeroNameLine("mage"), Is.EqualTo("MAGE  (AI controlled)"));
+            Assert.That(SurvivorViewLogic.HeroNameLine("archer"), Is.EqualTo("ARCHER  (AI controlled)"));
+            Assert.That(SurvivorViewLogic.HeroNameLine("warrior"), Is.EqualTo("WARRIOR  (AI controlled)"));
         }
 
         [Test]
@@ -489,7 +489,7 @@ namespace PersonalArena.View.Tests
                 Assert.That(SurvivorViewLogic.ItemDescription(item, 1), Is.Not.EqualTo(SurvivorViewLogic.ItemDescription(item, 2)),
                     "item " + item + ": a new weapon reads differently from an upgrade");
                 Assert.That(SurvivorViewLogic.ItemColor(item), Is.Not.EqualTo(fallback), "item " + item);
-                Assert.That(SurvivorViewLogic.LevelLabel(item, 1), Is.EqualTo("MỚI"));
+                Assert.That(SurvivorViewLogic.LevelLabel(item, 1), Is.EqualTo("NEW"));
             }
 
             for (int item = 0; item < SurvivorCatalog.CatalogSize; item++)

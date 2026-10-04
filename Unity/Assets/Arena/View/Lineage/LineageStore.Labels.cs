@@ -38,7 +38,7 @@ namespace PersonalArena.View
             if (unreadable)
             {
                 labels = null;
-                error = "Không đọc được tên/ghim đã lưu (labels.json) nên chưa đổi gì. Thử lại sau giây lát.";
+                error = "Could not read the saved names and pins (labels.json), so nothing was changed. Try again in a moment.";
                 return false;
             }
 
@@ -65,7 +65,7 @@ namespace PersonalArena.View
             string lineage = LineageDirectory(runsDirectory, behavior);
             if (lineage == null || string.IsNullOrEmpty(runId))
             {
-                error = "Không tìm thấy thư mục lịch sử não.";
+                error = "Brain history folder not found.";
                 return false;
             }
 
@@ -104,7 +104,7 @@ namespace PersonalArena.View
             string lineage = LineageDirectory(runsDirectory, behavior);
             if (lineage == null || string.IsNullOrEmpty(versionId))
             {
-                error = "Không tìm thấy thư mục lịch sử não.";
+                error = "Brain history folder not found.";
                 return false;
             }
 
@@ -162,7 +162,7 @@ namespace PersonalArena.View
             error = null;
             if (string.IsNullOrEmpty(lineageDirectory) || labels == null)
             {
-                error = "Không tìm thấy thư mục lịch sử não.";
+                error = "Brain history folder not found.";
                 return false;
             }
 
@@ -203,7 +203,7 @@ namespace PersonalArena.View
             {
                 TryDelete(temp);
                 Debug.LogWarning("Could not save " + path + ": " + exception.Message);
-                error = "Không lưu được tên/ghim: " + exception.Message;
+                error = "Could not save the name/pin: " + exception.Message;
                 return false;
             }
         }

@@ -66,7 +66,7 @@ namespace PersonalArena.View
         private string loadedPath;
         private DateTime loadedWriteTime;
         private DateTime loadedAt;
-        private string brainStatus = "Đang chờ AI lưu bộ não đầu tiên...";
+        private string brainStatus = "Waiting for the AI to save its first brain...";
         private float nextPoll;
         private float accumulator;
         private float endTimer;
@@ -113,7 +113,7 @@ namespace PersonalArena.View
         private string switchNotice;
         private float switchNoticeUntil;
 
-        // M6: a saved brain version picked in the lineage panel ("Xem ngay"); not saved across restarts. B clears it.
+        // M6: a saved brain version picked in the lineage panel ("Watch now"); not saved across restarts. B clears it.
         private LineageVersion watchedVersion;
         private string watchedBranchName;
         private bool loadedIsVersion;
@@ -510,7 +510,7 @@ namespace PersonalArena.View
 
             if (keyboard.mKey.wasPressedThisFrame && survivorAudio != null)
             {
-                ShowSwitchNotice(survivorAudio.ToggleMute() ? "Đã tắt tiếng" : "Đã bật tiếng");
+                ShowSwitchNotice(survivorAudio.ToggleMute() ? "Sound off" : "Sound on");
             }
 
             if (keyboard.spaceKey.wasPressedThisFrame)

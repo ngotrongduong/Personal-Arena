@@ -14,10 +14,10 @@ namespace PersonalArena.Core.Survivor
         {
             switch (label)
             {
-                case SpectatorLabel.Kiting: return "THẢ DIỀU";
-                case SpectatorLabel.Looting: return "NHẶT VÀNG";
-                case SpectatorLabel.Charging: return "LAO VÀO";
-                case SpectatorLabel.Escaping: return "THOÁT VÂY";
+                case SpectatorLabel.Kiting: return "KITING";
+                case SpectatorLabel.Looting: return "LOOTING GOLD";
+                case SpectatorLabel.Charging: return "CHARGING IN";
+                case SpectatorLabel.Escaping: return "BREAKING OUT";
                 default: return string.Empty;
             }
         }

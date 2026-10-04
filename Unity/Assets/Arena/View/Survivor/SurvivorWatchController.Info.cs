@@ -80,30 +80,30 @@ namespace PersonalArena.View
             string title = ClassViewLogic.AiTitle(classId);
             if (brain == null)
             {
-                text = title + "\nChưa có bộ não";
+                text = title + "\nNo brain yet";
             }
             else
             {
                 if (loadedIsVersion && watchedVersion != null)
                 {
-                    text = title + "\nNão: " + watchedVersion.Name + " (" + watchedBranchName + ")" +
-                        "\nĐã học " + brain.Step.ToString("N0", culture) + " bước" +
-                        "   Phiên bản đã lưu   (B: não mới nhất)";
+                    text = title + "\nBrain: " + watchedVersion.Name + " (" + watchedBranchName + ")" +
+                        "\nTrained " + brain.Step.ToString("N0", culture) + " steps" +
+                        "   Saved version   (B: newest brain)";
                 }
                 else if (loadedIsChampion)
                 {
-                    text = title + "   NÃO GIỎI NHẤT" +
+                    text = title + "   BEST BRAIN" +
                         (loadedChampion != null ? "   " + loadedChampion.run_id : string.Empty) +
-                        "\nĐã học " + brain.Step.ToString("N0", culture) + " bước" +
-                        (loadedChampion != null ? (loadedChampion.passes_m4a ? "   đạt M4A" : "   chưa đạt M4A") : string.Empty) +
-                        "\nĐổi khi có não chấm điểm cao hơn   (B: não mới nhất)";
+                        "\nTrained " + brain.Step.ToString("N0", culture) + " steps" +
+                        (loadedChampion != null ? (loadedChampion.passes_m4a ? "   M4A met" : "   M4A not met") : string.Empty) +
+                        "\nReplaced when a brain scores higher   (B: newest brain)";
                 }
                 else
                 {
                     text = title + "   " + BrainLocator.RunName(loadedPath) +
-                        "\nĐã học " + brain.Step.ToString("N0", culture) + " bước" +
-                        "   (nạp lúc " + loadedAt.ToString("HH:mm", culture) + ")" +
-                        "\nNão mới nhất, tự cập nhật   (B: não giỏi nhất)";
+                        "\nTrained " + brain.Step.ToString("N0", culture) + " steps" +
+                        "   (loaded at " + loadedAt.ToString("HH:mm", culture) + ")" +
+                        "\nNewest brain, updates itself   (B: best brain)";
                 }
                 if (!string.IsNullOrEmpty(brainStatus))
                 {
@@ -111,8 +111,8 @@ namespace PersonalArena.View
                 }
             }
 
-            text += "\nTrận " + run + "   Tốc độ xem x" + SpeedSteps[speedIndex] +
-                "   Chọn: " + (pilot.Deterministic ? "tốt nhất" : "ngẫu nhiên");
+            text += "\nRun " + run + "   Speed x" + SpeedSteps[speedIndex] +
+                "   Picks: " + (pilot.Deterministic ? "best" : "random");
             if (recent.Count > 0)
             {
                 float time = 0f;
@@ -125,13 +125,13 @@ namespace PersonalArena.View
                     gold += result.Gold;
                 }
 
-                text += "\n" + recent.Count + " trận gần nhất (TB): sống " + SurvivorViewLogic.FormatClock(time / recent.Count) +
-                    ", cấp " + (level / recent.Count).ToString("0.0", culture) +
-                    ", vàng " + (gold / recent.Count).ToString("0", culture);
+                text += "\n" + recent.Count + " latest runs (avg): survival " + SurvivorViewLogic.FormatClock(time / recent.Count) +
+                    ", level " + (level / recent.Count).ToString("0.0", culture) +
+                    ", gold " + (gold / recent.Count).ToString("0", culture);
             }
             else
             {
-                text += "\nTrung bình 10 trận gần nhất: chưa có trận nào xong";
+                text += "\nAverage of the last 10 runs: no run finished yet";
             }
 
             // M5: wallet, a build change waiting for the next run, and the Auto Farm progress.
@@ -140,7 +140,7 @@ namespace PersonalArena.View
                 text += "\n" + MetaViewLogic.WalletText(store.Profile);
                 if (IsBuildChangePending())
                 {
-                    text += "\nThay đổi build: áp dụng từ trận sau";
+                    text += "\nBuild change: applies from the next run";
                 }
             }
             string farmLine = farmPanel != null ? farmPanel.StatusLine : null;

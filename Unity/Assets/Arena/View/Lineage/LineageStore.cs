@@ -50,25 +50,25 @@ namespace PersonalArena.View
         {
             if (string.IsNullOrEmpty(runId))
             {
-                return "Nhánh ?";
+                return "Branch ?";
             }
 
             Match match = SurvivorRunNumber.Match(runId);
             if (match.Success && int.TryParse(match.Groups[1].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int number))
             {
-                return "Nhánh " + number.ToString(CultureInfo.InvariantCulture);
+                return "Branch " + number.ToString(CultureInfo.InvariantCulture);
             }
 
             return runId;
         }
 
-        /// <summary>96_999_889 → "Bước 97,0 tr"; below a million "Bước 950 nghìn".</summary>
+        /// <summary>96_999_889 → "Step 97.0M"; below a million "Step 950K".</summary>
         public static string DefaultVersionName(long step)
         {
-            return "Bước " + FormatStep(step);
+            return "Step " + FormatStep(step);
         }
 
-        /// <summary>A step count in Vietnamese: "97,0 tr", "950 nghìn", "500".</summary>
+        /// <summary>A short step count: "97.0M", "950K", "500".</summary>
         public static string FormatStep(long step)
         {
             if (step < 0)
@@ -78,12 +78,12 @@ namespace PersonalArena.View
 
             if (step >= 1000000)
             {
-                return (step / 1000000.0).ToString("0.0", CultureInfo.InvariantCulture).Replace('.', ',') + " tr";
+                return (step / 1000000.0).ToString("0.0", CultureInfo.InvariantCulture) + "M";
             }
 
             if (step >= 1000)
             {
-                return (step / 1000).ToString(CultureInfo.InvariantCulture) + " nghìn";
+                return (step / 1000).ToString(CultureInfo.InvariantCulture) + "K";
             }
 
             return step.ToString(CultureInfo.InvariantCulture);

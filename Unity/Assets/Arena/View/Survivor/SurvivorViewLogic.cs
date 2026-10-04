@@ -17,7 +17,7 @@ namespace PersonalArena.View
             {
                 return null;
             }
-            string name = kind == BuffKind.Rage ? "CUỒNG NỘ" : kind == BuffKind.Shield ? "KHIÊN" : "TỐC ĐỘ";
+            string name = kind == BuffKind.Rage ? "RAGE" : kind == BuffKind.Shield ? "SHIELD" : "HASTE";
             return name + "  " + Mathf.CeilToInt(remaining) + "s";
         }
 
@@ -150,51 +150,51 @@ namespace PersonalArena.View
                 case 0:
                     if (isNew)
                     {
-                        return "Chém vòng cung trước mặt";
+                        return "Slashes an arc in front";
                     }
-                    return nextLevel >= 5 ? "+Sát thương, chém cả phía sau" : "+8 sát thương, +10% tầm";
+                    return nextLevel >= 5 ? "+Damage, also slashes behind" : "+8 damage, +10% range";
                 case 1:
                     if (isNew)
                     {
-                        return "Đâm giáo xuyên thẳng vào quái gần";
+                        return "Thrusts a spear through nearby enemies";
                     }
-                    return nextLevel == 3 || nextLevel == 5 ? "+10 sát thương, thêm 1 giáo" : "+10 sát thương";
+                    return nextLevel == 3 || nextLevel == 5 ? "+10 damage, +1 spear" : "+10 damage";
                 case 2:
                     if (isNew)
                     {
-                        return "Rìu bay vòng quanh người";
+                        return "Axes orbit the hero";
                     }
-                    return nextLevel == 2 || nextLevel == 4 ? "+4 sát thương, thêm 1 rìu" : "+4 sát thương";
+                    return nextLevel == 2 || nextLevel == 4 ? "+4 damage, +1 axe" : "+4 damage";
                 case 4:
-                    return isNew ? "Vùng hào quang đốt quái sát bên" : "+2 sát thương, +10% vùng";
+                    return isNew ? "An aura burns enemies close by" : "+2 damage, +10% area";
                 case 5:
-                    return isNew ? "Sóng chấn đẩy lùi quái xung quanh" : "+6 sát thương, hồi nhanh hơn";
+                    return isNew ? "A shockwave knocks back enemies around" : "+6 damage, faster cooldown";
                 case 3:
                     if (isNew)
                     {
-                        return "Ném búa vào quái gần";
+                        return "Throws a hammer at a nearby enemy";
                     }
-                    return nextLevel >= 4 ? "+7 sát thương, ném 3 búa" : "+7 sát thương, ném 2 búa";
+                    return nextLevel >= 4 ? "+7 damage, throws 3 hammers" : "+7 damage, throws 2 hammers";
                 case 6:
-                    return "+10% máu tối đa";
+                    return "+10% max HP";
                 case 7:
-                    return "+1 giáp (giảm sát thương)";
+                    return "+1 armor (less damage taken)";
                 case 8:
-                    return "+8% sát thương";
+                    return "+8% damage";
                 case 9:
-                    return "+4% tỉ lệ chí mạng";
+                    return "+4% crit chance";
                 case 10:
-                    return "-6% thời gian hồi vũ khí";
+                    return "-6% weapon cooldown";
                 case 11:
-                    return "+8% vùng ảnh hưởng";
+                    return "+8% area of effect";
                 case 12:
-                    return "+8% tốc độ chạy";
+                    return "+8% move speed";
                 case 13:
-                    return "+25% tầm hút đồ";
+                    return "+25% pickup range";
                 case 62:
-                    return "Nhận ngay 25 vàng";
+                    return "Gain 25 gold now";
                 case 63:
-                    return "Hồi ngay 30 máu";
+                    return "Heal 30 HP now";
                 default:
                     return string.Empty;
             }
@@ -208,7 +208,7 @@ namespace PersonalArena.View
             {
                 return string.Empty;
             }
-            return nextLevel <= 1 ? "MỚI" : "Lv " + nextLevel;
+            return nextLevel <= 1 ? "NEW" : "Lv " + nextLevel;
         }
 
         /// <summary>Theme color of a survivor item, used for icon badges and card accents.</summary>
@@ -284,10 +284,10 @@ namespace PersonalArena.View
         {
             switch (reason)
             {
-                case EndReason.Won: return "CHIẾN THẮNG!";
-                case EndReason.TimeUp: return "HẾT GIỜ";
-                case EndReason.Expired: return "TRÙM CÒN SỐNG - HẾT GIỜ";
-                case EndReason.Died: return "ĐÃ GỤC NGÃ";
+                case EndReason.Won: return "VICTORY!";
+                case EndReason.TimeUp: return "TIME UP";
+                case EndReason.Expired: return "BOSS STILL ALIVE - TIME UP";
+                case EndReason.Died: return "DEFEATED";
                 default: return string.Empty;
             }
         }
@@ -297,13 +297,13 @@ namespace PersonalArena.View
         {
             switch (cause)
             {
-                case DeathCause.Surrounded: return "bị bao vây";
-                case DeathCause.Boss: return "bị Trùm hạ gục";
-                case DeathCause.Brute: return "trúng đòn của Đồ tể";
-                case DeathCause.Contact: return "bị quái cào";
-                case DeathCause.Projectile: return "trúng đạn";
-                case DeathCause.Explosion: return "bị Bom xác nổ";
-                default: return "không rõ";
+                case DeathCause.Surrounded: return "surrounded";
+                case DeathCause.Boss: return "killed by the Boss";
+                case DeathCause.Brute: return "hit by a Brute";
+                case DeathCause.Contact: return "clawed by enemies";
+                case DeathCause.Projectile: return "hit by a projectile";
+                case DeathCause.Explosion: return "blown up by an Exploder";
+                default: return "unknown";
             }
         }
 
@@ -351,7 +351,7 @@ namespace PersonalArena.View
         public static string EvolvedToast(int catalogIndex)
         {
             string name = ItemName(catalogIndex);
-            return string.IsNullOrEmpty(name) ? "TIẾN HÓA!" : "TIẾN HÓA: " + name;
+            return string.IsNullOrEmpty(name) ? "EVOLVED!" : "EVOLVED: " + name;
         }
 
         /// <summary>Visual of a weapon; an evolution draws like its base weapon.</summary>
@@ -473,22 +473,22 @@ namespace PersonalArena.View
             }
             switch (skill.Id)
             {
-                case "kick": return "Đá";
-                case "shield-block": return "Đỡ khiên";
-                case "dash": return "Lướt";
-                case "fireball": return "Cầu lửa";
-                case "mana-shield": return "Khiên phép";
-                case "blink": return "Dịch chuyển";
-                case "frost-burst": return "Nổ băng";
-                case "power-shot": return "Bắn mạnh";
-                case "roll-back": return "Lộn lùi";
-                case "war-cry": return "Tiếng thét";
-                case "leap-slam": return "Nhảy đập đất";
-                case "whirlwind": return "Xoáy kiếm";
-                case "caltrop-trap": return "Bẫy gai";
-                case "arrow-barrage": return "Mưa tên";
-                case "fire-wall": return "Tường lửa";
-                case "chain-lightning": return "Lôi liên hoàn";
+                case "kick": return "Kick";
+                case "shield-block": return "Shield Block";
+                case "dash": return "Dash";
+                case "fireball": return "Fireball";
+                case "mana-shield": return "Magic Shield";
+                case "blink": return "Blink";
+                case "frost-burst": return "Frost Nova";
+                case "power-shot": return "Power Shot";
+                case "roll-back": return "Backflip";
+                case "war-cry": return "War Cry";
+                case "leap-slam": return "Leap Slam";
+                case "whirlwind": return "Whirlwind";
+                case "caltrop-trap": return "Spike Trap";
+                case "arrow-barrage": return "Arrow Rain";
+                case "fire-wall": return "Fire Wall";
+                case "chain-lightning": return "Chain Lightning";
                 default: return skill.Id;
             }
         }
@@ -498,22 +498,22 @@ namespace PersonalArena.View
         {
             switch (skillId)
             {
-                case "kick": return "Đá văng và làm choáng quái trước mặt";
-                case "shield-block": return "Giơ khiên chặn đòn phía trước, đỡ đúng lúc thì phản đòn";
-                case "dash": return "Lướt nhanh theo hướng chạy";
-                case "fireball": return "Ném cầu lửa nổ trúng nhiều quái";
-                case "mana-shield": return "Bọc khiên phép chặn đòn mọi hướng";
-                case "blink": return "Dịch chuyển tức thời một đoạn ngắn";
-                case "frost-burst": return "Nổ băng quanh người, làm choáng quái";
-                case "power-shot": return "Bắn mũi tên mạnh xuyên nhiều quái";
-                case "roll-back": return "Lộn ra sau để giữ khoảng cách";
-                case "war-cry": return "Thét đẩy lùi và làm choáng quái quanh người";
-                case "leap-slam": return "Nhảy tới quái và đập đất gây choáng";
-                case "whirlwind": return "Xoay kiếm gây sát thương liên tục quanh người";
-                case "caltrop-trap": return "Đặt bẫy gai gây sát thương và làm chậm quái";
-                case "arrow-barrage": return "Bắn chùm tên xuyên quái phía trước";
-                case "fire-wall": return "Dựng tường lửa đốt quái đi qua";
-                case "chain-lightning": return "Phóng sét truyền qua nhiều quái";
+                case "kick": return "Kicks enemies in front away and stuns them";
+                case "shield-block": return "Raises the shield to block hits from the front; a well-timed block counters";
+                case "dash": return "Dashes quickly in the move direction";
+                case "fireball": return "Throws a fireball that explodes on several enemies";
+                case "mana-shield": return "A magic shield blocks hits from every side";
+                case "blink": return "Teleports a short distance instantly";
+                case "frost-burst": return "A frost blast around the hero stuns enemies";
+                case "power-shot": return "Fires a strong arrow that pierces several enemies";
+                case "roll-back": return "Rolls backward to keep distance";
+                case "war-cry": return "A shout knocks back and stuns enemies around the hero";
+                case "leap-slam": return "Leaps at enemies and slams the ground, stunning them";
+                case "whirlwind": return "Spins the sword, damaging everything around continuously";
+                case "caltrop-trap": return "Places a spike trap that damages and slows enemies";
+                case "arrow-barrage": return "Fires a volley of arrows that pierces enemies ahead";
+                case "fire-wall": return "Raises a wall of fire that burns enemies passing through";
+                case "chain-lightning": return "Casts lightning that jumps between enemies";
                 default: return string.Empty;
             }
         }
@@ -531,7 +531,7 @@ namespace PersonalArena.View
         public static float SkillSlotX(int column, int shown) => (column - (Mathf.Max(1, shown) - 1) * 0.5f) * SkillSlotSpacing;
 
         /// <summary>Name line of the vitals panel, e.g. "PHÁP SƯ  (AI điều khiển)"; unknown classes read as the Warrior.</summary>
-        public static string HeroNameLine(string classId) => ClassViewLogic.UpperName(classId) + "  (AI điều khiển)";
+        public static string HeroNameLine(string classId) => ClassViewLogic.UpperName(classId) + "  (AI controlled)";
 
         private static string ClassWeaponDescription(int catalogIndex, int nextLevel)
         {
@@ -545,22 +545,22 @@ namespace PersonalArena.View
                 return NewWeaponText(catalogIndex);
             }
 
-            string text = "+" + Mathf.RoundToInt(def.DamagePerLevel) + " sát thương";
+            string text = "+" + Mathf.RoundToInt(def.DamagePerLevel) + " damage";
             if (catalogIndex == SurvivorCatalog.DaggerIndex)
             {
-                return def.BackArcLevel > 0 && nextLevel >= def.BackArcLevel ? "+Sát thương, chém cả phía sau" : text + ", +10% tầm";
+                return def.BackArcLevel > 0 && nextLevel >= def.BackArcLevel ? "+Damage, also slashes behind" : text + ", +10% range";
             }
             if (catalogIndex == SurvivorCatalog.FrostNovaIndex)
             {
-                return text + ", hồi nhanh hơn";
+                return text + ", faster cooldown";
             }
             if (catalogIndex == SurvivorCatalog.HolyFieldIndex)
             {
-                return text + ", +10% vùng";
+                return text + ", +10% area";
             }
             if (CountGrows(def, nextLevel))
             {
-                text += ", thêm 1 " + CountUnit(catalogIndex);
+                text += ", +1 " + CountUnit(catalogIndex);
             }
             return text;
         }
@@ -569,18 +569,18 @@ namespace PersonalArena.View
         {
             switch (catalogIndex)
             {
-                case SurvivorCatalog.MagicBoltIndex: return "Bắn tia phép vào quái gần";
-                case SurvivorCatalog.FireOrbIndex: return "Cầu lửa bay vòng quanh người";
-                case SurvivorCatalog.FrostNovaIndex: return "Vòng băng lan ra, làm choáng quái";
-                case SurvivorCatalog.HolyFieldIndex: return "Vùng ánh sáng thánh đốt quái quanh người";
-                case SurvivorCatalog.LightningIndex: return "Sét đánh xuống quái ngẫu nhiên gần đó";
-                case SurvivorCatalog.ArcaneBeamIndex: return "Bắn tia ma thuật xuyên thẳng hàng quái";
-                case SurvivorCatalog.ArrowIndex: return "Bắn tên xuyên 1 quái";
-                case SurvivorCatalog.MultiShotIndex: return "Bắn chùm 3 mũi tên tỏa ra";
-                case SurvivorCatalog.ArrowRainIndex: return "Mưa tên trút xuống chỗ quái đông nhất";
-                case SurvivorCatalog.OrbitKnifeIndex: return "Dao bay vòng quanh người";
-                case SurvivorCatalog.DaggerIndex: return "Chém nhanh nửa vòng trước mặt";
-                case SurvivorCatalog.CrossbowIndex: return "Bắn nỏ xuyên thẳng, sát thương lớn";
+                case SurvivorCatalog.MagicBoltIndex: return "Fires a magic bolt at a nearby enemy";
+                case SurvivorCatalog.FireOrbIndex: return "Fireballs orbit the hero";
+                case SurvivorCatalog.FrostNovaIndex: return "A ring of frost spreads out and stuns enemies";
+                case SurvivorCatalog.HolyFieldIndex: return "Holy light burns enemies around the hero";
+                case SurvivorCatalog.LightningIndex: return "Lightning strikes random enemies nearby";
+                case SurvivorCatalog.ArcaneBeamIndex: return "Fires an arcane ray straight through a line of enemies";
+                case SurvivorCatalog.ArrowIndex: return "Fires an arrow that pierces 1 enemy";
+                case SurvivorCatalog.MultiShotIndex: return "Fires a spread of 3 arrows";
+                case SurvivorCatalog.ArrowRainIndex: return "Arrows rain down where enemies are thickest";
+                case SurvivorCatalog.OrbitKnifeIndex: return "Daggers orbit the hero";
+                case SurvivorCatalog.DaggerIndex: return "A quick half-circle slash in front";
+                case SurvivorCatalog.CrossbowIndex: return "Fires a piercing bolt for heavy damage";
                 default: return string.Empty;
             }
         }
@@ -593,10 +593,10 @@ namespace PersonalArena.View
             {
                 return string.Empty;
             }
-            string text = "Tiến hóa từ " + baseDef.Name + ": sát thương x1,5, tầm xa hơn";
+            string text = "Evolved from " + baseDef.Name + ": damage x1.5, longer range";
             if (baseDef.CountByLevel.Count > 0)
             {
-                text += ", thêm 1 " + CountUnit(baseDef.CatalogIndex);
+                text += ", +1 " + CountUnit(baseDef.CatalogIndex);
             }
             return text;
         }
@@ -616,19 +616,19 @@ namespace PersonalArena.View
         {
             switch (catalogIndex)
             {
-                case 1: return "giáo";
-                case 2: return "rìu";
-                case 3: return "búa";
+                case 1: return "spear";
+                case 2: return "axe";
+                case 3: return "hammer";
                 case SurvivorCatalog.MagicBoltIndex: return "tia";
-                case SurvivorCatalog.FireOrbIndex: return "cầu lửa";
-                case SurvivorCatalog.LightningIndex: return "tia sét";
+                case SurvivorCatalog.FireOrbIndex: return "fireball";
+                case SurvivorCatalog.LightningIndex: return "bolt";
                 case SurvivorCatalog.ArcaneBeamIndex: return "tia";
-                case SurvivorCatalog.ArrowIndex: return "mũi tên";
-                case SurvivorCatalog.MultiShotIndex: return "mũi tên";
-                case SurvivorCatalog.ArrowRainIndex: return "loạt tên";
+                case SurvivorCatalog.ArrowIndex: return "arrow";
+                case SurvivorCatalog.MultiShotIndex: return "arrow";
+                case SurvivorCatalog.ArrowRainIndex: return "volley";
                 case SurvivorCatalog.OrbitKnifeIndex: return "dao";
-                case SurvivorCatalog.CrossbowIndex: return "mũi nỏ";
-                default: return "đòn";
+                case SurvivorCatalog.CrossbowIndex: return "bolt";
+                default: return "hit";
             }
         }
     }

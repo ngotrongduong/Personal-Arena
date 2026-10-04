@@ -12,10 +12,10 @@ namespace PersonalArena.Core.Tests.Survivor
         public void DisplayNames()
         {
             Assert.That(SpectatorLabels.DisplayName(SpectatorLabel.None), Is.EqualTo(""));
-            Assert.That(SpectatorLabels.DisplayName(SpectatorLabel.Kiting), Is.EqualTo("THẢ DIỀU"));
-            Assert.That(SpectatorLabels.DisplayName(SpectatorLabel.Looting), Is.EqualTo("NHẶT VÀNG"));
-            Assert.That(SpectatorLabels.DisplayName(SpectatorLabel.Charging), Is.EqualTo("LAO VÀO"));
-            Assert.That(SpectatorLabels.DisplayName(SpectatorLabel.Escaping), Is.EqualTo("THOÁT VÂY"));
+            Assert.That(SpectatorLabels.DisplayName(SpectatorLabel.Kiting), Is.EqualTo("KITING"));
+            Assert.That(SpectatorLabels.DisplayName(SpectatorLabel.Looting), Is.EqualTo("LOOTING GOLD"));
+            Assert.That(SpectatorLabels.DisplayName(SpectatorLabel.Charging), Is.EqualTo("CHARGING IN"));
+            Assert.That(SpectatorLabels.DisplayName(SpectatorLabel.Escaping), Is.EqualTo("BREAKING OUT"));
         }
 
         [Test]

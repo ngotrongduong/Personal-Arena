@@ -54,7 +54,7 @@ namespace PersonalArena.View
         /// <summary>Raised after the profile changed and was saved (the viewer refreshes its wallet line).</summary>
         public event Action ProfileChanged;
 
-        protected override string Title => "NHÂN VẬT & BỘ CHỈ SỐ";
+        protected override string Title => "CHARACTER & LOADOUTS";
         protected override Vector2 CardSize => new Vector2(1600f, 1000f);
 
         /// <summary>The profile to edit; <paramref name="pending"/> tells whether the next run will differ from the current one.</summary>
@@ -83,11 +83,11 @@ namespace PersonalArena.View
             int loadout = Mathf.Clamp(warrior.ActiveLoadout, 0, ProfileRules.LoadoutCount - 1);
             int unspent = ProfileRules.UnspentPoints(warrior, loadout);
 
-            headerText.text = ClassViewLogic.UpperName(warrior.ClassId) + "  Cấp " + warrior.Level;
-            walletText.text = "Ví: " + MetaViewLogic.FormatGold(profile.Gold) + " vàng     Điểm chưa dùng: " + unspent +
-                "     Bộ đang dùng: " + MetaViewLogic.LoadoutName(warrior, loadout);
+            headerText.text = ClassViewLogic.UpperName(warrior.ClassId) + "  Lv " + warrior.Level;
+            walletText.text = "Wallet: " + MetaViewLogic.FormatGold(profile.Gold) + " gold     Unspent points: " + unspent +
+                "     Active loadout: " + MetaViewLogic.LoadoutName(warrior, loadout);
             bool pending = changePending != null && changePending();
-            pendingText.text = saveFailed ? "Không lưu được hồ sơ" : pending ? "Áp dụng từ trận sau" : string.Empty;
+            pendingText.text = saveFailed ? "The profile could not be saved" : pending ? "Applies from the next run" : string.Empty;
 
             RefreshBuy(profile, warrior);
             RefreshLoadouts(warrior, loadout, unspent);
@@ -107,7 +107,7 @@ namespace PersonalArena.View
             walletText = PlaceText("Wallet", card, 19, TextAnchor.UpperLeft, Color.white, LeftX, -120f, 610f, 26f);
             pendingText = PlaceText("Pending", card, 18, TextAnchor.UpperRight, Warn, RightX, -26f, RightWidth - 70f, 26f, true);
 
-            buyButton = CreateButton("Buy Level", card, "Mua cấp", 20, 660f, -74f, 314f, 48f, OnBuyLevel);
+            buyButton = CreateButton("Buy Level", card, "Buy level", 20, 660f, -74f, 314f, 48f, OnBuyLevel);
             buyReason = PlaceText("Buy Reason", card, 15, TextAnchor.UpperLeft, Warn, 660f, -126f, 314f, 22f);
 
             BuildLoadoutSection(card);
@@ -116,8 +116,8 @@ namespace PersonalArena.View
             BuildShopSection(card);
 
             Text footer = PlaceText("Footer", card, 17, TextAnchor.UpperLeft, Muted, LeftX, -960f, 1530f, 26f);
-            footer.text = "Thay đổi áp dụng từ trận xem sau. AI học theo build này ở lần HUẤN LUYỆN sau. " +
-                "Mỗi nhân vật có cấp, bộ chỉ số và bộ não riêng.";
+            footer.text = "Changes apply from the next run you watch. The AI learns this build at the next TRAIN. " +
+                "Each character has its own level, loadouts and brain.";
         }
 
         // ------------------------------------------------------------------ building
@@ -126,7 +126,7 @@ namespace PersonalArena.View
         {
             RectTransform section = CreateCard("Loadouts", card, LeftX, -160f, LeftWidth, 680f);
             // Rows: RowTop + 13 · RowHeight ends near -640 inside this card.
-            Header(section, "Bộ chỉ số (5 bộ, mỗi bộ cộng điểm riêng)", 900f);
+            Header(section, "Loadouts (5, each with its own points)", 900f);
 
             for (int i = 0; i < loadoutTabs.Length; i++)
             {
@@ -136,9 +136,9 @@ namespace PersonalArena.View
             }
 
             Text nameLabel = PlaceText("Name Label", section, 17, TextAnchor.MiddleLeft, Muted, 18f, -102f, 90f, 36f);
-            nameLabel.text = "Tên bộ:";
+            nameLabel.text = "Name:";
             nameField = CreateNameField(section, 104f, -102f, 300f, 36f);
-            resetButton = CreateButton("Reset Points", section, "Tẩy điểm (miễn phí)", 16, 420f, -102f, 230f, 36f, OnResetPoints);
+            resetButton = CreateButton("Reset Points", section, "Reset points (free)", 16, 420f, -102f, 230f, 36f, OnResetPoints);
             unspentText = PlaceText("Unspent", section, 18, TextAnchor.MiddleLeft, Gold, 666f, -102f, 260f, 36f, true);
 
             for (int i = 0; i < statRows.Length; i++)
@@ -164,7 +164,7 @@ namespace PersonalArena.View
         private void BuildTierSection(RectTransform card)
         {
             RectTransform section = CreateCard("Tier", card, RightX, -160f, RightWidth, 250f);
-            Header(section, "Bậc độ khó", 520f);
+            Header(section, "Difficulty tier", 520f);
             tierDown = CreateButton("Tier Down", section, "<", 24, 18f, -50f, 54f, 44f, () => OnChangeTier(-1));
             tierLabel = PlaceText("Tier", section, 24, TextAnchor.MiddleCenter, Color.white, 76f, -50f, 150f, 44f, true);
             tierUp = CreateButton("Tier Up", section, ">", 24, 230f, -50f, 54f, 44f, () => OnChangeTier(1));
@@ -176,7 +176,7 @@ namespace PersonalArena.View
         private void BuildFocusSection(RectTransform card)
         {
             RectTransform section = CreateCard("Focus", card, RightX, -422f, RightWidth, 240f);
-            Header(section, "Trọng tâm huấn luyện", 520f);
+            Header(section, "Training focus", 520f);
             for (int i = 0; i < TrainingFocusInfo.Count; i++)
             {
                 TrainingFocus focus = (TrainingFocus)i;
@@ -190,7 +190,7 @@ namespace PersonalArena.View
         private void BuildShopSection(RectTransform card)
         {
             RectTransform section = CreateCard("Shop", card, RightX, -674f, RightWidth, 276f);
-            Header(section, "Cửa hàng nhân vật", 520f);
+            Header(section, "Character shop", 520f);
             string[] ids = ClassViewLogic.ClassIds;
             const float columnWidth = 176f;
             for (int i = 0; i < ids.Length; i++)
@@ -207,7 +207,7 @@ namespace PersonalArena.View
                 shop.Style.verticalOverflow = VerticalWrapMode.Truncate;
                 shop.Style.text = ClassViewLogic.PlayStyle(classId);
                 shop.Buy = CreateButton("Buy", box, ClassViewLogic.BuyLabel(classId), 14, 8f, -130f, columnWidth - 16f, 38f, () => OnBuyClass(classId));
-                shop.Select = CreateButton("Select", box, "Chọn", 15, 8f, -174f, columnWidth - 16f, 38f, () => OnSelectClass(classId));
+                shop.Select = CreateButton("Select", box, "Select", 15, 8f, -174f, columnWidth - 16f, 38f, () => OnSelectClass(classId));
                 shopCards[i] = shop;
             }
         }
@@ -227,7 +227,7 @@ namespace PersonalArena.View
 
             Text placeholder = CreateText("Placeholder", rect, 17, TextAnchor.MiddleLeft, TextDisabled);
             placeholder.fontStyle = FontStyle.Italic;
-            placeholder.text = "Tên bộ (tối đa " + ProfileRules.MaxNameLength + " ký tự)";
+            placeholder.text = "Loadout name (up to " + ProfileRules.MaxNameLength + " characters)";
             placeholder.horizontalOverflow = HorizontalWrapMode.Wrap;
             placeholder.verticalOverflow = VerticalWrapMode.Truncate;
             SetStretch(placeholder.rectTransform, 10f, 10f, 2f, 2f);
@@ -248,17 +248,17 @@ namespace PersonalArena.View
         {
             if (warrior.Level >= ProfileRules.MaxCharacterLevel)
             {
-                buyButton.Set("Đã đạt cấp tối đa", ButtonColor, false);
-                buyReason.text = "Cấp " + ProfileRules.MaxCharacterLevel + " là cấp cao nhất.";
+                buyButton.Set("Max level reached", ButtonColor, false);
+                buyReason.text = "Level " + ProfileRules.MaxCharacterLevel + " is the highest level.";
                 return;
             }
 
             long cost = ProfileRules.LevelCost(warrior.Level);
             bool affordable = profile.Gold >= cost;
-            buyButton.Set("Mua cấp " + (warrior.Level + 1) + " — " + MetaViewLogic.FormatGold(cost) + " vàng", ButtonGo, affordable);
+            buyButton.Set("Buy level " + (warrior.Level + 1) + " — " + MetaViewLogic.FormatGold(cost) + " gold", ButtonGo, affordable);
             buyReason.text = affordable
-                ? "Mỗi cấp cho 1 điểm chỉ số ở mọi bộ."
-                : "Thiếu " + MetaViewLogic.FormatGold(cost - profile.Gold) + " vàng. Xem AI chơi hoặc FARM VÀNG để kiếm thêm.";
+                ? "Each level gives 1 stat point in every loadout."
+                : "Short by " + MetaViewLogic.FormatGold(cost - profile.Gold) + " gold. Watch the AI play or use GOLD FARM to earn more.";
             buyReason.color = affordable ? Muted : Warn;
         }
 
@@ -277,7 +277,7 @@ namespace PersonalArena.View
             Loadout loadout = warrior.Loadouts[active];
             bool anySpent = ProfileRules.SpentPoints(loadout) > 0;
             resetButton.Set(null, ButtonStop, anySpent);
-            unspentText.text = "Điểm chưa dùng: " + unspent;
+            unspentText.text = "Unspent points: " + unspent;
             unspentText.color = unspent > 0 ? Gold : Muted;
 
             for (int i = 0; i < statRows.Length; i++)
@@ -296,12 +296,12 @@ namespace PersonalArena.View
         private void RefreshTier(PlayerProfile profile)
         {
             int tier = Mathf.Clamp(profile.SelectedTier, 1, ProfileRules.MaxTier);
-            tierLabel.text = "Bậc " + tier;
+            tierLabel.text = "Tier " + tier;
             tierDown.Set(null, ButtonColor, tier > 1);
             tierUp.Set(null, ButtonColor, tier < profile.UnlockedTier);
             tierUnlocked.text = profile.UnlockedTier >= ProfileRules.MaxTier
-                ? "Đã mở mọi bậc"
-                : "Đã mở tới bậc " + profile.UnlockedTier + ". Thắng ở bậc " + profile.UnlockedTier + " để mở bậc tiếp.";
+                ? "All tiers unlocked"
+                : "Unlocked up to tier " + profile.UnlockedTier + ". Win at tier " + profile.UnlockedTier + " to unlock the next.";
             tierGold.text = MetaViewLogic.TierGoldText(tier);
             tierRules.text = MetaViewLogic.TierRulesText(tier);
         }

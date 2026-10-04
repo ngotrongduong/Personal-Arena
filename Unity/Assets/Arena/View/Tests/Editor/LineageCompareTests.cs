@@ -63,7 +63,7 @@ namespace PersonalArena.View.Tests
         {
             Assert.That(LineageCompare.Format(LineageMetric.MedianSurvival, 125f), Is.EqualTo("2:05"));
             Assert.That(LineageCompare.Format(LineageMetric.WinRate, 0.456f), Is.EqualTo("46%"));
-            Assert.That(LineageCompare.Format(LineageMetric.GoldPerMinute, 12.34f), Is.EqualTo("12,3"));
+            Assert.That(LineageCompare.Format(LineageMetric.GoldPerMinute, 12.34f), Is.EqualTo("12.3"));
             Assert.That(LineageCompare.Format(LineageMetric.Score, 511.6f), Is.EqualTo("512"));
             Assert.That(LineageCompare.Metrics.Length, Is.EqualTo(9));
 

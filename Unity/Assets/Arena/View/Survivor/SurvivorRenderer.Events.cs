@@ -52,7 +52,7 @@ namespace PersonalArena.View
                         {
                             effects.Sparkle(point, GoldColor, 40, 2f, 3f, 0.35f);
                         }
-                        effects.Text(point + Vector3.up * 3.5f, "TRÙM ĐÃ GỤC!", GoldColor, 2f, 2f);
+                        effects.Text(point + Vector3.up * 3.5f, "BOSS DOWN!", GoldColor, 2f, 2f);
                         break;
                     }
                     case SurvivorEventType.EliteSpawned:
@@ -73,7 +73,7 @@ namespace PersonalArena.View
                         {
                             effects.Puff(point, new Color(0.35f, 0.1f, 0.12f, 0.7f), 24, 1.6f, 3.5f, 1.4f, 1f);
                         }
-                        effects.Text(heroPosition + Vector3.up * 3f, "TRÙM XUẤT HIỆN!", BossColor, 1.8f, 2.2f);
+                        effects.Text(heroPosition + Vector3.up * 3f, "THE BOSS IS HERE!", BossColor, 1.8f, 2.2f);
                         break;
                     }
                     case SurvivorEventType.HeroDamaged:
@@ -97,7 +97,7 @@ namespace PersonalArena.View
                     case SurvivorEventType.Parry:
                         FlashGuard(ParryColor);
                         effects.Flash(heroPosition + Vector3.up * 0.9f + heroRoot.forward * 0.6f, ParryColor, 2f, 0.25f);
-                        effects.Text(heroPosition + Vector3.up * 2.4f, "ĐỠ ĐÒN!", ParryColor, 1.2f, 0.9f);
+                        effects.Text(heroPosition + Vector3.up * 2.4f, "BLOCKED!", ParryColor, 1.2f, 0.9f);
                         break;
                     case SurvivorEventType.SkillUsed:
                         OnSkillUsed(e, heroPosition);
@@ -113,7 +113,7 @@ namespace PersonalArena.View
                         {
                             effects.Sparkle(heroPosition, LevelUpColor, 22, 0.9f, 2.6f, 0.28f);
                         }
-                        effects.Text(heroPosition + Vector3.up * 2.6f, "LÊN CẤP!", LevelUpColor, 1.4f, 1.3f);
+                        effects.Text(heroPosition + Vector3.up * 2.6f, "LEVEL UP!", LevelUpColor, 1.4f, 1.3f);
                         break;
                     case SurvivorEventType.ItemPicked:
                     {
@@ -191,7 +191,7 @@ namespace PersonalArena.View
                         effects.Shockwave(heroPosition, gold, 6f, 0.8f);
                         effects.Flash(heroPosition + Vector3.up, gold, 4f, 0.35f);
                         effects.Sparkle(heroPosition, gold, 32, 1.2f, 3f, 0.3f);
-                        effects.Text(heroPosition + Vector3.up * 3f, "TIẾN HÓA!", gold, 1.6f, 1.6f);
+                        effects.Text(heroPosition + Vector3.up * 3f, "EVOLVED!", gold, 1.6f, 1.6f);
                         WeaponEvolved?.Invoke(e.Id);
                         break;
                     }

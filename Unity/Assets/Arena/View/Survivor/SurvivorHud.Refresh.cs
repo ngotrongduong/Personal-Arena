@@ -48,7 +48,7 @@ namespace PersonalArena.View
                 shownSecond = second;
                 clockText.text = SurvivorViewLogic.FormatClock(sim.Time);
                 bool bossPhase = sim.Time >= sim.Config.RunSeconds;
-                clockGoal.text = bossPhase ? "HẠ TRÙM TRƯỚC " + SurvivorViewLogic.FormatClock(sim.Config.BossExpireSeconds) : "SỐNG SÓT TỚI " + SurvivorViewLogic.FormatClock(sim.Config.RunSeconds);
+                clockGoal.text = bossPhase ? "KILL THE BOSS BY " + SurvivorViewLogic.FormatClock(sim.Config.BossExpireSeconds) : "SURVIVE UNTIL " + SurvivorViewLogic.FormatClock(sim.Config.RunSeconds);
                 clockText.color = bossPhase ? new Color(1f, 0.55f, 0.45f) : Color.white;
             }
 
@@ -68,7 +68,7 @@ namespace PersonalArena.View
                 if (hp != shownBossHp)
                 {
                     shownBossHp = hp;
-                    bossText.text = "TRÙM XƯƠNG   " + hp + " / " + Mathf.CeilToInt(boss.MaxHp);
+                    bossText.text = "BONE LORD   " + hp + " / " + Mathf.CeilToInt(boss.MaxHp);
                 }
             }
         }
@@ -90,7 +90,7 @@ namespace PersonalArena.View
             {
                 shownHp = hp;
                 shownMaxHp = maxHp;
-                hpText.text = "MÁU  " + hp + " / " + maxHp;
+                hpText.text = "HP  " + hp + " / " + maxHp;
             }
 
             float energyRatio = hero.MaxEnergy > 0f ? Mathf.Clamp01(hero.Energy / hero.MaxEnergy) : 0f;
@@ -99,7 +99,7 @@ namespace PersonalArena.View
             if (energy != shownEnergy)
             {
                 shownEnergy = energy;
-                energyText.text = "NĂNG LƯỢNG  " + energy + " / " + Mathf.CeilToInt(hero.MaxEnergy);
+                energyText.text = "ENERGY  " + energy + " / " + Mathf.CeilToInt(hero.MaxEnergy);
             }
 
             int gold = Mathf.FloorToInt(sim.Gold);
@@ -277,7 +277,7 @@ namespace PersonalArena.View
             {
                 shownChosen = chosen;
                 ItemDef def = SurvivorCatalog.Get(highlight.Item(chosen));
-                offerStatus.text = chosen >= 0 && def != null ? "AI chọn:  " + def.Name : "AI đang chọn...";
+                offerStatus.text = chosen >= 0 && def != null ? "AI picks:  " + def.Name : "The AI is choosing...";
                 offerStatus.color = chosen >= 0 ? GoldText : new Color(0.8f, 0.85f, 0.95f);
             }
 
@@ -327,7 +327,7 @@ namespace PersonalArena.View
                 card.Name.text = def != null ? def.Name : "?";
                 card.Level.text = SurvivorViewLogic.LevelLabel(item, level);
                 card.Level.color = level <= 1 ? new Color(0.5f, 1f, 0.6f) : GoldText;
-                card.Kind.text = def == null ? string.Empty : def.Kind == ItemKind.Weapon ? "VŨ KHÍ" : def.Kind == ItemKind.Passive ? "BỊ ĐỘNG" : "PHẦN THƯỞNG";
+                card.Kind.text = def == null ? string.Empty : def.Kind == ItemKind.Weapon ? "WEAPONS" : def.Kind == ItemKind.Passive ? "PASSIVES" : "REWARD";
                 card.Description.text = SurvivorViewLogic.ItemDescription(item, level);
                 card.Group.alpha = 0f;
             }
@@ -352,12 +352,12 @@ namespace PersonalArena.View
                 shownEndCountdown = -1;
                 endTitle.text = SurvivorViewLogic.EndTitle(sim.EndReason);
                 endTitle.color = SurvivorViewLogic.EndColor(sim.EndReason);
-                endCause.text = sim.EndReason == EndReason.Died ? "Nguyên nhân: " + SurvivorViewLogic.DeathCauseText(sim.DeathCause) : string.Empty;
+                endCause.text = sim.EndReason == EndReason.Died ? "Cause: " + SurvivorViewLogic.DeathCauseText(sim.DeathCause) : string.Empty;
                 endStats.text =
-                    "Thời gian  " + SurvivorViewLogic.FormatClock(sim.Time) +
-                    "\nCấp  " + sim.Level +
-                    "\nVàng  " + Mathf.FloorToInt(sim.Gold) +
-                    "\nHạ gục  " + sim.Kills + (sim.EliteKills > 0 ? "   (tinh anh " + sim.EliteKills + ")" : string.Empty);
+                    "Time  " + SurvivorViewLogic.FormatClock(sim.Time) +
+                    "\nLevel  " + sim.Level +
+                    "\nGold  " + Mathf.FloorToInt(sim.Gold) +
+                    "\nKills  " + sim.Kills + (sim.EliteKills > 0 ? "   (elites " + sim.EliteKills + ")" : string.Empty);
                 endItems.text = FinalItems(sim.Inventory);
             }
 
@@ -365,13 +365,13 @@ namespace PersonalArena.View
             if (countdown != shownEndCountdown)
             {
                 shownEndCountdown = countdown;
-                endFooter.text = countdown > 0 ? "Trận mới sau " + countdown + " giây" : "Đang bắt đầu trận mới...";
+                endFooter.text = countdown > 0 ? "Next run in " + countdown + "s" : "Starting a new run...";
             }
         }
 
         private static string FinalItems(SurvivorInventory inventory)
         {
-            StringBuilder builder = new StringBuilder("Trang bị cuối:\n");
+            StringBuilder builder = new StringBuilder("Final build:\n");
             int written = 0;
             for (int i = 0; i < inventory.WeaponCount; i++)
             {

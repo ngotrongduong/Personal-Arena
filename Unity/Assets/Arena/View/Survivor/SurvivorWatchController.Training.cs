@@ -93,7 +93,7 @@ namespace PersonalArena.View
 
         private static string PowerLabel(TrainingPower power)
         {
-            return "Sức mạnh: " + power.Name + " - " + power.Fighters + " đấu trường cùng lúc     đổi >";
+            return "Power: " + power.Name + " - " + power.Fighters + " arenas at once     change >";
         }
 
         private void PollTraining()
@@ -135,60 +135,60 @@ namespace PersonalArena.View
             CultureInfo culture = CultureInfo.InvariantCulture;
             bool stopAsked = Time.unscaledTime - stopRequestedAt < StopFeedbackSeconds;
             string lastRun = status != null && status.step > 0
-                ? "\nLần trước " + status.run_id + ": " + status.step.ToString("N0", culture) + " bước"
+                ? "\nLast time " + status.run_id + ": " + status.step.ToString("N0", culture) + " steps"
                 : string.Empty;
             string text;
             switch (trainingSnapshot.State)
             {
                 case TrainingState.Unavailable:
-                    hud.SetTrainingButton("HUẤN LUYỆN AI", false, TrainColor);
-                    text = "Máy này chưa huấn luyện được:\n" + training.MissingPiece();
+                    hud.SetTrainingButton("TRAIN AI", false, TrainColor);
+                    text = "This machine cannot train yet:\n" + training.MissingPiece();
                     break;
                 case TrainingState.Starting when otherClass:
                 case TrainingState.Training when otherClass:
                     // M7: another class trains; TRAIN stops it (saving) and then trains the class on screen.
-                    hud.SetTrainingButton(stopAsked ? "ĐANG DỪNG..." : ClassViewLogic.SwitchTrainLabel(classId), !stopAsked, TrainColor);
+                    hud.SetTrainingButton(stopAsked ? "STOPPING..." : ClassViewLogic.SwitchTrainLabel(classId), !stopAsked, TrainColor);
                     text = ClassViewLogic.OtherClassTrainingLine(RunningBehavior, classId) +
-                        (status.step > 0 ? "\n" + status.run_id + ": bước " + status.step.ToString("N0", culture) : string.Empty);
+                        (status.step > 0 ? "\n" + status.run_id + ": step " + status.step.ToString("N0", culture) : string.Empty);
                     break;
                 case TrainingState.Starting:
-                    hud.SetTrainingButton(stopAsked ? "ĐANG DỪNG..." : "DỪNG HUẤN LUYỆN", !stopAsked, StopColor);
+                    hud.SetTrainingButton(stopAsked ? "STOPPING..." : "STOP TRAINING", !stopAsked, StopColor);
                     text = status != null && status.message != null && status.message.StartsWith("The trainer crashed", StringComparison.Ordinal)
-                        ? "Trình huấn luyện bị lỗi và sẽ tự chạy lại.\nTiến độ vẫn được giữ."
-                        : "Đang khởi động... nạp các đấu trường huấn luyện\n(khoảng một phút). " + ClassViewLogic.DisplayName(classId) +
-                          " ở đây sẽ\ntự cập nhật khi AI học tiến bộ.";
+                        ? "The trainer crashed and will restart by itself.\nProgress is kept."
+                        : "Starting... loading the training arenas\n(about a minute). " + ClassViewLogic.DisplayName(classId) +
+                          " here will\nupdate itself as the AI improves.";
                     break;
                 case TrainingState.Training:
-                    hud.SetTrainingButton(stopAsked ? "ĐANG DỪNG..." : "DỪNG HUẤN LUYỆN", !stopAsked, StopColor);
-                    text = "Đang huấn luyện " + status.run_id +
-                        "\nBước " + status.step.ToString("N0", culture) +
-                        (status.has_reward ? "    Điểm thưởng TB " + status.mean_reward.ToString("0.0", culture) : string.Empty) +
+                    hud.SetTrainingButton(stopAsked ? "STOPPING..." : "STOP TRAINING", !stopAsked, StopColor);
+                    text = "Training " + status.run_id +
+                        "\nStep " + status.step.ToString("N0", culture) +
+                        (status.has_reward ? "    Avg reward " + status.mean_reward.ToString("0.0", culture) : string.Empty) +
                         (status.num_envs > 0
-                            ? "\n" + (status.num_envs * status.arena_agents) + " đấu trường học cùng lúc (" +
-                              status.num_envs + " game x " + status.arena_agents + ")" + (status.cpu ? " trên CPU" : string.Empty)
+                            ? "\n" + (status.num_envs * status.arena_agents) + " arenas training at once (" +
+                              status.num_envs + " game x " + status.arena_agents + ")" + (status.cpu ? " on CPU" : string.Empty)
                             : string.Empty) +
-                        "\nPhiên này " + FormatDuration(status.session_seconds);
+                        "\nThis session " + FormatDuration(status.session_seconds);
                     break;
                 case TrainingState.Stopping:
-                    hud.SetTrainingButton("ĐANG LƯU...", false, StopColor);
-                    text = "Đang lưu tiến độ của AI, vui lòng chờ...";
+                    hud.SetTrainingButton("SAVING...", false, StopColor);
+                    text = "Saving the AI's progress, please wait...";
                     break;
                 case TrainingState.External:
-                    hud.SetTrainingButton("ĐANG HUẤN LUYỆN (NGOÀI)", false, StopColor);
-                    text = "Huấn luyện được chạy từ bên ngoài game.\n" + ClassViewLogic.DisplayName(classId) +
-                        " ở đây vẫn tự cập nhật\nmỗi khi có bộ não mới.";
+                    hud.SetTrainingButton("TRAINING (EXTERNAL)", false, StopColor);
+                    text = "Training was started outside the game.\n" + ClassViewLogic.DisplayName(classId) +
+                        " here still updates itself\nwhenever a new brain is saved.";
                     break;
                 case TrainingState.Stopped:
-                    hud.SetTrainingButton("HUẤN LUYỆN AI", true, TrainColor);
-                    text = "Đã dừng và lưu tiến độ.\nBấm để học tiếp." + lastRun;
+                    hud.SetTrainingButton("TRAIN AI", true, TrainColor);
+                    text = "Stopped; progress saved.\nPress to continue training." + lastRun;
                     break;
                 case TrainingState.Error:
-                    hud.SetTrainingButton("HUẤN LUYỆN AI", true, TrainColor);
-                    text = "Có lỗi: " + (status != null ? status.message : string.Empty) + "\nBấm để thử lại.";
+                    hud.SetTrainingButton("TRAIN AI", true, TrainColor);
+                    text = "Error: " + (status != null ? status.message : string.Empty) + "\nPress to retry.";
                     break;
                 default:
-                    hud.SetTrainingButton("HUẤN LUYỆN AI", true, TrainColor);
-                    text = "Bấm để AI tiếp tục học ở chế độ nền\ntrong lúc bạn xem nó chơi." + lastRun;
+                    hud.SetTrainingButton("TRAIN AI", true, TrainColor);
+                    text = "Press to let the AI keep learning in the\nbackground while you watch it play." + lastRun;
                     break;
             }
 
@@ -199,7 +199,7 @@ namespace PersonalArena.View
 
             if (restartWithNewPower)
             {
-                text = "Đổi sức mạnh sang " + Powers[powerIndex].Name + ":\nđang lưu tiến độ rồi chạy lại...";
+                text = "Changing power to " + Powers[powerIndex].Name + ":\nsaving progress, then restarting...";
             }
             if (pendingClassStart)
             {
@@ -215,8 +215,8 @@ namespace PersonalArena.View
             hud.SetTrainingText(text);
             float[] rewards = status != null ? status.rewards : null;
             string caption = rewards != null && rewards.Length > 0 && status.steps != null && status.steps.Length > 0
-                ? "Điểm thưởng TB, bước 0 - " + FormatSteps(status.steps[status.steps.Length - 1]) + " (cao hơn = giỏi hơn)"
-                : "Biểu đồ điểm thưởng hiện khi bắt đầu huấn luyện";
+                ? "Avg reward, steps 0 - " + FormatSteps(status.steps[status.steps.Length - 1]) + " (higher = better)"
+                : "The reward chart appears once training starts";
             hud.SetTrainingGraph(rewards, caption);
         }
 
@@ -233,7 +233,7 @@ namespace PersonalArena.View
                 string line = MetaViewLogic.TrainingBuildLine(status.owner_build, status.owner_tier, status.training_focus);
                 if (MetaViewLogic.TrainingChoicesDiffer(status.owner_build, status.owner_tier, status.training_focus, startedOwner, current))
                 {
-                    line += "\nThay đổi build/trọng tâm sẽ áp dụng ở lần HUẤN LUYỆN sau";
+                    line += "\nBuild/focus changes apply from the next TRAIN";
                 }
 
                 return line;
@@ -246,8 +246,8 @@ namespace PersonalArena.View
         {
             int whole = Mathf.Max(0, Mathf.FloorToInt(seconds));
             return whole >= 3600
-                ? (whole / 3600) + " giờ " + (whole % 3600 / 60).ToString("00") + " phút"
-                : (whole / 60) + " phút " + (whole % 60).ToString("00") + " giây";
+                ? (whole / 3600) + "h " + (whole % 3600 / 60).ToString("00") + "m"
+                : (whole / 60) + "m " + (whole % 60).ToString("00") + "s";
         }
 
         private static string FormatSteps(long steps)

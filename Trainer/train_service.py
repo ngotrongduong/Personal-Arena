@@ -199,10 +199,10 @@ def plan_run(runs_dir: Path, behavior: str, requested: str | None = None) -> Run
     message = ""
     if requested and requested != champion.CHAMPIONS_DIR:
         try:
-            brain_lineage.check_id(requested, "nhánh")
+            brain_lineage.check_id(requested, "branch")
         except brain_lineage.LineageError:
             # Never let a run name leave the runs folder: train this class's own newest run instead.
-            message = f"Tên nhánh {requested} không hợp lệ; học tiếp não {behavior} mới nhất."
+            message = f"Branch name {requested} is not valid; continuing the newest {behavior} brain."
             requested = None
     if (
         requested
@@ -210,7 +210,7 @@ def plan_run(runs_dir: Path, behavior: str, requested: str | None = None) -> Run
         and foreign_run(runs_dir / requested, behavior)
     ):
         # The viewer asked for another class's branch: train this class's own newest run instead.
-        message = f"Nhánh {requested} không phải não {behavior}; học tiếp não {behavior} mới nhất."
+        message = f"Branch {requested} is not a {behavior} brain; continuing the newest {behavior} brain."
         requested = None
     if (
         requested
@@ -298,12 +298,12 @@ def plan_run(runs_dir: Path, behavior: str, requested: str | None = None) -> Run
                         arena_trainer.SCHEMA_VERSION,
                     )
                 except Exception as error:  # upgrade_run wraps its own errors; stay safe anyway
-                    message = f"Không thể nâng cấp não AI ({error}); bắt đầu học lại từ đầu."
+                    message = f"The AI brain could not be upgraded ({error}); training starts from scratch."
                 else:
                     message = (
-                        "Não AI được nâng cấp lên luật mới "
+                        "The AI brain was upgraded to the new rules "
                         f"(schema v{old_version} → v{arena_trainer.SCHEMA_VERSION}) "
-                        f"và học tiếp từ bước {source_step}."
+                        f"and continues from step {source_step}."
                     )
             elif older:
                 old_version = arena_trainer.run_schema_version(older[0].parent)
@@ -313,8 +313,8 @@ def plan_run(runs_dir: Path, behavior: str, requested: str | None = None) -> Run
                 if not current_schema.is_file():
                     missing.append(f"schema v{arena_trainer.SCHEMA_VERSION}")
                 message = (
-                    "Không thể nâng cấp não AI vì thiếu " + " và ".join(missing)
-                    + "; bắt đầu học lại từ đầu."
+                    "The AI brain could not be upgraded: missing " + " and ".join(missing)
+                    + "; training starts from scratch."
                 )
 
     run_dir = runs_dir / run_id

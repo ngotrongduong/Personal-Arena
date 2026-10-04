@@ -38,11 +38,11 @@ namespace PersonalArena.View
         {
             switch (cause)
             {
-                case "Surrounded": return "Bị bao vây";
+                case "Surrounded": return "Surrounded";
                 case "Boss": return "Boss";
-                case "Brute": return "Quái khổng lồ";
-                case "Contact": return "Va chạm quái";
-                case "Projectile": return "Trúng đạn";
+                case "Brute": return "Giant enemies";
+                case "Contact": return "Enemy contact";
+                case "Projectile": return "Projectiles";
                 default: return cause;
             }
         }
@@ -64,12 +64,12 @@ namespace PersonalArena.View
         {
             if (steps >= 1000000L)
             {
-                return (steps / 1000000f).ToString("0.0", CultureInfo.InvariantCulture) + " triệu";
+                return (steps / 1000000f).ToString("0.0", CultureInfo.InvariantCulture) + "M";
             }
 
             if (steps >= 1000L)
             {
-                return (steps / 1000f).ToString("0", CultureInfo.InvariantCulture) + " nghìn";
+                return (steps / 1000f).ToString("0", CultureInfo.InvariantCulture) + "K";
             }
 
             return steps.ToString(CultureInfo.InvariantCulture);
@@ -83,7 +83,7 @@ namespace PersonalArena.View
                 return utc.ToLocalTime().ToString("HH:mm dd/MM", CultureInfo.InvariantCulture);
             }
 
-            return "không rõ";
+            return "unknown";
         }
 
         private static string Percent(float fraction)
@@ -93,14 +93,14 @@ namespace PersonalArena.View
 
         private static string Metres(float value)
         {
-            return value < 0f ? "chưa có" : value.ToString("0.0", CultureInfo.InvariantCulture) + " m";
+            return value < 0f ? "none yet" : value.ToString("0.0", CultureInfo.InvariantCulture) + " m";
         }
 
         private static string SkillLine(string name, int uses, int effective, int runs)
         {
             string perRun = (uses / (float)runs).ToString("0.#", CultureInfo.InvariantCulture);
-            string useful = uses > 0 ? Mathf.RoundToInt(effective * 100f / uses) + "% có tác dụng" : "không dùng";
-            return name + " " + perRun + " lần (" + useful + ")";
+            string useful = uses > 0 ? Mathf.RoundToInt(effective * 100f / uses) + "% effective" : "not used";
+            return name + " " + perRun + " uses (" + useful + ")";
         }
 
         private Text Header(Transform card, string text)

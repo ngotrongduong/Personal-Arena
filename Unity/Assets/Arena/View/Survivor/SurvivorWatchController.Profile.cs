@@ -116,7 +116,7 @@ namespace PersonalArena.View
 
             characterPanel?.Refresh();
             comparePanel?.Refresh();
-            ShowSwitchNotice("Đang xem " + ClassViewLogic.DisplayName(classId) +
+            ShowSwitchNotice("Watching " + ClassViewLogic.DisplayName(classId) +
                 (pilot.Brain == null ? "\n" + ClassViewLogic.NoBrainText(classId, training != null) : string.Empty));
             switchNoticeUntil = Time.unscaledTime + ProfileNoticeSeconds;
         }

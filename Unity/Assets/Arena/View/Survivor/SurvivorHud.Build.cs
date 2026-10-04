@@ -287,7 +287,7 @@ namespace PersonalArena.View
             goldText.fontStyle = FontStyle.Bold;
             SetRect(goldText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(50f, -110f), new Vector2(150f, 24f), new Vector2(0f, 1f));
             Text killsLabel = CreateText("Kills Label", vitals, 16, TextAnchor.MiddleLeft, new Color(0.75f, 0.8f, 0.9f));
-            killsLabel.text = "HẠ GỤC";
+            killsLabel.text = "KILLS";
             SetRect(killsLabel.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(210f, -110f), new Vector2(80f, 24f), new Vector2(0f, 1f));
             killsText = CreateText("Kills", vitals, 20, TextAnchor.MiddleLeft, Color.white);
             killsText.fontStyle = FontStyle.Bold;
@@ -317,10 +317,10 @@ namespace PersonalArena.View
             }
 
             Text weaponsLabel = CreateText("Weapons Label", vitals, 13, TextAnchor.UpperLeft, new Color(0.65f, 0.7f, 0.8f));
-            weaponsLabel.text = "VŨ KHÍ";
+            weaponsLabel.text = "WEAPONS";
             SetRect(weaponsLabel.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -144f), new Vector2(120f, 18f), new Vector2(0f, 1f));
             Text passivesLabel = CreateText("Passives Label", vitals, 13, TextAnchor.UpperLeft, new Color(0.65f, 0.7f, 0.8f));
-            passivesLabel.text = "BỊ ĐỘNG";
+            passivesLabel.text = "PASSIVES";
             SetRect(passivesLabel.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -226f), new Vector2(120f, 18f), new Vector2(0f, 1f));
             for (int i = 0; i < WeaponSlots; i++)
             {
@@ -478,7 +478,7 @@ namespace PersonalArena.View
             RectTransform pause = CreatePanel("Paused", canvasRoot, new Color(0.03f, 0.03f, 0.05f, 0.8f));
             SetRect(pause, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 180f), new Vector2(380f, 96f), new Vector2(0.5f, 0.5f));
             Text pauseText = CreateText("Label", pause, 46, TextAnchor.MiddleCenter, GoldText);
-            pauseText.text = "TẠM DỪNG";
+            pauseText.text = "PAUSED";
             pauseText.fontStyle = FontStyle.Bold;
             SetStretch(pauseText.rectTransform, 0f, 0f, 0f, 0f);
             pausePanel = pause.gameObject;
@@ -505,7 +505,7 @@ namespace PersonalArena.View
             offerPanel = dimObject;
 
             Text title = CreateText("Title", dimRect, 52, TextAnchor.MiddleCenter, GoldText);
-            title.text = "LÊN CẤP!";
+            title.text = "LEVEL UP!";
             title.fontStyle = FontStyle.Bold;
             Outline titleOutline = title.gameObject.AddComponent<Outline>();
             titleOutline.effectColor = new Color(0.25f, 0.12f, 0f, 0.9f);
@@ -611,7 +611,7 @@ namespace PersonalArena.View
             SetRect(divider, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -132f), new Vector2(2f, 390f), new Vector2(0.5f, 1f));
 
             Text storyTitle = CreateText("Story Title", end, 21, TextAnchor.UpperLeft, GoldText);
-            storyTitle.text = "Câu chuyện trận đấu";
+            storyTitle.text = "Run story";
             storyTitle.fontStyle = FontStyle.Bold;
             SetRect(storyTitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(rightCenter, -136f), new Vector2(columnWidth - 20f, 30f), new Vector2(0.5f, 1f));
             endStory = CreateText("Story", end, 17, TextAnchor.UpperLeft, new Color(0.88f, 0.9f, 0.96f));

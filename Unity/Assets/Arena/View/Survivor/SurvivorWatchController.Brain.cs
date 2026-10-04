@@ -13,12 +13,12 @@ namespace PersonalArena.View
     /// <summary>Which brain plays: the newest or the best, a saved lineage version, and reloading it while training saves.</summary>
     public sealed partial class SurvivorWatchController
     {
-        /// <summary>"Xem ngay" in the lineage panel: watch that saved version now (fresh run), until B.</summary>
+        /// <summary>"Watch now" in the lineage panel: watch that saved version now (fresh run), until B.</summary>
         private void OnWatchVersionRequested(LineageVersion version, string branchName)
         {
             if (!string.IsNullOrWhiteSpace(brainFile))
             {
-                ShowSwitchNotice("Đang xem một bộ não cố định (-brain), không đổi được.");
+                ShowSwitchNotice("Watching a fixed brain (-brain); it cannot be switched.");
                 return;
             }
 
@@ -41,12 +41,12 @@ namespace PersonalArena.View
                 watchedBranchName = null;
                 loadedPath = null;
                 PollBrain();
-                ShowSwitchNotice("Không xem được phiên bản " + version.Name + ".\n" +
-                    (string.IsNullOrEmpty(problem) ? "Không đọc được tệp não." : problem));
+                ShowSwitchNotice("Cannot watch version " + version.Name + ".\n" +
+                    (string.IsNullOrEmpty(problem) ? "The brain file could not be read." : problem));
                 return;
             }
 
-            ShowSwitchNotice("Đang xem phiên bản " + version.Name + " — bấm B để về não mới nhất");
+            ShowSwitchNotice("Watching version " + version.Name + " — press B for the newest brain");
             switchNoticeUntil = Time.unscaledTime + ProfileNoticeSeconds;
             if (sim != null && pilot.Brain != null)
             {
@@ -69,7 +69,7 @@ namespace PersonalArena.View
         {
             if (!string.IsNullOrWhiteSpace(brainFile))
             {
-                ShowSwitchNotice("Đang xem một bộ não cố định (-brain), không đổi được.");
+                ShowSwitchNotice("Watching a fixed brain (-brain); it cannot be switched.");
                 return;
             }
 
@@ -83,7 +83,7 @@ namespace PersonalArena.View
                 PlayerPrefs.Save();
                 loadedPath = null;
                 PollBrain();
-                ShowSwitchNotice("Đang xem NÃO MỚI NHẤT");
+                ShowSwitchNotice("Watching the NEWEST BRAIN");
                 if (sim != null && pilot.Brain != null)
                 {
                     RestartNow();
@@ -95,7 +95,7 @@ namespace PersonalArena.View
             bool wantBest = !loadedIsChampion;
             if (wantBest && BrainLocator.FindChampionBrain(runsDirectory, BehaviorName) == null)
             {
-                ShowSwitchNotice("Chưa có não giỏi nhất.\nNó xuất hiện sau 2 triệu bước huấn luyện.");
+                ShowSwitchNotice("No best brain yet.\nIt appears after 2M training steps.");
                 return;
             }
 
@@ -109,11 +109,11 @@ namespace PersonalArena.View
                 watchBest = false;
                 PlayerPrefs.SetInt(WatchBestPreference, 0);
                 PlayerPrefs.Save();
-                ShowSwitchNotice("Không nạp được não giỏi nhất.\nVẫn xem NÃO MỚI NHẤT.");
+                ShowSwitchNotice("The best brain could not be loaded.\nStill watching the NEWEST BRAIN.");
                 return;
             }
 
-            ShowSwitchNotice(watchBest ? "Đang xem NÃO GIỎI NHẤT" : "Đang xem NÃO MỚI NHẤT");
+            ShowSwitchNotice(watchBest ? "Watching the BEST BRAIN" : "Watching the NEWEST BRAIN");
             if (sim != null && pilot.Brain != null)
             {
                 RestartNow();
@@ -158,13 +158,13 @@ namespace PersonalArena.View
                 {
                     if (runsDirectory == null && string.IsNullOrWhiteSpace(brainFile))
                     {
-                        brainStatus = "Không tìm thấy thư mục Trainer/runs.";
+                        brainStatus = "Folder Trainer/runs not found.";
                     }
                     else if (string.IsNullOrWhiteSpace(brainFile) && classId == ProfileRules.WarriorId &&
                         BrainLocator.FindNewestBrain(runsDirectory, BehaviorName, false) != null)
                     {
-                        brainStatus = "Luật chơi đã đổi sang chế độ Sinh tồn.\nBộ não cũ không biết luật mới nên chiến binh đứng chờ.\n" +
-                            "Bấm HUẤN LUYỆN AI để dạy nó luật mới.";
+                        brainStatus = "The rules changed to Survivor mode.\nThe old brain does not know them, so the warrior stands idle.\n" +
+                            "Press TRAIN AI to teach it the new rules.";
                     }
                     else
                     {
@@ -199,14 +199,14 @@ namespace PersonalArena.View
                 string problem = SurvivorPilot.Validate(brain);
                 if (problem == null && brain.SelfTestError() > SelfTestTolerance)
                 {
-                    problem = "Bộ não không qua được bài tự kiểm tra.";
+                    problem = "The brain failed its self-check.";
                 }
 
                 loadedPath = path;
                 loadedWriteTime = written;
                 if (problem != null)
                 {
-                    brainStatus = "Bộ não bị từ chối: " + problem;
+                    brainStatus = "Brain rejected: " + problem;
                     Debug.LogWarning("Rejected brain " + path + ": " + problem);
                 }
                 else
@@ -218,7 +218,7 @@ namespace PersonalArena.View
                     loadedBrainBytes = bytes;
                     loadedBrainName = versionPath != null
                         ? watchedVersion.Name
-                        : champion != null ? "não giỏi nhất" : BrainLocator.RunName(path);
+                        : champion != null ? "best brain" : BrainLocator.RunName(path);
                     loadedAt = DateTime.Now;
                     brainStatus = null;
                     loadedIsChampion = champion != null;
@@ -255,7 +255,7 @@ namespace PersonalArena.View
             {
                 loadedPath = path;
                 loadedWriteTime = written;
-                brainStatus = "Không đọc được bộ não: " + exception.Message;
+                brainStatus = "Could not read the brain: " + exception.Message;
                 Debug.LogWarning("Could not load brain " + path + ": " + exception.Message);
             }
 

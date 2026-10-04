@@ -51,7 +51,7 @@ namespace PersonalArena.View.Tests
             Assert.That(profile.Gold, Is.EqualTo(reward.GoldAdded));
             Assert.That(warrior.Loadouts[0].Record.Runs, Is.EqualTo(1));
             Assert.That(profile.Stats.FarmRuns, Is.EqualTo(0));
-            Assert.That(MetaViewLogic.RewardText(reward), Does.StartWith("+" + MetaViewLogic.FormatGold(reward.GoldAdded) + " vàng vào ví"));
+            Assert.That(MetaViewLogic.RewardText(reward), Does.StartWith("+" + MetaViewLogic.FormatGold(reward.GoldAdded) + " gold to wallet"));
         }
 
         [Test]
@@ -59,8 +59,8 @@ namespace PersonalArena.View.Tests
         {
             string text = MetaViewLogic.RewardText(new RunReward { GoldAdded = 1234, TierUnlocked = true, UnlockedTier = 3 });
 
-            Assert.That(text, Is.EqualTo("+1.234 vàng vào ví\nMở khóa bậc 3!"));
-            Assert.That(MetaViewLogic.RewardText(null), Does.Contain("không tính vàng"));
+            Assert.That(text, Is.EqualTo("+1,234 gold to wallet\nUnlocked tier 3!"));
+            Assert.That(MetaViewLogic.RewardText(null), Does.Contain("earns no gold"));
         }
 
         [Test]
@@ -110,8 +110,8 @@ namespace PersonalArena.View.Tests
         [Test]
         public void TrainingBuildLineTexts()
         {
-            Assert.That(MetaViewLogic.TrainingBuildLine(true, 3, "gold"), Does.StartWith("Học theo build của bạn (bậc 3) · Trọng tâm: "));
-            Assert.That(MetaViewLogic.TrainingBuildLine(false, 0, null), Does.StartWith("Học build ngẫu nhiên · Trọng tâm: "));
+            Assert.That(MetaViewLogic.TrainingBuildLine(true, 3, "gold"), Does.StartWith("Learning your build (tier 3) · Focus: "));
+            Assert.That(MetaViewLogic.TrainingBuildLine(false, 0, null), Does.StartWith("Learning random builds · Focus: "));
         }
 
         [Test]
@@ -159,16 +159,16 @@ namespace PersonalArena.View.Tests
 
             string text = MetaViewLogic.WalletText(profile);
 
-            Assert.That(text, Does.StartWith("Ví: 12.345 vàng   Bậc 1"));
-            Assert.That(text, Does.Contain("Bộ: " + ProfileRules.DefaultLoadoutName(0)));
+            Assert.That(text, Does.StartWith("Wallet: 12,345 gold   Tier 1"));
+            Assert.That(text, Does.Contain("Loadout: " + ProfileRules.DefaultLoadoutName(0)));
         }
 
         [Test]
-        public void NumbersUseVietnameseSeparators()
+        public void NumbersUseEnglishSeparators()
         {
-            Assert.That(MetaViewLogic.FormatGold(1234567), Is.EqualTo("1.234.567"));
-            Assert.That(MetaViewLogic.FormatDecimal(1.5f, "0.0"), Is.EqualTo("1,5"));
-            Assert.That(MetaViewLogic.FormatDuration(200f), Is.EqualTo("3 phút 20 giây"));
+            Assert.That(MetaViewLogic.FormatGold(1234567), Is.EqualTo("1,234,567"));
+            Assert.That(MetaViewLogic.FormatDecimal(1.5f, "0.0"), Is.EqualTo("1.5"));
+            Assert.That(MetaViewLogic.FormatDuration(200f), Is.EqualTo("3m 20s"));
             Assert.That(MetaViewLogic.TierGoldMultiplier(3), Is.EqualTo(2f));
         }
     }

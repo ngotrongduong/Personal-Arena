@@ -38,15 +38,15 @@ namespace PersonalArena.View
         {
             switch (metric)
             {
-                case LineageMetric.MedianSurvival: return "Sống (trung vị)";
-                case LineageMetric.P10Survival: return "Sống (10% tệ nhất)";
-                case LineageMetric.WinRate: return "Tỉ lệ thắng";
-                case LineageMetric.GoldPerMinute: return "Vàng/phút";
-                case LineageMetric.XpPerMinute: return "EXP/phút";
-                case LineageMetric.MeanLevel: return "Cấp TB";
-                case LineageMetric.DamageTakenPerMinute: return "Máu mất/phút";
-                case LineageMetric.BossDamage: return "Sát thương trùm";
-                case LineageMetric.Score: return "Điểm";
+                case LineageMetric.MedianSurvival: return "Survival (median)";
+                case LineageMetric.P10Survival: return "Survival (worst 10%)";
+                case LineageMetric.WinRate: return "Win rate";
+                case LineageMetric.GoldPerMinute: return "Gold/min";
+                case LineageMetric.XpPerMinute: return "EXP/min";
+                case LineageMetric.MeanLevel: return "Avg level";
+                case LineageMetric.DamageTakenPerMinute: return "HP lost/min";
+                case LineageMetric.BossDamage: return "Boss damage";
+                case LineageMetric.Score: return "Score";
                 default: return metric.ToString();
             }
         }
@@ -95,11 +95,11 @@ namespace PersonalArena.View
                 case LineageMetric.BossDamage:
                     return Percent(value);
                 case LineageMetric.MeanLevel:
-                    return value.ToString("0.0", CultureInfo.InvariantCulture).Replace('.', ',');
+                    return value.ToString("0.0", CultureInfo.InvariantCulture);
                 case LineageMetric.GoldPerMinute:
                 case LineageMetric.XpPerMinute:
                 case LineageMetric.DamageTakenPerMinute:
-                    return value.ToString("0.0", CultureInfo.InvariantCulture).Replace('.', ',');
+                    return value.ToString("0.0", CultureInfo.InvariantCulture);
                 default:
                     return Mathf.RoundToInt(value).ToString(CultureInfo.InvariantCulture);
             }

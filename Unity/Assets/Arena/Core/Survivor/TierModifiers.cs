@@ -30,15 +30,15 @@ namespace PersonalArena.Core.Survivor
         {
             switch (modifier)
             {
-                case TierModifier.DenserSpawns: return "Quái dày hơn 10%";
-                case TierModifier.EarlyElite: return "Tinh anh xuất hiện thêm ở phút 1,5";
-                case TierModifier.FastRunners: return "Runner nhanh hơn 15%";
-                case TierModifier.LessMeat: return "Thịt rớt ít đi một nửa";
-                case TierModifier.EarlyBrutes: return "Brute xuất hiện sớm từ phút 1";
-                case TierModifier.DoubleElites: return "Tinh anh gấp đôi";
-                case TierModifier.EnemyRegen: return "Quái hồi máu chậm khi không bị đánh";
-                case TierModifier.BossSummonsFaster: return "Boss gọi quân nhanh gấp đôi";
-                case TierModifier.Nightmare: return "Ác mộng: tất cả modifier trên, quái nhanh hơn 10%, tinh anh thêm 50% máu";
+                case TierModifier.DenserSpawns: return "10% more enemies";
+                case TierModifier.EarlyElite: return "An extra elite appears at 1:30";
+                case TierModifier.FastRunners: return "Runners are 15% faster";
+                case TierModifier.LessMeat: return "Meat drops half as often";
+                case TierModifier.EarlyBrutes: return "Brutes appear from minute 1";
+                case TierModifier.DoubleElites: return "Twice as many elites";
+                case TierModifier.EnemyRegen: return "Enemies slowly heal when not being hit";
+                case TierModifier.BossSummonsFaster: return "The boss summons twice as fast";
+                case TierModifier.Nightmare: return "Nightmare: all modifiers above, enemies 10% faster, elites +50% HP";
                 default: return string.Empty;
             }
         }

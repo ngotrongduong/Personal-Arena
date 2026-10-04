@@ -22,10 +22,10 @@ namespace PersonalArena.View.Tests
         public void ParseResult_ReadsAWarningOnSuccess()
         {
             LineageResult result = LineageCommand.ParseResult(
-                "{\"ok\": true, \"id\": \"warrior-s001-5\", \"warning\": \"Đã lưu phiên bản nhưng chưa chấm điểm được.\"}\n", 0);
+                "{\"ok\": true, \"id\": \"warrior-s001-5\", \"warning\": \"Version saved but not scored yet.\"}\n", 0);
 
             Assert.That(result.ok, Is.True);
-            Assert.That(result.warning, Does.Contain("chưa chấm điểm"));
+            Assert.That(result.warning, Does.Contain("not scored yet"));
         }
 
         [Test]

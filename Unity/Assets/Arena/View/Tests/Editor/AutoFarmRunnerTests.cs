@@ -76,7 +76,7 @@ namespace PersonalArena.View.Tests
             Assert.That(runner.Error, Is.Null);
 
             List<string> lines = new List<string>();
-            FarmSummary summary = runner.Record(profile, warrior, 0, "Bộ 1", lines);
+            FarmSummary summary = runner.Record(profile, warrior, 0, "Loadout 1", lines);
 
             Assert.That(runner.IsRecorded, Is.True);
             Assert.That(summary.Runs, Is.EqualTo(2));
@@ -89,7 +89,7 @@ namespace PersonalArena.View.Tests
             Assert.That(lines.Count, Is.EqualTo(2));
             Assert.That(lines[0], Does.Contain(",farm,"));
 
-            FarmSummary again = runner.Record(profile, warrior, 0, "Bộ 1", lines);
+            FarmSummary again = runner.Record(profile, warrior, 0, "Loadout 1", lines);
             Assert.That(again, Is.SameAs(summary), "Booking twice must not pay twice.");
             Assert.That(profile.Stats.FarmSessions, Is.EqualTo(1));
         }
@@ -108,21 +108,21 @@ namespace PersonalArena.View.Tests
             Assert.That(runner.IsCancelled, Is.True);
             Assert.That(runner.Completed, Is.LessThanOrEqualTo(1));
 
-            FarmSummary summary = runner.Record(profile, warrior, 0, "Bộ 1", null);
+            FarmSummary summary = runner.Record(profile, warrior, 0, "Loadout 1", null);
             Assert.That(summary.Cancelled, Is.True);
             Assert.That(summary.Runs, Is.EqualTo(runner.Completed));
             Assert.That(profile.Stats.FarmSessions, Is.EqualTo(1));
         }
 
         [Test]
-        public void SummaryTextIsVietnamese()
+        public void SummaryTextIsReadable()
         {
             FarmSummary summary = new FarmSummary { Runs = 3, Wins = 1, Gold = 1500, AverageSeconds = 400f, Cancelled = true };
 
             string text = MetaViewLogic.FarmSummaryText(summary);
 
-            Assert.That(text, Does.StartWith("Xong 3 trận: thắng 1 · +1.500 vàng vào ví · sống TB 06:40"));
-            Assert.That(text, Does.Contain("Đã dừng giữa chừng"));
+            Assert.That(text, Does.StartWith("Finished 3 runs: won 1 · +1,500 gold to wallet · avg survival 06:40"));
+            Assert.That(text, Does.Contain("Stopped early"));
         }
     }
 }

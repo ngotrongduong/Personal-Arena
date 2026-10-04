@@ -63,12 +63,12 @@ namespace PersonalArena.View.Tests
         [Test]
         public void LabelsAreVietnamese()
         {
-            Assert.That(ViewerSettings.WindowModeLabel(ViewerWindowMode.Windowed), Is.EqualTo("Cửa sổ"));
-            Assert.That(ViewerSettings.WindowModeLabel(ViewerWindowMode.Borderless), Is.EqualTo("Toàn màn hình"));
-            Assert.That(ViewerSettings.QualityLabel(ViewerSettings.QualityLow), Is.EqualTo("Thấp"));
-            Assert.That(ViewerSettings.QualityLabel(ViewerSettings.QualityMedium), Is.EqualTo("Vừa"));
-            Assert.That(ViewerSettings.QualityLabel(ViewerSettings.QualityHigh), Is.EqualTo("Cao"));
-            Assert.That(ViewerSettings.QualityLabel(99), Is.EqualTo("Cao"));
+            Assert.That(ViewerSettings.WindowModeLabel(ViewerWindowMode.Windowed), Is.EqualTo("Windowed"));
+            Assert.That(ViewerSettings.WindowModeLabel(ViewerWindowMode.Borderless), Is.EqualTo("Fullscreen"));
+            Assert.That(ViewerSettings.QualityLabel(ViewerSettings.QualityLow), Is.EqualTo("Low"));
+            Assert.That(ViewerSettings.QualityLabel(ViewerSettings.QualityMedium), Is.EqualTo("Medium"));
+            Assert.That(ViewerSettings.QualityLabel(ViewerSettings.QualityHigh), Is.EqualTo("High"));
+            Assert.That(ViewerSettings.QualityLabel(99), Is.EqualTo("High"));
         }
 
         [Test]

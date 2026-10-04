@@ -76,7 +76,8 @@ namespace PersonalArena.Core.Meta
             return character;
         }
 
-        public static string DefaultLoadoutName(int index) => "Bộ " + (index + 1);
+        public static string DefaultLoadoutName(int index) => "Loadout " + (index + 1);
+        private const string LegacyLoadoutPrefix = "Bộ ";
         public static string DefaultBrainRunId(string classId) => classId + "-s001";
 
         public static CharacterProfile FindCharacter(PlayerProfile p, string classId)
@@ -147,7 +148,8 @@ namespace PersonalArena.Core.Meta
         {
             bool changed = false;
             string name = CleanName(l.Name);
-            if (name == null) name = DefaultLoadoutName(index);
+            // Profiles saved before the game went English hold the old default name ("Bộ 1"): show the new default.
+            if (name == null || name == LegacyLoadoutPrefix + (index + 1)) name = DefaultLoadoutName(index);
             if (l.Name != name) { l.Name = name; changed = true; }
             if (l.Points == null || l.Points.Length != StatInfo.SlotCount)
             {

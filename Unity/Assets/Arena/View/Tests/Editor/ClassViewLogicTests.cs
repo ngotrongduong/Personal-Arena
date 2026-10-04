@@ -6,9 +6,9 @@ namespace PersonalArena.View.Tests
 {
     public sealed class ClassViewLogicTests
     {
-        [TestCase("warrior", "Warrior", "Chiến binh", "CHIẾN BINH")]
-        [TestCase("mage", "Mage", "Pháp sư", "PHÁP SƯ")]
-        [TestCase("archer", "Archer", "Cung thủ", "CUNG THỦ")]
+        [TestCase("warrior", "Warrior", "Warrior", "WARRIOR")]
+        [TestCase("mage", "Mage", "Mage", "MAGE")]
+        [TestCase("archer", "Archer", "Archer", "ARCHER")]
         public void Names_RoundTripBetweenClassAndBehavior(string classId, string behavior, string display, string upper)
         {
             Assert.That(ClassViewLogic.BehaviorName(classId), Is.EqualTo(behavior));
@@ -27,7 +27,7 @@ namespace PersonalArena.View.Tests
             Assert.That(ClassViewLogic.ClassIdOfBehavior("Paladin"), Is.Null);
             Assert.That(ClassViewLogic.ClassIdOfBehavior(null), Is.Null);
             Assert.That(ClassViewLogic.BehaviorName(null), Is.EqualTo("Warrior"));
-            Assert.That(ClassViewLogic.DisplayName("MAGE"), Is.EqualTo("Pháp sư"));
+            Assert.That(ClassViewLogic.DisplayName("MAGE"), Is.EqualTo("Mage"));
         }
 
         [Test]
@@ -39,24 +39,24 @@ namespace PersonalArena.View.Tests
             Assert.That(ClassViewLogic.ShopState(profile, "mage"), Is.EqualTo(ClassShopState.TooExpensive));
             Assert.That(ClassViewLogic.ShopState(profile, "archer"), Is.EqualTo(ClassShopState.TooExpensive));
             Assert.That(ClassViewLogic.ShopState(profile, "paladin"), Is.EqualTo(ClassShopState.Unavailable));
-            Assert.That(ClassViewLogic.ShopStatus(profile, "mage"), Is.EqualTo("Thiếu 1.500 vàng"));
-            Assert.That(ClassViewLogic.ShopStatus(profile, "paladin"), Is.EqualTo("Chưa mở"));
+            Assert.That(ClassViewLogic.ShopStatus(profile, "mage"), Is.EqualTo("Short by 1,500 gold"));
+            Assert.That(ClassViewLogic.ShopStatus(profile, "paladin"), Is.EqualTo("Locked"));
 
             profile.Gold = 2000;
             Assert.That(ClassViewLogic.ShopState(profile, "mage"), Is.EqualTo(ClassShopState.Buyable));
-            Assert.That(ClassViewLogic.ShopStatus(profile, "mage"), Is.EqualTo("Giá 1.500 vàng"));
-            Assert.That(ClassViewLogic.ShopStatus(profile, "archer"), Is.EqualTo("Thiếu 1.000 vàng"));
+            Assert.That(ClassViewLogic.ShopStatus(profile, "mage"), Is.EqualTo("Price 1,500 gold"));
+            Assert.That(ClassViewLogic.ShopStatus(profile, "archer"), Is.EqualTo("Short by 1,000 gold"));
 
             Assert.That(ProfileRules.TryBuyClass(profile, "mage"), Is.True);
             Assert.That(profile.Gold, Is.EqualTo(500));
             Assert.That(ClassViewLogic.ShopState(profile, "mage"), Is.EqualTo(ClassShopState.Owned));
-            Assert.That(ClassViewLogic.ShopStatus(profile, "mage"), Does.StartWith("Đã có"));
+            Assert.That(ClassViewLogic.ShopStatus(profile, "mage"), Does.StartWith("Owned"));
             Assert.That(ClassViewLogic.SelectedClassId(profile), Is.EqualTo("warrior"), "buying does not select");
 
             Assert.That(ProfileRules.TrySelectClass(profile, "mage"), Is.True);
             Assert.That(ClassViewLogic.ShopState(profile, "mage"), Is.EqualTo(ClassShopState.Selected));
             Assert.That(ClassViewLogic.ShopState(profile, "warrior"), Is.EqualTo(ClassShopState.Owned));
-            Assert.That(ClassViewLogic.ShopStatus(profile, "mage"), Is.EqualTo("Đang dùng"));
+            Assert.That(ClassViewLogic.ShopStatus(profile, "mage"), Is.EqualTo("Active"));
             Assert.That(ClassViewLogic.SelectedClassId(profile), Is.EqualTo("mage"));
             Assert.That(ClassViewLogic.SelectedCharacter(profile).ClassId, Is.EqualTo("mage"));
             Assert.That(ClassViewLogic.SelectedCharacter(profile).BrainRunId, Is.EqualTo("mage-s001"));
@@ -77,8 +77,8 @@ namespace PersonalArena.View.Tests
         [Test]
         public void Shop_ButtonsMatchTheState()
         {
-            Assert.That(ClassViewLogic.BuyLabel("mage"), Is.EqualTo("Mua (1.500 vàng)"));
-            Assert.That(ClassViewLogic.BuyLabel("archer"), Is.EqualTo("Mua (3.000 vàng)"));
+            Assert.That(ClassViewLogic.BuyLabel("mage"), Is.EqualTo("Buy (1,500 gold)"));
+            Assert.That(ClassViewLogic.BuyLabel("archer"), Is.EqualTo("Buy (3,000 gold)"));
 
             Assert.That(ClassViewLogic.ShowsBuy(ClassShopState.Buyable), Is.True);
             Assert.That(ClassViewLogic.ShowsBuy(ClassShopState.TooExpensive), Is.True);
@@ -89,8 +89,8 @@ namespace PersonalArena.View.Tests
             Assert.That(ClassViewLogic.CanSelect(ClassShopState.Owned), Is.True);
             Assert.That(ClassViewLogic.CanSelect(ClassShopState.Selected), Is.False);
             Assert.That(ClassViewLogic.CanSelect(ClassShopState.Buyable), Is.False);
-            Assert.That(ClassViewLogic.SelectLabel(ClassShopState.Selected), Is.EqualTo("Đang dùng"));
-            Assert.That(ClassViewLogic.SelectLabel(ClassShopState.Owned), Is.EqualTo("Chọn"));
+            Assert.That(ClassViewLogic.SelectLabel(ClassShopState.Selected), Is.EqualTo("Active"));
+            Assert.That(ClassViewLogic.SelectLabel(ClassShopState.Owned), Is.EqualTo("Select"));
         }
 
         [Test]
@@ -157,14 +157,14 @@ namespace PersonalArena.View.Tests
         [Test]
         public void TrainingTexts_NameTheClass()
         {
-            Assert.That(ClassViewLogic.SwitchTrainLabel("mage"), Is.EqualTo("HUẤN LUYỆN PHÁP SƯ"));
-            Assert.That(ClassViewLogic.SwitchNotice("Warrior", "mage"), Does.Contain("Chiến binh").And.Contain("Pháp sư"));
-            Assert.That(ClassViewLogic.OtherClassTrainingLine("Archer", "mage"), Does.Contain("Cung thủ").And.Contain("Pháp sư"));
+            Assert.That(ClassViewLogic.SwitchTrainLabel("mage"), Is.EqualTo("TRAIN MAGE"));
+            Assert.That(ClassViewLogic.SwitchNotice("Warrior", "mage"), Does.Contain("Warrior").And.Contain("Mage"));
+            Assert.That(ClassViewLogic.OtherClassTrainingLine("Archer", "mage"), Does.Contain("Archer").And.Contain("Mage"));
             Assert.That(ClassViewLogic.OtherClassTrainingLine("Robot", "mage"), Does.Contain("Robot"));
 
-            Assert.That(ClassViewLogic.NoBrainText("mage", true), Does.Contain("Chưa có não Mage").And.Contain("HUẤN LUYỆN AI"));
-            Assert.That(ClassViewLogic.NoBrainText("archer", false), Does.Contain("Chưa có não Archer").And.Not.Contain("HUẤN LUYỆN AI"));
-            Assert.That(ClassViewLogic.NoBrainText("warrior", true), Does.StartWith("Chiến binh chưa có bộ não"));
+            Assert.That(ClassViewLogic.NoBrainText("mage", true), Does.Contain("No brain for Mage").And.Contain("TRAIN AI"));
+            Assert.That(ClassViewLogic.NoBrainText("archer", false), Does.Contain("No brain for Archer").And.Not.Contain("TRAIN AI"));
+            Assert.That(ClassViewLogic.NoBrainText("warrior", true), Does.StartWith("The Warrior has no brain yet"));
         }
     }
 }

@@ -37,11 +37,11 @@ namespace PersonalArena.Core.Survivor
         {
             switch (focus)
             {
-                case TrainingFocus.Survival: return "Sống sót";
-                case TrainingFocus.Gold: return "Vàng";
+                case TrainingFocus.Survival: return "Survival";
+                case TrainingFocus.Gold: return "Gold";
                 case TrainingFocus.Boss: return "Boss";
-                case TrainingFocus.Offense: return "Tấn công";
-                default: return "Cân bằng";
+                case TrainingFocus.Offense: return "Offense";
+                default: return "Balanced";
             }
         }
     }

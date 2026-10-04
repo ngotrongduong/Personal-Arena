@@ -148,10 +148,10 @@ namespace PersonalArena.View.Tests
         {
             Assert.That(BehaviorProfilePanel.FormatSeconds(552f), Is.EqualTo("9:12"));
             Assert.That(BehaviorProfilePanel.FormatSeconds(-1f), Is.EqualTo("—"));
-            Assert.That(BehaviorProfilePanel.FormatSteps(16999928L), Is.EqualTo("17.0 triệu"));
-            Assert.That(BehaviorProfilePanel.FormatSteps(2500L), Is.EqualTo("3 nghìn").Or.EqualTo("2 nghìn"));
-            Assert.That(BehaviorProfilePanel.DeathCauseName("Surrounded"), Is.EqualTo("Bị bao vây"));
-            Assert.That(BehaviorProfilePanel.DeathCauseName("Projectile"), Is.EqualTo("Trúng đạn"));
+            Assert.That(BehaviorProfilePanel.FormatSteps(16999928L), Is.EqualTo("17.0M"));
+            Assert.That(BehaviorProfilePanel.FormatSteps(2500L), Is.EqualTo("3K").Or.EqualTo("2K"));
+            Assert.That(BehaviorProfilePanel.DeathCauseName("Surrounded"), Is.EqualTo("Surrounded"));
+            Assert.That(BehaviorProfilePanel.DeathCauseName("Projectile"), Is.EqualTo("Projectiles"));
         }
     }
 }

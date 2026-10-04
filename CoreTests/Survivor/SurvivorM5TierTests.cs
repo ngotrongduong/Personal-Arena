@@ -20,7 +20,7 @@ namespace PersonalArena.Core.Tests.Survivor
                 Assert.That(TierModifiers.Has((int)m, m), Is.True); Assert.That(TierModifiers.Has((int)m - 1, m), Is.False);
                 Assert.That(TierModifiers.DisplayName(m), Is.Not.Empty, m.ToString());
             }
-            Assert.That(TierModifiers.DisplayName(TierModifier.Nightmare), Is.EqualTo("Ác mộng: tất cả modifier trên, quái nhanh hơn 10%, tinh anh thêm 50% máu"));
+            Assert.That(TierModifiers.DisplayName(TierModifier.Nightmare), Is.EqualTo("Nightmare: all modifiers above, enemies 10% faster, elites +50% HP"));
         }
 
         [Test]

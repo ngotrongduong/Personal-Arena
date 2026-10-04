@@ -20,10 +20,10 @@ namespace PersonalArena.View
                 return;
             }
 
-            string error = command.Start(SyncKind, "sync", "Đang cập nhật lịch sử não...", LineageCommand.DefaultTimeoutSeconds);
+            string error = command.Start(SyncKind, "sync", "Updating the brain history...", LineageCommand.DefaultTimeoutSeconds);
             if (error != null)
             {
-                SetMessage("Chưa cập nhật được lịch sử não: " + error, Warn);
+                SetMessage("Could not update the brain history: " + error, Warn);
             }
         }
 
@@ -31,7 +31,7 @@ namespace PersonalArena.View
         {
             if (command == null)
             {
-                SetMessage("Không tìm thấy thư mục huấn luyện.", Bad);
+                SetMessage("Training folder not found.", Bad);
                 return;
             }
 
@@ -52,14 +52,14 @@ namespace PersonalArena.View
         {
             if (result == null)
             {
-                result = new LineageResult { ok = false, error = "Lệnh lịch sử não không trả lời." };
+                result = new LineageResult { ok = false, error = "The brain history tool did not answer." };
             }
 
             if (!result.ok)
             {
                 string prefix = kind == SyncKind
-                    ? "Chưa cập nhật được lịch sử não: "
-                    : kind == SnapshotKind ? "Không lưu được phiên bản: " : "Không tạo được nhánh mới: ";
+                    ? "Could not update the brain history: "
+                    : kind == SnapshotKind ? "Could not save the version: " : "Could not create the branch: ";
                 Reload();
                 SetMessage(prefix + result.error, Bad);
                 Refresh();
@@ -76,8 +76,8 @@ namespace PersonalArena.View
                     Reload();
                     LineageVersion saved = index.FindVersion(result.id);
                     string text = saved != null
-                        ? "Đã lưu phiên bản \"" + saved.Name + "\"" + (saved.HasEvaluation ? " và chấm điểm xong." : " (chưa chấm điểm).")
-                        : "Đã lưu phiên bản mới.";
+                        ? "Saved version \"" + saved.Name + "\"" + (saved.HasEvaluation ? " and scored it." : " (not scored yet).")
+                        : "New version saved.";
                     if (!string.IsNullOrEmpty(result.warning))
                     {
                         text += " " + result.warning;
@@ -100,7 +100,7 @@ namespace PersonalArena.View
             if (!TrainingServiceClient.IsSafeRunId(run))
             {
                 Reload();
-                SetMessage("Đã tạo nhánh mới nhưng không đọc được tên thư mục của nó.", Warn);
+                SetMessage("The branch was created but its folder name could not be read.", Warn);
                 return;
             }
 
@@ -118,14 +118,14 @@ namespace PersonalArena.View
                 ScrollToTop(versionContent);
             }
 
-            string text = "Đã tạo nhánh mới \"" + index.BranchName(run) + "\" và chọn làm nhánh đang dùng." + TrainingNote(run);
+            string text = "Created branch \"" + index.BranchName(run) + "\" and made it the active branch." + TrainingNote(run);
             if (!string.IsNullOrEmpty(labelError))
             {
                 text += " " + labelError;
             }
             if (!saved)
             {
-                text += " Không lưu được hồ sơ.";
+                text += " The profile could not be saved.";
             }
             if (!string.IsNullOrEmpty(result.warning))
             {
@@ -155,7 +155,7 @@ namespace PersonalArena.View
         {
             string training = TrainingRunId();
             return training != null && !string.Equals(training, runId, StringComparison.OrdinalIgnoreCase)
-                ? " Áp dụng ở lần HUẤN LUYỆN sau."
+                ? " Applies from the next TRAIN."
                 : string.Empty;
         }
 
@@ -182,19 +182,19 @@ namespace PersonalArena.View
             }
 
             bool saved = SetActiveBranch(branch.RunId);
-            string text = "Đã chọn \"" + branch.Name + "\" làm nhánh đang dùng.";
+            string text = "Selected \"" + branch.Name + "\" as the active branch.";
             if (LineageStore.TrainRunId(runsDirectory, behavior, branch.RunId) == null)
             {
-                text += " Nhánh này chưa có bản lưu huấn luyện (checkpoint.pt), nên HUẤN LUYỆN sẽ học tiếp nhánh mới nhất.";
+                text += " This branch has no training checkpoint (checkpoint.pt), so TRAIN will continue the newest branch.";
             }
             else
             {
                 string note = TrainingNote(branch.RunId);
-                text += note.Length > 0 ? note : " Lần HUẤN LUYỆN sau sẽ học tiếp nhánh này.";
+                text += note.Length > 0 ? note : " The next TRAIN will continue this branch.";
             }
             if (!saved)
             {
-                text += " Không lưu được hồ sơ.";
+                text += " The profile could not be saved.";
             }
 
             selectedRunId = branch.RunId;
@@ -218,8 +218,8 @@ namespace PersonalArena.View
                 return;
             }
 
-            string newName = LineageStore.CleanName(branch.Name + " (bản sao)");
-            StartCommand(ForkKind, "fork --run-id " + branch.RunId, "Đang nhân bản \"" + branch.Name + "\"...",
+            string newName = LineageStore.CleanName(branch.Name + " (copy)");
+            StartCommand(ForkKind, "fork --run-id " + branch.RunId, "Cloning \"" + branch.Name + "\"...",
                 LineageCommand.DefaultTimeoutSeconds, newName);
         }
 
@@ -232,7 +232,7 @@ namespace PersonalArena.View
             }
 
             selectedRunId = branch.RunId;
-            StartCommand(SnapshotKind, "snapshot --run-id " + branch.RunId, "Đang lưu và chấm điểm... (vài phút)",
+            StartCommand(SnapshotKind, "snapshot --run-id " + branch.RunId, "Saving and scoring... (a few minutes)",
                 LineageCommand.EvaluateTimeoutSeconds, null);
         }
 
@@ -294,8 +294,8 @@ namespace PersonalArena.View
             else
             {
                 SetMessage(version.Pinned
-                    ? "Đã bỏ ghim \"" + version.Name + "\"."
-                    : "Đã ghim \"" + version.Name + "\": bản này sẽ không bao giờ bị tự xoá.", Good);
+                    ? "Unpinned \"" + version.Name + "\"."
+                    : "Pinned \"" + version.Name + "\": it will never be deleted automatically.", Good);
             }
 
             Reload();
@@ -320,12 +320,12 @@ namespace PersonalArena.View
 
             if (!TrainingServiceClient.IsSafeRunId(version.Id))
             {
-                SetMessage("Không rẽ nhánh được từ bản này (tên thư mục lạ).", Bad);
+                SetMessage("Cannot fork from this version (unexpected folder name).", Bad);
                 return;
             }
 
-            string newName = LineageStore.CleanName("Nhánh từ " + version.Name);
-            StartCommand(ForkKind, "fork --version " + version.Id, "Đang tạo nhánh mới từ \"" + version.Name + "\"...",
+            string newName = LineageStore.CleanName("Fork of " + version.Name);
+            StartCommand(ForkKind, "fork --version " + version.Id, "Creating a branch from \"" + version.Name + "\"...",
                 LineageCommand.DefaultTimeoutSeconds, newName);
         }
 
@@ -342,8 +342,8 @@ namespace PersonalArena.View
             renameId = id;
             hideRenameNextFrame = false;
             renameArea.SetActive(true);
-            renameLabel.text = (kind == RenameKind.Branch ? "Đổi tên nhánh \"" : "Đổi tên phiên bản \"") + currentName +
-                "\": gõ tên mới rồi bấm Enter (Esc để huỷ, để trống là tên mặc định).";
+            renameLabel.text = (kind == RenameKind.Branch ? "Rename branch \"" : "Rename version \"") + currentName +
+                "\": type a new name and press Enter (Esc cancels, empty restores the default name).";
             renameField.SetTextWithoutNotify(currentName ?? string.Empty);
             renameField.Select();
             renameField.ActivateInputField();

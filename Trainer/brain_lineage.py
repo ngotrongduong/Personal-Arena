@@ -59,7 +59,7 @@ def check_id(value: str | None, what: str) -> str | None:
         or value.endswith((".", " "))  # Windows silently strips these, aliasing another name
         or value.lower() == champion.CHAMPIONS_DIR.lower()
     ):
-        raise LineageError(f"Tên {what} không hợp lệ: {value}")
+        raise LineageError(f"The {what} name is not valid: {value}")
     return value
 
 
@@ -191,20 +191,20 @@ def snapshot(
     log: Callable[[str], None] = print,
 ) -> dict:
     """Save the newest settled checkpoint of ``run_id`` as a manual version."""
-    check_id(run_id, "nhánh")
+    check_id(run_id, "branch")
     results_dir = Path(results_dir)
     behavior_dir = results_dir / run_id / behavior
     if not behavior_dir.is_dir():
-        raise LineageError(f"Không tìm thấy nhánh {run_id}.")
+        raise LineageError(f"Branch {run_id} not found.")
     if arena_trainer.run_schema_version(results_dir / run_id) != arena_trainer.SCHEMA_VERSION:
-        raise LineageError(f"Nhánh {run_id} dùng luật cũ nên không lưu được.")
+        raise LineageError(f"Branch {run_id} uses the old rules and cannot be saved.")
     found = export_brain.checkpoints(behavior_dir)
     settled = [
         (step, path) for step, path in found
         if now() - _modified(path) >= SETTLED_SECONDS
     ]
     if not settled:
-        raise LineageError(f"Nhánh {run_id} chưa có bản lưu huấn luyện nào.")
+        raise LineageError(f"Branch {run_id} has no training checkpoint yet.")
 
     for step, checkpoint in reversed(settled):
         target = versions_directory(results_dir, behavior) / version_id(run_id, step)
@@ -240,7 +240,7 @@ def snapshot(
         if evaluate:
             _evaluate_into(result, target, runner, log)
         return result
-    raise LineageError(f"Không đọc được bản lưu huấn luyện nào của nhánh {run_id}.")
+    raise LineageError(f"No training checkpoint of branch {run_id} could be read.")
 
 
 def fork(
@@ -253,22 +253,22 @@ def fork(
 ) -> dict:
     """Start a new branch (run) from a version, or clone the newest state of branch ``run_id``."""
     results_dir = Path(results_dir)
-    check_id(version, "phiên bản")
-    check_id(run_id, "nhánh")
+    check_id(version, "version")
+    check_id(run_id, "branch")
     if (version is None) == (run_id is None):
-        raise LineageError("Cần chọn đúng một phiên bản hoặc một nhánh để rẽ nhánh.")
+        raise LineageError("Pick exactly one version or one branch to fork from.")
     if run_id is not None:
         version = snapshot(results_dir, behavior, run_id, evaluate=False, now=now, log=log)["id"]
 
     source = versions_directory(results_dir, behavior) / str(version)
     metadata = _read_json(source / VERSION_FILE)
     if metadata is None or not (source / BRAIN_FILE).is_file():
-        raise LineageError(f"Không tìm thấy phiên bản {version}.")
+        raise LineageError(f"Version {version} not found.")
     checkpoint = source / CHECKPOINT_FILE
     if not checkpoint.is_file():
-        raise LineageError("Bản này chỉ còn não để xem, không học tiếp được.")
+        raise LineageError("Only the brain is left: it can be watched but not trained further.")
     if int(metadata.get("schema_version", -1)) != arena_trainer.SCHEMA_VERSION:
-        raise LineageError("Phiên bản này dùng luật cũ nên không rẽ nhánh được.")
+        raise LineageError("This version uses the old rules and cannot be forked.")
 
     from Trainer import train_service  # late import: train_service imports this module
 
@@ -301,7 +301,7 @@ def fork(
             json.dumps(forked, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
         )
         if target.exists():
-            raise LineageError(f"Nhánh {new_run} đã tồn tại.")
+            raise LineageError(f"Branch {new_run} already exists.")
         arena_trainer.replace_directory(partial, target)
     except BaseException:
         shutil.rmtree(partial, ignore_errors=True)
@@ -323,7 +323,7 @@ def fork(
         _write_json_atomic(lineage / BRANCHES_FILE, {"branches": branches})
     except Exception as error:  # noqa: BLE001 - the new run exists and trains; only its tree link is lost
         log(f"lineage: branch {new_run} created but not listed: {error}")
-        result["warning"] = f"Đã tạo nhánh {new_run} nhưng chưa ghi được cây nhánh."
+        result["warning"] = f"Branch {new_run} was created but the branch tree could not be written."
     log(f"lineage: new branch {new_run} from {source.name}")
     return result
 
@@ -400,7 +400,7 @@ def _evaluate_into(result: dict, target: Path, runner: champion.EvaluationRunner
         _evaluate_version(target, runner, log)
     except Exception as error:  # noqa: BLE001 - the version itself is already saved
         log(f"lineage: evaluation of {target.name} failed: {error}")
-        result["warning"] = "Đã lưu phiên bản nhưng chưa chấm điểm được."
+        result["warning"] = "Version saved but not scored yet."
 
 
 def _evaluate_version(target: Path, runner: champion.EvaluationRunner | None, log) -> None:
@@ -568,9 +568,9 @@ def main(argv: Iterable[str] | None = None) -> int:
         print(message, file=sys.stderr)
 
     try:
-        check_id(args.behavior, "hành vi")
-        check_id(getattr(args, "run_id", None), "nhánh")
-        check_id(getattr(args, "version", None), "phiên bản")
+        check_id(args.behavior, "behavior")
+        check_id(getattr(args, "run_id", None), "branch")
+        check_id(getattr(args, "version", None), "version")
         if args.command == "sync":
             result = {"ok": True, "imported": sync(results_dir, args.behavior)}
         elif args.command == "prune":
@@ -587,7 +587,7 @@ def main(argv: Iterable[str] | None = None) -> int:
         print(json.dumps({"ok": False, "error": str(error)}, ensure_ascii=False))
         return 1
     except Exception as error:  # noqa: BLE001 - the viewer shows every failure to the owner
-        print(json.dumps({"ok": False, "error": f"Lỗi: {type(error).__name__}: {error}"}, ensure_ascii=False))
+        print(json.dumps({"ok": False, "error": f"Error: {type(error).__name__}: {error}"}, ensure_ascii=False))
         return 1
     print(json.dumps(result, ensure_ascii=False))
     return 0

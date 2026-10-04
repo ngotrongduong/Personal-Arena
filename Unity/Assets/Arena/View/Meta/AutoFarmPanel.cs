@@ -45,7 +45,7 @@ namespace PersonalArena.View
         /// <summary>Raised after a finished session was booked into the profile (and saved).</summary>
         public event Action ProfileChanged;
 
-        protected override string Title => "FARM VÀNG TỰ ĐỘNG";
+        protected override string Title => "AUTO GOLD FARM";
         protected override Vector2 CardSize => new Vector2(1100f, 760f);
 
         public bool IsFarming => runner != null && !runner.IsRecorded;
@@ -60,8 +60,8 @@ namespace PersonalArena.View
                     return null;
                 }
 
-                return "Farm vàng: " + runner.Completed + "/" + runner.RunCount + " trận · +" +
-                    MetaViewLogic.FormatGold((long)Math.Floor(runner.TotalGold)) + " vàng";
+                return "Gold farm: " + runner.Completed + "/" + runner.RunCount + " runs · +" +
+                    MetaViewLogic.FormatGold((long)Math.Floor(runner.TotalGold)) + " gold";
             }
         }
 
@@ -104,7 +104,7 @@ namespace PersonalArena.View
             catch (ArgumentException exception)
             {
                 runner = null;
-                startError = "Không farm được với bộ não này: " + exception.Message;
+                startError = "Cannot farm with this brain: " + exception.Message;
                 Refresh();
                 return false;
             }
@@ -169,32 +169,32 @@ namespace PersonalArena.View
         protected override void BuildContent(RectTransform card)
         {
             Text intro = PlaceText("Intro", card, 18, TextAnchor.UpperLeft, Muted, 34f, -76f, 1030f, 50f, false, true);
-            intro.text = "AI tự chơi các trận ẩn (không vẽ, chạy nhanh nhất có thể) bằng bộ chỉ số và bậc bạn đang chọn. " +
-                "Vàng kiếm được vào ví thật. Bạn vẫn xem AI chơi bình thường trong lúc farm.";
+            intro.text = "The AI plays hidden runs (not drawn, as fast as possible) with the loadout and tier you selected. " +
+                "The gold goes to your real wallet. You can keep watching the AI play while it farms.";
             buildText = PlaceText("Build", card, 18, TextAnchor.UpperLeft, Color.white, 34f, -134f, 1030f, 50f, false, true);
 
             Text countLabel = PlaceText("Count Label", card, 19, TextAnchor.MiddleLeft, Color.white, 34f, -196f, 130f, 48f, true);
-            countLabel.text = "Số trận:";
+            countLabel.text = "Runs:";
             for (int i = 0; i < RunChoices.Length; i++)
             {
                 int index = i;
-                choiceButtons[i] = CreateButton("Runs " + RunChoices[i], card, RunChoices[i] + " trận", 18,
+                choiceButtons[i] = CreateButton("Runs " + RunChoices[i], card, RunChoices[i] + " runs", 18,
                     170f + i * 128f, -196f, 118f, 48f, () => OnChoose(index));
             }
 
-            startButton = CreateButton("Start", card, "Bắt đầu", 24, 34f, -266f, 360f, 64f, OnStartStop);
+            startButton = CreateButton("Start", card, "Start", 24, 34f, -266f, 360f, 64f, OnStartStop);
             reasonText = PlaceText("Reason", card, 17, TextAnchor.MiddleLeft, Warn, 412f, -266f, 650f, 64f, false, true);
 
             CreateBar("Progress", card, 34f, -352f, ProgressWidth, 26f, Good, out progressFill);
             progressText = PlaceText("Progress Text", card, 19, TextAnchor.UpperLeft, Color.white, 34f, -390f, 1030f, 56f, false, true);
 
             Text resultHeader = PlaceText("Result Header", card, 20, TextAnchor.UpperLeft, Gold, 34f, -462f, 1030f, 28f, true);
-            resultHeader.text = "Kết quả lần farm gần nhất";
+            resultHeader.text = "Latest farm result";
             resultText = PlaceText("Result", card, 19, TextAnchor.UpperLeft, Color.white, 34f, -496f, 1030f, 110f, false, true);
             errorText = PlaceText("Error", card, 18, TextAnchor.UpperLeft, Bad, 34f, -614f, 1030f, 60f, false, true);
 
             Text footer = PlaceText("Footer", card, 16, TextAnchor.UpperLeft, Muted, 34f, -700f, 1030f, 44f, false, true);
-            footer.text = "Farm dùng bộ não đang nạp lúc bấm Bắt đầu, kể cả khi có não mới. Thoát game sẽ dừng farm; các trận đã xong vẫn được tính.";
+            footer.text = "The farm uses the brain loaded when you press Start, even if a newer one arrives. Quitting the game stops the farm; finished runs still count.";
         }
 
         private void Refresh()
@@ -212,15 +212,15 @@ namespace PersonalArena.View
             string brain = brainName != null ? brainName() : null;
             if (running)
             {
-                buildText.text = "Đang farm " + ClassViewLogic.DisplayName(runner.ClassId) + " với bộ \"" + runnerLoadoutName + "\" ở bậc " + runner.Tier + " (" +
+                buildText.text = "Farming " + ClassViewLogic.DisplayName(runner.ClassId) + " with loadout \"" + runnerLoadoutName + "\" at tier " + runner.Tier + " (" +
                     MetaViewLogic.TierGoldText(runner.Tier) + ").";
             }
             else if (warrior != null)
             {
                 int tier = Mathf.Clamp(profile.SelectedTier, 1, ProfileRules.MaxTier);
-                buildText.text = ClassViewLogic.DisplayName(warrior.ClassId) + "   Bộ: " + MetaViewLogic.LoadoutName(warrior, warrior.ActiveLoadout) + " (" +
-                    MetaViewLogic.CompactPoints(warrior.Loadouts[warrior.ActiveLoadout].Points, 3) + ")   Bậc " + tier + " (" +
-                    MetaViewLogic.TierGoldText(tier) + ")" + (string.IsNullOrEmpty(brain) ? string.Empty : "\nBộ não: " + brain);
+                buildText.text = ClassViewLogic.DisplayName(warrior.ClassId) + "   Loadout: " + MetaViewLogic.LoadoutName(warrior, warrior.ActiveLoadout) + " (" +
+                    MetaViewLogic.CompactPoints(warrior.Loadouts[warrior.ActiveLoadout].Points, 3) + ")   Tier " + tier + " (" +
+                    MetaViewLogic.TierGoldText(tier) + ")" + (string.IsNullOrEmpty(brain) ? string.Empty : "\nBrain: " + brain);
             }
 
             for (int i = 0; i < choiceButtons.Length; i++)
@@ -232,12 +232,12 @@ namespace PersonalArena.View
             if (running)
             {
                 bool stopping = runner.IsCancelled;
-                startButton.Set(stopping ? "Đang dừng..." : "Dừng", ButtonStop, !stopping);
-                reasonText.text = stopping ? "Trận đang chạy sẽ xong rồi dừng." : string.Empty;
+                startButton.Set(stopping ? "Stopping..." : "Stop", ButtonStop, !stopping);
+                reasonText.text = stopping ? "The current run will finish, then the farm stops." : string.Empty;
             }
             else
             {
-                startButton.Set("Bắt đầu", ButtonGo, reason == null);
+                startButton.Set("Start", ButtonGo, reason == null);
                 reasonText.text = reason ?? startError ?? string.Empty;
             }
 
@@ -246,25 +246,25 @@ namespace PersonalArena.View
                 int completed = runner.Completed;
                 SetBar(progressFill, ProgressWidth, runner.RunCount > 0 ? (float)completed / runner.RunCount : 0f);
                 float left = runner.EstimatedSecondsLeft;
-                progressText.text = "Đã xong " + completed + "/" + runner.RunCount + " trận     Vàng: +" +
+                progressText.text = "Finished " + completed + "/" + runner.RunCount + " runs     Gold: +" +
                     MetaViewLogic.FormatGold((long)Math.Floor(runner.TotalGold)) +
                     (running
-                        ? "     Còn khoảng " + (left < 0f ? "đang tính..." : MetaViewLogic.FormatDuration(left))
-                        : "     Thời gian " + MetaViewLogic.FormatDuration(runner.ElapsedSeconds));
+                        ? "     Time left ~" + (left < 0f ? "estimating..." : MetaViewLogic.FormatDuration(left))
+                        : "     Time " + MetaViewLogic.FormatDuration(runner.ElapsedSeconds));
             }
             else
             {
                 SetBar(progressFill, ProgressWidth, 0f);
-                progressText.text = "Chưa farm lần nào trong phiên này.";
+                progressText.text = "No farm yet in this session.";
             }
 
             resultText.text = lastSummary != null
-                ? MetaViewLogic.FarmSummaryText(lastSummary) + "\nVí hiện có: " + MetaViewLogic.FormatGold(profile.Gold) + " vàng"
-                : running ? "Đang farm... kết quả hiện khi xong." : "Chưa có.";
+                ? MetaViewLogic.FarmSummaryText(lastSummary) + "\nWallet: " + MetaViewLogic.FormatGold(profile.Gold) + " gold"
+                : running ? "Farming... the result shows when it is done." : "None yet.";
 
             // FarmSession.Error: shown as soon as the worker stops on it (also part of the summary).
             string error = runner != null && runner.IsDone ? runner.Error : null;
-            errorText.text = string.IsNullOrEmpty(error) ? string.Empty : "Lỗi khi farm: " + error;
+            errorText.text = string.IsNullOrEmpty(error) ? string.Empty : "Farm error: " + error;
         }
 
         /// <summary>Why a session cannot start now, or null.</summary>
@@ -272,13 +272,13 @@ namespace PersonalArena.View
         {
             if (store == null || store.Selected == null)
             {
-                return "Chưa đọc được hồ sơ.";
+                return "The profile has not been read yet.";
             }
 
             byte[] bytes = brainBytes != null ? brainBytes() : null;
             if (bytes == null || bytes.Length == 0)
             {
-                return "Chưa có bộ não để farm. Bấm HUẤN LUYỆN AI trước, rồi chờ AI lưu bộ não đầu tiên.";
+                return "No brain to farm with yet. Press TRAIN AI first, then wait for the AI to save its first brain.";
             }
 
             return null;

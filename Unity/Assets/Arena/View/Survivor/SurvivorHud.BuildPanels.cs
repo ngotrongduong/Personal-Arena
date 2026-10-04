@@ -77,17 +77,17 @@ namespace PersonalArena.View
 
             Button character = CreateButton("Character Button", panel, new Color(0.2f, 0.42f, 0.72f, 1f), new Vector2(18f, -8f), new Vector2(118f, 44f),
                 14, out _, out Text characterLabel);
-            characterLabel.text = "NHÂN VẬT\n(C)";
+            characterLabel.text = "CHARACTER\n(C)";
             character.onClick.AddListener(ToggleCharacterPanel);
 
             Button farm = CreateButton("Farm Button", panel, new Color(0.62f, 0.48f, 0.12f, 1f), new Vector2(142f, -8f), new Vector2(118f, 44f),
                 14, out _, out Text farmLabel);
-            farmLabel.text = "FARM VÀNG\n(F)";
+            farmLabel.text = "GOLD FARM\n(F)";
             farm.onClick.AddListener(ToggleFarmPanel);
 
             Button compare = CreateButton("Compare Button", panel, new Color(0.2f, 0.5f, 0.48f, 1f), new Vector2(266f, -8f), new Vector2(146f, 44f),
                 14, out _, out Text compareLabel);
-            compareLabel.text = "SO SÁNH BUILD\n(V)";
+            compareLabel.text = "COMPARE\n(V)";
             compare.onClick.AddListener(ToggleComparePanel);
         }
 
@@ -142,7 +142,7 @@ namespace PersonalArena.View
             trainingPanel = panel.gameObject;
 
             Text title = CreateText("Title", panel, 20, TextAnchor.UpperLeft, GoldText);
-            title.text = "HUẤN LUYỆN AI";
+            title.text = "TRAIN AI";
             title.fontStyle = FontStyle.Bold;
             SetRect(title.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -12f), new Vector2(394f, 26f), new Vector2(0f, 1f));
 
@@ -178,17 +178,17 @@ namespace PersonalArena.View
 
             Button dataButton = CreateButton("Training Data Button", panel, new Color(0.36f, 0.25f, 0.62f, 1f), new Vector2(18f, -406f), new Vector2(194f, 40f),
                 17, out _, out Text dataLabel);
-            dataLabel.text = "BIỂU ĐỒ HỌC  (G)";
+            dataLabel.text = "CHARTS  (G)";
             dataButton.onClick.AddListener(ToggleHistoryPanel);
 
             Button profileButton = CreateButton("Profile Button", panel, new Color(0.62f, 0.4f, 0.14f, 1f), new Vector2(218f, -406f), new Vector2(194f, 40f),
                 17, out _, out Text profileLabel);
-            profileLabel.text = "HỒ SƠ AI  (P)";
+            profileLabel.text = "AI PROFILE  (P)";
             profileButton.onClick.AddListener(ToggleProfilePanel);
 
             Button lineageButton = CreateButton("Lineage Button", panel, new Color(0.18f, 0.44f, 0.5f, 1f), new Vector2(18f, -452f), new Vector2(394f, 40f),
                 17, out _, out Text lineageLabel);
-            lineageLabel.text = "LỊCH SỬ NÃO  (L)";
+            lineageLabel.text = "BRAIN HISTORY  (L)";
             lineageButton.onClick.AddListener(ToggleLineagePanel);
 
             EnsureAnalysisPanels();

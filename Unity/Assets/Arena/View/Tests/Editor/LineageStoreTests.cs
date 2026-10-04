@@ -35,15 +35,15 @@ namespace PersonalArena.View.Tests
         // ------------------------------------------------------------------ names
 
         [Test]
-        public void DefaultNames_AreVietnamese()
+        public void DefaultNames_AreReadable()
         {
-            Assert.That(LineageStore.DefaultBranchName("warrior-s001"), Is.EqualTo("Nhánh 1"));
-            Assert.That(LineageStore.DefaultBranchName("warrior-s012"), Is.EqualTo("Nhánh 12"));
+            Assert.That(LineageStore.DefaultBranchName("warrior-s001"), Is.EqualTo("Branch 1"));
+            Assert.That(LineageStore.DefaultBranchName("warrior-s012"), Is.EqualTo("Branch 12"));
             Assert.That(LineageStore.DefaultBranchName("my-run"), Is.EqualTo("my-run"));
-            Assert.That(LineageStore.DefaultBranchName(null), Is.EqualTo("Nhánh ?"));
+            Assert.That(LineageStore.DefaultBranchName(null), Is.EqualTo("Branch ?"));
 
-            Assert.That(LineageStore.DefaultVersionName(96999889), Is.EqualTo("Bước 97,0 tr"));
-            Assert.That(LineageStore.FormatStep(950000), Is.EqualTo("950 nghìn"));
+            Assert.That(LineageStore.DefaultVersionName(96999889), Is.EqualTo("Step 97.0M"));
+            Assert.That(LineageStore.FormatStep(950000), Is.EqualTo("950K"));
             Assert.That(LineageStore.FormatStep(500), Is.EqualTo("500"));
             Assert.That(LineageStore.FormatStep(-5), Is.EqualTo("0"));
         }
@@ -164,12 +164,12 @@ namespace PersonalArena.View.Tests
 
             LineageVersion champion = index.FindVersion(ChampionVersionId);
             Assert.That(champion.CustomName, Is.Null);
-            Assert.That(champion.Name, Is.EqualTo("Bước 97,0 tr"));
+            Assert.That(champion.Name, Is.EqualTo("Step 97.0M"));
             Assert.That(champion.Pinned, Is.False);
 
             Assert.That(index.FindBranch("warrior-s001").Name, Is.EqualTo("Chính"));
-            Assert.That(index.FindBranch("warrior-s002").Name, Is.EqualTo("Nhánh 2"));
-            Assert.That(index.BranchName("warrior-s009"), Is.EqualTo("Nhánh 9"));
+            Assert.That(index.FindBranch("warrior-s002").Name, Is.EqualTo("Branch 2"));
+            Assert.That(index.BranchName("warrior-s009"), Is.EqualTo("Branch 9"));
         }
 
         [Test]
@@ -223,7 +223,7 @@ namespace PersonalArena.View.Tests
             Assert.That(index.FindVersion(ChampionVersionId).Name, Is.EqualTo("Vô địch"));
             Assert.That(index.FindVersion(ChampionVersionId).Pinned, Is.True);
             Assert.That(index.FindVersion(PlainVersionId).Pinned, Is.False);
-            Assert.That(index.FindBranch("warrior-s001").Name, Is.EqualTo("Nhánh 1"));
+            Assert.That(index.FindBranch("warrior-s001").Name, Is.EqualTo("Branch 1"));
             Assert.That(index.FindBranch("warrior-s002").Name, Is.EqualTo("Nhánh thử"));
             string lineageDirectory = Path.GetDirectoryName(LineageStore.LabelsPath(runs, Behavior));
             Assert.That(Directory.GetFiles(lineageDirectory, "*.tmp"), Is.Empty);

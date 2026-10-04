@@ -14,7 +14,7 @@ namespace PersonalArena.Core.Tests.Survivor
         {
             Assert.That(TrainingFocusInfo.Count, Is.EqualTo(5));
             string[] ids = { "balanced", "survival", "gold", "boss", "offense" };
-            string[] names = { "Cân bằng", "Sống sót", "Vàng", "Boss", "Tấn công" };
+            string[] names = { "Balanced", "Survival", "Gold", "Boss", "Offense" };
             for (int i = 0; i < AllFocuses.Length; i++)
             {
                 Assert.That(TrainingFocusInfo.Id(AllFocuses[i]), Is.EqualTo(ids[i]));

@@ -29,23 +29,23 @@ namespace PersonalArena.View
     {
         private static readonly string[] StatNames =
         {
-            "Máu tối đa", "Giáp", "Hồi máu", "Sức mạnh", "Chí mạng", "ST chí mạng", "Hồi chiêu",
-            "Vùng", "Tốc chạy", "Nam châm", "May mắn", "Tham lam", "Học nhanh"
+            "Max HP", "Armor", "Regen", "Might", "Crit", "Crit damage", "Cooldown",
+            "Area", "Speed", "Magnet", "Luck", "Greed", "Growth"
         };
 
         private static readonly string[] StatShortNames =
         {
-            "Máu", "Giáp", "Hồi máu", "Mạnh", "Chí mạng", "ST chí mạng", "Hồi chiêu",
-            "Vùng", "Tốc chạy", "Nam châm", "May mắn", "Tham lam", "Học nhanh"
+            "HP", "Armor", "Regen", "Might", "Crit", "Crit damage", "Cooldown",
+            "Area", "Speed", "Magnet", "Luck", "Greed", "Growth"
         };
 
         /// <summary>What one point changes; "{0}" is the signed amount.</summary>
         private static readonly string[] StatEffects =
         {
-            "{0}% máu tối đa / điểm", "{0} giáp / điểm", "{0} máu mỗi giây / điểm", "{0}% sát thương / điểm",
-            "{0}% tỉ lệ chí mạng / điểm", "{0}% ST chí mạng / điểm", "{0}% thời gian hồi chiêu / điểm",
-            "{0}% vùng đánh / điểm", "{0}% tốc chạy / điểm", "{0}% bán kính nhặt / điểm", "{0} may mắn / điểm",
-            "{0}% vàng / điểm", "{0}% EXP / điểm"
+            "{0}% max HP / point", "{0} armor / point", "{0} HP per second / point", "{0}% damage / point",
+            "{0}% crit chance / point", "{0}% crit damage / point", "{0}% cooldown / point",
+            "{0}% attack area / point", "{0}% move speed / point", "{0}% pickup radius / point", "{0} luck / point",
+            "{0}% gold / point", "{0}% EXP / point"
         };
 
         /// <summary>Stats whose per-point value is a fraction shown as a percentage.</summary>
@@ -121,13 +121,13 @@ namespace PersonalArena.View
         {
             if (reward == null)
             {
-                return "Trận này không tính vàng (AI chưa chơi).";
+                return "This run earns no gold (the AI did not play).";
             }
 
-            string text = "+" + FormatGold(reward.GoldAdded) + " vàng vào ví";
+            string text = "+" + FormatGold(reward.GoldAdded) + " gold to wallet";
             if (reward.TierUnlocked)
             {
-                text += "\nMở khóa bậc " + reward.UnlockedTier + "!";
+                text += "\nUnlocked tier " + reward.UnlockedTier + "!";
             }
 
             return text;
@@ -178,10 +178,10 @@ namespace PersonalArena.View
         /// <summary>"Học theo build của bạn (bậc N) · Trọng tâm: X" or "Học build ngẫu nhiên · Trọng tâm: X".</summary>
         public static string TrainingBuildLine(bool ownerBuild, int tier, string focusId)
         {
-            string focus = " · Trọng tâm: " + FocusName(focusId);
+            string focus = " · Focus: " + FocusName(focusId);
             return ownerBuild
-                ? "Học theo build của bạn (bậc " + Math.Max(1, tier) + ")" + focus
-                : "Học build ngẫu nhiên" + focus;
+                ? "Learning your build (tier " + Math.Max(1, tier) + ")" + focus
+                : "Learning random builds" + focus;
         }
 
         /// <summary>
@@ -267,7 +267,7 @@ namespace PersonalArena.View
         {
             if (points == null)
             {
-                return "chưa cộng điểm";
+                return "no points spent";
             }
 
             List<int> stats = new List<int>();
@@ -280,7 +280,7 @@ namespace PersonalArena.View
             }
             if (stats.Count == 0)
             {
-                return "chưa cộng điểm";
+                return "no points spent";
             }
 
             stats.Sort((a, b) => points[a] != points[b] ? points[b].CompareTo(points[a]) : a.CompareTo(b));
@@ -296,7 +296,7 @@ namespace PersonalArena.View
             }
             if (stats.Count > shown)
             {
-                text.Append(" · +").Append(stats.Count - shown).Append(" chỉ số");
+                text.Append(" · +").Append(stats.Count - shown).Append(" stats");
             }
 
             return text.ToString();
@@ -312,7 +312,7 @@ namespace PersonalArena.View
         public static string TierGoldText(int tier)
         {
             int clamped = Math.Max(1, Math.Min(ProfileRules.MaxTier, tier));
-            return "Vàng ×" + FormatDecimal(TierGoldMultiplier(clamped), "0.0") + "  (1 + 0,5·(" + clamped + "−1))";
+            return "Gold ×" + FormatDecimal(TierGoldMultiplier(clamped), "0.0") + "  (1 + 0,5·(" + clamped + "−1))";
         }
 
         /// <summary>The Vietnamese rule changes of a tier, one per line ("Luật gốc, không có thay đổi" at tier 1).</summary>
@@ -328,7 +328,7 @@ namespace PersonalArena.View
                 text.Append("• ").Append(TierModifiers.DisplayName(modifier));
             }
 
-            return text.Length > 0 ? text.ToString() : "• Luật gốc, không có thay đổi";
+            return text.Length > 0 ? text.ToString() : "• Base rules, no changes";
         }
 
         /// <summary>The normalized focus id ("balanced" for null or unknown).</summary>
@@ -349,11 +349,11 @@ namespace PersonalArena.View
         {
             switch (focus)
             {
-                case TrainingFocus.Survival: return "AI bị phạt nặng hơn khi mất máu, chơi an toàn hơn";
-                case TrainingFocus.Gold: return "AI được thưởng nhiều hơn khi nhặt vàng";
-                case TrainingFocus.Boss: return "AI được thưởng nhiều hơn khi gây sát thương lên Trùm";
-                case TrainingFocus.Offense: return "AI được thưởng thêm khi hạ quái và lên cấp, chấp nhận mất máu";
-                default: return "Phần thưởng mặc định, không nghiêng về mục tiêu nào";
+                case TrainingFocus.Survival: return "The AI is punished more for losing HP and plays safer";
+                case TrainingFocus.Gold: return "The AI is rewarded more for picking up gold";
+                case TrainingFocus.Boss: return "The AI is rewarded more for damaging the Boss";
+                case TrainingFocus.Offense: return "The AI is rewarded more for kills and level-ups, and accepts losing HP";
+                default: return "Default rewards, no goal favoured";
             }
         }
 
@@ -369,9 +369,9 @@ namespace PersonalArena.View
 
             CharacterProfile character = ClassViewLogic.SelectedCharacter(profile);
             string loadout = LoadoutName(character, character != null ? character.ActiveLoadout : 0);
-            return "Ví: " + FormatGold(profile.Gold) + " vàng   Bậc " + profile.SelectedTier +
-                (character != null ? "   " + ClassViewLogic.DisplayName(character.ClassId) + " cấp " + character.Level : string.Empty) +
-                "\nBộ: " + loadout + "   Trọng tâm: " + FocusName(profile.TrainingFocus);
+            return "Wallet: " + FormatGold(profile.Gold) + " gold   Tier " + profile.SelectedTier +
+                (character != null ? "   " + ClassViewLogic.DisplayName(character.ClassId) + " level " + character.Level : string.Empty) +
+                "\nLoadout: " + loadout + "   Focus: " + FocusName(profile.TrainingFocus);
         }
 
         public static string LoadoutName(CharacterProfile character, int index)
@@ -401,13 +401,13 @@ namespace PersonalArena.View
         /// <summary>Whole gold with dot thousands separators, e.g. "12.345".</summary>
         public static string FormatGold(long gold)
         {
-            return gold.ToString("N0", CultureInfo.InvariantCulture).Replace(',', '.');
+            return gold.ToString("N0", CultureInfo.InvariantCulture);
         }
 
-        /// <summary>A decimal number with a Vietnamese decimal comma.</summary>
+        /// <summary>A decimal number with a decimal point, whatever the machine's culture.</summary>
         public static string FormatDecimal(float value, string format)
         {
-            return value.ToString(format, CultureInfo.InvariantCulture).Replace('.', ',');
+            return value.ToString(format, CultureInfo.InvariantCulture);
         }
 
         public static string Percent(float ratio)
@@ -421,10 +421,10 @@ namespace PersonalArena.View
             int whole = Math.Max(0, (int)Math.Round(seconds));
             if (whole >= 3600)
             {
-                return (whole / 3600) + " giờ " + (whole % 3600 / 60).ToString("00", CultureInfo.InvariantCulture) + " phút";
+                return (whole / 3600) + "h " + (whole % 3600 / 60).ToString("00", CultureInfo.InvariantCulture) + "m";
             }
 
-            return whole >= 60 ? (whole / 60) + " phút " + (whole % 60).ToString("00", CultureInfo.InvariantCulture) + " giây" : whole + " giây";
+            return whole >= 60 ? (whole / 60) + "m " + (whole % 60).ToString("00", CultureInfo.InvariantCulture) + "s" : whole + "s";
         }
 
         /// <summary>Summary shown when an Auto Farm session ends.</summary>
@@ -436,20 +436,20 @@ namespace PersonalArena.View
             }
 
             string text = summary.Runs > 0
-                ? "Xong " + summary.Runs + " trận: thắng " + summary.Wins + " · +" + FormatGold(summary.Gold) + " vàng vào ví" +
-                  " · sống TB " + SurvivorViewLogic.FormatClock(summary.AverageSeconds)
-                : "Chưa xong trận nào, không có vàng.";
+                ? "Finished " + summary.Runs + " runs: won " + summary.Wins + " · +" + FormatGold(summary.Gold) + " gold to wallet" +
+                  " · avg survival " + SurvivorViewLogic.FormatClock(summary.AverageSeconds)
+                : "No run finished, no gold earned.";
             if (summary.TierUnlocked)
             {
-                text += "\nMở khóa bậc " + summary.UnlockedTier + "!";
+                text += "\nUnlocked tier " + summary.UnlockedTier + "!";
             }
             if (summary.Cancelled && string.IsNullOrEmpty(summary.Error))
             {
-                text += "\nĐã dừng giữa chừng, các trận đã xong vẫn được tính.";
+                text += "\nStopped early; finished runs still count.";
             }
             if (!string.IsNullOrEmpty(summary.Error))
             {
-                text += "\nFarm dừng: " + summary.Error;
+                text += "\nFarm stopped: " + summary.Error;
             }
 
             return text;

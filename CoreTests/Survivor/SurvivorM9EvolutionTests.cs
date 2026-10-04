@@ -11,22 +11,22 @@ namespace PersonalArena.Core.Tests.Survivor
     {
         private static readonly object[][] Rows =
         {
-            new object[] { 112, 26, 58, "inferno", "Hỏa ngục" },
-            new object[] { 113, 27, 12, "phantom-blade", "Kiếm vô ảnh" },
-            new object[] { 114, 28, 7, "mountain-hammer", "Búa núi" },
-            new object[] { 115, 29, 35, "carpet-bomb", "Mưa bom" },
-            new object[] { 116, 30, 36, "fury", "Cơn thịnh nộ" },
-            new object[] { 117, 31, 6, "aegis", "Kết giới bất diệt" },
-            new object[] { 118, 32, 10, "storm-boomerang", "Boomerang bão" },
-            new object[] { 119, 33, 34, "miasma", "Đầm độc" },
-            new object[] { 120, 64, 59, "chaos-shot", "Đạn hỗn loạn" },
-            new object[] { 121, 65, 37, "wraith", "Bóng ma tốc độ" },
-            new object[] { 122, 66, 10, "eternal-corridor", "Hành lang vĩnh cửu" },
-            new object[] { 123, 68, 11, "nebula", "Tinh vân" },
-            new object[] { 124, 69, 8, "meteor", "Thiên thạch" },
-            new object[] { 125, 70, 9, "twin-bracelet", "Vòng tay song" },
-            new object[] { 126, 71, 13, "four-winds", "Tứ phương" },
-            new object[] { 127, 72, 60, "sage-stone", "Đá hiền triết" }
+            new object[] { 112, 26, 58, "inferno", "Inferno" },
+            new object[] { 113, 27, 12, "phantom-blade", "Phantom Blade" },
+            new object[] { 114, 28, 7, "mountain-hammer", "Mountain Hammer" },
+            new object[] { 115, 29, 35, "carpet-bomb", "Bombardment" },
+            new object[] { 116, 30, 36, "fury", "Wrath" },
+            new object[] { 117, 31, 6, "aegis", "Eternal Barrier" },
+            new object[] { 118, 32, 10, "storm-boomerang", "Storm Boomerang" },
+            new object[] { 119, 33, 34, "miasma", "Toxic Swamp" },
+            new object[] { 120, 64, 59, "chaos-shot", "Chaos Shot" },
+            new object[] { 121, 65, 37, "wraith", "Speed Phantom" },
+            new object[] { 122, 66, 10, "eternal-corridor", "Eternal Corridor" },
+            new object[] { 123, 68, 11, "nebula", "Nebula" },
+            new object[] { 124, 69, 8, "meteor", "Meteor" },
+            new object[] { 125, 70, 9, "twin-bracelet", "Twin Bracer" },
+            new object[] { 126, 71, 13, "four-winds", "Four Winds" },
+            new object[] { 127, 72, 60, "sage-stone", "Philosopher's Stone" }
         };
 
         private static readonly int[] OldBases = { 0, 1, 2, 3, 4, 5, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25 };
