@@ -8,7 +8,7 @@ namespace PersonalArena.View
     /// sparkles, sword slashes, floating combat text, dash afterimages, stun stars, the block shield and trails.
     /// Everything runs on unscaled time so effects stay readable while the simulation is paused or sped up.
     /// </summary>
-    public sealed class ArenaEffects : MonoBehaviour
+    public sealed partial class ArenaEffects : MonoBehaviour
     {
         private const int SlashPool = 6;
         private const int LabelPool = 48;
@@ -412,6 +412,7 @@ namespace PersonalArena.View
         public void Clear()
         {
             EnsureReady();
+            ClearVfx();
             sparks.Clear();
             puffs.Clear();
             rings.Clear();
@@ -439,6 +440,7 @@ namespace PersonalArena.View
         private void LateUpdate()
         {
             float delta = Time.unscaledDeltaTime;
+            UpdateVfx(delta);
             Camera camera = Camera.main;
 
             for (int i = 0; i < slashes.Count; i++)

@@ -15,11 +15,17 @@
   `brain_upgrade` v4 → v5. Đá không choáng trùm (D-042). Core chia file theo cơ chế (T-046).
 - **Bản build (2026-10-04, Claude trên PC):** `Build/WatchNext` + `Build/TrainingNext` v0.8.147 theo schema v5,
   smoke test 3 class đạt; tự thay vào khi mở trình xem / bấm TRAIN lần tới. Codex hết token nên Claude làm nốt T-037.
-- **Test:** CoreTests 629/629, pytest 204/204, EditMode 299/299 (PC, 2026-10-04).
+- **M10 (hiệu ứng kỹ năng/vũ khí, chỉ trình xem, không đổi Core/schema):** bước 1–2 xong ngày 2026-10-04 — texture
+  Kenney Particle Pack (CC0) qua `VfxLibrary`; `ArenaEffects.Vfx.cs` có `Explosion`, `Flame`, `Smoke`, `Decal`, `Rune`,
+  `Twirl`, `Shards`, `Crystals`, `Bolt`; tường lửa cháy thật, vũng độc bốc khói, bẫy có chông 3D, nổ có cầu lửa + vết
+  cháy, băng có tinh thể + mảnh vụn, sét là tia gấp khúc. Cờ `-fxDemo` (đi kèm `-perfLog`) chụp ảnh trình diễn.
+  Đo lại: 60 FPS ổn định tới 128 quái. **Còn bước 3:** mưa tên, khiên, vòng phép thánh, hiệu ứng trúng đòn/chết theo hệ,
+  lớp băng trên quái bị đóng băng, âm thanh lửa/băng/nổ/sét.
+- **Test:** CoreTests 629/629, pytest 204/204, EditMode 300/300 (PC, 2026-10-04).
 
 ## Việc tiếp theo (theo thứ tự)
 
-1. Owner mở `Xem-AI.cmd` (bản xem v0.8.150) và bấm TRAIN để não học tiếp trên schema v5; theo dõi AI dùng món M9.
+1. Owner mở `Xem-AI.cmd` (bản xem v0.8.153) và bấm TRAIN để não học tiếp trên schema v5; theo dõi AI dùng món M9.
 2. **Trình xem đẹp hơn:** khi AI bị dồn vào góc, nửa màn hình là vùng tối ngoài hàng rào; ngọc EXP rải kín đất
    giữa trận nhìn rối. (Icon M9 đã thay bằng icon riêng từ game-icons.net ngày 2026-10-04.)
 3. **Mượt và đẹp (ưu tiên của owner 2026-10-04):** đo FPS trình xem lúc đông quái, xem tận mắt từng hiệu ứng M9;
