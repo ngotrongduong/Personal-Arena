@@ -265,7 +265,7 @@ namespace PersonalArena.View.Tests
         [TestCase("warrior")]
         [TestCase("mage")]
         [TestCase("archer")]
-        public void EveryClassSkill_HasAVietnameseTitleAndDescription(string classId)
+        public void EveryClassSkill_HasATitleAndDescription(string classId)
         {
             SurvivorClassDef kit = SurvivorDefaults.ForClass(classId);
             Assert.That(kit, Is.Not.Null);
@@ -280,7 +280,7 @@ namespace PersonalArena.View.Tests
                 shown++;
                 string title = SurvivorViewLogic.SkillTitle(skill);
                 Assert.That(title, Is.Not.Empty, skill.Id);
-                Assert.That(title, Is.Not.EqualTo(skill.Id), skill.Id + " needs a Vietnamese title");
+                Assert.That(title, Is.Not.EqualTo(skill.Id), skill.Id + " needs a title");
                 Assert.That(SurvivorViewLogic.SkillDescription(skill.Id), Is.Not.Empty, skill.Id);
             }
             Assert.That(shown, Is.EqualTo(classId == "archer" ? 5 : 6));
@@ -292,18 +292,18 @@ namespace PersonalArena.View.Tests
         [Test]
         public void SkillBar_CentresUpToSixSlots()
         {
-            Assert.That(SurvivorViewLogic.SkillPanelWidth(3), Is.EqualTo(456f), "three slots keep the old bar width");
-            Assert.That(SurvivorViewLogic.SkillPanelWidth(4), Is.EqualTo(600f));
+            Assert.That(SurvivorViewLogic.SkillPanelWidth(3), Is.EqualTo(352f));
+            Assert.That(SurvivorViewLogic.SkillPanelWidth(4), Is.EqualTo(464f));
             Assert.That(SurvivorViewLogic.SkillPanelWidth(0), Is.EqualTo(SurvivorViewLogic.SkillPanelWidth(1)));
             Assert.That(SurvivorViewLogic.SkillSlotX(1, 3), Is.EqualTo(0f));
-            Assert.That(SurvivorViewLogic.SkillSlotX(0, 3), Is.EqualTo(-144f));
-            Assert.That(SurvivorViewLogic.SkillSlotX(2, 3), Is.EqualTo(144f));
-            Assert.That(SurvivorViewLogic.SkillSlotX(0, 4), Is.EqualTo(-216f));
-            Assert.That(SurvivorViewLogic.SkillSlotX(3, 4), Is.EqualTo(216f));
-            Assert.That(SurvivorViewLogic.SkillPanelWidth(5), Is.EqualTo(744f));
-            Assert.That(SurvivorViewLogic.SkillPanelWidth(6), Is.EqualTo(888f));
-            Assert.That(SurvivorViewLogic.SkillSlotX(0, 6), Is.EqualTo(-360f));
-            Assert.That(SurvivorViewLogic.SkillSlotX(5, 6), Is.EqualTo(360f));
+            Assert.That(SurvivorViewLogic.SkillSlotX(0, 3), Is.EqualTo(-112f));
+            Assert.That(SurvivorViewLogic.SkillSlotX(2, 3), Is.EqualTo(112f));
+            Assert.That(SurvivorViewLogic.SkillSlotX(0, 4), Is.EqualTo(-168f));
+            Assert.That(SurvivorViewLogic.SkillSlotX(3, 4), Is.EqualTo(168f));
+            Assert.That(SurvivorViewLogic.SkillPanelWidth(5), Is.EqualTo(576f));
+            Assert.That(SurvivorViewLogic.SkillPanelWidth(6), Is.EqualTo(688f));
+            Assert.That(SurvivorViewLogic.SkillSlotX(0, 6), Is.EqualTo(-280f));
+            Assert.That(SurvivorViewLogic.SkillSlotX(5, 6), Is.EqualTo(280f));
         }
 
         [Test]

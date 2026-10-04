@@ -496,8 +496,22 @@ namespace PersonalArena.View
                 hud.ToggleSettingsPanel();
             }
 
-            // Esc first closes an open full-screen panel; only a second press pauses.
-            if (keyboard.escapeKey.wasPressedThisFrame && !hud.PanelHandlesEscape())
+            if (keyboard.hKey.wasPressedThisFrame)
+            {
+                hud.ToggleHelp();
+            }
+
+            if (keyboard.tabKey.wasPressedThisFrame)
+            {
+                hud.ToggleSidePanels();
+            }
+
+            // Esc first closes the key help or an open full-screen panel; only another press pauses.
+            if (keyboard.escapeKey.wasPressedThisFrame && hud.HelpOpen)
+            {
+                hud.ToggleHelp();
+            }
+            else if (keyboard.escapeKey.wasPressedThisFrame && !hud.PanelHandlesEscape())
             {
                 paused = !paused;
                 accumulator = 0f;

@@ -16,7 +16,7 @@ namespace PersonalArena.View.Tests
             Assert.That(ClassViewLogic.ClassIdOfBehavior(behavior.ToLowerInvariant()), Is.EqualTo(classId));
             Assert.That(ClassViewLogic.DisplayName(classId), Is.EqualTo(display));
             Assert.That(ClassViewLogic.UpperName(classId), Is.EqualTo(upper));
-            Assert.That(ClassViewLogic.AiTitle(classId), Is.EqualTo("AI " + upper));
+            Assert.That(ClassViewLogic.AiTitle(classId), Is.EqualTo(upper + " AI"));
             Assert.That(ClassViewLogic.PlayStyle(classId), Is.Not.Empty);
         }
 

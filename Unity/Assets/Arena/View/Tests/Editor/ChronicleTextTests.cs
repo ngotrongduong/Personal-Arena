@@ -19,7 +19,7 @@ namespace PersonalArena.View.Tests
         }
 
         [Test]
-        public void LinesHaveTheClockAndVietnameseText()
+        public void LinesHaveTheClockAndTheText()
         {
             RunChronicle chronicle = new RunChronicle { EndReason = EndReason.Won };
             chronicle.Entries.Add(Entry(65f, ChronicleKind.EliteKilled));

@@ -88,13 +88,14 @@ namespace PersonalArena.View
             }
 
             hud.SetHelpText(
-                "The AI plays by itself - just watch\n" +
-                "Space speed   T pick mode   Esc pause\n" +
-                "R new run   G charts   P AI profile\n" +
-                "C character   F gold farm   V compare builds\n" +
-                "B newest / best brain   L brain history\n" +
-                "M mute   O settings\n" +
-                "Mouse wheel: zoom");
+                "The AI plays by itself - you only watch.\n" +
+                "Space   watch speed          T   pick mode (random / best)\n" +
+                "Esc   pause                        R   new run\n" +
+                "B   newest brain / best brain\n" +
+                "C   character      F   gold farm      V   compare builds\n" +
+                "G   charts      P   AI profile      L   brain history\n" +
+                "M   mute      O   settings      Tab   hide the side panels\n" +
+                "Mouse wheel   zoom      Hover an icon   details      H   close");
 
             // M8 settings: quality and window mode apply at start (automated runs keep their window as launched).
             PlayerPrefsSoundStorage prefs = new PlayerPrefsSoundStorage();

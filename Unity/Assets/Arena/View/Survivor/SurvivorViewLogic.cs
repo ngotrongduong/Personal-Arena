@@ -133,71 +133,24 @@ namespace PersonalArena.View
             return range * (areaMultiplier > 0f ? areaMultiplier : 1f);
         }
 
-        /// <summary>Short Vietnamese description of what picking an item at <paramref name="nextLevel"/> gives.</summary>
+        /// <summary>Level-up card text: what a new item does, or what reaching <paramref name="nextLevel"/> changes.</summary>
         public static string ItemDescription(int catalogIndex, int nextLevel)
         {
-            bool isNew = nextLevel <= 1;
-            if (IsEvolution(catalogIndex))
+            return SurvivorItemDetails.CardText(catalogIndex, nextLevel);
+        }
+
+        /// <summary>Kind line of a tooltip or level-up card: weapon, evolved weapon, passive or one-off reward.</summary>
+        public static string ItemKindLabel(ItemDef def)
+        {
+            if (def == null)
             {
-                return EvolutionDescription(catalogIndex);
+                return string.Empty;
             }
-            if (catalogIndex >= SurvivorCatalog.MagicBoltIndex && catalogIndex <= SurvivorCatalog.CrossbowIndex)
+            if (def.EvolvesFrom >= 0)
             {
-                return ClassWeaponDescription(catalogIndex, nextLevel);
+                return "EVOLVED WEAPON";
             }
-            switch (catalogIndex)
-            {
-                case 0:
-                    if (isNew)
-                    {
-                        return "Slashes an arc in front";
-                    }
-                    return nextLevel >= 5 ? "+Damage, also slashes behind" : "+8 damage, +10% range";
-                case 1:
-                    if (isNew)
-                    {
-                        return "Thrusts a spear through nearby enemies";
-                    }
-                    return nextLevel == 3 || nextLevel == 5 ? "+10 damage, +1 spear" : "+10 damage";
-                case 2:
-                    if (isNew)
-                    {
-                        return "Axes orbit the hero";
-                    }
-                    return nextLevel == 2 || nextLevel == 4 ? "+4 damage, +1 axe" : "+4 damage";
-                case 4:
-                    return isNew ? "An aura burns enemies close by" : "+2 damage, +10% area";
-                case 5:
-                    return isNew ? "A shockwave knocks back enemies around" : "+6 damage, faster cooldown";
-                case 3:
-                    if (isNew)
-                    {
-                        return "Throws a hammer at a nearby enemy";
-                    }
-                    return nextLevel >= 4 ? "+7 damage, throws 3 hammers" : "+7 damage, throws 2 hammers";
-                case 6:
-                    return "+10% max HP";
-                case 7:
-                    return "+1 armor (less damage taken)";
-                case 8:
-                    return "+8% damage";
-                case 9:
-                    return "+4% crit chance";
-                case 10:
-                    return "-6% weapon cooldown";
-                case 11:
-                    return "+8% area of effect";
-                case 12:
-                    return "+8% move speed";
-                case 13:
-                    return "+25% pickup range";
-                case 62:
-                    return "Gain 25 gold now";
-                case 63:
-                    return "Heal 30 HP now";
-                default:
-                    return string.Empty;
-            }
+            return def.Kind == ItemKind.Weapon ? "WEAPON" : def.Kind == ItemKind.Passive ? "PASSIVE" : "REWARD";
         }
 
         /// <summary>Card level line: "MỚI" for a new item, "Lv N" for an upgrade, empty for one-off rewards.</summary>
@@ -279,7 +232,7 @@ namespace PersonalArena.View
             }
         }
 
-        /// <summary>Vietnamese end-of-run title.</summary>
+        /// <summary>End-of-run title.</summary>
         public static string EndTitle(EndReason reason)
         {
             switch (reason)
@@ -292,7 +245,7 @@ namespace PersonalArena.View
             }
         }
 
-        /// <summary>Vietnamese cause of death for the end screen.</summary>
+        /// <summary>Cause of death for the end screen.</summary>
         public static string DeathCauseText(DeathCause cause)
         {
             switch (cause)
@@ -464,7 +417,7 @@ namespace PersonalArena.View
             return false;
         }
 
-        /// <summary>Vietnamese skill button title; unknown ids show the id.</summary>
+        /// <summary>Skill button title; unknown ids show the id.</summary>
         public static string SkillTitle(SkillDef skill)
         {
             if (skill == null)
@@ -486,14 +439,14 @@ namespace PersonalArena.View
                 case "leap-slam": return "Leap Slam";
                 case "whirlwind": return "Whirlwind";
                 case "caltrop-trap": return "Spike Trap";
-                case "arrow-barrage": return "Arrow Rain";
+                case "arrow-barrage": return "Arrow Barrage";
                 case "fire-wall": return "Fire Wall";
                 case "chain-lightning": return "Chain Lightning";
                 default: return skill.Id;
             }
         }
 
-        /// <summary>One-line Vietnamese description of a skill; empty for unknown ids.</summary>
+        /// <summary>One-line description of a skill; empty for unknown ids.</summary>
         public static string SkillDescription(string skillId)
         {
             switch (skillId)
@@ -522,114 +475,15 @@ namespace PersonalArena.View
         public static bool SkillVisible(SkillDef skill) => skill != null && skill.Kind != SkillKind.None;
 
         /// <summary>Distance between two skill slots in the bottom HUD bar.</summary>
-        public const float SkillSlotSpacing = 144f;
+        public const float SkillSlotSpacing = 112f;
 
-        /// <summary>Width of the skill bar holding <paramref name="shown"/> slots (3 slots = the old 456 px).</summary>
-        public static float SkillPanelWidth(int shown) => Mathf.Max(1, shown) * SkillSlotSpacing + 24f;
+        /// <summary>Width of the skill bar holding <paramref name="shown"/> slots.</summary>
+        public static float SkillPanelWidth(int shown) => Mathf.Max(1, shown) * SkillSlotSpacing + 16f;
 
         /// <summary>Centre x of the <paramref name="column"/>-th of <paramref name="shown"/> centred skill slots.</summary>
         public static float SkillSlotX(int column, int shown) => (column - (Mathf.Max(1, shown) - 1) * 0.5f) * SkillSlotSpacing;
 
         /// <summary>Name line of the vitals panel, e.g. "PHÁP SƯ  (AI điều khiển)"; unknown classes read as the Warrior.</summary>
         public static string HeroNameLine(string classId) => ClassViewLogic.UpperName(classId) + "  (AI controlled)";
-
-        private static string ClassWeaponDescription(int catalogIndex, int nextLevel)
-        {
-            ItemDef def = SurvivorCatalog.Get(catalogIndex);
-            if (def == null)
-            {
-                return string.Empty;
-            }
-            if (nextLevel <= 1)
-            {
-                return NewWeaponText(catalogIndex);
-            }
-
-            string text = "+" + Mathf.RoundToInt(def.DamagePerLevel) + " damage";
-            if (catalogIndex == SurvivorCatalog.DaggerIndex)
-            {
-                return def.BackArcLevel > 0 && nextLevel >= def.BackArcLevel ? "+Damage, also slashes behind" : text + ", +10% range";
-            }
-            if (catalogIndex == SurvivorCatalog.FrostNovaIndex)
-            {
-                return text + ", faster cooldown";
-            }
-            if (catalogIndex == SurvivorCatalog.HolyFieldIndex)
-            {
-                return text + ", +10% area";
-            }
-            if (CountGrows(def, nextLevel))
-            {
-                text += ", +1 " + CountUnit(catalogIndex);
-            }
-            return text;
-        }
-
-        private static string NewWeaponText(int catalogIndex)
-        {
-            switch (catalogIndex)
-            {
-                case SurvivorCatalog.MagicBoltIndex: return "Fires a magic bolt at a nearby enemy";
-                case SurvivorCatalog.FireOrbIndex: return "Fireballs orbit the hero";
-                case SurvivorCatalog.FrostNovaIndex: return "A ring of frost spreads out and stuns enemies";
-                case SurvivorCatalog.HolyFieldIndex: return "Holy light burns enemies around the hero";
-                case SurvivorCatalog.LightningIndex: return "Lightning strikes random enemies nearby";
-                case SurvivorCatalog.ArcaneBeamIndex: return "Fires an arcane ray straight through a line of enemies";
-                case SurvivorCatalog.ArrowIndex: return "Fires an arrow that pierces 1 enemy";
-                case SurvivorCatalog.MultiShotIndex: return "Fires a spread of 3 arrows";
-                case SurvivorCatalog.ArrowRainIndex: return "Arrows rain down where enemies are thickest";
-                case SurvivorCatalog.OrbitKnifeIndex: return "Daggers orbit the hero";
-                case SurvivorCatalog.DaggerIndex: return "A quick half-circle slash in front";
-                case SurvivorCatalog.CrossbowIndex: return "Fires a piercing bolt for heavy damage";
-                default: return string.Empty;
-            }
-        }
-
-        private static string EvolutionDescription(int catalogIndex)
-        {
-            ItemDef def = SurvivorCatalog.Get(catalogIndex);
-            ItemDef baseDef = def != null ? SurvivorCatalog.Get(def.EvolvesFrom) : null;
-            if (baseDef == null)
-            {
-                return string.Empty;
-            }
-            string text = "Evolved from " + baseDef.Name + ": damage x1.5, longer range";
-            if (baseDef.CountByLevel.Count > 0)
-            {
-                text += ", +1 " + CountUnit(baseDef.CatalogIndex);
-            }
-            return text;
-        }
-
-        private static bool CountGrows(ItemDef def, int nextLevel)
-        {
-            if (def.CountByLevel.Count == 0 || nextLevel < 2)
-            {
-                return false;
-            }
-            int now = def.CountByLevel[Mathf.Min(nextLevel - 2, def.CountByLevel.Count - 1)];
-            int next = def.CountByLevel[Mathf.Min(nextLevel - 1, def.CountByLevel.Count - 1)];
-            return next > now;
-        }
-
-        private static string CountUnit(int catalogIndex)
-        {
-            switch (catalogIndex)
-            {
-                case 1: return "spear";
-                case 2: return "axe";
-                case 3: return "hammer";
-                case SurvivorCatalog.MagicBoltIndex: return "tia";
-                case SurvivorCatalog.FireOrbIndex: return "fireball";
-                case SurvivorCatalog.LightningIndex: return "bolt";
-                case SurvivorCatalog.ArcaneBeamIndex: return "tia";
-                case SurvivorCatalog.ArrowIndex: return "arrow";
-                case SurvivorCatalog.MultiShotIndex: return "arrow";
-                case SurvivorCatalog.ArrowRainIndex: return "volley";
-                case SurvivorCatalog.OrbitKnifeIndex: return "dao";
-                case SurvivorCatalog.CrossbowIndex: return "bolt";
-                default: return "hit";
-            }
-        }
     }
 }

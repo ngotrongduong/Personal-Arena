@@ -6,7 +6,7 @@ using PersonalArena.Core.Survivor;
 namespace PersonalArena.View
 {
     /// <summary>
-    /// Vietnamese text of the post-run story (<see cref="RunChronicle"/>, data from Core). When a run has more
+    /// Text of the post-run story (<see cref="RunChronicle"/>, data from Core). When a run has more
     /// entries than fit, the most important ones are kept (End, BossKilled, BossSpawned, NearDeath, ItemMaxed
     /// first) and shown in time order. Pure: EditMode tested.
     /// </summary>

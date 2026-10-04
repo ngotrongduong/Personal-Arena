@@ -288,7 +288,7 @@ namespace PersonalArena.View
         }
 
         /// <summary>The info header: "AI PHÁP SƯ".</summary>
-        public static string AiTitle(string classId) => "AI " + UpperName(classId);
+        public static string AiTitle(string classId) => UpperName(classId) + " AI";
 
         private static string Normalize(string classId)
         {

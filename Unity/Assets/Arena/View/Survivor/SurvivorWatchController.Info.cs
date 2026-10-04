@@ -77,33 +77,33 @@ namespace PersonalArena.View
             CultureInfo culture = CultureInfo.InvariantCulture;
             string text;
             PolicyBrain brain = pilot.Brain;
-            string title = ClassViewLogic.AiTitle(classId);
+            // The card's heading in gold; the lines under it stay short so the card stays small.
+            string title = "<b><color=#FFDB73>" + ClassViewLogic.AiTitle(classId) + "</color></b>";
+            const string dot = "  ·  ";
             if (brain == null)
             {
                 text = title + "\nNo brain yet";
             }
             else
             {
+                string steps = LineageStore.FormatStep(brain.Step) + " steps";
                 if (loadedIsVersion && watchedVersion != null)
                 {
-                    text = title + "\nBrain: " + watchedVersion.Name + " (" + watchedBranchName + ")" +
-                        "\nTrained " + brain.Step.ToString("N0", culture) + " steps" +
-                        "   Saved version   (B: newest brain)";
+                    text = title + "   " + watchedVersion.Name + " (" + watchedBranchName + ")" +
+                        "\n" + steps + dot + "saved version" + dot + "B: newest brain";
                 }
                 else if (loadedIsChampion)
                 {
                     text = title + "   BEST BRAIN" +
                         (loadedChampion != null ? "   " + loadedChampion.run_id : string.Empty) +
-                        "\nTrained " + brain.Step.ToString("N0", culture) + " steps" +
-                        (loadedChampion != null ? (loadedChampion.passes_m4a ? "   M4A met" : "   M4A not met") : string.Empty) +
-                        "\nReplaced when a brain scores higher   (B: newest brain)";
+                        "\n" + steps +
+                        (loadedChampion != null ? dot + (loadedChampion.passes_m4a ? "M4A met" : "M4A not met") : string.Empty) +
+                        dot + "B: newest brain";
                 }
                 else
                 {
                     text = title + "   " + BrainLocator.RunName(loadedPath) +
-                        "\nTrained " + brain.Step.ToString("N0", culture) + " steps" +
-                        "   (loaded at " + loadedAt.ToString("HH:mm", culture) + ")" +
-                        "\nNewest brain, updates itself   (B: best brain)";
+                        "\n" + steps + dot + "newest brain, loaded " + loadedAt.ToString("HH:mm", culture) + dot + "B: best brain";
                 }
                 if (!string.IsNullOrEmpty(brainStatus))
                 {
@@ -111,8 +111,8 @@ namespace PersonalArena.View
                 }
             }
 
-            text += "\nRun " + run + "   Speed x" + SpeedSteps[speedIndex] +
-                "   Picks: " + (pilot.Deterministic ? "best" : "random");
+            text += "\nRun " + run + dot + "Speed x" + SpeedSteps[speedIndex] +
+                dot + "Picks: " + (pilot.Deterministic ? "best" : "random");
             if (recent.Count > 0)
             {
                 float time = 0f;
@@ -125,13 +125,13 @@ namespace PersonalArena.View
                     gold += result.Gold;
                 }
 
-                text += "\n" + recent.Count + " latest runs (avg): survival " + SurvivorViewLogic.FormatClock(time / recent.Count) +
-                    ", level " + (level / recent.Count).ToString("0.0", culture) +
-                    ", gold " + (gold / recent.Count).ToString("0", culture);
+                text += "\nLast " + recent.Count + (recent.Count == 1 ? " run: " : " runs: ") + SurvivorViewLogic.FormatClock(time / recent.Count) +
+                    dot + "Lv " + (level / recent.Count).ToString("0.0", culture) +
+                    dot + (gold / recent.Count).ToString("0", culture) + " gold";
             }
             else
             {
-                text += "\nAverage of the last 10 runs: no run finished yet";
+                text += "\nNo run finished yet";
             }
 
             // M5: wallet, a build change waiting for the next run, and the Auto Farm progress.

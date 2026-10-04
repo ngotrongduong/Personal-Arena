@@ -199,7 +199,7 @@ namespace PersonalArena.Core.Survivor
         };
         private static readonly ItemDef Bomb = new ItemDef
         {
-            CatalogIndex = BombIndex, Id = "bomb", Name = "Bom", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Bomb,
+            CatalogIndex = BombIndex, Id = "bomb", Name = "Bomb", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Bomb,
             BaseDamage = 30f, DamagePerLevel = 9f, BaseRange = 9f, BaseCooldown = 2f, Knockback = 1f,
             ProjectileSpeed = 9f, ProjectileRadius = 0.3f, ProjectileRange = 9f, Width = 2f
         };

@@ -315,7 +315,7 @@ namespace PersonalArena.View
             return "Gold ×" + FormatDecimal(TierGoldMultiplier(clamped), "0.0") + "  (1 + 0,5·(" + clamped + "−1))";
         }
 
-        /// <summary>The Vietnamese rule changes of a tier, one per line ("Luật gốc, không có thay đổi" at tier 1).</summary>
+        /// <summary>The rule changes of a tier, one per line ("Base rules, no changes" at tier 1).</summary>
         public static string TierRulesText(int tier)
         {
             StringBuilder text = new StringBuilder();

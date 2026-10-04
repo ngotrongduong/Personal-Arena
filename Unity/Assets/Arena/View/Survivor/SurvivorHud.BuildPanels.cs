@@ -17,7 +17,7 @@ namespace PersonalArena.View
         {
             fpsText = CreateText("Fps Counter", canvasRoot, 16, TextAnchor.LowerLeft, new Color(0.75f, 0.9f, 0.75f, 0.95f));
             AddShadow(fpsText);
-            SetRect(fpsText.rectTransform, Vector2.zero, Vector2.zero, new Vector2(20f, 14f), new Vector2(200f, 24f), Vector2.zero);
+            SetRect(fpsText.rectTransform, Vector2.zero, Vector2.zero, new Vector2(Margin + 4f, 34f), new Vector2(200f, 24f), Vector2.zero);
             fpsText.gameObject.SetActive(false);
 
             versionText = CreateText("Version", canvasRoot, 14, TextAnchor.LowerRight, new Color(0.7f, 0.74f, 0.82f, 0.85f));
@@ -69,26 +69,31 @@ namespace PersonalArena.View
             SetRect(holeImage.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(12f, 12f), new Vector2(0.5f, 0.5f));
         }
 
-        /// <summary>NHÂN VẬT / FARM VÀNG / SO SÁNH BUILD buttons under the info panel (always shown).</summary>
+        /// <summary>The menu card of the right column: one button per panel, with its key.</summary>
         private void BuildMetaButtons()
         {
-            RectTransform panel = CreatePanel("M5 Buttons", canvasRoot, PanelColor);
-            SetRect(panel, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20f, MetaButtonsTop), new Vector2(430f, 60f), new Vector2(1f, 1f));
+            RectTransform panel = CreatePanel("Menu", canvasRoot, PanelColor);
+            SetRect(panel, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-Margin, 0f), new Vector2(SideWidth, MenuHeight), new Vector2(1f, 1f));
+            menuPanel = panel;
 
-            Button character = CreateButton("Character Button", panel, new Color(0.2f, 0.42f, 0.72f, 1f), new Vector2(18f, -8f), new Vector2(118f, 44f),
-                14, out _, out Text characterLabel);
-            characterLabel.text = "CHARACTER\n(C)";
-            character.onClick.AddListener(ToggleCharacterPanel);
+            CreateMenuButton(panel, 0, 0, "CHARACTER   C", ToggleCharacterPanel);
+            CreateMenuButton(panel, 1, 0, "GOLD FARM   F", ToggleFarmPanel);
+            CreateMenuButton(panel, 2, 0, "COMPARE   V", ToggleComparePanel);
+            CreateMenuButton(panel, 0, 1, "CHARTS   G", ToggleHistoryPanel);
+            CreateMenuButton(panel, 1, 1, "AI PROFILE   P", ToggleProfilePanel);
+            CreateMenuButton(panel, 2, 1, "HISTORY   L", ToggleLineagePanel);
+            LayoutRightColumn();
+        }
 
-            Button farm = CreateButton("Farm Button", panel, new Color(0.62f, 0.48f, 0.12f, 1f), new Vector2(142f, -8f), new Vector2(118f, 44f),
-                14, out _, out Text farmLabel);
-            farmLabel.text = "GOLD FARM\n(F)";
-            farm.onClick.AddListener(ToggleFarmPanel);
-
-            Button compare = CreateButton("Compare Button", panel, new Color(0.2f, 0.5f, 0.48f, 1f), new Vector2(266f, -8f), new Vector2(146f, 44f),
-                14, out _, out Text compareLabel);
-            compareLabel.text = "COMPARE\n(V)";
-            compare.onClick.AddListener(ToggleComparePanel);
+        private void CreateMenuButton(Transform panel, int column, int row, string label, UnityEngine.Events.UnityAction onClick)
+        {
+            const float gap = 6f;
+            const float height = 30f;
+            float width = (SideWidth - 24f - 2f * gap) / 3f;
+            Button button = CreateButton(label, panel, MenuButtonColor, new Vector2(12f + column * (width + gap), -10f - row * (height + gap)),
+                new Vector2(width, height), 13, out _, out Text text);
+            text.text = label;
+            button.onClick.AddListener(onClick);
         }
 
         private void BuildMetaPanels()
@@ -131,41 +136,34 @@ namespace PersonalArena.View
 
         private void BuildTrainingPanel()
         {
-            if (FindFirstObjectByType<EventSystem>() == null)
-            {
-                GameObject events = new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
-                events.transform.SetParent(transform, false);
-            }
-
+            const float inner = SideWidth - 28f;
             RectTransform panel = CreatePanel("Training", canvasRoot, PanelColor);
-            SetRect(panel, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20f, TrainingTop), new Vector2(430f, TrainingHeight), new Vector2(1f, 1f));
+            SetRect(panel, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-Margin, -(TopOffset + InfoHeight + CardGap)),
+                new Vector2(SideWidth, TrainingHeight), new Vector2(1f, 1f));
             trainingPanel = panel.gameObject;
 
-            Text title = CreateText("Title", panel, 20, TextAnchor.UpperLeft, GoldText);
-            title.text = "TRAIN AI";
-            title.fontStyle = FontStyle.Bold;
-            SetRect(title.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -12f), new Vector2(394f, 26f), new Vector2(0f, 1f));
-
-            trainingButton = CreateButton("Train Button", panel, new Color(0.2f, 0.6f, 0.32f, 1f), new Vector2(18f, -44f), new Vector2(394f, 54f),
-                24, out trainingButtonImage, out trainingButtonLabel);
+            trainingButton = CreateButton("Train Button", panel, new Color(0.2f, 0.6f, 0.32f, 1f), new Vector2(14f, -12f), new Vector2(inner, 44f),
+                21, out trainingButtonImage, out trainingButtonLabel);
             trainingButton.onClick.AddListener(() => TrainingButtonClicked?.Invoke());
 
-            powerButton = CreateButton("Power Button", panel, new Color(0.17f, 0.21f, 0.32f, 1f), new Vector2(18f, -106f), new Vector2(394f, 36f),
-                16, out _, out powerLabel);
+            powerButton = CreateButton("Power Button", panel, MenuButtonColor, new Vector2(14f, -62f), new Vector2(inner, 28f),
+                13, out _, out powerLabel);
             powerLabel.fontStyle = FontStyle.Normal;
             powerButton.onClick.AddListener(() => TrainingPowerClicked?.Invoke());
 
-            // Room for the status plus the M5 build/focus line (and the "applies next TRAIN" note).
-            trainingText = CreateText("Status", panel, 15, TextAnchor.UpperLeft, new Color(0.9f, 0.93f, 0.97f));
+            // The status, plus the build/focus line and the "applies next TRAIN" note.
+            trainingText = CreateText("Status", panel, 14, TextAnchor.UpperLeft, new Color(0.9f, 0.93f, 0.97f));
             trainingText.horizontalOverflow = HorizontalWrapMode.Wrap;
-            SetRect(trainingText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -150f), new Vector2(394f, 156f), new Vector2(0f, 1f));
+            trainingText.verticalOverflow = VerticalWrapMode.Truncate;
+            trainingText.lineSpacing = 1.1f;
+            SetRect(trainingText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(16f, -98f), new Vector2(inner - 4f, 108f), new Vector2(0f, 1f));
 
-            trainingGraphCaption = CreateText("Graph Caption", panel, 14, TextAnchor.UpperLeft, new Color(0.7f, 0.76f, 0.84f));
-            SetRect(trainingGraphCaption.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -310f), new Vector2(394f, 20f), new Vector2(0f, 1f));
+            trainingGraphCaption = CreateText("Graph Caption", panel, 12, TextAnchor.UpperLeft, MutedText);
+            SetRect(trainingGraphCaption.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(16f, -208f), new Vector2(inner - 4f, 16f), new Vector2(0f, 1f));
 
             RectTransform graph = CreatePanel("Reward Graph", panel, new Color(0.08f, 0.09f, 0.13f, 1f));
-            SetRect(graph, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(18f, -332f), new Vector2(394f, TrainingGraphHeight), new Vector2(0f, 1f));
-            float slot = 394f / TrainingBarCount;
+            SetRect(graph, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(14f, -226f), new Vector2(inner, TrainingGraphHeight), new Vector2(0f, 1f));
+            float slot = inner / TrainingBarCount;
             for (int i = 0; i < TrainingBarCount; i++)
             {
                 GameObject barObject = CreateUiObject("Bar " + i, graph);
@@ -175,21 +173,6 @@ namespace PersonalArena.View
                 trainingBars[i] = bar;
                 barObject.SetActive(false);
             }
-
-            Button dataButton = CreateButton("Training Data Button", panel, new Color(0.36f, 0.25f, 0.62f, 1f), new Vector2(18f, -406f), new Vector2(194f, 40f),
-                17, out _, out Text dataLabel);
-            dataLabel.text = "CHARTS  (G)";
-            dataButton.onClick.AddListener(ToggleHistoryPanel);
-
-            Button profileButton = CreateButton("Profile Button", panel, new Color(0.62f, 0.4f, 0.14f, 1f), new Vector2(218f, -406f), new Vector2(194f, 40f),
-                17, out _, out Text profileLabel);
-            profileLabel.text = "AI PROFILE  (P)";
-            profileButton.onClick.AddListener(ToggleProfilePanel);
-
-            Button lineageButton = CreateButton("Lineage Button", panel, new Color(0.18f, 0.44f, 0.5f, 1f), new Vector2(18f, -452f), new Vector2(394f, 40f),
-                17, out _, out Text lineageLabel);
-            lineageLabel.text = "BRAIN HISTORY  (L)";
-            lineageButton.onClick.AddListener(ToggleLineagePanel);
 
             EnsureAnalysisPanels();
             trainingPanel.SetActive(false);

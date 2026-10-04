@@ -61,7 +61,7 @@ namespace PersonalArena.View.Tests
         }
 
         [Test]
-        public void LabelsAreVietnamese()
+        public void LabelsAreReadable()
         {
             Assert.That(ViewerSettings.WindowModeLabel(ViewerWindowMode.Windowed), Is.EqualTo("Windowed"));
             Assert.That(ViewerSettings.WindowModeLabel(ViewerWindowMode.Borderless), Is.EqualTo("Fullscreen"));

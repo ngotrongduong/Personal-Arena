@@ -307,7 +307,7 @@ namespace PersonalArena.View
         private void FillCards()
         {
             int count = highlight.Count;
-            float spacing = 290f;
+            float spacing = OfferCardWidth + 22f;
             float start = -(count - 1) * spacing * 0.5f;
             for (int i = 0; i < cards.Length; i++)
             {
@@ -327,8 +327,11 @@ namespace PersonalArena.View
                 card.Name.text = def != null ? def.Name : "?";
                 card.Level.text = SurvivorViewLogic.LevelLabel(item, level);
                 card.Level.color = level <= 1 ? new Color(0.5f, 1f, 0.6f) : GoldText;
-                card.Kind.text = def == null ? string.Empty : def.Kind == ItemKind.Weapon ? "WEAPONS" : def.Kind == ItemKind.Passive ? "PASSIVES" : "REWARD";
-                card.Description.text = SurvivorViewLogic.ItemDescription(item, level);
+                card.Kind.text = SurvivorViewLogic.ItemKindLabel(def);
+                // A new item also says how it evolves (in gold), so the pick can be judged.
+                string evolution = level <= 1 ? SurvivorItemDetails.Evolution(item) : string.Empty;
+                card.Description.text = SurvivorViewLogic.ItemDescription(item, level) +
+                    (evolution.Length > 0 ? "\n\n<color=#E6C36A>" + evolution + "</color>" : string.Empty);
                 card.Group.alpha = 0f;
             }
         }

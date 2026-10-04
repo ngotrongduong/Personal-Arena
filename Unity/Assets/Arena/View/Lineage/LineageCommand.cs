@@ -59,12 +59,12 @@ namespace PersonalArena.View
         /// <summary>Caller data of the running command (e.g. the name to give a new branch).</summary>
         public object RunningTag { get; private set; }
 
-        /// <summary>Vietnamese text for the panel while the command runs.</summary>
+        /// <summary>Text for the panel while the command runs.</summary>
         public string BusyText { get; private set; }
 
         public double ElapsedSeconds => IsRunning ? (DateTime.UtcNow - startedUtc).TotalSeconds : 0.0;
 
-        /// <summary>Null when the command can run, otherwise what is missing (Vietnamese).</summary>
+        /// <summary>Null when the command can run, otherwise what is missing.</summary>
         public string MissingPiece()
         {
             if (!File.Exists(PythonPath))
@@ -87,7 +87,7 @@ namespace PersonalArena.View
 
         /// <summary>
         /// Starts a command (e.g. "sync", "snapshot --run-id warrior-s001", "fork --version ID"). Returns an error
-        /// (Vietnamese) or null. Only one command runs at a time.
+        /// or null. Only one command runs at a time.
         /// </summary>
         public string Start(string kind, string commandArguments, string busyText, double timeout, object tag = null)
         {

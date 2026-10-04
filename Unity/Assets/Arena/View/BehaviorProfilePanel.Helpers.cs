@@ -15,7 +15,7 @@ namespace PersonalArena.View
         /// <summary>Number of play-style traits (shared with the brain lineage compare view).</summary>
         public static int TraitCount => Traits.Length;
 
-        /// <summary>Vietnamese name of trait <paramref name="index"/>.</summary>
+        /// <summary>Display name of trait <paramref name="index"/>.</summary>
         public static string TraitName(int index)
         {
             return Traits[index].Name;
@@ -33,7 +33,7 @@ namespace PersonalArena.View
             return behavior == null ? -1f : Traits[index].Read(behavior);
         }
 
-        /// <summary>Vietnamese name for a DeathCause enum name.</summary>
+        /// <summary>Display name for a DeathCause enum name.</summary>
         public static string DeathCauseName(string cause)
         {
             switch (cause)
@@ -59,7 +59,7 @@ namespace PersonalArena.View
             return (total / 60) + ":" + (total % 60).ToString("00", CultureInfo.InvariantCulture);
         }
 
-        /// <summary>Training steps in Vietnamese units, e.g. 16999928 → "17.0 triệu".</summary>
+        /// <summary>Training steps in short units, e.g. 16999928 → "17.0M".</summary>
         public static string FormatSteps(long steps)
         {
             if (steps >= 1000000L)
