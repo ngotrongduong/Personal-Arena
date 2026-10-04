@@ -48,6 +48,14 @@
   thét, nhảy bổ, sóng chấn động, dịch chuyển, lên cấp, nhặt đồ, rương, buff (cuồng nộ/khiên/tốc độ), bình mana, tinh anh/trùm
   xuất hiện và chết, gọi quái, phân thân, thầy cúng hồi máu, quái vàng, hào quang buff dưới chân, cầu phép và cầu lửa. Cờ
   `-vfxGallery` (kèm `-perfLog`) chụp lần lượt mọi hiệu ứng của gói để chọn/chỉnh cỡ.
+- **M12b (owner yêu cầu 2026-10-04: thay nốt các hiệu ứng cũ còn lại) — xong, chỉ trình xem:** bộ hiệu ứng gói tăng từ 56
+  lên 116 loại (`StoreVfxSet.Scales` lưu cỡ gốc từng loại). `ArenaEffects.StoreMap.cs` cho các hàm gốc tự chuyển sang hiệu ứng
+  gói theo màu khi có gói: `Sparks` / `Flash` / `Sparkle` / `Shards` → vụ nổ nhỏ đúng màu (gộp các lời gọi chồng nhau trong
+  cùng khung hình thành một, tối đa 4 cái mỗi khung hình), `Puff` → bụi/khói, `Slash` → vệt chém, `Twirl` → vòng xoáy, `Rune`
+  → vòng phép, `Flame` → lửa, `Smoke` → khói/hơi độc, `Crystals` → tinh thể băng. Thêm: đạn nhổ độc, đạn nảy, đạn đà dùng cầu
+  phép của gói; hào quang diện rộng dùng vòng phép; bong bóng khiên cũ ẩn khi có khiên của gói. Giữ nguyên có chủ ý: mũi tên
+  và bom (đã là model), vòng báo bán kính, số sát thương, vết cháy trên đất, tia sét. Không có gói thì mọi thứ về hiệu ứng cũ.
+  Cờ `-vfxGalleryFrom <trang>` để chụp gallery từ trang bất kỳ.
 - **Test:** CoreTests 629/629, pytest 204/204, EditMode 300/300 (PC, 2026-10-04).
 
 ## Việc tiếp theo (theo thứ tự)

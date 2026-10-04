@@ -47,7 +47,13 @@ namespace PersonalArena.View
         /// <summary>A store effect sized to cover a gameplay radius.</summary>
         private bool StoreArea(StoreFx slot, Vector3 point, float radius, float lifetime = 2f)
         {
-            return effects.Store(slot, point, radius / StoreRadius(slot), lifetime);
+            if (!effects.Store(slot, point, radius / StoreRadius(slot), lifetime))
+            {
+                return false;
+            }
+            // The built-in rune and ground fill of the same moment would only cover it.
+            effects.MarkStoreArea(point);
+            return true;
         }
 
         private bool StoreAt(StoreFx slot, Vector3 point, float scale = 1f, float lifetime = 2f)

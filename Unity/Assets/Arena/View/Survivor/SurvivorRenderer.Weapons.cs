@@ -228,12 +228,20 @@ namespace PersonalArena.View
             root.transform.SetParent(weaponRoot, false);
             view.Root = root.transform;
 
-            GameObject orb = CreatePrimitive("Orb", PrimitiveType.Sphere, view.Root, spitMaterial);
-            orb.transform.localScale = Vector3.one * 0.42f;
-            orb.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
-            Transform glow = CreateFlatQuad("Glow", view.Root, spitGlowMaterial);
-            glow.localPosition = new Vector3(0f, 0.05f - SpitHeight, 0f);
-            glow.localScale = new Vector3(1.3f, 1f, 1.3f);
+            GameObject storeOrb = effects.StoreAttach(StoreFx.SwampBall, view.Root, 0.45f);
+            if (storeOrb != null)
+            {
+                storeOrb.SetActive(true);
+            }
+            else
+            {
+                GameObject orb = CreatePrimitive("Orb", PrimitiveType.Sphere, view.Root, spitMaterial);
+                orb.transform.localScale = Vector3.one * 0.42f;
+                orb.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
+                Transform glow = CreateFlatQuad("Glow", view.Root, spitGlowMaterial);
+                glow.localPosition = new Vector3(0f, 0.05f - SpitHeight, 0f);
+                glow.localScale = new Vector3(1.3f, 1f, 1.3f);
+            }
 
             view.Trail = effects.CreateTrail(view.Root, 0f, new Color(0.5f, 1f, 0.3f, 0.5f), 0.32f, 0.2f);
             view.Trail.emitting = false;

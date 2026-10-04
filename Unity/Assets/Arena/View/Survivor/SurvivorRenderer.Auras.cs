@@ -54,7 +54,11 @@ namespace PersonalArena.View
             UseStoreAura(BuffAura.Defense, StoreFx.ShieldBlue, 0.85f, 0.9f);
             UseStoreAura(BuffAura.Speed, StoreFx.LightningAura, 1.6f, 0f);
             UseStoreAura(BuffAura.Heal, StoreFx.HealAura, 1.6f, 0f);
+            UseStoreAura(BuffAura.Area, StoreFx.MagicCircle2, 1f, 0f);
         }
+
+        // Radius in metres of the store circle used for the area aura, at scale 1.
+        private const float AreaAuraStoreRadius = 1.6f;
 
         private void UseStoreAura(BuffAura aura, StoreFx slot, float scale, float height)
         {
@@ -119,6 +123,10 @@ namespace PersonalArena.View
                     continue;
                 }
                 float size = (i == (int)BuffAura.Area ? areaSize : view.Size) * (1f + 0.06f * Mathf.Sin(time * 4f + i));
+                if (i == (int)BuffAura.Area && view.Store != null)
+                {
+                    view.Store.transform.localScale = Vector3.one * (size / 2.1f / AreaAuraStoreRadius);
+                }
                 // Stacked a little apart so two auras never z-fight.
                 view.Root.position = center + Vector3.up * (0.012f * i)
                     + (buffAuraDemo ? new Vector3((i - 2) * 4.2f, 0f, -7.5f) : Vector3.zero);

@@ -34,16 +34,17 @@ namespace PersonalArena.View
                 blastsThisFrame = 0;
             }
             MarkElement(point, radius, ElementFire);
-            effects.Rune(point, color, radius * 2.3f, 0.6f);
             if (blastsThisFrame++ < BlastsPerFrame)
             {
                 if (!StoreArea(store, point, radius, 1.6f))
                 {
+                    effects.Rune(point, color, radius * 2.3f, 0.6f);
                     effects.Explosion(point, color, radius);
                 }
             }
             else
             {
+                effects.Rune(point, color, radius * 2.3f, 0.6f);
                 effects.Flash(point + Vector3.up * 0.7f, color, radius * 1.8f, 0.22f);
                 effects.AreaFill(point, color, radius, 0.6f);
             }
@@ -206,6 +207,11 @@ namespace PersonalArena.View
 
         private void PresentBarrierBubble(int charges, bool show)
         {
+            // With the store packs the defence aura's shield bubble already shows the barrier.
+            if (buffAuras[(int)BuffAura.Defense] != null && buffAuras[(int)BuffAura.Defense].Store != null)
+            {
+                show = false;
+            }
             if (barrierBubble.gameObject.activeSelf != show)
             {
                 barrierBubble.gameObject.SetActive(show);

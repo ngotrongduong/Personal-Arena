@@ -72,14 +72,81 @@ namespace PersonalArena.View.Editor
             { "Hole", "Assets/52SpecialEffectPack/Effect/Effect(Shuriken)/Hole.prefab" },
             { "FlameEmission", "Assets/52SpecialEffectPack/Effect/Effect(Shuriken)/FlameEmission.prefab" },
             { "Kunai", "Assets/52SpecialEffectPack/Effect/Effect(Shuriken)/Kunai.prefab" },
-            { "ElementalArrow", "Assets/52SpecialEffectPack/Effect/Effect(Shuriken)/ElementalArrow.prefab" }
+            { "ElementalArrow", "Assets/52SpecialEffectPack/Effect/Effect(Shuriken)/ElementalArrow.prefab" },
+            { "SparksBlue", "Assets/Hovl Studio/Magic effects pack/Prefabs/Sparks/Sparks explode blue.prefab" },
+            { "SparksGreen", "Assets/Hovl Studio/Magic effects pack/Prefabs/Sparks/Sparks explode green.prefab" },
+            { "SparksPink", "Assets/Hovl Studio/Magic effects pack/Prefabs/Sparks/Sparks explode pink.prefab" },
+            { "SparksRed", "Assets/Hovl Studio/Magic effects pack/Prefabs/Sparks/Sparks explode red.prefab" },
+            { "SparksWhite", "Assets/Hovl Studio/Magic effects pack/Prefabs/Sparks/Sparks explode white.prefab" },
+            { "TwinkleBlue", "Assets/Hovl Studio/Magic effects pack/Prefabs/Sparks/Sparks flashing blue.prefab" },
+            { "TwinkleGreen", "Assets/Hovl Studio/Magic effects pack/Prefabs/Sparks/Sparks flashing green.prefab" },
+            { "TwinklePink", "Assets/Hovl Studio/Magic effects pack/Prefabs/Sparks/Sparks flashing pink.prefab" },
+            { "TwinkleRed", "Assets/Hovl Studio/Magic effects pack/Prefabs/Sparks/Sparks flashing red.prefab" },
+            { "TwinkleWhite", "Assets/Hovl Studio/Magic effects pack/Prefabs/Sparks/Sparks flashing white.prefab" },
+            { "TwinkleYellow", "Assets/Hovl Studio/Magic effects pack/Prefabs/Sparks/Sparks flashing yellow.prefab" },
+            { "SlashBlue", "Assets/Hovl Studio/Magic effects pack/Prefabs/Slash effects/Charge slash blue.prefab" },
+            { "SlashPurple", "Assets/Hovl Studio/Magic effects pack/Prefabs/Slash effects/Charge slash purple.prefab" },
+            { "SlashRed", "Assets/Hovl Studio/Magic effects pack/Prefabs/Slash effects/Charge slash red.prefab" },
+            { "SlashElectro", "Assets/Hovl Studio/Magic effects pack/Prefabs/Slash effects/Electro slash.prefab" },
+            { "SlashSnow", "Assets/Hovl Studio/Magic effects pack/Prefabs/Slash effects/Snow slash.prefab" },
+            { "SlashStone", "Assets/Hovl Studio/Magic effects pack/Prefabs/Slash effects/Stone slash.prefab" },
+            { "TwirlBlue", "Assets/Hovl Studio/Magic effects pack/Prefabs/AoE effects/AoE slash blue.prefab" },
+            { "TwirlGreen", "Assets/Hovl Studio/Magic effects pack/Prefabs/AoE effects/AoE slash green.prefab" },
+            { "TwirlOrange", "Assets/Hovl Studio/Magic effects pack/Prefabs/AoE effects/AoE slash orange.prefab" },
+            { "SmokePuff", "Assets/Hovl Studio/Magic effects pack/Prefabs/Smoke effects/Smoke puff.prefab" },
+            { "LoveHit", "Assets/Hovl Studio/Magic effects pack/Prefabs/Hits and explosions/Love hit.prefab" },
+            { "PortalBlue", "Assets/Hovl Studio/Magic effects pack/Prefabs/Portals/Portal blue.prefab" },
+            { "PortalGreen", "Assets/Hovl Studio/Magic effects pack/Prefabs/Portals/Portal green.prefab" },
+            { "PortalYellow", "Assets/Hovl Studio/Magic effects pack/Prefabs/Portals/Portal yellow.prefab" },
+            { "ShieldPink", "Assets/Hovl Studio/Magic effects pack/Prefabs/Magic shields/Magic shield pink.prefab" },
+            { "DebuffAura", "Assets/Hovl Studio/Magic effects pack/Prefabs/Character auras/Debuff.prefab" },
+            { "LoveAura", "Assets/Hovl Studio/Magic effects pack/Prefabs/Character auras/Love aura.prefab" },
+            { "PlexusAura", "Assets/Hovl Studio/Magic effects pack/Prefabs/Character auras/Plexus.prefab" },
+            { "CrystalsCross", "Assets/Hovl Studio/Magic effects pack/Prefabs/AoE effects/Crystals crossfade.prefab" },
+            { "CrystalBlue", "Assets/Hovl Studio/Magic effects pack/Prefabs/Environment/Crystal effect blue.prefab" },
+            { "CrystalGreen", "Assets/Hovl Studio/Magic effects pack/Prefabs/Environment/Crystal effect green.prefab" },
+            { "CrystalRed", "Assets/Hovl Studio/Magic effects pack/Prefabs/Environment/Crystal effect red.prefab" },
+            { "DustGround", "Assets/Hovl Studio/Magic effects pack/Prefabs/Smoke effects/Dust ground.prefab" },
+            { "SmokeGround", "Assets/Hovl Studio/Magic effects pack/Prefabs/Smoke effects/Smoke ground.prefab" },
+            { "ElementalArrow2", "Assets/52SpecialEffectPack/Effect/Effect(Shuriken)/ElementalArrow2.prefab" },
+            { "LightningArrow", "Assets/52SpecialEffectPack/Effect/Effect(Shuriken)/LigthningArrow.prefab" },
+            { "Kunai2", "Assets/52SpecialEffectPack/Effect/Effect(Shuriken)/Kunai2.prefab" },
+            { "Kunai3", "Assets/52SpecialEffectPack/Effect/Effect(Shuriken)/Kunai3.prefab" },
+            { "Kunai4", "Assets/52SpecialEffectPack/Effect/Effect(Shuriken)/Kunai4.prefab" },
+            { "Kunai5", "Assets/52SpecialEffectPack/Effect/Effect(Shuriken)/Kunai5.prefab" },
+            { "ElementalBall2", "Assets/52SpecialEffectPack/Effect/Effect(Shuriken)/ElementalBall2.prefab" },
+            { "ElementalBall3", "Assets/52SpecialEffectPack/Effect/Effect(Shuriken)/ElementalBall3.prefab" },
+            { "ElementalBall4", "Assets/52SpecialEffectPack/Effect/Effect(Shuriken)/ElementalBall4.prefab" },
+            { "Explode2", "Assets/52SpecialEffectPack/Effect/Effect(Shuriken)/Explode2.prefab" },
+            { "Explode3", "Assets/52SpecialEffectPack/Effect/Effect(Shuriken)/Explode3.prefab" },
+            { "Explode4", "Assets/52SpecialEffectPack/Effect/Effect(Shuriken)/Explode4.prefab" },
+            { "Explode6", "Assets/52SpecialEffectPack/Effect/Effect(Shuriken)/Explode6.prefab" },
+            { "Explode8", "Assets/52SpecialEffectPack/Effect/Effect(Shuriken)/Explode8.prefab" },
+            { "Explode9", "Assets/52SpecialEffectPack/Effect/Effect(Shuriken)/Explode9.prefab" },
+            { "Explode10", "Assets/52SpecialEffectPack/Effect/Effect(Shuriken)/Explode10.prefab" },
+            { "Explode11", "Assets/52SpecialEffectPack/Effect/Effect(Shuriken)/Explode11.prefab" },
+            { "LightningBall2", "Assets/52SpecialEffectPack/Effect/Effect(Shuriken)/LightningBall2.prefab" },
+            { "LightningRotateBall", "Assets/52SpecialEffectPack/Effect/Effect(Shuriken)/LightningRotateBall.prefab" },
+            { "MagicCircleRelease", "Assets/52SpecialEffectPack/Effect/Effect(Shuriken)/MagicCircleRelease.prefab" },
+            { "MagicCube", "Assets/52SpecialEffectPack/Effect/Effect(Shuriken)/MagicCube.prefab" },
+            { "Portal2", "Assets/52SpecialEffectPack/Effect/Effect(Shuriken)/Portal2.prefab" },
+            { "RainbowExplode2", "Assets/52SpecialEffectPack/Effect/Effect(Shuriken)/RainbowExplode2.prefab" },
+            { "SummonCircle3", "Assets/52SpecialEffectPack/Effect/Effect(Shuriken)/SummonMagicCircle3.prefab" },
+            { "LaserFire", "Assets/52SpecialEffectPack/Effect/Effect(Shuriken)/LaserFire.prefab" }
         };
+
+        // The second pack is authored about five times larger than this game's units.
+        private static float BaseScale(string path)
+        {
+            return path.Contains("52SpecialEffectPack") ? 0.22f : 1f;
+        }
 
         [MenuItem("Personal Arena/Rebuild Store Effect Set")]
         public static void Build()
         {
             List<string> names = new List<string>();
             List<GameObject> prefabs = new List<GameObject>();
+            List<float> scales = new List<float>();
             for (int i = 0; i < Slots.GetLength(0); i++)
             {
                 GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(Slots[i, 1]);
@@ -87,6 +154,7 @@ namespace PersonalArena.View.Editor
                 {
                     names.Add(Slots[i, 0]);
                     prefabs.Add(prefab);
+                    scales.Add(BaseScale(Slots[i, 1]));
                 }
                 else if (Directory.Exists(Path.GetDirectoryName(Slots[i, 1])))
                 {
@@ -107,6 +175,7 @@ namespace PersonalArena.View.Editor
             }
             set.Names = names.ToArray();
             set.Prefabs = prefabs.ToArray();
+            set.Scales = scales.ToArray();
             EditorUtility.SetDirty(set);
             AssetDatabase.SaveAssets();
             Debug.Log("Store effect set: " + prefabs.Count + " of " + Slots.GetLength(0) + " effects.");
