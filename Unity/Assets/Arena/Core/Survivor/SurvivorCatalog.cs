@@ -59,6 +59,11 @@ namespace PersonalArena.Core.Survivor
         public const int BraceletTrioIndex = 70;
         public const int QuadShotIndex = 71;
         public const int MagiStoneIndex = 72;
+        // Rings (always circling the hero at a fixed distance), shared by every class.
+        public const int SpiritOrbsIndex = 73;
+        public const int SawRingIndex = 74;
+        public const int FrostHaloIndex = 75;
+        public const int CometIndex = 76;
         public const int BonusGoldIndex = 62;
         public const int BonusHealIndex = 63;
 
@@ -164,6 +169,10 @@ namespace PersonalArena.Core.Survivor
                 70 => BraceletTrio,
                 71 => QuadShot,
                 72 => MagiStone,
+                73 => SpiritOrbs,
+                74 => SawRing,
+                75 => FrostHalo,
+                76 => Comet,
                 34 => DurationCharm,
                 35 => Duplicator,
                 36 => SpikedArmor,

@@ -10,8 +10,8 @@ namespace PersonalArena.Core.Tests.Survivor
     public sealed class SurvivorM9MageArcherTests
     {
         private static readonly int[] NewWeapons = { 69, 70, 71, 72 };
-        private static readonly int[] MagePool = { 14, 15, 16, 17, 18, 19, 64, 66, 67, 68, 26, 31, 33, 69, 70, 72 };
-        private static readonly int[] ArcherPool = { 20, 21, 22, 23, 24, 25, 64, 65, 29, 32, 33, 70, 71 };
+        private static readonly int[] MagePool = { 14, 15, 16, 17, 18, 19, 64, 66, 67, 68, 26, 31, 33, 69, 70, 72, 73, 74, 75, 76 };
+        private static readonly int[] ArcherPool = { 20, 21, 22, 23, 24, 25, 64, 65, 29, 32, 33, 70, 71, 73, 74, 75, 76 };
         private static readonly int[] MageKit = { 69, 70, 72, 31, 33, 26 };
         private static readonly int[] ArcherKit = { 70, 71, 29, 32, 33, 20 };
 
@@ -26,14 +26,14 @@ namespace PersonalArena.Core.Tests.Survivor
             Assert.That(quad.Id, Is.EqualTo("quad-shot")); Assert.That(quad.Name, Is.EqualTo("Four-Way Shot")); Assert.That(quad.Pattern, Is.EqualTo(WeaponPattern.Quad)); Assert.That(quad.BaseDamage, Is.EqualTo(10f)); Assert.That(quad.DamagePerLevel, Is.EqualTo(4f)); Assert.That(quad.ProjectileSpeed, Is.EqualTo(13f)); Assert.That(quad.ProjectileRange, Is.EqualTo(9f)); Assert.That(quad.BaseCooldown, Is.EqualTo(1.2f)); Assert.That(quad.Pierce, Is.EqualTo(1)); Assert.That(quad.CountByLevel, Is.EqualTo(new[] { 1, 1, 2, 2, 3 })); Assert.That(SurvivorCatalog.QuadStaggerDegrees, Is.EqualTo(8f));
             Assert.That(stone.Id, Is.EqualTo("magi-stone")); Assert.That(stone.Name, Is.EqualTo("Charged Stone")); Assert.That(stone.Pattern, Is.EqualTo(WeaponPattern.Stone)); Assert.That(stone.BaseDamage, Is.EqualTo(20f)); Assert.That(stone.DamagePerLevel, Is.EqualTo(20f)); Assert.That(stone.BaseRange, Is.EqualTo(10f)); Assert.That(stone.BaseCooldown, Is.EqualTo(0.9f)); Assert.That(stone.CountByLevel, Is.EqualTo(new[] { 1, 1, 2, 2, 3 }));
             foreach (int index in NewWeapons) { ItemDef def = SurvivorCatalog.Get(index); Assert.That(def.Kind, Is.EqualTo(ItemKind.Weapon)); Assert.That(def.MaxLevel, Is.EqualTo(5)); Assert.That(def.CatalogIndex, Is.EqualTo(index)); }
-            Assert.That(SurvivorCatalog.Get(73), Is.Null); Assert.That(SurvivorObservation.Size, Is.EqualTo(2592)); Assert.That(SurvivorObservation.SchemaVersion, Is.EqualTo(5));
+            Assert.That(SurvivorCatalog.Get(77), Is.Null); Assert.That(SurvivorObservation.Size, Is.EqualTo(2592)); Assert.That(SurvivorObservation.SchemaVersion, Is.EqualTo(5));
         }
 
         [Test]
         public void Pools_AreExactlyTheFinalLists_AndNothingElseChanged()
         {
             Assert.That(SurvivorDefaults.Mage().WeaponPool, Is.EqualTo(MagePool)); Assert.That(SurvivorDefaults.Archer().WeaponPool, Is.EqualTo(ArcherPool));
-            Assert.That(SurvivorDefaults.Warrior().WeaponPool, Is.EqualTo(new[] { 0, 1, 2, 3, 4, 5, 26, 27, 28, 29, 30, 31, 32, 33, 64 }));
+            Assert.That(SurvivorDefaults.Warrior().WeaponPool, Is.EqualTo(new[] { 0, 1, 2, 3, 4, 5, 26, 27, 28, 29, 30, 31, 32, 33, 64, 73, 74, 75, 76 }));
             int[] passives = { 6, 7, 8, 9, 10, 11, 12, 13, 58, 59, 60, 61, 34, 35, 36, 37 };
             foreach (SurvivorClassDef kit in new[] { SurvivorDefaults.Warrior(), SurvivorDefaults.Mage(), SurvivorDefaults.Archer() }) Assert.That(kit.PassivePool, Is.EqualTo(passives), kit.Id);
             Assert.That(SurvivorDefaults.Mage().StartingWeapon, Is.EqualTo(14)); Assert.That(SurvivorDefaults.Archer().StartingWeapon, Is.EqualTo(20));

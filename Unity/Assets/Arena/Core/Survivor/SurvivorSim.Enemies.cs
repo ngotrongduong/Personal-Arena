@@ -165,6 +165,7 @@ namespace PersonalArena.Core.Survivor
             e.Elite = elite; e.IsBoss = boss; e.WindupRemaining = 0f; e.StunRemaining = 0f;
             e.Golden = false; e.Small = false; e.ChargeRemaining = 0f;
             e.OrbitNextHitTime = 0f; e.LastShockwaveId = 0; e.LastHitTime = Time; e.SlowRemaining = 0f; e.SlowMultiplier = 1f;
+            for (int ring = 0; ring < e.RingNextHitTimes.Length; ring++) e.RingNextHitTimes[ring] = 0f;
             e.RelocatedThisTick = false; e.Separated = false; enemyPreviousPositions[slot] = point;
             e.AttackCooldown = 0f; e.ContactCooldown = 0f; e.SummonCooldown = boss ? EffectiveBossSummonInterval : def.SummonInterval > 0f ? def.SummonInterval : def.HealInterval;
             if (e.Radius > maxEnemyRadius) maxEnemyRadius = e.Radius;

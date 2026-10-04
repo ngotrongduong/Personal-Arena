@@ -13,7 +13,7 @@ namespace PersonalArena.Core.Survivor
                 Id = "warrior", MaxHp = 150f, Regen = 0.2f, Armor = 0f, MoveSpeed = 4.5f,
                 Acceleration = 30f, Radius = 0.5f, PickupRadius = 1.5f, CritChance = 0.05f,
                 CritDamage = 1.5f, MaxEnergy = 100f, EnergyRegen = 15f, Mass = 1f,
-                StartingWeapon = 0, WeaponPool = new[] { 0, 1, 2, 3, 4, 5, 26, 27, 28, 29, 30, 31, 32, 33, 64 }, PassivePool = new[] { 6, 7, 8, 9, 10, 11, 12, 13, 58, 59, 60, 61, 34, 35, 36, 37 },
+                StartingWeapon = 0, WeaponPool = new[] { 0, 1, 2, 3, 4, 5, 26, 27, 28, 29, 30, 31, 32, 33, 64, 73, 74, 75, 76 }, PassivePool = new[] { 6, 7, 8, 9, 10, 11, 12, 13, 58, 59, 60, 61, 34, 35, 36, 37 },
                 ActiveSkills = Skills(
                     new SkillDef { Id = "kick", Kind = SkillKind.Kick, Damage = 10f, Range = 1.8f, ArcDegrees = 100f, StunSeconds = 1.2f, Knockback = 3f, Cooldown = 3f },
                     new SkillDef { Id = "shield-block", Kind = SkillKind.Block, EnergyCost = 10f, EnergyPerSecond = 20f, BlockMoveMultiplier = 0.4f, BlockDamageMultiplier = 0.5f, ParryWindowSeconds = 0.2f, StunSeconds = 1.5f, BlockStaggerSeconds = 0.6f, BlockPushback = 0.8f },
@@ -33,7 +33,7 @@ namespace PersonalArena.Core.Survivor
                 Id = "mage", MaxHp = 110f, Regen = 0.15f, Armor = 0f, MoveSpeed = 4.3f,
                 Acceleration = 30f, Radius = 0.45f, PickupRadius = 1.8f, CritChance = 0.05f,
                 CritDamage = 1.5f, MaxEnergy = 150f, EnergyRegen = 20f, Mass = 0.9f,
-                StartingWeapon = SurvivorCatalog.MagicBoltIndex, WeaponPool = new[] { 14, 15, 16, 17, 18, 19, 64, 66, 67, 68, 26, 31, 33, 69, 70, 72 },
+                StartingWeapon = SurvivorCatalog.MagicBoltIndex, WeaponPool = new[] { 14, 15, 16, 17, 18, 19, 64, 66, 67, 68, 26, 31, 33, 69, 70, 72, 73, 74, 75, 76 },
                 PassivePool = new[] { 6, 7, 8, 9, 10, 11, 12, 13, 58, 59, 60, 61, 34, 35, 36, 37 },
                 ActiveSkills = Skills(
                     new SkillDef { Id = "fireball", Kind = SkillKind.Projectile, Damage = 40f, Range = 12f, ProjectileSpeed = 14f, ProjectileRadius = 0.4f, AreaRadius = 2f, Knockback = 1f, Cooldown = 3f, EnergyCost = 25f },
@@ -54,7 +54,7 @@ namespace PersonalArena.Core.Survivor
                 Id = "archer", MaxHp = 130f, Regen = 0.2f, Armor = 0f, MoveSpeed = 5f,
                 Acceleration = 34f, Radius = 0.45f, PickupRadius = 1.6f, CritChance = 0.08f,
                 CritDamage = 1.6f, MaxEnergy = 100f, EnergyRegen = 15f, Mass = 0.9f,
-                StartingWeapon = SurvivorCatalog.ArrowIndex, WeaponPool = new[] { 20, 21, 22, 23, 24, 25, 64, 65, 29, 32, 33, 70, 71 },
+                StartingWeapon = SurvivorCatalog.ArrowIndex, WeaponPool = new[] { 20, 21, 22, 23, 24, 25, 64, 65, 29, 32, 33, 70, 71, 73, 74, 75, 76 },
                 PassivePool = new[] { 6, 7, 8, 9, 10, 11, 12, 13, 58, 59, 60, 61, 34, 35, 36, 37 },
                 ActiveSkills = Skills(
                     new SkillDef { Id = "power-shot", Kind = SkillKind.Projectile, Damage = 50f, Range = 14f, ProjectileSpeed = 22f, ProjectileRadius = 0.35f, Knockback = 2.5f, Pierce = true, Cooldown = 3.5f, EnergyCost = 20f },

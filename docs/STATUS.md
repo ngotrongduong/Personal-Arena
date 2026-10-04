@@ -2,7 +2,7 @@
 
 > "Bộ nhớ" giữa các phiên. Đọc đầu tiên, cập nhật cuối cùng. **Giữ file dưới 200 dòng** (CI kiểm):
 > nhật ký cũ chuyển sang `docs/archive/SESSIONS.md`, task xong sang `docs/archive/BOARD-DONE.md`.
-> Cập nhật lần cuối: 2026-10-05 (phiên Claude trên PC: M16 — rừng quanh bản đồ, game tiếng Anh, HUD mới + tooltip; bản xem v0.8.189).
+> Cập nhật lần cuối: 2026-10-05 (phiên Claude trên PC: M16 — game tiếng Anh, HUD mới, Codex, vũ khí vòng xoay; bản xem + train v0.8.192).
 
 ## Đang ở đâu (đọc phần này là đủ để bắt đầu)
 
@@ -28,16 +28,19 @@
 - **M16 (T-050):** rừng 5 hàng cây quanh bản đồ + sương mù theo mức zoom (hết vùng tối ngoài hàng rào); **toàn bộ
   chữ trong game là tiếng Anh** (D-049); **HUD mới** gọn hơn, Tab ẩn cột phải, H mở bảng phím; **tooltip** khi rê
   chuột vào ô vũ khí/bị động/skill và thẻ lên cấp ghi số liệu thật, sinh từ catalog (`SurvivorItemDetails`, D-050).
-- **Bản cài (2026-10-05):** `Build/WatchNext` v0.8.189, `Build/TrainingNext` v0.8.175 (luật chơi không đổi từ đó);
-  smoke test 3 class đạt; 60 FPS, mở app ~0,9 s tới khung hình đầu.
-- **Test:** CoreTests 645/645, pytest 204/204, EditMode 308/308 (PC, 2026-10-05).
+- **M16 (T-051, T-052):** bảng **Codex** (phím K) liệt kê mọi vũ khí/bị động/tiến hóa/skill kèm số liệu từng cấp và
+  công thức; 4 vũ khí **vòng xoay** dùng chung cả 3 class (`WeaponPattern.Ring`, catalog 73–76: Spirit Orbs, Saw
+  Ring, Frost Halo, Comet — D-051), cầm nhiều vòng cùng lúc được; hiệu ứng Purge chỉ còn một vòng đúng bán kính.
+- **Bản cài (2026-10-05):** `Build/WatchNext` + `Build/TrainingNext` v0.8.192 (bản train có vũ khí vòng, tự tráo ở
+  lần bấm TRAIN kế tiếp); smoke test 3 class đạt; 60 FPS, mở app ~0,9 s tới khung hình đầu.
+- **Test:** CoreTests 651/651, pytest 204/204, EditMode 313/313 (PC, 2026-10-05).
 
 ## Việc tiếp theo (theo thứ tự)
 
-1. **Owner:** mở `Xem-AI.cmd` (bản xem v0.8.189), xem HUD mới + tooltip + hiệu ứng M13–M15 trong trận thật và bấm
-   TRAIN — não cần học tiếp để quen Kiếm quét mới, quái mới, vật phẩm mới (điểm số sẽ dao động một thời gian).
-2. **Claude:** bảng "Codex" liệt kê mọi vũ khí/bị động/tiến hóa và công thức (tooltip hiện mới chỉ có món đang cầm);
-   ngọc EXP rải kín đất — chưa thấy với não Chiến binh (nó nhặt hết), cần xem với não yếu rồi mới sửa.
+1. **Owner:** mở `Xem-AI.cmd` (bản xem v0.8.192), xem HUD mới, Codex (K), vũ khí vòng xoay, rồi bấm TRAIN (dừng rồi
+   bấm lại nếu đang train) — não chưa từng thấy vũ khí 73–76 nên cần học tiếp (điểm số sẽ dao động một thời gian).
+2. **Claude:** tiến hóa + icon riêng cho 4 vũ khí vòng (hiện dùng lại glyph cũ, chưa có bản tiến hóa); cân bằng lại
+   sau khi có số liệu train; ngọc EXP rải kín đất — chưa thấy với não Chiến binh, cần xem với não yếu rồi mới sửa.
 3. Nợ nhỏ (nhật ký 2026-10-02 trong archive): rẽ nhánh từ champion cũ thiếu `training_status.json`,
    khóa `brain_lineage` khi chạy song song, walker triệu hồi ngoài bản đồ 1 tick.
 
@@ -77,7 +80,7 @@
 | M9: nội dung kiểu Vampire Survivors (6 + 6 ô, vũ khí/phụ kiện/tiến hóa mới, 6 skill, schema v5) | xong (T-036..T-046); tách file View lớn chuyển sang T-049 |
 | M10–M14: hiệu ứng, vật phẩm rơi, quái mới, gói Asset Store, sóng kiếm bay | xong (PR #8–#17) — chờ owner xem bản v0.8.171 và train tiếp |
 | M15: hình ảnh riêng cho 34 vũ khí tiến hóa + đồng hồ buff HUD (T-047), mở app nhanh (T-048), tách file View (T-049) | xong |
-| M16: rừng quanh bản đồ, game tiếng Anh, HUD mới + tooltip chi tiết (T-050) | xong — chờ owner xem bản v0.8.189 |
+| M16: rừng quanh bản đồ, game tiếng Anh, HUD mới + tooltip (T-050), Codex (T-051), vũ khí vòng xoay + Purge (T-052) | xong — chờ owner xem bản v0.8.192 và train tiếp |
 
 
 ## Cách làm trên PC (Claude)
@@ -121,7 +124,12 @@
 - HUD: thẻ nhân vật nhỏ, cấp cạnh đồng hồ, thanh skill mảnh có số ô, cột phải 3 thẻ (Tab ẩn), bảng phím (H).
   Tooltip + thẻ lên cấp sinh từ số catalog; trước đó một nửa số món không có mô tả.
 - Cờ kiểm tra mới (đi kèm `-perfLog`): `-cameraAt x,z[,khoảng cách]` giữ camera ở một điểm; `-hudDemo` ghim lần
-  lượt tooltip món, tooltip skill, bảng phím vào từng ảnh `-perfShots`.
+  lượt tooltip món, tooltip skill, bảng phím vào từng ảnh `-perfShots`; `-startWeapon <catalog>` và `-ringDemo`
+  (chỉ mời vũ khí vòng); `-openPanel codex[:trang[:ô]]` chụp Codex.
+- Sau đó (T-051, T-052): bảng Codex; owner chê hiệu ứng Purge quá to và muốn thêm vũ khí xoay quanh nhân vật, dùng
+  chung 3 class → `WeaponPattern.Ring` + 4 món 73–76 trong mọi pool (D-051), Orbit cũ và golden không đổi.
+  Bản đầu có vệt đuôi và hiệu ứng gói trên vật thể: ở x8 vệt thành vòng tròn kín, hiệu ứng gói rơi hạt lại → bỏ cả hai.
+- Unity `-runTests` khi có lỗi biên dịch thì treo ~10 phút mới thoát → chạy `unity-run.ps1 -Compile` trước.
 
 ### 2026-10-05 (sau) — Claude (PC): T-048 mở trình xem nhanh hơn, T-049 tách file View
 - T-048: "khựng 3 s ở khung hình đầu" hóa ra là thời gian mở app (màn logo Unity 2,2 s), bị `-perfLog` tính nhầm

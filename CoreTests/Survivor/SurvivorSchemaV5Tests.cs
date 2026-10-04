@@ -49,7 +49,7 @@ namespace PersonalArena.Core.Tests.Survivor
             float[] values = Observe(sim);
             Assert.That(values[SurvivorObservation.InventoryOffset + 0], Is.EqualTo(1f)); Assert.That(values[SurvivorObservation.InventoryOffset + 37], Is.GreaterThan(0f));
             for (int i = 64; i < 128; i++) Assert.That(values[SurvivorObservation.InventoryOffset + i], Is.Zero, "reserved slot " + i);
-            Assert.That(SurvivorCatalog.Get(73), Is.Null); Assert.That(SurvivorCatalog.Get(111), Is.Null); Assert.That(SurvivorCatalog.Get(128), Is.Null);
+            Assert.That(SurvivorCatalog.Get(77), Is.Null); Assert.That(SurvivorCatalog.Get(111), Is.Null); Assert.That(SurvivorCatalog.Get(128), Is.Null);
         }
 
         [Test]

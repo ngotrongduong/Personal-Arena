@@ -16,8 +16,9 @@ namespace PersonalArena.Core.Survivor
     /// Bounce: a projectile that bounces off walls and obstacles. Momentum: a volley along the hero's movement, stronger the more the hero moves.
     /// Freeze: a chance to stun every non-boss enemy nearby. Purge: kills every normal enemy nearby. BombRing: a salvo of blasts placed on a rotating ring.
     /// Trio: a very tight fan at ONE random enemy in range. Quad: projectiles in four fixed directions around the hero's body. Stone: instant fixed-damage hits (no Might, no crit) on the nearest enemies.
+    /// Ring: bodies that circle the hero all the time at a fixed distance (no cooldown); a hero may hold several, each with its own state.
     /// </summary>
-    public enum WeaponPattern { None, Sweep, Thrust, Orbit, Thrown, Aura, Shockwave, Strike, Fan, Combo, Bomb, Retaliate, Barrier, Boomerang, Zone, Bounce, Momentum, Freeze, Purge, BombRing, Trio, Quad, Stone }
+    public enum WeaponPattern { None, Sweep, Thrust, Orbit, Thrown, Aura, Shockwave, Strike, Fan, Combo, Bomb, Retaliate, Barrier, Boomerang, Zone, Bounce, Momentum, Freeze, Purge, BombRing, Trio, Quad, Stone, Ring }
     public enum StatId
     {
         MaxHp, Armor, Regen, Might, Crit, CritDamage, Cooldown, Area,

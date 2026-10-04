@@ -95,6 +95,10 @@ namespace PersonalArena.View
                 case "orbit-knife": return "orbit-axe";
                 case "dagger": return "sword-sweep";
                 case "crossbow": return "piercing-arrow";
+                case "spirit-orbs": return "blink";
+                case "saw-ring": return "orbit-axe";
+                case "frost-halo": return "frost-nova";
+                case "comet": return "fireball";
                 default: return null;
             }
         }
