@@ -254,7 +254,9 @@ namespace PersonalArena.View
             // M8 settings: quality and window mode apply at start (automated runs keep their window as launched).
             PlayerPrefsSoundStorage prefs = new PlayerPrefsSoundStorage();
             viewerSettings = ViewerSettings.Load(prefs);
-            bool applyWindowMode = string.IsNullOrEmpty(screenshotPath) && !quitAfterScreenshot && smoke == null;
+            BeginPerfLog();
+            bool applyWindowMode = string.IsNullOrEmpty(screenshotPath) && !quitAfterScreenshot && smoke == null &&
+                string.IsNullOrEmpty(perfLogPath);
             SettingsPanel.ApplyDisplay(viewerSettings, applyWindowMode);
             SettingsPanel settingsPanel = hud.SettingsPanel;
             if (settingsPanel != null)
@@ -621,6 +623,7 @@ namespace PersonalArena.View
             float realDelta = Time.unscaledDeltaTime;
             UpdateScreenshots();
             UpdateSmokeTest();
+            UpdatePerfLog();
 
             if (sim.IsEnded)
             {
