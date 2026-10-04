@@ -132,7 +132,7 @@ namespace PersonalArena.View
 
         // Right column: the AI info card, the training card, then the menu card.
         private const float InfoHeight = 170f;
-        private const float MenuHeight = 86f;
+        private const float MenuHeight = 122f;
         private const float TrainingHeight = 272f;
 
         // M5: floating spectator tag above the hero, end-screen reward and story, out-of-run panels.

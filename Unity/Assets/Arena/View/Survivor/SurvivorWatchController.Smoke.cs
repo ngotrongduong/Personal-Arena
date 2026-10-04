@@ -25,7 +25,7 @@ namespace PersonalArena.View
         private const float SmokePanelSettleSeconds = 0.4f;
         private const int SmokeFarmRuns = 2;
         private static readonly string[] SmokeClasses = { ProfileRules.WarriorId, ProfileRules.MageId, ProfileRules.ArcherId };
-        private static readonly string[] SmokePanels = { "C", "F", "V", "L", "G", "P", "O" };
+        private static readonly string[] SmokePanels = { "C", "F", "V", "L", "G", "P", "O", "K" };
 
         private enum SmokeStage
         {
@@ -443,6 +443,7 @@ namespace PersonalArena.View
                 case "F": hud.ToggleFarmPanel(); break;
                 case "V": hud.ToggleComparePanel(); break;
                 case "L": hud.ToggleLineagePanel(); break;
+                case "K": hud.ToggleCodexPanel(); break;
                 case "G": hud.ToggleHistoryPanel(); break;
                 case "P": hud.ToggleProfilePanel(); break;
                 default: hud.ToggleSettingsPanel(); break;
@@ -457,6 +458,7 @@ namespace PersonalArena.View
                 case "F": return hud.FarmPanel != null && hud.FarmPanel.IsOpen;
                 case "V": return hud.ComparePanel != null && hud.ComparePanel.IsOpen;
                 case "L": return hud.LineagePanel != null && hud.LineagePanel.IsOpen;
+                case "K": return hud.CodexPanel != null && hud.CodexPanel.IsOpen;
                 case "G": return hud.HistoryPanel != null && hud.HistoryPanel.IsOpen;
                 case "P": return hud.ProfilePanel != null && hud.ProfilePanel.IsOpen;
                 default: return hud.SettingsPanel != null && hud.SettingsPanel.IsOpen;

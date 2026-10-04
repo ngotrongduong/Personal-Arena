@@ -28,6 +28,7 @@ namespace PersonalArena.View
         private static readonly Color MutedText = new Color(0.68f, 0.73f, 0.84f, 1f);
         private static readonly Color MenuButtonColor = new Color(0.17f, 0.21f, 0.32f, 1f);
 
+        private CodexPanel codexPanel;
         private RectTransform infoPanel;
         private RectTransform menuPanel;
         private GameObject helpPanel;
@@ -45,6 +46,23 @@ namespace PersonalArena.View
         private bool trainingShown;
 
         public bool HelpOpen => helpPanel != null && helpPanel.activeSelf;
+
+        public CodexPanel CodexPanel
+        {
+            get
+            {
+                EnsureBuilt();
+                return codexPanel;
+            }
+        }
+
+        /// <summary>Opens or closes the codex (K); only one full-screen panel is open at a time.</summary>
+        public void ToggleCodexPanel()
+        {
+            EnsureBuilt();
+            CloseOtherPanels(codexPanel);
+            codexPanel.Toggle();
+        }
 
         /// <summary>H: shows or hides the list of keys.</summary>
         public void ToggleHelp()

@@ -137,6 +137,13 @@ namespace PersonalArena.View
             return builder.ToString();
         }
 
+        /// <summary>A passive's whole bonus at <paramref name="level"/>, e.g. "+50% max HP"; empty for other rows.</summary>
+        public static string PassiveTotal(int catalogIndex, int level)
+        {
+            ItemDef def = SurvivorCatalog.Get(catalogIndex);
+            return def != null && def.Kind == ItemKind.Passive ? PassiveEffect(def, level) : string.Empty;
+        }
+
         /// <summary>How the item evolves or what it evolved from; for a passive, the weapons it evolves. Empty when none.</summary>
         public static string Evolution(int catalogIndex)
         {

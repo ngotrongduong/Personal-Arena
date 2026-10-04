@@ -94,6 +94,7 @@ namespace PersonalArena.View
                 "B   newest brain / best brain\n" +
                 "C   character      F   gold farm      V   compare builds\n" +
                 "G   charts      P   AI profile      L   brain history\n" +
+                "K   codex: every weapon, passive, evolution and skill\n" +
                 "M   mute      O   settings      Tab   hide the side panels\n" +
                 "Mouse wheel   zoom      Hover an icon   details      H   close");
 
