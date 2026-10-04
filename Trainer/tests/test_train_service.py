@@ -204,6 +204,37 @@ def test_plan_run_upgrades_the_newest_older_schema(tmp_path: Path, monkeypatch):
     )
 
 
+def test_plan_run_upgrades_when_the_viewer_requests_the_older_schema_run(tmp_path: Path, monkeypatch):
+    # The viewer always passes the profile's run id, which still names the schema-4 run after an update.
+    schema_dir = tmp_path / "schemas"
+    schema_dir.mkdir()
+    write_fake_schema(schema_dir, 4)
+    write_fake_schema(schema_dir, 5)
+    monkeypatch.setattr(arena_trainer, "SCHEMAS_DIR", schema_dir)
+    monkeypatch.setattr(arena_trainer, "SCHEMA_VERSION", 5)
+    make_checkpoint(tmp_path, "warrior-s001", 800, schema_version=4)
+    calls = []
+
+    def fake_upgrade(runs_dir, source_run, behavior, new_run, old_version, new_version):
+        calls.append((source_run, behavior, new_run, old_version, new_version))
+        make_checkpoint(runs_dir, new_run, 800, schema_version=5, behavior=behavior)
+        return runs_dir / new_run / behavior
+
+    monkeypatch.setattr(train_service.brain_upgrade, "upgrade_run", fake_upgrade)
+
+    plan = train_service.plan_run(tmp_path, "Warrior", "warrior-s001")
+
+    assert calls == [("warrior-s001", "Warrior", "warrior-s002", 4, 5)]
+    assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-s002", "resume", 800)
+    assert "học tiếp từ bước 800" in plan.message
+
+    # The next TRAIN still names the old run: it resumes the upgraded run, with no second upgrade.
+    again = train_service.plan_run(tmp_path, "Warrior", "warrior-s001")
+
+    assert len(calls) == 1
+    assert (again.run_id, again.mode, again.last_step) == ("warrior-s002", "resume", 800)
+
+
 def test_plan_run_missing_old_schema_falls_back_to_new(tmp_path: Path, monkeypatch):
     schema_dir = tmp_path / "schemas"
     schema_dir.mkdir()

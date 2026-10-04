@@ -212,6 +212,19 @@ def plan_run(runs_dir: Path, behavior: str, requested: str | None = None) -> Run
         # The viewer asked for another class's branch: train this class's own newest run instead.
         message = f"Nhánh {requested} không phải não {behavior}; học tiếp não {behavior} mới nhất."
         requested = None
+    if (
+        requested
+        and requested != champion.CHAMPIONS_DIR
+        and (runs_dir / requested / arena_trainer.SCHEMA_FILE).is_file()
+        and any(
+            entry.name != arena_trainer.SCHEMA_FILE for entry in (runs_dir / requested).iterdir()
+        )
+        and arena_trainer.run_schema_version(runs_dir / requested) < arena_trainer.SCHEMA_VERSION
+    ):
+        # The viewer still names the run from before the schema change (the profile keeps its run id).
+        # Plan as if nothing was requested: resume the class's current-schema run, or upgrade the older
+        # brain into the next run. Never start from zero while an upgradable brain exists.
+        requested = None
     if requested:
         run_id = next_run_id(runs_dir, behavior) if requested == champion.CHAMPIONS_DIR else requested
         requested_dir = runs_dir / run_id
