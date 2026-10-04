@@ -161,7 +161,7 @@ namespace PersonalArena.Core.Tests.Survivor
                 for (int i = 0; i < sim.Obstacles.Count; i++) if (sim.Obstacles[i].Active) { o = sim.Obstacles[i]; break; }
                 if (o == null || Math.Abs(o.Position.X - 6f) > 45f || Math.Abs(o.Position.Y) > 45f) continue;
                 sim.SetHeroInvulnerableForTests(); sim.SetEnemiesInvulnerableForTests();
-                sim.SetHeroStateForTests(new Vec2(o.Position.X - 6f, o.Position.Y), Vec2.Zero, 0f); Brute(sim, o.Position.X - 4.5f, o.Position.Y);
+                sim.SetHeroStateForTests(new Vec2(o.Position.X - 6f, o.Position.Y), Vec2.Zero, 0f); Brute(sim, o.Position.X + 3f, o.Position.Y); // behind the obstacle: a shot that hit the enemy first would ricochet off it
                 sim.Step(default); List<SurvivorProjectile> shots = Shots(sim, 64); Assert.That(shots.Count, Is.EqualTo(1));
                 sim.SetWeaponCooldownForTests(64, 1000f);
                 for (int tick = 0; tick < 60 && shots[0].Bounces == 0; tick++) sim.Step(default);
@@ -174,12 +174,31 @@ namespace PersonalArena.Core.Tests.Survivor
         }
 
         [Test]
-        public void Bounce_HittingAnEnemyDoesNotUseABounce_AndTheShotFliesOn()
+        public void Bounce_HittingALoneEnemyReflectsTheShot_WithoutUsingABounce()
         {
             SurvivorSim sim = Sim(64, 1, 340); SurvivorEnemy brute = Brute(sim, 6f, 0f); sim.Step(default);
             SurvivorProjectile shot = Shots(sim, 64)[0]; sim.SetWeaponCooldownForTests(64, 1000f); int hits = 0;
-            for (int tick = 0; tick < 60; tick++) { sim.Step(default); for (int e = 0; e < sim.Events.Count; e++) if (sim.Events[e].Type == SurvivorEventType.DamageDealt && sim.Events[e].Id == brute.Id) hits++; }
-            Assert.That(hits, Is.EqualTo(1)); Assert.That(shot.Active, Is.True); Assert.That(shot.Bounces, Is.Zero); Assert.That(shot.Position.X, Is.GreaterThan(8f));
+            for (int tick = 0; tick < 40 && hits == 0; tick++) { sim.Step(default); for (int e = 0; e < sim.Events.Count; e++) if (sim.Events[e].Type == SurvivorEventType.DamageDealt && sim.Events[e].Id == brute.Id) hits++; }
+            Assert.That(hits, Is.EqualTo(1)); Assert.That(shot.Active, Is.True); Assert.That(shot.Bounces, Is.Zero);
+            Assert.That(shot.Velocity.X, Is.LessThan(0f), "the shot bounces back off the enemy"); Assert.That(shot.Velocity.Length, Is.EqualTo(10f).Within(1e-3f));
+        }
+
+        [Test]
+        public void Bounce_HittingAnEnemyTurnsTheShotTowardAnotherEnemy()
+        {
+            SurvivorSim sim = Sim(64, 1, 342); SurvivorEnemy first = Brute(sim, 5f, 0f); SurvivorEnemy second = Brute(sim, 5f, 6f); sim.Step(default);
+            SurvivorProjectile shot = Shots(sim, 64)[0]; sim.SetWeaponCooldownForTests(64, 1000f); bool hitFirst = false, hitSecond = false;
+            for (int tick = 0; tick < 120 && !hitSecond; tick++)
+            {
+                sim.Step(default);
+                for (int e = 0; e < sim.Events.Count; e++)
+                {
+                    if (sim.Events[e].Type != SurvivorEventType.DamageDealt) continue;
+                    if (sim.Events[e].Id == first.Id) hitFirst = true; else if (sim.Events[e].Id == second.Id) hitSecond = true;
+                }
+                if (hitFirst && !hitSecond && shot.Active) Assert.That(shot.Velocity.Y, Is.GreaterThan(0f), "after the first hit the shot heads for the second enemy");
+            }
+            Assert.That(hitFirst, Is.True); Assert.That(hitSecond, Is.True); Assert.That(shot.Bounces, Is.Zero);
         }
 
         [Test]

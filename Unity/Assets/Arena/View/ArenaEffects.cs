@@ -104,10 +104,6 @@ namespace PersonalArena.View
         public void Sparks(Vector3 position, Vector3 direction, Color color, int count, float speed = 6f, float spread = 0.8f)
         {
             EnsureReady();
-            if (StoreSparks(position, color, count))
-            {
-                return;
-            }
             Vector3 forward = direction.sqrMagnitude > 1e-4f ? direction.normalized : Vector3.up;
             ParticleSystem.EmitParams emit = new ParticleSystem.EmitParams();
             for (int i = 0; i < count; i++)
@@ -164,10 +160,6 @@ namespace PersonalArena.View
         public void Flash(Vector3 position, Color color, float size, float lifetime = 0.2f)
         {
             EnsureReady();
-            if (StoreFlash(position, color, size))
-            {
-                return;
-            }
             ParticleSystem.EmitParams emit = new ParticleSystem.EmitParams
             {
                 position = position,
@@ -183,10 +175,6 @@ namespace PersonalArena.View
         public void Sparkle(Vector3 position, Color color, int count, float radius, float rise = 1.4f, float size = 0.22f)
         {
             EnsureReady();
-            if (StoreTwinkle(position, color, count, radius))
-            {
-                return;
-            }
             ParticleSystem.EmitParams emit = new ParticleSystem.EmitParams();
             for (int i = 0; i < count; i++)
             {
@@ -205,10 +193,6 @@ namespace PersonalArena.View
         public void Slash(Vector3 position, float yawDegrees, Color color, bool mirror, float reach = 1.3f, float lifetime = 0.2f)
         {
             EnsureReady();
-            if (StoreSlash(position, yawDegrees, color, reach))
-            {
-                return;
-            }
             SlashFx slash = null;
             for (int i = 0; i < slashes.Count; i++)
             {

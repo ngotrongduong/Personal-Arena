@@ -10,9 +10,9 @@ namespace PersonalArena.View
     /// </summary>
     public sealed partial class ArenaEffects
     {
-        private const int BoltPool = 14;
+        private const int BoltPool = 28;
         private const int BoltPoints = 7;
-        private const float BoltLifetime = 0.28f;
+        private const float BoltLifetime = 0.4f;
         /// <summary>M11: ground rings, runes and swirls stay this much longer than their callers ask, so areas read clearly.</summary>
         private const float AreaLinger = 1.7f;
 
@@ -202,10 +202,11 @@ namespace PersonalArena.View
         }
 
         /// <summary>One flame tongue rising from <paramref name="position"/>; call repeatedly for a burning area.</summary>
-        public void Flame(Vector3 position, Color color, float size, float lifetime = 0.7f)
+        public void Flame(Vector3 position, Color color, float size, float lifetime = 0.7f, bool store = true)
         {
             EnsureVfx();
-            if (StoreFlame(position, size, lifetime))
+            // A dense spray passes store = false: the pool cannot cover it, and a mix of two flame styles looks wrong.
+            if (store && StoreFlame(position, size, lifetime))
             {
                 return;
             }
@@ -302,10 +303,6 @@ namespace PersonalArena.View
         public void Shards(Vector3 position, Color color, int count, float speed, float size)
         {
             EnsureVfx();
-            if (StoreShards(position, color, count, size))
-            {
-                return;
-            }
             ParticleSystem.EmitParams emit = new ParticleSystem.EmitParams();
             for (int i = 0; i < count; i++)
             {
