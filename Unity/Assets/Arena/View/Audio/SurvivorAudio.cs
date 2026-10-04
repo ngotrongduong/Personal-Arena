@@ -68,7 +68,9 @@ namespace PersonalArena.View
             settings = SoundSettings.Load(storage);
             mixer = new SoundMixer(Environment.TickCount);
             missingWarned = new bool[SoundCueInfo.CueCount];
+            double at = PerfTrace.Now;
             CreateSources();
+            PerfTrace.Span("audio sources", at);
             if (soundSet == null)
             {
                 Debug.LogWarning("SurvivorAudio: no sound set assigned; the viewer stays silent.");

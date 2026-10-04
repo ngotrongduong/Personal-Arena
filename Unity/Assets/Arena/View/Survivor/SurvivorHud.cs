@@ -401,15 +401,19 @@ namespace PersonalArena.View
 
         private void Awake()
         {
+            double at = PerfTrace.Now;
             EnsureBuilt();
+            PerfTrace.Span("hud built", at);
         }
 
         private void LateUpdate()
         {
+            double at = PerfTrace.Now;
             Refresh(Time.unscaledDeltaTime);
             UpdateHeroLabel(Time.unscaledDeltaTime);
             UpdateToast(Time.unscaledDeltaTime);
             UpdateFps(Time.unscaledDeltaTime);
+            PerfTrace.Span("hud late update", at, 20.0);
         }
 
         /// <summary>Fades the spectator tag in/out (~0.2 s) and keeps it above the hero on screen.</summary>
