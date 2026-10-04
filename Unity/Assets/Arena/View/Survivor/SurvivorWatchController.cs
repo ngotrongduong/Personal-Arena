@@ -171,6 +171,7 @@ namespace PersonalArena.View
 
         private void Start()
         {
+            PerfTrace.Mark("controller start");
             ResolveReferences();
             string requestedBrain = CommandLineValue("-brain");
             if (!string.IsNullOrWhiteSpace(requestedBrain))
@@ -323,14 +324,18 @@ namespace PersonalArena.View
                 config.RunSeconds = shortRunSeconds;
             }
 
+            PerfTrace.Mark("panels bound");
             sim = new SurvivorSim(config, seed);
             followCamera.SetTarget(survivorRenderer);
             survivorRenderer.SetCamera(followCamera.ViewCamera);
             survivorRenderer.Bind(sim);
             survivorRenderer.WeaponEvolved += OnWeaponEvolved;
             hud.BindHeroLabel(survivorRenderer, followCamera.ViewCamera);
+            PerfTrace.Mark("renderer bound");
             StartRun();
+            PerfTrace.Mark("run started");
             PollBrain();
+            PerfTrace.Mark("brain polled");
 
             // -watchVersion <id> (checks the build): start on a saved lineage version, as "Xem ngay" does.
             string startVersion = CommandLineValue("-watchVersion");

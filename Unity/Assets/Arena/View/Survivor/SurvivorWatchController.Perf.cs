@@ -7,13 +7,16 @@ namespace PersonalArena.View
 {
     /// <summary>
     /// -perfLog &lt;file.csv&gt;: a smoothness check of the built viewer. Every 5 real seconds it appends one line
-    /// (sim time, enemies alive, average FPS, worst frame in ms, the hero's weapon ids). With -perfShots N it
+    /// (sim time, enemies alive, average FPS, worst frame in ms, the hero's weapon ids); the launch itself and
+    /// every frame over 50 ms go to *_startup.csv with the steps behind them (<see cref="PerfTrace"/>). With -perfShots N it
     /// also saves a screenshot next to the log every N sim seconds. -perfSeconds S quits after S real seconds
     /// (default 300). The window stays as launched.
     /// </summary>
     public sealed partial class SurvivorWatchController
     {
         private const float PerfWindowSeconds = 5f;
+        private const float SlowFrameSeconds = 0.05f;
+        private const int LaunchFrames = 3;
 
         private string perfLogPath;
         private float perfShotEvery;
@@ -52,6 +55,7 @@ namespace PersonalArena.View
                 fxDemoRound = Mathf.Max(0, firstPage);
             }
             File.WriteAllText(perfLogPath, "simTime,enemies,avgFps,worstMs,weapons\n");
+            File.WriteAllText(SiblingPath(perfLogPath, "_startup"), "step,atMs,tookMs\n");
         }
 
         private void UpdatePerfLog()
@@ -62,11 +66,27 @@ namespace PersonalArena.View
             }
 
             float delta = Time.unscaledDeltaTime;
-            perfFrames++;
-            perfClock += delta;
-            perfWorst = Mathf.Max(perfWorst, delta);
+            // Unity reports the launch (engine start, scene load) as the delta of frame 1 and the length of frame 1
+            // two frames later. Those are loading time, not stutter: they go to the start-up trace only.
+            bool launching = Time.frameCount <= LaunchFrames;
+            if (launching || delta > SlowFrameSeconds)
+            {
+                PerfTrace.Mark("frame " + Time.frameCount.ToString(CultureInfo.InvariantCulture) + " delta " +
+                    (delta * 1000f).ToString("0", CultureInfo.InvariantCulture));
+            }
+            if (!launching)
+            {
+                perfFrames++;
+                perfClock += delta;
+                perfWorst = Mathf.Max(perfWorst, delta);
+            }
             if (perfClock >= PerfWindowSeconds)
             {
+                string trace = PerfTrace.Drain();
+                if (trace.Length > 0)
+                {
+                    File.AppendAllText(SiblingPath(perfLogPath, "_startup"), trace);
+                }
                 perfLine.Length = 0;
                 perfLine.Append(sim.Time.ToString("0", CultureInfo.InvariantCulture)).Append(',')
                     .Append(sim.AliveEnemyCount).Append(',')

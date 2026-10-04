@@ -246,8 +246,10 @@ namespace PersonalArena.View
             animationDelta = Mathf.Clamp(delta, 0f, 0.25f);
 
             heroFlashRemaining = Mathf.Max(0f, heroFlashRemaining - realDelta);
+            double at = PerfTrace.Now;
             PresentFrame(realDelta);
             TopUpEnemyPools();
+            PerfTrace.Span("renderer late update", at, 20.0);
 
             frameCounter++;
             numbersLeft = NumbersPerFrame;
@@ -307,12 +309,22 @@ namespace PersonalArena.View
             shadowMaterial.renderQueue = 2990;
 
             actorsRoot = CreateChild("Actors", transform);
+            double at = PerfTrace.Now;
             BuildScenery();
+            PerfTrace.Span("build scenery", at);
+            at = PerfTrace.Now;
             BuildHero();
+            PerfTrace.Span("build hero", at);
+            at = PerfTrace.Now;
             BuildEnemyPools();
+            PerfTrace.Span("build enemy pools", at);
+            at = PerfTrace.Now;
             BuildPickups();
             BuildHammers();
+            PerfTrace.Span("build pickups", at);
+            at = PerfTrace.Now;
             BuildWeapons();
+            PerfTrace.Span("build weapons", at);
         }
 
         private static Transform CreateChild(string childName, Transform parent)

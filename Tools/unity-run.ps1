@@ -4,7 +4,7 @@
 
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File Tools/unity-run.ps1 -Tests EditMode
-  powershell -ExecutionPolicy Bypass -File Tools/unity-run.ps1 -Method PersonalArena.View.Editor.WatchBuild.BuildWindows -ExtraArgs "-watchBuildOutput Build/WatchNext"
+  powershell -ExecutionPolicy Bypass -File Tools/unity-run.ps1 -Method PersonalArena.View.Editor.WatchBuild.BuildWindows -ExtraArgs "-watchBuildOutput ../Build/WatchNext"   # relative paths start at Unity/
   powershell -ExecutionPolicy Bypass -File Tools/unity-run.ps1 -Method PersonalArena.ML.Editor.TrainingBuild.BuildWindows -ExtraArgs "-buildPath Build/TrainingNext"
   powershell -ExecutionPolicy Bypass -File Tools/unity-run.ps1 -Compile        # compile check only (no tests, no build)
 

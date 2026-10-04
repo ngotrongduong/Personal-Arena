@@ -196,7 +196,9 @@ namespace PersonalArena.View
                 storeScales[i] = 1f;
                 storePools[i] = new List<StoreInstance>(StorePerSlot);
             }
+            double at = PerfTrace.Now;
             StoreVfxSet set = Resources.Load<StoreVfxSet>(StoreVfxSet.ResourceName);
+            PerfTrace.Span("store set load", at);
             if (set == null)
             {
                 return;
@@ -278,7 +280,9 @@ namespace PersonalArena.View
             {
                 return null;
             }
+            double at = PerfTrace.Now;
             StoreInstance created = CreateStore(prefab, parent);
+            PerfTrace.Span("store create " + slot, at, 2.0);
             pool.Add(created);
             return created;
         }
