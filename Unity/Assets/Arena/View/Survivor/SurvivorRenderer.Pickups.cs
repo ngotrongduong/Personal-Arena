@@ -91,7 +91,9 @@ namespace PersonalArena.View
             public float Phase;
         }
 
-        private const int ProjectileLookCount = 8;
+        private const int ProjectileLookCount = 9;
+        /// <summary>Half-width of the sword wave model at spinner scale 1 (the catalog radius of the wave).</summary>
+        private const float SwordWaveRadius = 1.1f;
 
         private sealed class HammerView
         {
@@ -758,6 +760,17 @@ namespace PersonalArena.View
                     glow.localScale = new Vector3(1.3f, 1f, 2.6f);
                     break;
                 }
+                case ProjectileLook.SwordWave:
+                {
+                    // A flat crescent as wide as the real hit width, with a brighter thin core on its leading edge.
+                    float size = SwordWaveRadius / 0.9f;
+                    GameObject blade = CreateMeshObject("Wave", model, FxAssets.WaveCrescent, FxAssets.GhostMaterial);
+                    blade.transform.localScale = Vector3.one * size;
+                    GameObject core = CreateMeshObject("Wave Core", model, FxAssets.WaveCrescent, FxAssets.GhostMaterial);
+                    core.transform.localPosition = new Vector3(0f, 0.02f, 0.06f);
+                    core.transform.localScale = new Vector3(size * 0.96f, size, size * 0.55f);
+                    break;
+                }
                 case ProjectileLook.Arrow:
                 case ProjectileLook.PowerShot:
                 {
@@ -838,6 +851,11 @@ namespace PersonalArena.View
             view.Spinner.localScale = Vector3.one * (evolved ? SurvivorViewLogic.EvolutionScale : 1f);
             view.Spinner.localRotation = Quaternion.identity;
             SetRendererTint(view.Renderers, EvolvedTint, evolved);
+            if (look == ProjectileLook.SwordWave)
+            {
+                // The ghost material is white: the wave takes the sword's slash colour (gold once evolved).
+                SetRendererTint(view.Renderers, evolved ? SurvivorViewLogic.EvolutionGold : StrikeColor, true);
+            }
 
             int key = (int)look * 2 + (evolved ? 1 : 0);
             if (projectileTrails[key] == null)
@@ -881,6 +899,11 @@ namespace PersonalArena.View
                     view.Trail.widthMultiplier = 0.42f * scale;
                     view.Trail.time = 0.28f;
                     break;
+                case ProjectileLook.SwordWave:
+                    // The crescent is the whole effect: a ribbon behind it reads as a white block.
+                    view.Trail.widthMultiplier = 0f;
+                    view.Trail.time = 0.05f;
+                    break;
                 default:
                     view.Trail.widthMultiplier = 0.4f * scale;
                     view.Trail.time = 0.16f;
@@ -899,6 +922,7 @@ namespace PersonalArena.View
                 case ProjectileLook.Bomb: return new Color(1f, 0.35f, 0.15f, 0.65f);
                 case ProjectileLook.Bounce: return new Color(0.25f, 0.95f, 1f, 0.75f);
                 case ProjectileLook.Momentum: return new Color(0.35f, 1f, 0.65f, 0.75f);
+                case ProjectileLook.SwordWave: return new Color(0.78f, 0.9f, 1f, 0.3f);
                 default: return new Color(1f, 0.7f, 0.35f, 0.5f);
             }
         }
@@ -962,6 +986,11 @@ namespace PersonalArena.View
                     view.Id = projectile.Id;
                     ProjectileLook look = SurvivorViewLogic.ProjectileLookOf(projectile.SourceIndex, sim.Config.ClassDef);
                     SetProjectileLook(view, look, projectile.SourceIndex >= 0 && SurvivorViewLogic.IsEvolution(projectile.SourceIndex));
+                    if (look == ProjectileLook.SwordWave)
+                    {
+                        // As wide as the wave really cuts (area bonuses and the evolution widen it).
+                        view.Spinner.localScale = Vector3.one * (projectile.Radius / SwordWaveRadius);
+                    }
                     view.Previous = position;
                     view.Current = position;
                     view.Root.localPosition = position;
@@ -1095,7 +1124,8 @@ namespace PersonalArena.View
             }
             ProjectileLook[] looks =
             {
-                ProjectileLook.MagicBolt, ProjectileLook.Fireball, ProjectileLook.Bomb, ProjectileLook.Bounce, ProjectileLook.Momentum
+                ProjectileLook.MagicBolt, ProjectileLook.Fireball, ProjectileLook.Bomb, ProjectileLook.Bounce, ProjectileLook.Momentum,
+                ProjectileLook.SwordWave
             };
             for (int i = 0; i < looks.Length; i++)
             {

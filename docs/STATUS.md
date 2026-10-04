@@ -65,7 +65,14 @@
   nổ đúng bán kính; bỏ vòng/lấp lánh trên người khi vũ khí xoay, hào quang, vòng bảo hộ, mưa bom bắn. **Core:** Đạn nảy trúng
   quái thì bật sang quái gần nhất chưa trúng (trong 8 m), không có thì dội ngược; không tốn lượt nảy tường
   (`RicochetOffEnemy`, `BounceRicochetRange`). Schema vẫn v5; cân bằng Đạn nảy đổi nhẹ.
-- **Test:** CoreTests 642/642, pytest 204/204, EditMode 300/300 (PC, 2026-10-04).
+- **M14 (owner yêu cầu 2026-10-04: "làm sóng kiếm bay cho Kiếm quét") — xong:** Kiếm quét (vũ khí đầu của chiến binh,
+  catalog 0) và bản tiến hóa giờ phóng **sóng kiếm bay**: một lưỡi liềm bay theo hướng mặt (tốc độ 12, nửa bề rộng 1,1 m,
+  bay 6 m, +10 %/cấp, nhân với diện rộng), chém **mọi** quái trên đường bay, mỗi con một lần, đẩy lùi theo hướng bay; từ cấp 5
+  có thêm sóng thứ hai bay ra sau lưng. Vẫn là `WeaponPattern.Sweep` (def có `ProjectileSpeed > 0` → `LaunchSwordWaves`, cờ
+  `SurvivorProjectile.Wave`); dao găm và phun lửa vẫn là đòn quét hình cung. Trình xem: `ProjectileLook.SwordWave` (lưới
+  `FxAssets.WaveCrescent`, rộng đúng bằng vùng chém, vàng khi tiến hóa), bỏ vệt chém đứng yên trên người. Schema vẫn v5;
+  4 golden tier-1 ghi lại; AI cần train tiếp để quen vũ khí mới.
+- **Test:** CoreTests 644/644, pytest 204/204, EditMode 300/300 (PC, 2026-10-04).
 
 ## Việc tiếp theo (theo thứ tự)
 

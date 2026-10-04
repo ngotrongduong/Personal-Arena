@@ -68,7 +68,8 @@ namespace PersonalArena.View
         PowerShot,
         Bomb,
         Bounce,
-        Momentum
+        Momentum,
+        SwordWave
     }
 
     /// <summary>
@@ -477,6 +478,7 @@ namespace PersonalArena.View
                 case WeaponVisual.Bomb: return ProjectileLook.Bomb;
                 case WeaponVisual.Bounce: return ProjectileLook.Bounce;
                 case WeaponVisual.Momentum: return ProjectileLook.Momentum;
+                case WeaponVisual.Sweep: return ProjectileLook.SwordWave;
                 default: return ProjectileLook.Hammer;
             }
         }

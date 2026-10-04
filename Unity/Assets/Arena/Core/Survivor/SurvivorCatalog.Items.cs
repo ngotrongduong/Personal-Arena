@@ -15,7 +15,9 @@ namespace PersonalArena.Core.Survivor
         {
             CatalogIndex = 0, Id = "sword-sweep", Name = "Kiếm quét", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Sweep,
             BaseDamage = 20f, DamagePerLevel = 8f, BaseRange = 2.5f, BaseCooldown = 1.2f, Knockback = 0.5f,
-            RangePerLevel = 0.1f, ArcDegrees = 120f, BackArcLevel = 5
+            RangePerLevel = 0.1f, ArcDegrees = 120f, BackArcLevel = 5,
+            // A sweep with a projectile speed throws a sword wave: it flies ProjectileRange and cuts every enemy on its path.
+            ProjectileSpeed = 12f, ProjectileRadius = 1.1f, ProjectileRange = 6f
         };
         private static readonly ItemDef SpearThrust = new ItemDef
         {

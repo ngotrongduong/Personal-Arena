@@ -28,7 +28,8 @@ namespace PersonalArena.Core.Tests.Meta
             float sum = 0f;
             foreach (SurvivorRunStats stats in session.Results)
             {
-                Assert.That(stats.SurvivedSeconds, Is.GreaterThan(0f).And.LessThanOrEqualTo(60f + 1e-3f));
+                // A run that reaches the time limit ends on the first tick past it (float time adds up to 60.016).
+                Assert.That(stats.SurvivedSeconds, Is.GreaterThan(0f).And.LessThanOrEqualTo(60f + 0.05f));
                 Assert.That(stats.EndReason, Is.Not.EqualTo(EndReason.None));
                 sum += stats.Gold;
             }

@@ -28,6 +28,7 @@ namespace PersonalArena.View
         private static Material ghostMaterial;
         private static Mesh quad;
         private static Mesh slashArc;
+        private static Mesh waveCrescent;
         private static Mesh shieldBand;
 
         public static Shader FxShader
@@ -77,6 +78,9 @@ namespace PersonalArena.View
 
         /// <summary>Crescent sweep in front of the origin (+Z forward), vertex alpha fading toward both tips.</summary>
         public static Mesh SlashArc => slashArc != null ? slashArc : slashArc = BuildSlashArc();
+
+        /// <summary>Flat crescent bulging forward, used as the flying sword wave.</summary>
+        public static Mesh WaveCrescent => waveCrescent != null ? waveCrescent : waveCrescent = BuildWaveCrescent();
 
         /// <summary>Curved vertical band in front of the origin used as the block shield glow.</summary>
         public static Mesh ShieldBand => shieldBand != null ? shieldBand : shieldBand = BuildShieldBand();
@@ -360,6 +364,54 @@ namespace PersonalArena.View
             }
 
             Mesh mesh = new Mesh { name = "Fx Slash Arc" };
+            mesh.vertices = vertices;
+            mesh.colors = colors;
+            mesh.uv = uvs;
+            mesh.triangles = triangles;
+            mesh.RecalculateBounds();
+            return mesh;
+        }
+
+        /// <summary>
+        /// Flat crescent bulging toward +Z, centred on the origin, half a unit wide each side at scale 1 / 0.9:
+        /// the flying sword wave. Bright along the leading edge, pointed and faded at both tips.
+        /// </summary>
+        private static Mesh BuildWaveCrescent()
+        {
+            const int segments = 24;
+            const float sweep = 130f;
+            const float thickness = 0.45f;
+            const float back = 0.7f;
+            Vector3[] vertices = new Vector3[(segments + 1) * 2];
+            Color[] colors = new Color[vertices.Length];
+            Vector2[] uvs = new Vector2[vertices.Length];
+            int[] triangles = new int[segments * 6];
+            for (int i = 0; i <= segments; i++)
+            {
+                float t = i / (float)segments;
+                float angle = Mathf.Deg2Rad * (-sweep * 0.5f + sweep * t);
+                Vector3 direction = new Vector3(Mathf.Sin(angle), 0f, Mathf.Cos(angle));
+                float edge = Mathf.Sin(t * Mathf.PI);
+                vertices[i * 2] = direction * (1f - thickness * edge) - Vector3.forward * back;
+                vertices[i * 2 + 1] = direction - Vector3.forward * back;
+                colors[i * 2] = new Color(1f, 1f, 1f, 0f);
+                colors[i * 2 + 1] = new Color(1f, 1f, 1f, 0.25f + 0.75f * edge);
+                uvs[i * 2] = new Vector2(t, 0f);
+                uvs[i * 2 + 1] = new Vector2(t, 1f);
+                if (i < segments)
+                {
+                    int v = i * 2;
+                    int k = i * 6;
+                    triangles[k] = v;
+                    triangles[k + 1] = v + 1;
+                    triangles[k + 2] = v + 2;
+                    triangles[k + 3] = v + 1;
+                    triangles[k + 4] = v + 3;
+                    triangles[k + 5] = v + 2;
+                }
+            }
+
+            Mesh mesh = new Mesh { name = "Fx Wave Crescent" };
             mesh.vertices = vertices;
             mesh.colors = colors;
             mesh.uv = uvs;

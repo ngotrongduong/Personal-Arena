@@ -20,13 +20,13 @@ namespace PersonalArena.Core.Survivor
 
         private SurvivorProjectile NewProjectile()
         {
-            for (int i = 0; i < projectileLimit; i++) if (!projectiles[i].Active) { projectiles[i].ExplodeOnExpire = false; projectiles[i].Bouncing = false; return projectiles[i]; }
-            if (projectileLimit < projectiles.Length) { SurvivorProjectile fresh = projectiles[projectileLimit++]; fresh.ExplodeOnExpire = false; fresh.Bouncing = false; return fresh; }
+            for (int i = 0; i < projectileLimit; i++) if (!projectiles[i].Active) { projectiles[i].ExplodeOnExpire = false; projectiles[i].Bouncing = false; projectiles[i].Wave = false; return projectiles[i]; }
+            if (projectileLimit < projectiles.Length) { SurvivorProjectile fresh = projectiles[projectileLimit++]; fresh.ExplodeOnExpire = false; fresh.Bouncing = false; fresh.Wave = false; return fresh; }
             return null;
         }
 
         private bool LaunchProjectile(int source, Vec2 direction, float speed, float radius, float damage, float knockback,
-            float range, int pierce, float explodeRadius, float stun, bool explodeOnExpire = false, int bounces = -1)
+            float range, int pierce, float explodeRadius, float stun, bool explodeOnExpire = false, int bounces = -1, bool wave = false)
         {
             SurvivorProjectile projectile = NewProjectile();
             if (projectile == null) return false;
@@ -36,7 +36,8 @@ namespace PersonalArena.Core.Survivor
             projectile.PierceRemaining = pierce; projectile.HitCount = 0; projectile.SourceIndex = source;
             projectile.ExplodeRadius = explodeRadius; projectile.StunSeconds = stun; projectile.ExplodeOnExpire = explodeOnExpire;
             projectile.Bouncing = bounces >= 0; projectile.BouncesLeft = bounces; projectile.BounceCount = 0;
-            if (projectile.Bouncing) for (int i = 0; i < projectile.BounceIds.Length; i++) { projectile.BounceIds[i] = 0; projectile.BounceUntil[i] = 0f; }
+            projectile.Wave = wave;
+            if (projectile.Bouncing || wave) for (int i = 0; i < projectile.BounceIds.Length; i++) { projectile.BounceIds[i] = 0; projectile.BounceUntil[i] = 0f; }
             return true;
         }
 
@@ -100,7 +101,7 @@ namespace PersonalArena.Core.Survivor
                     continue;
                 }
                 Vec2 pushDirection = p.Velocity.Normalized();
-                if (p.Bouncing)
+                if (p.Bouncing || p.Wave)
                 {
                     bool struck = false; Vec2 struckAt = Vec2.Zero;
                     for (int n = 0; n < found; n++)
@@ -111,7 +112,7 @@ namespace PersonalArena.Core.Survivor
                         DamageEnemy(e, p.Damage, p.Knockback, pushDirection);
                     }
                     if (IsEnded) return;
-                    if (struck) RicochetOffEnemy(p, struckAt);
+                    if (struck && p.Bouncing) RicochetOffEnemy(p, struckAt);
                     continue;
                 }
                 for (int n = 0; n < found; n++)
@@ -128,7 +129,7 @@ namespace PersonalArena.Core.Survivor
 
         internal bool AlreadyHit(SurvivorProjectile p, int enemyId)
         {
-            if (p.Bouncing)
+            if (p.Bouncing || p.Wave)
             {
                 for (int i = 0; i < p.BounceIds.Length; i++) if (p.BounceIds[i] == enemyId && p.BounceUntil[i] > Time) return true;
                 return false;

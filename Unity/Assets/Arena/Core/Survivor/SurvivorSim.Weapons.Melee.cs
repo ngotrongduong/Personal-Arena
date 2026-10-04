@@ -26,6 +26,20 @@ namespace PersonalArena.Core.Survivor
             }
         }
 
+        /// <summary>
+        /// Sword wave: a wide blade of energy flies along the hero's facing and damages every enemy it passes over
+        /// (once each); from BackArcLevel a second wave flies backwards. Range grows per level and with area.
+        /// </summary>
+        private void LaunchSwordWaves(ItemDef def, int level, Vec2 facing)
+        {
+            float range = def.ProjectileRange * (1f + def.RangePerLevel * (level - 1)) * stats.AreaMul;
+            float damage = def.BaseDamage + def.DamagePerLevel * (level - 1);
+            float radius = def.ProjectileRadius * stats.AreaMul;
+            LaunchProjectile(def.CatalogIndex, facing, def.ProjectileSpeed, radius, damage, def.Knockback, range, 0, 0f, 0f, wave: true);
+            if (def.BackArcLevel > 0 && level >= def.BackArcLevel)
+                LaunchProjectile(def.CatalogIndex, facing * -1f, def.ProjectileSpeed, radius, damage, def.Knockback, range, 0, 0f, 0f, wave: true);
+        }
+
         private bool ThrustSpears(ItemDef def, int level, out Vec2 aim, out int count)
         {
             aim = Vec2.Zero; count = VolleyCount(def.CountByLevel, level);
