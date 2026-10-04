@@ -29,7 +29,11 @@
   giữ schema v5 (2592). **Bước A xong (chỉ trình xem):** hiệu ứng diện rộng phủ kín bán kính thật và lâu hơn (`AreaFill`,
   `AreaLinger`), hiệu ứng nam châm lớn, đạn đúng hình (cầu phép có vòng xoay, cầu lửa, bom có ngòi, pha lê nảy, mũi lao),
   bình máu/bình mana hình chai, nam châm chữ U, đồng vàng sáng, hào quang buff dưới chân (`SurvivorRenderer.Auras.cs`).
-  Bước B (vật phẩm rơi mới + buff ngắn hạn) và C (3 quái mới + quái vàng) sửa Core.
+  **Bước B xong (Core + trình xem):** quái thường rơi thêm bình mana (0,9 %, hồi 50 % năng lượng), bom, cuồng nộ (+50 % sát thương
+  10 s), khiên (−60 % sát thương nhận 8 s), tốc độ (+35 % tốc chạy 8 s) — mỗi món 0,15 %; bình máu 0,5 % → 0,9 %; bán kính diện
+  rộng gốc ×1,2 (`AreaBaseMul`). Món mới roll trên dòng ngẫu nhiên riêng (`SurvivorSim.Buffs.cs`), AI đọc bình mana ở kênh vật
+  phẩm thứ 7, bốn món còn lại qua kênh nam châm (schema v5 giữ nguyên). HUD chưa có đồng hồ buff (đang báo bằng chữ nổi + hào
+  quang). Bước C (3 quái mới + quái vàng) còn lại.
 - **Test:** CoreTests 629/629, pytest 204/204, EditMode 300/300 (PC, 2026-10-04).
 
 ## Việc tiếp theo (theo thứ tự)

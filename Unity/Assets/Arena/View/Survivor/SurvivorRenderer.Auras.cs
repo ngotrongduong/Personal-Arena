@@ -1,3 +1,4 @@
+using PersonalArena.Core.Survivor;
 using UnityEngine;
 
 namespace PersonalArena.View
@@ -110,9 +111,52 @@ namespace PersonalArena.View
             }
         }
 
-        // Timed item buffs arrive with the M11 drops; until then only the standing states above show an aura.
-        private bool HeroHasDamageBuff() => false;
-        private bool HeroHasDefenseBuff() => false;
-        private bool HeroHasSpeedBuff() => false;
+        private bool HeroHasDamageBuff() => sim.RageRemaining > 0f;
+        private bool HeroHasDefenseBuff() => sim.ShieldRemaining > 0f;
+        private bool HeroHasSpeedBuff() => sim.HasteRemaining > 0f;
+
+        private static readonly Color RageColor = new Color(1f, 0.35f, 0.12f);
+        private static readonly Color ShieldBuffColor = new Color(0.4f, 0.75f, 1f);
+        private static readonly Color HasteColor = new Color(0.45f, 1f, 0.55f);
+        private static readonly Color ManaColor = new Color(0.35f, 0.6f, 1f);
+
+        private void OnBuffStarted(SurvivorEvent e, Vector3 heroPosition)
+        {
+            Color color;
+            string label;
+            switch ((BuffKind)e.Id)
+            {
+                case BuffKind.Rage: color = RageColor; label = "CUỒNG NỘ!"; break;
+                case BuffKind.Shield: color = ShieldBuffColor; label = "KHIÊN!"; break;
+                default: color = HasteColor; label = "TỐC ĐỘ!"; break;
+            }
+            effects.Shockwave(heroPosition, color, 9f, 0.6f);
+            effects.Rune(heroPosition, color, 6f, 0.8f);
+            effects.Flash(heroPosition + Vector3.up, color, 4f, 0.25f);
+            effects.Sparkle(heroPosition, color, 22, 1.2f, 2.4f, 0.26f);
+            effects.Text(heroPosition + Vector3.up * 2.5f, label, color, 1.3f, 1.2f);
+        }
+
+        private void OnBombPickup(SurvivorEvent e)
+        {
+            Vector3 point = ArenaSpace.ToWorld(e.Point);
+            float radius = Mathf.Max(1f, e.Value);
+            effects.Shockwave(point, FireballColor, radius * RingQuadPerRadius, 0.6f);
+            effects.Shockwave(point, Color.white, radius * RingQuadPerRadius * 0.6f, 0.4f);
+            Blast(point, FireballColor, radius);
+            for (int i = 0; i < 6; i++)
+            {
+                float angle = i * Mathf.PI / 3f;
+                effects.Explosion(point + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * (radius * 0.6f), FireballColor, radius * 0.4f, false);
+            }
+            effects.Text(point + Vector3.up * 2.5f, "BOM!", FireballColor, 1.4f, 1.1f);
+        }
+
+        private void OnManaRestored(SurvivorEvent e, Vector3 heroPosition)
+        {
+            effects.Shockwave(heroPosition, ManaColor, 4f, 0.5f);
+            effects.Sparkle(heroPosition, ManaColor, 18, 0.8f, 2.2f, 0.24f);
+            effects.Text(heroPosition + Vector3.up * 2.2f, "+" + NumberText(Mathf.RoundToInt(e.Value)) + " năng lượng", ManaColor, 1.1f, 1f);
+        }
     }
 }

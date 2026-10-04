@@ -228,7 +228,7 @@ namespace PersonalArena.Core.Survivor
         {
             if (IsEnded || enemy == null || !enemy.Active) return;
             if (testEnemiesInvulnerable) return;
-            float damage = flat ? baseDamage : baseDamage * stats.Might;
+            float damage = flat ? baseDamage : baseDamage * stats.Might * (RageRemaining > 0f ? RageDamageMul : 1f);
             float critChance = flat ? 0f : enemy.StunRemaining > 0f ? MathF.Min(1f, stats.CritChance * 2f) : stats.CritChance;
             if (!flat && rng.NextFloat() < critChance) { damage *= stats.CritDamage; AddEvent(SurvivorEventType.Crit, id: enemy.Id, point: enemy.Position); }
             float removed = MathF.Min(enemy.Hp, damage); enemy.Hp -= removed; DamageDealtTotal += removed; enemy.LastHitTime = Time;
@@ -268,6 +268,7 @@ namespace PersonalArena.Core.Survivor
             if (rng.NextFloat() < EffectiveMeatChance) SpawnPickup(PickupKind.Meat, enemy.Position + Vec2.FromAngle(tuning.MeatDropAngle) * tuning.DropOffset, tuning.MeatHeal, true);
             if (!enemy.Elite && RollMagnetDrop())
                 SpawnPickup(PickupKind.Magnet, enemy.Position + Vec2.FromAngle(SurvivorCatalog.MagnetDropAngle) * tuning.DropOffset, 0f, false);
+            if (!enemy.Elite) RollBonusDrop(enemy);
         }
 
         private bool RollMagnetDrop() => rng.NextFloat() < SurvivorCatalog.MagnetChance;

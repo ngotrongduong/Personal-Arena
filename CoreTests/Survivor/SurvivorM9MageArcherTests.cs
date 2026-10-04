@@ -411,7 +411,7 @@ namespace PersonalArena.Core.Tests.Survivor
         {
             foreach (string id in new[] { "mage", "archer" })
             {
-                SurvivorConfig now = SurvivorTestHelpers.Config(); now.ClassDef = SurvivorDefaults.ForClass(id);
+                SurvivorConfig now = SurvivorTestHelpers.PreM11Drops(SurvivorTestHelpers.Config()); now.ClassDef = SurvivorDefaults.ForClass(id);
                 SurvivorConfig old = SurvivorTestHelpers.Config(); old.ClassDef = SurvivorDefaults.ForClass(id); SurvivorTestHelpers.OldRules(old);
                 SurvivorSim a = new SurvivorSim(now, 605), b = new SurvivorSim(old, 605); a.DisablePickupCollectionForTests(); b.DisablePickupCollectionForTests();
                 for (int tick = 0; tick < 1500; tick++)

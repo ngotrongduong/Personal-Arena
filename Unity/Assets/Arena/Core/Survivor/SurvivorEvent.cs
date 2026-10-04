@@ -16,7 +16,13 @@ namespace PersonalArena.Core.Survivor
         /// <summary>A summoner raised walkers at Point; Value = how many.</summary>
         EnemySummoned,
         /// <summary>A Strike weapon or skill blast hit the ground at Point; Value = radius, Id = source index.</summary>
-        StrikeLanded
+        StrikeLanded,
+        /// <summary>A power-up started a timed buff: Id = <see cref="BuffKind"/>, Value = seconds.</summary>
+        BuffStarted,
+        /// <summary>A bomb pickup went off around the hero at Point; Value = blast radius.</summary>
+        BombExploded,
+        /// <summary>A mana potion restored Value energy.</summary>
+        ManaRestored
     }
 
     public readonly struct SurvivorEvent
@@ -32,5 +38,5 @@ namespace PersonalArena.Core.Survivor
 
     public enum EndReason { None, Died, Won, TimeUp, Expired }
     public enum DeathCause { None, Surrounded, Boss, Brute, Contact, Projectile, Explosion }
-    public enum PickupKind { None, Gem, Gold, Meat, Chest, Magnet }
+    public enum PickupKind { None, Gem, Gold, Meat, Chest, Magnet, Mana, Bomb, Rage, Shield, Haste }
 }

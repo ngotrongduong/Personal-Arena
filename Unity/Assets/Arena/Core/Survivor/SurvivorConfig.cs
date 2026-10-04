@@ -115,6 +115,9 @@ namespace PersonalArena.Core.Survivor
         public float EnemySeparation = 0.5f;
         public int ObstacleAttemptsPerObstacle = 64;
 
+        /// <summary>M11: every area (weapon and skill radius) starts from this multiplier instead of 1.</summary>
+        public float AreaBaseMul = 1.2f;
+
         // Loot and pickups.
         public float GoldChance = 0.045f;
         public float GoldMin = 1f;
@@ -122,7 +125,11 @@ namespace PersonalArena.Core.Survivor
         public float GoldMax = 6f;
         public float EliteGoldMin = 20f;
         public float EliteGoldMax = 41f;
-        public float MeatChance = 0.005f;
+        public float MeatChance = 0.009f;
+        /// <summary>M11: chance per normal kill of a mana potion.</summary>
+        public float ManaChance = 0.009f;
+        /// <summary>M11: chance per normal kill of each of bomb, rage, shield and haste.</summary>
+        public float PowerUpChance = 0.0015f;
         public float MeatHeal = 30f;
         public float BossGold = 500f;
         public float DropOffset = 0.3f;
@@ -173,7 +180,7 @@ namespace PersonalArena.Core.Survivor
             Check(PickupFlySpeed); Check(CollectMargin); Check(FillerGold); Check(FillerHeal);
             Check(DenserSpawnsMul); Check(EarlyEliteSeconds); Check(FastRunnerSpeedMul); Check(LessMeatMul); Check(EarlyBruteFromSeconds);
             Check(RegenDelaySeconds); Check(RegenFractionPerSecond); Check(BossSummonFasterMul); Check(NightmareSpeedMul); Check(NightmareEliteHpMul);
-            Check(BossHpMul); Check(XpMul);
+            Check(BossHpMul); Check(XpMul); Check(AreaBaseMul); Check(ManaChance); Check(PowerUpChance);
             if (MaxWeaponSlots < 1 || MaxWeaponSlots > SurvivorCatalog.MaxWeapons) throw new ArgumentOutOfRangeException(nameof(MaxWeaponSlots));
             if (MaxPassiveSlots < 1 || MaxPassiveSlots > SurvivorCatalog.MaxPassives) throw new ArgumentOutOfRangeException(nameof(MaxPassiveSlots));
             if (BossHpMul <= 0f) throw new ArgumentOutOfRangeException(nameof(BossHpMul));

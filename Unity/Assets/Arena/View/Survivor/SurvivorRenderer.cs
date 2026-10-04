@@ -670,6 +670,15 @@ namespace PersonalArena.View
                     case SurvivorEventType.MagnetPicked:
                         OnMagnetPicked(heroPosition);
                         break;
+                    case SurvivorEventType.BuffStarted:
+                        OnBuffStarted(e, heroPosition);
+                        break;
+                    case SurvivorEventType.BombExploded:
+                        OnBombPickup(e);
+                        break;
+                    case SurvivorEventType.ManaRestored:
+                        OnManaRestored(e, heroPosition);
+                        break;
                     case SurvivorEventType.GoldCollected:
                         if (e.Id < 0 && e.Point.X * e.Point.X + e.Point.Y * e.Point.Y > 0f && sparksLeft > 0)
                         {

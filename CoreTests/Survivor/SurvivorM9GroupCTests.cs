@@ -489,7 +489,7 @@ namespace PersonalArena.Core.Tests.Survivor
         [Test]
         public void GroupC_NotOwned_TheRunIsBitIdenticalToTheOldRules()
         {
-            SurvivorConfig now = SurvivorTestHelpers.Config(); now.ClassDef = SurvivorDefaults.Mage();
+            SurvivorConfig now = SurvivorTestHelpers.PreM11Drops(SurvivorTestHelpers.Config()); now.ClassDef = SurvivorDefaults.Mage();
             SurvivorConfig old = SurvivorTestHelpers.Config(); old.ClassDef = SurvivorDefaults.Mage(); SurvivorTestHelpers.OldRules(old);
             SurvivorSim a = new SurvivorSim(now, 405), b = new SurvivorSim(old, 405); a.DisablePickupCollectionForTests(); b.DisablePickupCollectionForTests();
             for (int tick = 0; tick < 1500; tick++)

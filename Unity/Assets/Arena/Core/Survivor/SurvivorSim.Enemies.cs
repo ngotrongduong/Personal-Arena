@@ -435,6 +435,7 @@ namespace PersonalArena.Core.Survivor
         private bool ApplyHeroDamage(float raw, int sourceId)
         {
             float damage = MathF.Max(1f, raw - stats.Armor);
+            if (ShieldRemaining > 0f) damage *= ShieldDamageTakenMul;
             damage = MathF.Min(damage, Hero.Hp); Hero.Hp -= damage; DamageTaken += damage; lastHeroDamage = damage;
             float hpRatio = Hero.MaxHp > 0f ? Hero.Hp / Hero.MaxHp : 0f;
             if (hpRatio < MinHpRatio) { MinHpRatio = hpRatio; MinHpTime = Time; }
