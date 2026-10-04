@@ -16,7 +16,7 @@ namespace PersonalArena.Core.Tests.Survivor
         {
             SurvivorSim warrior = ClassSim(SurvivorDefaults.Warrior(), 1);
             Assert.That(warrior.Inventory.Level(0), Is.EqualTo(1)); Assert.That(warrior.Hero.MaxHp, Is.EqualTo(150f));
-            Assert.That(SurvivorDefaults.Warrior().WeaponPool, Is.EqualTo(new[] { 0, 1, 2, 3, 4, 5 }));
+            Assert.That(SurvivorDefaults.Warrior().WeaponPool, Is.EqualTo(new[] { 0, 1, 2, 3, 4, 5, 26, 27, 28, 29, 30, 31, 32, 33, 64 }));
 
             SurvivorSim mage = ClassSim(SurvivorDefaults.Mage(), 1);
             Assert.That(mage.Inventory.Level(SurvivorCatalog.MagicBoltIndex), Is.EqualTo(1)); Assert.That(mage.Inventory.Level(0), Is.Zero);
@@ -334,13 +334,43 @@ namespace PersonalArena.Core.Tests.Survivor
         }
 
         [Test]
-        public void ArrowRain_StrikesSeveralDifferentEnemies()
+        public void Crossbow_TwoBoltsStillHitTheEnemyBehindTheTarget()
+        {
+            SurvivorSim sim = WeaponClassSim(SurvivorDefaults.Archer(), SurvivorCatalog.CrossbowIndex, 23);
+            sim.GiveItemForTests(SurvivorCatalog.CrossbowIndex, 4); // two bolts
+            SurvivorEnemy front = sim.SpawnEnemyForTests(2, new Vec2(3f, 0f)); SurvivorEnemy behind = sim.SpawnEnemyForTests(2, new Vec2(7f, 0f));
+            sim.Step(default);
+            Assert.That(front.Hp, Is.LessThan(front.MaxHp)); Assert.That(behind.Hp, Is.LessThan(behind.MaxHp), "even volleys keep one bolt on the aim line");
+        }
+
+        [Test]
+        public void ArrowRain_CoversTheDensestGroupInRange()
         {
             SurvivorSim sim = WeaponClassSim(SurvivorDefaults.Archer(), SurvivorCatalog.ArrowRainIndex, 19);
-            SurvivorEnemy a = sim.SpawnEnemyForTests(2, new Vec2(6f, 0f)); SurvivorEnemy b = sim.SpawnEnemyForTests(2, new Vec2(-6f, 0f));
+            SurvivorEnemy lone = sim.SpawnEnemyForTests(2, new Vec2(6f, 0f));
+            var group = new System.Collections.Generic.List<SurvivorEnemy>();
+            foreach (Vec2 offset in new[] { new Vec2(0f, 0f), new Vec2(1f, 0f), new Vec2(-1f, 0f), new Vec2(0f, 1.2f), new Vec2(0f, -1.2f) })
+                group.Add(sim.SpawnEnemyForTests(2, new Vec2(-6f, 0f) + offset));
+            sim.Step(default);
+            Assert.That(Find(sim.Events, SurvivorEventType.WeaponFired, SurvivorCatalog.ArrowRainIndex).Extra, Is.EqualTo(1f));
+            SurvivorEvent strike = Find(sim.Events, SurvivorEventType.StrikeLanded, SurvivorCatalog.ArrowRainIndex);
+            Assert.That(strike.Value, Is.EqualTo(2.6f).Within(1e-4f));
+            Assert.That((strike.Point - new Vec2(-6f, 0f)).Length, Is.LessThan(1.3f));
+            foreach (SurvivorEnemy e in group) Assert.That(e.Hp, Is.LessThan(e.MaxHp));
+            Assert.That(lone.Hp, Is.EqualTo(lone.MaxHp));
+        }
+
+        [Test]
+        public void ArrowRain_HigherLevelsRainOnSeparateGroups()
+        {
+            SurvivorSim sim = WeaponClassSim(SurvivorDefaults.Archer(), SurvivorCatalog.ArrowRainIndex, 19);
+            sim.GiveItemForTests(SurvivorCatalog.ArrowRainIndex, 3);
+            SurvivorEnemy[] left = { sim.SpawnEnemyForTests(2, new Vec2(-6f, 0f)), sim.SpawnEnemyForTests(2, new Vec2(-6f, 1f)), sim.SpawnEnemyForTests(2, new Vec2(-6f, -1f)) };
+            SurvivorEnemy[] right = { sim.SpawnEnemyForTests(2, new Vec2(6f, 0f)), sim.SpawnEnemyForTests(2, new Vec2(6f, 1f)) };
             sim.Step(default);
             Assert.That(Find(sim.Events, SurvivorEventType.WeaponFired, SurvivorCatalog.ArrowRainIndex).Extra, Is.EqualTo(2f));
-            Assert.That(a.Hp, Is.LessThan(a.MaxHp)); Assert.That(b.Hp, Is.LessThan(b.MaxHp));
+            foreach (SurvivorEnemy e in left) Assert.That(e.Hp, Is.LessThan(e.MaxHp));
+            foreach (SurvivorEnemy e in right) Assert.That(e.Hp, Is.LessThan(e.MaxHp));
         }
 
         [Test]

@@ -10,12 +10,11 @@ Versions: `com.unity.ml-agents` 4.x, `mlagents==1.1.0`, venv `.venv-ml` (see `do
 
 ## Configure
 
-- One YAML per class: `Trainer/config/<class>_ppo.yaml`, behavior name = class name
+- One YAML per class: `Trainer/config/<class>_survivor_ppo.yaml`, behavior name = class name
   (`Warrior`, `Mage`, `Archer`), must equal `BehaviorParameters.BehaviorName` in Unity.
-- `environment_parameters` names must match what `HeroAgent` reads via
-  `Academy.Instance.EnvironmentParameters.GetWithDefault(...)` and map onto `ArenaConfig`:
-  `zombie_count`, `arena_size`, `hp_mult`, `damage_mult`, `speed_mult`,
-  `kind_mix_runner`, `kind_mix_brute`, `kind_mix_spitter` (M3).
+- `environment_parameters` names must match what the ML glue reads via
+  `Academy.Instance.EnvironmentParameters.GetWithDefault(...)`; check the current list in the YAML
+  (`run_seconds`, `build_level_max`, `tier_max`, `hard_share`, …) rather than this file.
 - Change one hyperparameter at a time; record why in the run log.
 
 ## Run
@@ -26,11 +25,11 @@ Versions: `com.unity.ml-agents` 4.x, `mlagents==1.1.0`, venv `.venv-ml` (see `do
 
 ## Diagnose
 
-For a run: read `results/<run-id>/run_logs/` and TensorBoard scalars (or ask the owner for a
+For a run: read `Trainer/runs/<run-id>/` (run logs, `Trainer/runs/<run-id>.log`) and TensorBoard scalars (or ask the owner for a
 screenshot). Use the table in `docs/TRAINING.md`. For deeper design questions spawn the
 `rl-trainer` subagent.
 
 ## Finish
 
-Add a row to the run log in `docs/TRAINING.md`; copy a good model into the save folder only via
-the game's Training Center flow (M4), never into git.
+Add a row to the run log in `docs/TRAINING.md`. Good brains are kept by the champion and lineage
+tools (`Trainer/champion.py`, `Trainer/brain_lineage.py`) under `Trainer/runs/champions/`; never in git.

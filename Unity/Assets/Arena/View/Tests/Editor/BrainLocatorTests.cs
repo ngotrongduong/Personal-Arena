@@ -30,7 +30,7 @@ namespace PersonalArena.View.Tests
         [Test]
         public void CurrentSchema_IsTheSurvivorObservationSchema()
         {
-            Assert.That(BrainLocator.CurrentSchemaVersion, Is.EqualTo(4));
+            Assert.That(BrainLocator.CurrentSchemaVersion, Is.EqualTo(Current));
             Assert.That(BrainLocator.SchemaFileName, Is.EqualTo("schema_version.txt"));
         }
 

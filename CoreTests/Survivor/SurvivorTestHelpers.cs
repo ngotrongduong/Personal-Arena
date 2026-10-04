@@ -14,6 +14,27 @@ namespace PersonalArena.Core.Tests.Survivor
             config.Build.Tier = tier; return config;
         }
 
+        /// <summary>
+        /// The pre-M9 rules: kick stuns the boss, 4 + 4 slots, the old item pools, no fourth Warrior skill and no skills 5-6 for any class. Used by the bit-exact goldens and by tests
+        /// of the old slot behaviour; new-content tests use <see cref="Config"/> as is.
+        /// </summary>
+        public static SurvivorConfig OldRules(SurvivorConfig config)
+        {
+            config.Tuning.MaxWeaponSlots = 4; config.Tuning.MaxPassiveSlots = 4; config.Tuning.KickStunsBoss = true; config.Tuning.CenteredEvenVolleys = false;
+            config.ClassDef.PassivePool = new[] { 6, 7, 8, 9, 10, 11, 12, 13 };
+            for (int slot = 4; slot < SurvivorInput.SkillSlotCount; slot++) config.ClassDef.ActiveSkills[slot] = new SkillDef { Id = "none", Kind = SkillKind.None };
+            if (config.ClassDef.Id == "mage") config.ClassDef.WeaponPool = new[] { 14, 15, 16, 17, 18, 19 };
+            if (config.ClassDef.Id == "archer") config.ClassDef.WeaponPool = new[] { 20, 21, 22, 23, 24, 25 };
+            if (config.ClassDef.Id == "warrior")
+            {
+                config.ClassDef.WeaponPool = new[] { 0, 1, 2, 3, 4, 5 };
+                config.ClassDef.ActiveSkills[3] = new SkillDef { Id = "none", Kind = SkillKind.None };
+            }
+            return config;
+        }
+
+        public static SurvivorConfig OldConfig(int tier = 1, float runSeconds = 900f) => OldRules(Config(tier, runSeconds));
+
         public static void Step(SurvivorSim sim, int ticks, SurvivorInput input = default)
         {
             for (int i = 0; i < ticks && !sim.IsEnded; i++)
@@ -23,7 +44,7 @@ namespace PersonalArena.Core.Tests.Survivor
         }
 
         /// <summary>Zero-weight brain; a non-negative favoured index gets a bias of 10 in its branch.</summary>
-        public static PolicyBrain Brain(int observation = SurvivorObservation.Size, int move = 9, int skill = 5, int pick = 5, int favouredMove = -1, int favouredPick = -1)
+        public static PolicyBrain Brain(int observation = SurvivorObservation.Size, int move = SurvivorInput.MoveBranchSize, int skill = SurvivorInput.SkillBranchSize, int pick = SurvivorInput.PickBranchSize, int favouredMove = -1, int favouredPick = -1)
         {
             using MemoryStream stream = new MemoryStream(); using BinaryWriter writer = new BinaryWriter(stream, Encoding.UTF8, true);
             writer.Write(new byte[] { (byte)'P', (byte)'A', (byte)'B', (byte)'R' }); writer.Write(PolicyBrain.FormatVersion);

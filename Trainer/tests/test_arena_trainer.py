@@ -177,7 +177,7 @@ def test_schema_version_defaults_to_one_and_round_trips_current_version(tmp_path
     arena_trainer.write_schema_version(run_dir)
 
     assert arena_trainer.run_schema_version(run_dir) == arena_trainer.SCHEMA_VERSION
-    assert (run_dir / arena_trainer.SCHEMA_FILE).read_text(encoding="utf-8") == "4"
+    assert (run_dir / arena_trainer.SCHEMA_FILE).read_text(encoding="utf-8") == "5"
 
 
 def test_schema_version_reads_an_older_schema_marker(tmp_path: Path):

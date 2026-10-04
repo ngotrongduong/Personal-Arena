@@ -11,6 +11,9 @@ import pytest
 from Trainer import arena_trainer, brain_upgrade, export_brain
 
 
+PINNED_FAKE_WEIGHT_SHA = "c4a11cc2bb42b9bef66042e29dee16de2b39a654002ea07d8b891563cc716e4e"
+
+
 def schemas() -> tuple[dict, dict]:
     old = {
         "schema_version": 1,
@@ -38,39 +41,50 @@ def schemas() -> tuple[dict, dict]:
     return old, new
 
 
-def fake_checkpoint(seed: int = 19, step: int = 123) -> dict:
+def fake_checkpoint(
+    seed: int = 19,
+    step: int = 123,
+    in_size: int = 12,
+    branches: tuple[int, ...] = (3, 2),
+    hidden: int = 8,
+) -> dict:
+    """A tiny ML-Agents-shaped checkpoint.
+
+    Weights come from ``numpy.random.RandomState`` with explicit float32 casts, never from torch's RNG,
+    so the bytes (and the committed cross-language fixtures built from them) are identical on every
+    platform.
+    """
     import torch
 
-    generator = torch.Generator().manual_seed(seed)
+    random = np.random.RandomState(seed)
 
-    def layer(out_size: int, in_size: int) -> tuple[object, object]:
-        return (
-            torch.randn((out_size, in_size), generator=generator) * 0.1,
-            torch.randn((out_size,), generator=generator) * 0.1,
-        )
+    def layer(out_size: int, in_width: int) -> tuple[object, object]:
+        weight = (random.standard_normal((out_size, in_width)).astype(np.float32) * np.float32(0.1)).astype(np.float32)
+        bias = (random.standard_normal(out_size).astype(np.float32) * np.float32(0.1)).astype(np.float32)
+        return torch.from_numpy(weight), torch.from_numpy(bias)
 
     policy: dict = {
         "version_number": torch.tensor([3.0]),
         "is_continuous_int_deprecated": torch.tensor([0.0]),
         "continuous_act_size_vector": torch.tensor([0.0]),
-        "discrete_act_size_vector": torch.tensor([[3.0, 2.0]]),
-        "act_size_vector_deprecated": torch.tensor([5.0]),
+        "discrete_act_size_vector": torch.tensor([[float(size) for size in branches]]),
+        "act_size_vector_deprecated": torch.tensor([float(sum(branches))]),
         "memory_size_vector": torch.tensor([0.0]),
     }
     critic: dict = {}
-    width = 12
+    width = in_size
     for index in (0, 2, 4):
-        weight, bias = layer(8, width)
+        weight, bias = layer(hidden, width)
         policy[f"network_body._body_endoder.seq_layers.{index}.weight"] = weight
         policy[f"network_body._body_endoder.seq_layers.{index}.bias"] = bias
-        critic[f"network_body._body_endoder.seq_layers.{index}.weight"] = weight.clone() * 0.7
-        critic[f"network_body._body_endoder.seq_layers.{index}.bias"] = bias.clone() * 0.7
-        width = 8
-    for index, size in enumerate((3, 2)):
-        weight, bias = layer(size, 8)
+        critic[f"network_body._body_endoder.seq_layers.{index}.weight"] = (weight.clone() * 0.7).float()
+        critic[f"network_body._body_endoder.seq_layers.{index}.bias"] = (bias.clone() * 0.7).float()
+        width = hidden
+    for index, size in enumerate(branches):
+        weight, bias = layer(size, hidden)
         policy[f"action_model._discrete_distribution.branches.{index}.weight"] = weight
         policy[f"action_model._discrete_distribution.branches.{index}.bias"] = bias
-    value_weight, value_bias = layer(1, 8)
+    value_weight, value_bias = layer(1, hidden)
     critic["value_heads.value_heads.extrinsic.weight"] = value_weight
     critic["value_heads.value_heads.extrinsic.bias"] = value_bias
     return {
@@ -128,7 +142,9 @@ def test_upgrade_preserves_actor_logits_and_critic_body():
     assert "Optimizer:value_optimizer" in checkpoint
     assert upgraded["global_step"]["_GlobalSteps__global_step"].item() == 123
     assert upgraded["Policy"]["discrete_act_size_vector"].tolist() == [[5.0, 2.0, 4.0]]
-    np.testing.assert_allclose(new_branches[0][1][3:], old_branches[0][1].min(), rtol=0, atol=0)
+    np.testing.assert_allclose(
+        new_branches[0][1][3:], old_branches[0][1].min() - brain_upgrade.NEW_CHOICE_BIAS_MARGIN, rtol=0, atol=0
+    )
     np.testing.assert_allclose(new_branches[2][1], 0, rtol=0, atol=0)
 
 
@@ -261,8 +277,10 @@ def test_current_schema_file_is_valid_and_matches_the_expected_size():
     schema = arena_trainer.load_schema(arena_trainer.SCHEMA_VERSION)
 
     assert arena_trainer.schema_path(arena_trainer.SCHEMA_VERSION).is_file()
-    assert arena_trainer.observation_size(schema) == 2264
-    assert [action["size"] for action in schema["actions"]] == [9, 5, 5]
+    assert arena_trainer.SCHEMA_VERSION == 5
+    assert schema["schema_version"] == 5
+    assert arena_trainer.observation_size(schema) == 2592
+    assert [action["size"] for action in schema["actions"]] == [9, 7, 5]
 
 
 def test_load_schema_rejects_duplicate_names_and_inconsistent_totals(tmp_path: Path, monkeypatch):
@@ -281,9 +299,16 @@ def test_load_schema_rejects_duplicate_names_and_inconsistent_totals(tmp_path: P
         arena_trainer.load_schema(1)
 
 
+FIXTURE_HIDDEN = 8
+
+
 def fixture_payloads() -> tuple[bytes, bytes, dict]:
-    old_schema, new_schema = schemas()
-    old_state = fake_checkpoint(seed=1919, step=19019)
+    """Real v4 -> v5 upgrade of a small (hidden width 8) deterministic numpy-built checkpoint."""
+    old_schema = arena_trainer.load_schema(4)
+    new_schema = arena_trainer.load_schema(5)
+    old_state = fake_checkpoint(
+        seed=1919, step=19019, in_size=2264, branches=(9, 5, 5), hidden=FIXTURE_HIDDEN
+    )
     new_state = brain_upgrade.upgrade_state(old_state, old_schema, new_schema, seed=20)
     old_body, old_branches = export_brain.extract_actor_layers(old_state["Policy"])
     new_body, new_branches = export_brain.extract_actor_layers(new_state["Policy"])
@@ -308,6 +333,123 @@ def test_cross_language_fixtures_are_current():
     assert (fixtures / "old.brain").read_bytes() == old_brain
     assert (fixtures / "new.brain").read_bytes() == new_brain
     assert json.loads((fixtures / "map.json").read_text(encoding="utf-8")) == mapping
+
+
+def test_v4_to_v5_maps_every_block_as_documented():
+    old_schema = arena_trainer.load_schema(4)
+    new_schema = arena_trainer.load_schema(5)
+    columns = brain_upgrade.column_map(old_schema, new_schema)
+
+    assert len(columns) == 2264
+    assert len(set(columns)) == 2264
+    assert columns[0:64] == list(range(0, 64))  # self block keeps its positions
+    assert columns[64:128] == list(range(72, 136))  # inventory slot i -> 72 + i
+    for slot in range(4):
+        old_base = 128 + 66 * slot
+        new_base = 200 + 130 * slot
+        assert columns[old_base : old_base + 64] == list(range(new_base, new_base + 64))
+        assert columns[old_base + 64] == new_base + 128  # next level
+        assert columns[old_base + 65] == new_base + 129  # present flag
+    assert columns[392:2264] == list(range(720, 2592))  # rays and density shift by 328
+    assert brain_upgrade.action_map(old_schema, new_schema) == [(0, 9), (1, 5), (2, 5)]
+    new_only = set(range(2592)) - set(columns)
+    assert len(new_only) == 2592 - 2264
+    assert set(range(64, 72)) <= new_only
+
+
+def test_v5_schema_json_extends_v4_names():
+    old = {segment["name"]: segment for segment in arena_trainer.load_schema(4)["observation"]}
+    new = {segment["name"]: segment for segment in arena_trainer.load_schema(5)["observation"]}
+
+    assert list(old) == list(new)
+    assert new["self"]["fields"][:64] == old["self"]["fields"]
+    assert new["self"]["fields"][64:] == [
+        "skill_cooldown_4", "skill_cooldown_5", "skill_allowed_4", "skill_allowed_5",
+        "last_skill_5", "last_skill_6", "reserved_70", "reserved_71",
+    ]
+    assert new["inventory"]["repeat"] == 128
+    assert len(new["offers"]["fields"]) == 130
+    assert new["offers"]["fields"][:64] == old["offers"]["fields"][:64]
+    assert new["offers"]["fields"][-2:] == ["next_level", "present"]
+    assert new["rays"] == old["rays"] and new["density"] == old["density"]
+    assert arena_trainer.load_schema(5)["action_size"] == 21
+
+
+def test_v4_to_v5_upgrade_treats_weights_and_biases():
+    old_schema = arena_trainer.load_schema(4)
+    new_schema = arena_trainer.load_schema(5)
+    old = fake_checkpoint(seed=5, in_size=2264, branches=(9, 5, 5), hidden=6)
+    new = brain_upgrade.upgrade_state(old, old_schema, new_schema, seed=3)
+    columns = brain_upgrade.column_map(old_schema, new_schema)
+    new_only = sorted(set(range(2592)) - set(columns))
+
+    for section in ("Policy", "Optimizer:critic"):
+        old_weight = old[section][brain_upgrade.INPUT_WEIGHT].numpy()
+        new_weight = new[section][brain_upgrade.INPUT_WEIGHT].numpy()
+        assert new_weight.shape == (6, 2592)
+        np.testing.assert_array_equal(new_weight[:, columns], old_weight)  # old weights unchanged
+        assert not new_weight[:, new_only].any()  # new input columns are exactly zero
+
+    old_policy, new_policy = old["Policy"], new["Policy"]
+    assert new_policy["discrete_act_size_vector"].tolist() == [[9.0, 7.0, 5.0]]
+    assert new_policy["act_size_vector_deprecated"].tolist() == [21.0]
+    for branch, old_size in ((0, 9), (2, 5)):
+        for kind in ("weight", "bias"):
+            key = f"action_model._discrete_distribution.branches.{branch}.{kind}"
+            np.testing.assert_array_equal(new_policy[key].numpy(), old_policy[key].numpy())
+    weight_key = "action_model._discrete_distribution.branches.1.weight"
+    bias_key = "action_model._discrete_distribution.branches.1.bias"
+    np.testing.assert_array_equal(new_policy[weight_key].numpy()[:5], old_policy[weight_key].numpy())
+    np.testing.assert_array_equal(new_policy[bias_key].numpy()[:5], old_policy[bias_key].numpy())
+    new_bias = new_policy[bias_key].numpy()
+    assert new_bias.shape == (7,)
+    expected = old_policy[bias_key].numpy().min() - brain_upgrade.NEW_CHOICE_BIAS_MARGIN
+    np.testing.assert_array_equal(new_bias[5:], np.float32([expected, expected]))
+    assert new_bias[5:].max() < new_bias[:5].min() - 4.0  # new skills are clearly less likely
+    assert np.abs(new_policy[weight_key].numpy()[5:]).max() < 0.1  # small random rows, not copies
+
+
+def test_v4_to_v5_upgrade_preserves_old_logits_on_real_layout():
+    old_schema = arena_trainer.load_schema(4)
+    new_schema = arena_trainer.load_schema(5)
+    old = fake_checkpoint(seed=6, in_size=2264, branches=(9, 5, 5), hidden=16)
+    new = brain_upgrade.upgrade_state(old, old_schema, new_schema, seed=1)
+    columns = brain_upgrade.column_map(old_schema, new_schema)
+    old_body, old_branches = export_brain.extract_actor_layers(old["Policy"])
+    new_body, new_branches = export_brain.extract_actor_layers(new["Policy"])
+    rng = np.random.default_rng(3)
+    for _ in range(5):
+        old_obs = rng.uniform(-1, 1, 2264).astype(np.float32)
+        new_obs = np.zeros(2592, dtype=np.float32)
+        new_obs[columns] = old_obs
+        old_logits = export_brain.forward(old_body, old_branches, old_obs)
+        new_logits = export_brain.forward(new_body, new_branches, new_obs)
+        np.testing.assert_allclose(new_logits[:9], old_logits[:9], rtol=0, atol=1e-5)
+        np.testing.assert_allclose(new_logits[9:14], old_logits[9:14], rtol=0, atol=1e-5)
+        np.testing.assert_allclose(new_logits[16:], old_logits[14:], rtol=0, atol=1e-5)
+        # New skill logits stay below every old skill logit by roughly the bias margin.
+        assert new_logits[14:16].max() < old_logits[9:14].min() - 2.0
+
+
+def test_upgrade_is_deterministic_and_independent_of_torch_rng():
+    import torch
+
+    old_schema = arena_trainer.load_schema(4)
+    new_schema = arena_trainer.load_schema(5)
+    old = fake_checkpoint(seed=7, in_size=2264, branches=(9, 5, 5), hidden=4)
+    torch.manual_seed(1)
+    first = brain_upgrade.upgrade_state(old, old_schema, new_schema, seed=9)
+    torch.manual_seed(2)
+    second = brain_upgrade.upgrade_state(old, old_schema, new_schema, seed=9)
+    key = "action_model._discrete_distribution.branches.1.weight"
+    assert torch.equal(first["Policy"][key], second["Policy"][key])
+
+
+def test_fake_checkpoint_bytes_are_pinned_across_platforms():
+    state = fake_checkpoint(seed=1, in_size=3, branches=(2,), hidden=2)
+    weight = state["Policy"][brain_upgrade.INPUT_WEIGHT].numpy()
+    # numpy's RandomState (MT19937) stream is frozen by numpy's compatibility guarantee.
+    assert hashlib.sha256(weight.astype("<f4").tobytes()).hexdigest() == PINNED_FAKE_WEIGHT_SHA
 
 
 def make_mlagents(obs_size: int, branches: tuple[int, ...], model_path: Path, load: bool = False):

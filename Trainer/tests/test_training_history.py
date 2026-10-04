@@ -57,7 +57,7 @@ def test_build_history_merges_filters_deduplicates_and_downsamples(tmp_path: Pat
     }
     assert history["run_id"] == "warrior-s002"
     assert history["behavior"] == "Warrior"
-    assert history["schema_version"] == 4
+    assert history["schema_version"] == 5
     assert history["last_step"] == 25
     series = by_tag(history)
     assert set(series) == {

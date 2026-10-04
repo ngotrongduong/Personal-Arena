@@ -46,3 +46,37 @@ Resources/SkillIcons/arrow-rain       arrow-cluster         Lorc
 Resources/SkillIcons/orbit-knife      thrown-daggers        Lorc
 Resources/SkillIcons/dagger           plain-dagger          Lorc
 Resources/SkillIcons/crossbow         crossbow              Carl Olsen (https://github.com/carl-olsen)
+
+M9 items and skills (added 2026-10-04, one glyph per id):
+Resources/SkillIcons/flame-cone        dragon-breath         Lorc
+Resources/SkillIcons/combo-blade       crossed-swords        Lorc
+Resources/SkillIcons/heavy-hammer      warhammer             Delapouite
+Resources/SkillIcons/bomb              unlit-bomb            Lorc
+Resources/SkillIcons/retaliate         shield-reflect        Lorc
+Resources/SkillIcons/barrier           shield-echoes         Lorc
+Resources/SkillIcons/boomerang         boomerang             Delapouite
+Resources/SkillIcons/poison-pool       poison-gas            Lorc
+Resources/SkillIcons/duration-charm    stopwatch             Lorc
+Resources/SkillIcons/duplicator        two-shadows           Lorc
+Resources/SkillIcons/spiked-armor      spiked-armor          Lorc
+Resources/SkillIcons/omni-box          cube                  Delapouite
+Resources/SkillIcons/recovery          healing               Delapouite
+Resources/SkillIcons/clover            clover                Lorc
+Resources/SkillIcons/greed             receive-money         Delapouite
+Resources/SkillIcons/crown             crown                 Lorc
+Resources/SkillIcons/bounce-shot       divert                Lorc
+Resources/SkillIcons/momentum-spirit   ghost                 Lorc
+Resources/SkillIcons/time-clock        alarm-clock           Delapouite
+Resources/SkillIcons/purge             bright-explosion      Lorc
+Resources/SkillIcons/bomb-ring         cluster-bomb          Lorc
+Resources/SkillIcons/fireball-nova     fire-ring             Lorc
+Resources/SkillIcons/bracelet-trio     bracers               Skoll
+Resources/SkillIcons/quad-shot         arrow-flights         Lorc
+Resources/SkillIcons/magi-stone        rune-stone            Lorc
+Resources/SkillIcons/war-cry           shouting              Lorc
+Resources/SkillIcons/leap-slam         quake-stomp           Lorc
+Resources/SkillIcons/whirlwind         whirlwind             Lorc
+Resources/SkillIcons/caltrop-trap      caltrops              Delapouite
+Resources/SkillIcons/arrow-barrage     target-arrows         Lorc
+Resources/SkillIcons/fire-wall         fire-wave             Lorc
+Resources/SkillIcons/chain-lightning   lightning-arc         Lorc

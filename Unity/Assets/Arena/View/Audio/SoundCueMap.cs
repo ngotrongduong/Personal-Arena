@@ -181,6 +181,23 @@ namespace PersonalArena.View
                 case SurvivorCatalog.OrbitKnifeIndex: return SoundCue.KnifeWhirl;
                 case SurvivorCatalog.DaggerIndex: return SoundCue.DaggerSlash;
                 case SurvivorCatalog.CrossbowIndex: return SoundCue.CrossbowShot;
+                case SurvivorCatalog.FlameConeIndex: return SoundCue.Fireball;
+                case SurvivorCatalog.ComboBladeIndex: return SoundCue.SwordSwing;
+                case SurvivorCatalog.HeavyHammerIndex: return SoundCue.HammerThrow;
+                case SurvivorCatalog.BombIndex: return SoundCue.Explosion;
+                case SurvivorCatalog.RetaliateIndex: return SoundCue.ShieldBlock;
+                case SurvivorCatalog.BarrierIndex: return SoundCue.ShieldUp;
+                case SurvivorCatalog.BoomerangIndex: return SoundCue.KnifeWhirl;
+                case SurvivorCatalog.PoisonPoolIndex: return SoundCue.FireOrb;
+                case SurvivorCatalog.BounceShotIndex: return SoundCue.MagicBolt;
+                case SurvivorCatalog.MomentumSpiritIndex: return SoundCue.Dash;
+                case SurvivorCatalog.TimeClockIndex: return SoundCue.FrostNova;
+                case SurvivorCatalog.PurgeIndex: return SoundCue.FrostBurst;
+                case SurvivorCatalog.BombRingIndex: return SoundCue.Explosion;
+                case SurvivorCatalog.FireballNovaIndex: return SoundCue.Fireball;
+                case SurvivorCatalog.BraceletTrioIndex: return SoundCue.MultiShot;
+                case SurvivorCatalog.QuadShotIndex: return SoundCue.MultiShot;
+                case SurvivorCatalog.MagiStoneIndex: return SoundCue.MagicBolt;
                 // Lightning and arrow rain sound where they land (StrikeLanded); auras pulse silently.
                 case SurvivorCatalog.LightningIndex:
                 case SurvivorCatalog.ArrowRainIndex:
@@ -198,6 +215,20 @@ namespace PersonalArena.View
                 case WeaponPattern.Thrown: return SoundCue.MagicBolt;
                 case WeaponPattern.Shockwave: return SoundCue.Shockwave;
                 case WeaponPattern.Fan: return SoundCue.MultiShot;
+                case WeaponPattern.Combo: return SoundCue.SwordSwing;
+                case WeaponPattern.Bomb: return SoundCue.Explosion;
+                case WeaponPattern.Retaliate: return SoundCue.ShieldBlock;
+                case WeaponPattern.Barrier: return SoundCue.ShieldUp;
+                case WeaponPattern.Boomerang: return SoundCue.KnifeWhirl;
+                case WeaponPattern.Zone: return SoundCue.FireOrb;
+                case WeaponPattern.Bounce: return SoundCue.MagicBolt;
+                case WeaponPattern.Momentum: return SoundCue.Dash;
+                case WeaponPattern.Freeze: return SoundCue.FrostNova;
+                case WeaponPattern.Purge: return SoundCue.FrostBurst;
+                case WeaponPattern.BombRing: return SoundCue.Explosion;
+                case WeaponPattern.Trio:
+                case WeaponPattern.Quad: return SoundCue.MultiShot;
+                case WeaponPattern.Stone: return SoundCue.MagicBolt;
                 default: return SoundCue.None;
             }
         }
@@ -212,7 +243,21 @@ namespace PersonalArena.View
             {
                 ItemDef def = SurvivorCatalog.Get(id);
                 int baseIndex = def != null && def.EvolvesFrom >= 0 ? def.EvolvesFrom : id;
-                return baseIndex == SurvivorCatalog.ArrowRainIndex ? SoundCue.ArrowRain : SoundCue.LightningStrike;
+                if (baseIndex == SurvivorCatalog.ArrowRainIndex) return SoundCue.ArrowRain;
+                if (baseIndex == SurvivorCatalog.LightningIndex) return SoundCue.LightningStrike;
+                ItemDef baseDef = SurvivorCatalog.Get(baseIndex);
+                if (baseDef == null) return SoundCue.None;
+                switch (baseDef.Pattern)
+                {
+                    case WeaponPattern.Bomb:
+                    case WeaponPattern.BombRing:
+                    case WeaponPattern.Strike: return SoundCue.Explosion;
+                    case WeaponPattern.Retaliate: return SoundCue.ShieldBlock;
+                    case WeaponPattern.Purge: return SoundCue.FrostBurst;
+                    case WeaponPattern.Bounce: return SoundCue.MagicBolt;
+                    case WeaponPattern.Stone: return SoundCue.MagicBolt;
+                    default: return SoundCue.None;
+                }
             }
 
             SkillDef skill = Skill(kit, -1 - id);
@@ -245,6 +290,12 @@ namespace PersonalArena.View
                 case SkillKind.AreaBurst: return SoundCue.FrostBurst;
                 case SkillKind.Teleport: return SoundCue.Blink;
                 case SkillKind.MeleeStrike: return SoundCue.SwordSwing;
+                case SkillKind.Leap: return SoundCue.Kick;
+                case SkillKind.Whirlwind: return SoundCue.SwordSwing;
+                case SkillKind.Trap: return SoundCue.Kick;
+                case SkillKind.Barrage: return SoundCue.PowerShot;
+                case SkillKind.Wall: return SoundCue.Fireball;
+                case SkillKind.Chain: return SoundCue.LightningStrike;
                 default: return SoundCue.None;
             }
         }

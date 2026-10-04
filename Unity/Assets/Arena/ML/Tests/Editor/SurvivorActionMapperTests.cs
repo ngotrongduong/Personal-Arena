@@ -45,7 +45,7 @@ namespace PersonalArena.ML.Tests
             var sim = new SurvivorSim(new SurvivorConfig(), 7);
             var mask = new FakeActionMask();
 
-            SurvivorActionMapper.WriteMask(mask, sim, new bool[9], new bool[5], new bool[5]);
+            SurvivorActionMapper.WriteMask(mask, sim, new bool[SurvivorInput.MoveBranchSize], new bool[SurvivorInput.SkillBranchSize], new bool[SurvivorInput.PickBranchSize]);
 
             Assert.IsFalse(sim.IsAwaitingPick);
             for (int i = 0; i < SurvivorInput.MoveBranchSize; i++)
@@ -66,7 +66,7 @@ namespace PersonalArena.ML.Tests
         {
             var mask = new FakeActionMask();
 
-            SurvivorActionMapper.ApplyMask(mask, new bool[9], new bool[5], new[] { false, true, true, false, false });
+            SurvivorActionMapper.ApplyMask(mask, new bool[SurvivorInput.MoveBranchSize], new bool[SurvivorInput.SkillBranchSize], new[] { false, true, true, false, false });
 
             Assert.IsTrue(mask.IsEnabled(SurvivorActionMapper.MoveBranch, 0));
             Assert.IsFalse(mask.IsEnabled(SurvivorActionMapper.MoveBranch, 1));

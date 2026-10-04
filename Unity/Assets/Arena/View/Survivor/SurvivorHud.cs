@@ -16,8 +16,9 @@ namespace PersonalArena.View
     [DefaultExecutionOrder(1000)] // After SurvivorRenderer and SurvivorCamera, so the hero tag sits on this frame's hero.
     public sealed partial class SurvivorHud : MonoBehaviour
     {
-        private const int SkillSlots = 4;
-        private const int ItemSlots = 4;
+        private const int SkillSlots = SurvivorInput.SkillSlotCount;
+        private const int WeaponSlots = SurvivorCatalog.MaxWeapons;
+        private const int PassiveSlots = SurvivorCatalog.MaxPassives;
 
         private SurvivorSim sim;
         private PickHighlight highlight;
@@ -34,8 +35,8 @@ namespace PersonalArena.View
         private int shownBossHp = -1;
         private int shownEndCountdown = -1;
         private bool endShown;
-        private readonly int[] shownItems = new int[ItemSlots * 2];
-        private readonly int[] shownItemLevels = new int[ItemSlots * 2];
+        private readonly int[] shownItems = new int[WeaponSlots + PassiveSlots];
+        private readonly int[] shownItemLevels = new int[WeaponSlots + PassiveSlots];
         private readonly int[] shownCooldownTenths = new int[SkillSlots];
         private PickHighlight.Phase shownPhase = PickHighlight.Phase.None;
         private int shownChosen = -1;
@@ -372,6 +373,14 @@ namespace PersonalArena.View
             if (sim != null)
             {
                 LayoutSkillSlots(sim.Config.ClassDef?.ActiveSkills);
+                for (int i = 0; i < WeaponSlots; i++)
+                {
+                    itemSlots[i].Frame.gameObject.SetActive(i < sim.Config.Tuning.MaxWeaponSlots);
+                }
+                for (int i = 0; i < PassiveSlots; i++)
+                {
+                    itemSlots[WeaponSlots + i].Frame.gameObject.SetActive(i < sim.Config.Tuning.MaxPassiveSlots);
+                }
             }
             shownPhase = PickHighlight.Phase.None;
             shownChosen = -1;
@@ -569,12 +578,15 @@ namespace PersonalArena.View
         private void RefreshItems()
         {
             SurvivorInventory inventory = sim.Inventory;
-            for (int i = 0; i < ItemSlots; i++)
+            for (int i = 0; i < WeaponSlots; i++)
             {
                 int weapon = i < inventory.WeaponCount ? inventory.WeaponAt(i) : -1;
                 ApplyItemSlot(i, weapon, weapon >= 0 ? inventory.Level(weapon) : 0);
+            }
+            for (int i = 0; i < PassiveSlots; i++)
+            {
                 int passive = i < inventory.PassiveCount ? inventory.PassiveAt(i) : -1;
-                ApplyItemSlot(ItemSlots + i, passive, passive >= 0 ? inventory.Level(passive) : 0);
+                ApplyItemSlot(WeaponSlots + i, passive, passive >= 0 ? inventory.Level(passive) : 0);
             }
         }
 

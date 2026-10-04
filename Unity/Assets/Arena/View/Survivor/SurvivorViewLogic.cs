@@ -39,7 +39,23 @@ namespace PersonalArena.View
         ArrowRain,
         OrbitKnife,
         Dagger,
-        Crossbow
+        Crossbow,
+        FlameCone,
+        Combo,
+        Bomb,
+        Retaliate,
+        Barrier,
+        Boomerang,
+        Zone,
+        Bounce,
+        Momentum,
+        Freeze,
+        Purge,
+        BombRing,
+        FireballNova,
+        Trio,
+        Quad,
+        Stone
     }
 
     /// <summary>Model of a hero projectile.</summary>
@@ -49,7 +65,10 @@ namespace PersonalArena.View
         MagicBolt,
         Arrow,
         Fireball,
-        PowerShot
+        PowerShot,
+        Bomb,
+        Bounce,
+        Momentum
     }
 
     /// <summary>
@@ -279,8 +298,33 @@ namespace PersonalArena.View
                 case 23: return new Color(0.72f, 0.82f, 0.66f);
                 case 24: return new Color(0.82f, 0.62f, 0.4f);
                 case 25: return new Color(0.7f, 0.5f, 0.3f);
+                case 26: return new Color(1f, 0.38f, 0.12f);
+                case 27: return new Color(1f, 0.72f, 0.28f);
+                case 28: return new Color(0.76f, 0.8f, 0.9f);
+                case 29: return new Color(1f, 0.3f, 0.2f);
+                case 30: return new Color(1f, 0.62f, 0.28f);
+                case 31: return new Color(0.45f, 0.82f, 1f);
+                case 32: return new Color(0.42f, 0.95f, 0.82f);
+                case 33: return new Color(0.48f, 0.9f, 0.28f);
+                case 34: return new Color(0.7f, 0.6f, 1f);
+                case 35: return new Color(0.48f, 0.86f, 1f);
+                case 36: return new Color(0.9f, 0.7f, 0.5f);
+                case 37: return new Color(0.85f, 0.82f, 1f);
+                case 58: return new Color(0.45f, 1f, 0.58f);
+                case 59: return new Color(0.55f, 0.95f, 0.42f);
+                case 60: return new Color(1f, 0.78f, 0.25f);
+                case 61: return new Color(1f, 0.72f, 0.3f);
                 case 62: return new Color(1f, 0.82f, 0.3f);
                 case 63: return new Color(0.45f, 1f, 0.5f);
+                case 64: return new Color(0.45f, 0.9f, 1f);
+                case 65: return new Color(0.42f, 1f, 0.7f);
+                case 66: return new Color(0.65f, 0.92f, 1f);
+                case 67: return new Color(1f, 0.96f, 0.72f);
+                case 68: return new Color(1f, 0.42f, 0.2f);
+                case 69: return new Color(1f, 0.3f, 0.12f);
+                case 70: return new Color(0.78f, 0.48f, 1f);
+                case 71: return new Color(0.55f, 0.95f, 0.42f);
+                case 72: return new Color(0.78f, 0.7f, 1f);
                 default: return new Color(0.8f, 0.82f, 0.9f);
             }
         }
@@ -383,6 +427,23 @@ namespace PersonalArena.View
                 case SurvivorCatalog.OrbitKnifeIndex: return WeaponVisual.OrbitKnife;
                 case SurvivorCatalog.DaggerIndex: return WeaponVisual.Dagger;
                 case SurvivorCatalog.CrossbowIndex: return WeaponVisual.Crossbow;
+                case SurvivorCatalog.FlameConeIndex: return WeaponVisual.FlameCone;
+                case SurvivorCatalog.ComboBladeIndex: return WeaponVisual.Combo;
+                case SurvivorCatalog.HeavyHammerIndex: return WeaponVisual.Hammer;
+                case SurvivorCatalog.BombIndex: return WeaponVisual.Bomb;
+                case SurvivorCatalog.RetaliateIndex: return WeaponVisual.Retaliate;
+                case SurvivorCatalog.BarrierIndex: return WeaponVisual.Barrier;
+                case SurvivorCatalog.BoomerangIndex: return WeaponVisual.Boomerang;
+                case SurvivorCatalog.PoisonPoolIndex: return WeaponVisual.Zone;
+                case SurvivorCatalog.BounceShotIndex: return WeaponVisual.Bounce;
+                case SurvivorCatalog.MomentumSpiritIndex: return WeaponVisual.Momentum;
+                case SurvivorCatalog.TimeClockIndex: return WeaponVisual.Freeze;
+                case SurvivorCatalog.PurgeIndex: return WeaponVisual.Purge;
+                case SurvivorCatalog.BombRingIndex: return WeaponVisual.BombRing;
+                case SurvivorCatalog.FireballNovaIndex: return WeaponVisual.FireballNova;
+                case SurvivorCatalog.BraceletTrioIndex: return WeaponVisual.Trio;
+                case SurvivorCatalog.QuadShotIndex: return WeaponVisual.Quad;
+                case SurvivorCatalog.MagiStoneIndex: return WeaponVisual.Stone;
                 default: return WeaponVisual.None;
             }
         }
@@ -410,7 +471,12 @@ namespace PersonalArena.View
             {
                 case WeaponVisual.MagicBolt: return ProjectileLook.MagicBolt;
                 case WeaponVisual.Arrow:
-                case WeaponVisual.MultiShot: return ProjectileLook.Arrow;
+                case WeaponVisual.MultiShot:
+                case WeaponVisual.Trio:
+                case WeaponVisual.Quad: return ProjectileLook.Arrow;
+                case WeaponVisual.Bomb: return ProjectileLook.Bomb;
+                case WeaponVisual.Bounce: return ProjectileLook.Bounce;
+                case WeaponVisual.Momentum: return ProjectileLook.Momentum;
                 default: return ProjectileLook.Hammer;
             }
         }
@@ -465,6 +531,13 @@ namespace PersonalArena.View
                 case "frost-burst": return "Nổ băng";
                 case "power-shot": return "Bắn mạnh";
                 case "roll-back": return "Lộn lùi";
+                case "war-cry": return "Tiếng thét";
+                case "leap-slam": return "Nhảy đập đất";
+                case "whirlwind": return "Xoáy kiếm";
+                case "caltrop-trap": return "Bẫy gai";
+                case "arrow-barrage": return "Mưa tên";
+                case "fire-wall": return "Tường lửa";
+                case "chain-lightning": return "Lôi liên hoàn";
                 default: return skill.Id;
             }
         }
@@ -483,6 +556,13 @@ namespace PersonalArena.View
                 case "frost-burst": return "Nổ băng quanh người, làm choáng quái";
                 case "power-shot": return "Bắn mũi tên mạnh xuyên nhiều quái";
                 case "roll-back": return "Lộn ra sau để giữ khoảng cách";
+                case "war-cry": return "Thét đẩy lùi và làm choáng quái quanh người";
+                case "leap-slam": return "Nhảy tới quái và đập đất gây choáng";
+                case "whirlwind": return "Xoay kiếm gây sát thương liên tục quanh người";
+                case "caltrop-trap": return "Đặt bẫy gai gây sát thương và làm chậm quái";
+                case "arrow-barrage": return "Bắn chùm tên xuyên quái phía trước";
+                case "fire-wall": return "Dựng tường lửa đốt quái đi qua";
+                case "chain-lightning": return "Phóng sét truyền qua nhiều quái";
                 default: return string.Empty;
             }
         }
@@ -546,7 +626,7 @@ namespace PersonalArena.View
                 case SurvivorCatalog.ArcaneBeamIndex: return "Bắn tia ma thuật xuyên thẳng hàng quái";
                 case SurvivorCatalog.ArrowIndex: return "Bắn tên xuyên 1 quái";
                 case SurvivorCatalog.MultiShotIndex: return "Bắn chùm 3 mũi tên tỏa ra";
-                case SurvivorCatalog.ArrowRainIndex: return "Mưa tên trút xuống quái gần";
+                case SurvivorCatalog.ArrowRainIndex: return "Mưa tên trút xuống chỗ quái đông nhất";
                 case SurvivorCatalog.OrbitKnifeIndex: return "Dao bay vòng quanh người";
                 case SurvivorCatalog.DaggerIndex: return "Chém nhanh nửa vòng trước mặt";
                 case SurvivorCatalog.CrossbowIndex: return "Bắn nỏ xuyên thẳng, sát thương lớn";
