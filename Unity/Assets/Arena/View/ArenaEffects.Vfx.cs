@@ -13,6 +13,8 @@ namespace PersonalArena.View
         private const int BoltPool = 14;
         private const int BoltPoints = 7;
         private const float BoltLifetime = 0.28f;
+        /// <summary>M11: ground rings, runes and swirls stay this much longer than their callers ask, so areas read clearly.</summary>
+        private const float AreaLinger = 1.7f;
 
         private ParticleSystem flames;
         private ParticleSystem fireballs;
@@ -23,6 +25,7 @@ namespace PersonalArena.View
         private ParticleSystem twirls;
         private ParticleSystem shards;
         private ParticleSystem crystals;
+        private ParticleSystem fills;
         private readonly List<BoltFx> bolts = new List<BoltFx>();
         private int nextBolt;
 
@@ -108,6 +111,12 @@ namespace PersonalArena.View
             crystalSize.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(
                 new Keyframe(0f, 0.15f), new Keyframe(0.1f, 1f), new Keyframe(0.8f, 1f), new Keyframe(1f, 0.25f)));
 
+            Material fillMaterial = FxAssets.Create("Area Fill", FxAssets.RadialGlow, true);
+            owned.Add(fillMaterial);
+            fills = FxAssets.CreateParticles("Area Fills", poolRoot, fillMaterial, 60, ParticleSystemRenderMode.HorizontalBillboard);
+            FxAssets.FadeOverLifetime(fills, 0.08f, 0.45f);
+            FxAssets.SizeOverLifetime(fills, 0.55f, 1f);
+
             Material boltMaterial = FxAssets.Create("Bolt", FxAssets.SoftDot, true);
             owned.Add(boltMaterial);
             for (int i = 0; i < BoltPool; i++)
@@ -139,8 +148,8 @@ namespace PersonalArena.View
                 Vector3 offset = Random.insideUnitSphere * (size * 0.3f);
                 emit.position = point + new Vector3(offset.x, 0.5f + Mathf.Abs(offset.y), offset.z);
                 emit.velocity = offset * 1.5f + Vector3.up * 0.8f;
-                emit.startLifetime = Random.Range(0.45f, 0.7f);
-                emit.startSize = size * Random.Range(1.5f, 2.2f);
+                emit.startLifetime = Random.Range(0.75f, 1.15f);
+                emit.startSize = size * Random.Range(2.1f, 2.9f);
                 emit.rotation = Random.Range(0f, 360f);
                 emit.startColor = Color.Lerp(color, Color.white, 0.35f);
                 fireballs.Emit(emit, 1);
@@ -149,7 +158,7 @@ namespace PersonalArena.View
             for (int i = 0; i < tongues; i++)
             {
                 Vector2 ring = Random.insideUnitCircle * (size * 0.7f);
-                Flame(point + new Vector3(ring.x, 0.1f, ring.y), color, size * Random.Range(0.5f, 0.9f), 0.45f);
+                Flame(point + new Vector3(ring.x, 0.1f, ring.y), color, size * Random.Range(0.6f, 1.1f), 0.8f);
             }
             int chunks = Mathf.Clamp(Mathf.RoundToInt(size * 3f), 4, 9);
             emit = new ParticleSystem.EmitParams();
@@ -166,10 +175,26 @@ namespace PersonalArena.View
             }
             if (smoke)
             {
-                Smoke(point + Vector3.up * 0.6f, new Color(0.16f, 0.15f, 0.15f, 0.7f), 3, size * 1.4f, 1.3f);
+                Smoke(point + Vector3.up * 0.6f, new Color(0.16f, 0.15f, 0.15f, 0.7f), 5, size * 1.6f, 1.9f);
             }
             Decal(point, new Color(0.05f, 0.04f, 0.03f, 0.75f), size * 2.4f, 5f);
-            Flash(point + Vector3.up * 0.7f, color, size * 3.2f, 0.22f);
+            Flash(point + Vector3.up * 0.7f, color, size * 4.2f, 0.32f);
+            AreaFill(point, color, size, 0.9f);
+        }
+
+        /// <summary>A soft disc of light on the ground covering the whole radius of an area effect.</summary>
+        public void AreaFill(Vector3 position, Color color, float radius, float lifetime)
+        {
+            EnsureVfx();
+            ParticleSystem.EmitParams emit = new ParticleSystem.EmitParams
+            {
+                position = new Vector3(position.x, position.y + 0.055f, position.z),
+                velocity = Vector3.zero,
+                startLifetime = lifetime,
+                startSize = radius * 2.6f,
+                startColor = new Color(color.r, color.g, color.b, 0.55f)
+            };
+            fills.Emit(emit, 1);
         }
 
         /// <summary>One flame tongue rising from <paramref name="position"/>; call repeatedly for a burning area.</summary>
@@ -229,7 +254,7 @@ namespace PersonalArena.View
             {
                 position = new Vector3(position.x, position.y + 0.07f, position.z),
                 velocity = Vector3.zero,
-                startLifetime = lifetime,
+                startLifetime = lifetime * AreaLinger,
                 startSize = size,
                 rotation = Random.Range(0f, 360f),
                 startColor = color
@@ -245,7 +270,7 @@ namespace PersonalArena.View
             {
                 position = position,
                 velocity = Vector3.zero,
-                startLifetime = lifetime,
+                startLifetime = lifetime * AreaLinger,
                 startSize = size,
                 rotation = Random.Range(0f, 360f),
                 startColor = color
@@ -364,6 +389,7 @@ namespace PersonalArena.View
             twirls.Clear();
             shards.Clear();
             crystals.Clear();
+            fills.Clear();
             for (int i = 0; i < bolts.Count; i++)
             {
                 bolts[i].Active = false;

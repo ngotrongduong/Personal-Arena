@@ -34,6 +34,7 @@ namespace PersonalArena.View
                 blastsThisFrame = 0;
             }
             MarkElement(point, radius, ElementFire);
+            effects.Rune(point, color, radius * 2.3f, 0.6f);
             if (blastsThisFrame++ < BlastsPerFrame)
             {
                 effects.Explosion(point, color, radius);
@@ -41,6 +42,7 @@ namespace PersonalArena.View
             else
             {
                 effects.Flash(point + Vector3.up * 0.7f, color, radius * 1.8f, 0.22f);
+                effects.AreaFill(point, color, radius, 0.6f);
             }
         }
 
@@ -340,6 +342,8 @@ namespace PersonalArena.View
             }
             effects.Shards(At(3, 1), SpikeColor, 8, 2.4f, 0.45f);
             effects.Decal(At(3, 1), new Color(0.05f, 0.04f, 0.03f, 0.75f), 4f, 3f);
+            OnMagnetPicked(center + new Vector3(0f, 0f, 9f));
+            PlayM11Demo(center);
         }
     }
 }

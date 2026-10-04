@@ -330,6 +330,7 @@ namespace PersonalArena.View
             heroShadow = CreateBlobShadow(heroRoot, 1.3f);
             heroShieldGlow = effects.CreateShield(heroRoot);
             BuildBubble();
+            BuildBuffAuras();
             heroStars = effects.CreateStunStars(heroRoot, 1.85f);
             heroTrail = effects.CreateTrail(heroRoot, 0.75f, DashColor, 0.95f, 0.22f);
 
@@ -648,6 +649,7 @@ namespace PersonalArena.View
                         break;
                     case SurvivorEventType.Healed:
                         effects.Sparkle(heroPosition, HealColor, 14, 0.7f, 2f, 0.24f);
+                        PulseHealAura();
                         effects.Text(heroPosition + Vector3.up * 2.2f, "+" + NumberText(Mathf.RoundToInt(e.Value)), HealColor, 1.1f, 1f);
                         break;
                     case SurvivorEventType.LevelUp:
