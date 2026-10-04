@@ -2,7 +2,7 @@
 
 > "Bộ nhớ" giữa các phiên. Đọc đầu tiên, cập nhật cuối cùng. **Giữ file dưới 200 dòng** (CI kiểm):
 > nhật ký cũ chuyển sang `docs/archive/SESSIONS.md`, task xong sang `docs/archive/BOARD-DONE.md`.
-> Cập nhật lần cuối: 2026-10-05 (phiên Claude trên PC: T-048 mở trình xem nhanh hơn, T-049 tách file View, bản xem v0.8.181).
+> Cập nhật lần cuối: 2026-10-05 (phiên Claude trên PC: M16 — rừng quanh bản đồ, game tiếng Anh, HUD mới + tooltip; bản xem v0.8.189).
 
 ## Đang ở đâu (đọc phần này là đủ để bắt đầu)
 
@@ -25,15 +25,19 @@
   (`SurvivorEvolutionStyle.cs`, `SurvivorRenderer.Evolutions.cs`): vệt bay, màu, dấu trên đất ở đúng vùng trúng;
   chỉ sửa trình xem, điều kiện tiến hóa và Core giữ nguyên. HUD có đồng hồ buff (T-047). Tắt màn logo Unity nên
   trình xem mở nhanh hơn ~3 s (T-048); mọi file View dưới 700 dòng (T-049).
-- **Bản cài (2026-10-05):** `Build/WatchNext` v0.8.181, `Build/TrainingNext` v0.8.175 (Core không đổi từ đó);
+- **M16 (T-050):** rừng 5 hàng cây quanh bản đồ + sương mù theo mức zoom (hết vùng tối ngoài hàng rào); **toàn bộ
+  chữ trong game là tiếng Anh** (D-049); **HUD mới** gọn hơn, Tab ẩn cột phải, H mở bảng phím; **tooltip** khi rê
+  chuột vào ô vũ khí/bị động/skill và thẻ lên cấp ghi số liệu thật, sinh từ catalog (`SurvivorItemDetails`, D-050).
+- **Bản cài (2026-10-05):** `Build/WatchNext` v0.8.189, `Build/TrainingNext` v0.8.175 (luật chơi không đổi từ đó);
   smoke test 3 class đạt; 60 FPS, mở app ~0,9 s tới khung hình đầu.
-- **Test:** CoreTests 644/644, pytest 204/204, EditMode 302/302 (PC, 2026-10-05).
+- **Test:** CoreTests 645/645, pytest 204/204, EditMode 308/308 (PC, 2026-10-05).
 
 ## Việc tiếp theo (theo thứ tự)
 
-1. **Owner:** mở `Xem-AI.cmd` (bản xem v0.8.181), xem hiệu ứng M13–M15 trong trận thật và bấm TRAIN — não cần học
-   tiếp để quen Kiếm quét mới, quái mới, vật phẩm mới (điểm số sẽ dao động một thời gian).
-2. **Claude:** trình xem đẹp hơn — vùng tối ngoài hàng rào khi AI bị dồn vào góc; ngọc EXP rải kín đất nhìn rối.
+1. **Owner:** mở `Xem-AI.cmd` (bản xem v0.8.189), xem HUD mới + tooltip + hiệu ứng M13–M15 trong trận thật và bấm
+   TRAIN — não cần học tiếp để quen Kiếm quét mới, quái mới, vật phẩm mới (điểm số sẽ dao động một thời gian).
+2. **Claude:** bảng "Codex" liệt kê mọi vũ khí/bị động/tiến hóa và công thức (tooltip hiện mới chỉ có món đang cầm);
+   ngọc EXP rải kín đất — chưa thấy với não Chiến binh (nó nhặt hết), cần xem với não yếu rồi mới sửa.
 3. Nợ nhỏ (nhật ký 2026-10-02 trong archive): rẽ nhánh từ champion cũ thiếu `training_status.json`,
    khóa `brain_lineage` khi chạy song song, walker triệu hồi ngoài bản đồ 1 tick.
 
@@ -72,7 +76,8 @@
 | M8: đánh bóng — âm thanh, cài đặt + phiên bản + smoke test, cân bằng (T-033..T-035, D-039) | code xong — chờ owner nghiệm thu bản build mới |
 | M9: nội dung kiểu Vampire Survivors (6 + 6 ô, vũ khí/phụ kiện/tiến hóa mới, 6 skill, schema v5) | xong (T-036..T-046); tách file View lớn chuyển sang T-049 |
 | M10–M14: hiệu ứng, vật phẩm rơi, quái mới, gói Asset Store, sóng kiếm bay | xong (PR #8–#17) — chờ owner xem bản v0.8.171 và train tiếp |
-| M15: hình ảnh riêng cho 34 vũ khí tiến hóa + đồng hồ buff HUD (T-047), mở app nhanh (T-048), tách file View (T-049) | xong — chờ owner xem bản v0.8.181 |
+| M15: hình ảnh riêng cho 34 vũ khí tiến hóa + đồng hồ buff HUD (T-047), mở app nhanh (T-048), tách file View (T-049) | xong |
+| M16: rừng quanh bản đồ, game tiếng Anh, HUD mới + tooltip chi tiết (T-050) | xong — chờ owner xem bản v0.8.189 |
 
 
 ## Cách làm trên PC (Claude)
@@ -108,6 +113,16 @@
 
 ## Nhật ký phiên (mới nhất trên cùng; giữ ~3 mục, cũ hơn → archive)
 
+### 2026-10-05 (tối) — Claude (PC): M16 rừng quanh bản đồ, game tiếng Anh, HUD mới (T-050)
+- Owner yêu cầu thêm giữa phiên: UI chuyên nghiệp và gọn hơn, toàn bộ chữ tiếng Anh, skill + vũ khí có thông tin
+  chi tiết (D-049, D-050).
+- Cảnh: thay 72 cây thưa bằng 5 hàng cây quanh bản đồ, nền đất kéo dài 60 m, sương mù đi theo mức zoom.
+- Tiếng Anh: 756 chuỗi ở 57 file + thông báo của trainer, dịch bằng script trích/áp chuỗi; số kiểu `1,234`.
+- HUD: thẻ nhân vật nhỏ, cấp cạnh đồng hồ, thanh skill mảnh có số ô, cột phải 3 thẻ (Tab ẩn), bảng phím (H).
+  Tooltip + thẻ lên cấp sinh từ số catalog; trước đó một nửa số món không có mô tả.
+- Cờ kiểm tra mới (đi kèm `-perfLog`): `-cameraAt x,z[,khoảng cách]` giữ camera ở một điểm; `-hudDemo` ghim lần
+  lượt tooltip món, tooltip skill, bảng phím vào từng ảnh `-perfShots`.
+
 ### 2026-10-05 (sau) — Claude (PC): T-048 mở trình xem nhanh hơn, T-049 tách file View
 - T-048: "khựng 3 s ở khung hình đầu" hóa ra là thời gian mở app (màn logo Unity 2,2 s), bị `-perfLog` tính nhầm
   thành một khung hình; hiệu ứng không phải thủ phạm (bộ gói nạp trong 22 ms). Tắt logo Unity → khung hình đầu
@@ -127,13 +142,4 @@
   đúng cỡ vùng trúng (theo D-047, không vẽ lên thân nhân vật).
 - T-047: 3 ô đồng hồ buff (cuồng nộ, khiên, tốc độ) trên HUD, có thanh cạn dần và số giây.
 - Bản xem + bản train v0.8.175 đã cài; EditMode 302; Core và schema v5 không đổi.
-
-### 2026-10-04 → 05 — Claude (PC): M10–M14
-- M9 Unity làm nốt (T-037, T-041; Codex hết token), PR #7 merge vào `develop`.
-- M10 hiệu ứng Kenney; M11 hiệu ứng nổi bật hơn + vật phẩm rơi mới + 3 quái mới + quái vàng (PR #8–#13).
-- M12/M12b: dùng 2 gói Asset Store của owner, gói không commit (D-046) (PR #14, #15).
-- M13: owner chê rối mắt → bỏ hiệu ứng chồng trên thân, mỗi đòn một hiệu ứng đúng cỡ đúng hệ (D-047); Đạn nảy
-  bật sang quái khác (PR #16).
-- M14: Kiếm quét thành sóng kiếm bay (PR #17). Nội dung mới đều giữ schema v5 (D-048).
-- Bản xem + bản train v0.8.171 đã cài; CoreTests 644, EditMode 300, 60 FPS. Chưa train lần nào trong phiên này.
 

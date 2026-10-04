@@ -308,11 +308,11 @@ namespace PersonalArena.View
             return 1f + 0.5f * (Math.Max(1, Math.Min(ProfileRules.MaxTier, tier)) - 1);
         }
 
-        /// <summary>"Vàng ×1,5  (1 + 0,5·(2−1))".</summary>
+        /// <summary>"Gold ×1.5  (1 + 0.5·(2−1))".</summary>
         public static string TierGoldText(int tier)
         {
             int clamped = Math.Max(1, Math.Min(ProfileRules.MaxTier, tier));
-            return "Gold ×" + FormatDecimal(TierGoldMultiplier(clamped), "0.0") + "  (1 + 0,5·(" + clamped + "−1))";
+            return "Gold ×" + FormatDecimal(TierGoldMultiplier(clamped), "0.0") + "  (1 + 0.5·(" + clamped + "−1))";
         }
 
         /// <summary>The rule changes of a tier, one per line ("Base rules, no changes" at tier 1).</summary>
