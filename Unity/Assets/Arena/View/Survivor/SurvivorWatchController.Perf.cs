@@ -114,6 +114,7 @@ namespace PersonalArena.View
                     else
                     {
                         survivorRenderer.PlayFxDemo(survivorRenderer.HeroWorldPosition);
+                        hud.BuffDemo = true;
                     }
                 }
                 else if (fxDemoAt >= 0f && fxDemoShots < 2 && real - fxDemoAt >= (fxDemoShots == 0 ? (vfxGallery ? 0.15f : 0.05f) : (vfxGallery ? 0.5f : 0.3f)))

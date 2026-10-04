@@ -312,14 +312,19 @@ namespace PersonalArena.View
                     continue;
                 }
                 float size = view.Root.localScale.x;
-                view.Emit += delta * Mathf.Clamp(size * 1.6f, 2f, 9f);
+                // The evolved pool boils in its own acid colour, twice as busy.
+                int source = sim.Zones[i].SourceIndex;
+                bool evolved = source >= 0 && SurvivorViewLogic.IsEvolution(source);
+                Color acid = evolved ? SurvivorEvolutionStyles.Of(source).Color : PoisonColor;
+                Color fume = evolved ? new Color(acid.r * 0.7f, acid.g * 0.7f, acid.b * 0.7f, 0.36f) : PoisonFumeColor;
+                view.Emit += delta * Mathf.Clamp(size * 1.6f, 2f, 9f) * (evolved ? 2f : 1f);
                 while (view.Emit >= 1f)
                 {
                     view.Emit -= 1f;
                     Vector2 spot = Random.insideUnitCircle * (size * 0.3f);
                     Vector3 at = view.Root.position + new Vector3(spot.x, 0.1f, spot.y);
-                    effects.Smoke(at, PoisonFumeColor, 1, Mathf.Max(0.7f, size * 0.3f), 1.1f);
-                    effects.Sparkle(at, PoisonColor, 1, 0.1f, 0.9f, 0.16f);
+                    effects.Smoke(at, fume, 1, Mathf.Max(0.7f, size * 0.3f), 1.1f);
+                    effects.Sparkle(at, acid, evolved ? 2 : 1, 0.1f, evolved ? 1.8f : 0.9f, evolved ? 0.24f : 0.16f);
                 }
             }
         }

@@ -171,6 +171,13 @@ thưởng theo thứ bậc, nghiệm thu bằng đánh giá 100 seed). Đấu tr
 
 ## Nhật ký phiên cũ (mới nhất trên cùng)
 
+### 2026-10-03 — Claude (cloud): cơ chế tiết kiệm token
+- STATUS từ 498 → dưới 200 dòng; lịch sử chuyển `docs/archive/SESSIONS.md`, task xong `docs/archive/BOARD-DONE.md`.
+- Hook chặn đọc file sinh ra / file lớn, CI kiểm STATUS ≤ 200 dòng, `Tools/unity-run.ps1` cho Codex,
+  T-041 thêm yêu cầu tách các file View > 700 dòng.
+- Tắt 23 skill claude.ai không dùng cho dự án này (`skillOverrides` trong `.claude/settings.json`), bớt ~4.500 token
+  mỗi tin nhắn. Phiên sau chạy `/skill-doctor` để kiểm tra chúng đã ẩn chưa. CI xanh trên `9ebf35c`.
+
 ### 2026-10-02 — Claude (cloud): CI xanh lại, review M5–M8
 - CI `core-tests` đỏ từ M5: 2 golden băm từng bit float (ghi trên Windows) lệch trên Linux. Nay 2 test đó chỉ
   chạy trên Windows (`Assume`) và CI có thêm job `windows-latest` (PR #7, xanh cả hai).

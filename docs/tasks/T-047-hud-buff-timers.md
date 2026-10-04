@@ -1,7 +1,7 @@
 # T-047: HUD buff timers
 
 - **Owner:** Claude
-- **Status:** todo
+- **Status:** done
 - **Milestone:** M15
 - **Parallel OK with:** T-047, T-048, T-049
 - **Depends on:** none
@@ -25,12 +25,14 @@ Read the remaining buff times from the sim (`SurvivorSim.Buffs.cs`); view only, 
 
 ## Done when
 
-- [ ] `dotnet test CoreTests` passes, no warnings
-- [ ] AGENTS.md §6 invariants hold
-- [ ] Report filled
+- [x] `dotnet test CoreTests` passes, no warnings
+- [x] AGENTS.md §6 invariants hold
+- [x] Report filled
 
 ## Report (filled by the implementer)
 
-- Changed files:
-- Test result:
-- Notes / open questions:
+- Changed files: `SurvivorViewLogic.cs` (`BuffChipText`, `BuffSeconds`), `SurvivorHud.cs`, `SurvivorHud.Build.cs`,
+  `SurvivorWatchController.Perf.cs` (`-fxDemo` shows the three chips), `SurvivorViewLogicTests.cs`.
+- Test result: EditMode 302/302; Core untouched.
+- Notes / open questions: three chips under the vitals (rage, shield, haste), each with a draining bar and whole
+  seconds left; hidden when the buff is not running.
