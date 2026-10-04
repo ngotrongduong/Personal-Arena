@@ -25,6 +25,11 @@
   **Bước 4 xong (v0.8.155):** bong bóng khiên cho Vòng bảo hộ, gai bật lên cho Phản đòn,
   hiệu ứng trúng đòn/chết theo hệ (lửa, băng, độc, sét) đoán theo vị trí vùng hiệu ứng vì Core không ghi nguồn sát thương.
   **Chưa xem tận mắt trong trận thật** các hiệu ứng M10 ngoài ảnh `-fxDemo` (não đo thử gần như không nhặt món).
+- **M11 (owner yêu cầu 2026-10-04: hiệu ứng nổi bật hơn, vật phẩm rơi mới, quái mới, quái vàng):** kế hoạch 3 bước A → B → C,
+  giữ schema v5 (2592). **Bước A xong (chỉ trình xem):** hiệu ứng diện rộng phủ kín bán kính thật và lâu hơn (`AreaFill`,
+  `AreaLinger`), hiệu ứng nam châm lớn, đạn đúng hình (cầu phép có vòng xoay, cầu lửa, bom có ngòi, pha lê nảy, mũi lao),
+  bình máu/bình mana hình chai, nam châm chữ U, đồng vàng sáng, hào quang buff dưới chân (`SurvivorRenderer.Auras.cs`).
+  Bước B (vật phẩm rơi mới + buff ngắn hạn) và C (3 quái mới + quái vàng) sửa Core.
 - **Test:** CoreTests 629/629, pytest 204/204, EditMode 300/300 (PC, 2026-10-04).
 
 ## Việc tiếp theo (theo thứ tự)

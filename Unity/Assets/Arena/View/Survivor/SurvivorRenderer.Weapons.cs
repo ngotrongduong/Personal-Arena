@@ -520,14 +520,16 @@ namespace PersonalArena.View
                     {
                         effects.Sparkle(center, color, 14, 1.2f, 1.2f, 0.22f);
                         effects.Shards(center, FrostColor, 10, 3f, 0.55f);
-                        effects.Crystals(center, FrostColor, 5, 1.1f, 1.3f, 1.6f);
+                        effects.Crystals(center, FrostColor, 9, 2.6f, 1.4f, 2.6f);
                         MarkElement(center, 4f, ElementIce);
-                        effects.Decal(center, FrostMarkColor, 5f, 3f);
+                        effects.Decal(center, FrostMarkColor, 7f, 4f);
+                        effects.AreaFill(center, FrostColor, 3.5f, 1f);
                         PlayHeroOneShot(HeroCast, 1.8f, false);
                     }
                     else
                     {
                         effects.Puff(center, DustColor, 10, 0.9f, 2.4f, 0.6f, 0.3f);
+                        effects.AreaFill(center, color, 3f, 0.7f);
                         PlayHeroOneShot(HeroKick, 1.6f, false);
                     }
                     break;
@@ -558,10 +560,11 @@ namespace PersonalArena.View
                     effects.Shockwave(heroPosition, FrostColor, 14f * RingQuadPerRadius, 0.65f);
                     effects.Flash(heroPosition + Vector3.up, FrostColor, 5f, 0.25f);
                     effects.Shards(heroPosition, FrostColor, 18, 4.5f, 0.6f);
-                    effects.Crystals(heroPosition, FrostColor, 12, 4.5f, 1.5f, 2f);
+                    effects.Crystals(heroPosition, FrostColor, 22, 9f, 1.6f, 3f);
                     MarkElement(heroPosition, 14f, ElementIce);
-                    effects.Decal(heroPosition, FrostMarkColor, 12f, 4f);
-                    effects.Rune(heroPosition, FrostColor, 10f, 1f);
+                    effects.Decal(heroPosition, FrostMarkColor, 20f, 5f);
+                    effects.Rune(heroPosition, FrostColor, 22f, 1.2f);
+                    effects.AreaFill(heroPosition, FrostColor, 14f, 1.4f);
                     break;
                 case WeaponVisual.Purge:
                     PlayHeroOneShot(HeroCast, 2f, false);
@@ -569,6 +572,7 @@ namespace PersonalArena.View
                 case WeaponVisual.BombRing:
                     PlayHeroOneShot(HeroThrow, 2f, false);
                     effects.Shockwave(heroPosition, FireballColor, 10f, 0.45f);
+                    effects.Rune(heroPosition, FireballColor, 9f, 0.6f);
                     break;
                 case WeaponVisual.FireballNova:
                 case WeaponVisual.Stone:
@@ -599,9 +603,11 @@ namespace PersonalArena.View
                     effects.Flash(heroPosition + Vector3.up * 0.8f, FrostColor, radius * 1.2f, 0.25f);
                     effects.Sparkle(heroPosition, FrostColor, 22, radius * 0.7f, 1.4f, 0.26f);
                     effects.Shards(heroPosition, FrostColor, 16, 4f, 0.6f);
-                    effects.Crystals(heroPosition, FrostColor, 10, radius * 0.8f, 1.5f, 2f);
+                    effects.Crystals(heroPosition, FrostColor, 16, radius * 0.9f, 1.6f, 3f);
                     MarkElement(heroPosition, radius, ElementIce);
-                    effects.Decal(heroPosition, FrostMarkColor, radius * 2.4f, 4f);
+                    effects.Decal(heroPosition, FrostMarkColor, radius * 2.4f, 5f);
+                    effects.Rune(heroPosition, FrostColor, radius * 2.3f, 1f);
+                    effects.AreaFill(heroPosition, FrostColor, radius, 1.2f);
                 }
                 else
                 {
@@ -636,7 +642,8 @@ namespace PersonalArena.View
                     effects.Crystals(land, ArrowShaftColor, 1, 0f, 0.9f, 1.3f, 0.07f);
                 }
                 effects.Shockwave(point, color, radius * RingQuadPerRadius, 0.4f);
-                effects.Rune(point, color, radius * 2f, 0.5f);
+                effects.Rune(point, color, radius * 2.3f, 0.7f);
+                effects.AreaFill(point, color, radius, 0.8f);
                 if (puffsLeft > 0)
                 {
                     puffsLeft--;
@@ -651,8 +658,11 @@ namespace PersonalArena.View
                 effects.Bolt(top, point, color, evolved ? 1.5f : 1.1f);
                 MarkElement(point, radius, ElementLightning);
                 effects.Decal(point, new Color(0.05f, 0.05f, 0.08f, 0.6f), radius * 1.6f, 2.5f);
-                effects.Flash(point + Vector3.up * 0.8f, color, radius * 2.2f, 0.18f);
+                effects.Flash(point + Vector3.up * 0.8f, color, radius * 2.8f, 0.25f);
                 effects.Shockwave(point, color, radius * RingQuadPerRadius, 0.35f);
+                effects.AreaFill(point, color, radius, 0.7f);
+                effects.Bolt(point + new Vector3(-radius, 0.3f, 0f), point + new Vector3(radius, 0.3f, 0f), color, 0.6f);
+                effects.Bolt(point + new Vector3(0f, 0.3f, -radius), point + new Vector3(0f, 0.3f, radius), color, 0.6f);
                 if (sparksLeft > 0)
                 {
                     sparksLeft--;
@@ -735,9 +745,23 @@ namespace PersonalArena.View
 
         private void OnMagnetPicked(Vector3 heroPosition)
         {
-            effects.Shockwave(heroPosition, MagnetColor, 12f, 0.8f);
-            effects.Shockwave(heroPosition, MagnetColor, 6f, 0.5f);
-            effects.Sparkle(heroPosition, MagnetColor, 16, 0.8f, 2.2f, 0.24f);
+            effects.Shockwave(heroPosition, MagnetColor, 26f, 0.9f);
+            effects.Shockwave(heroPosition, MagnetColor, 14f, 0.7f);
+            effects.Shockwave(heroPosition, Color.white, 7f, 0.5f);
+            effects.Twirl(heroPosition + Vector3.up * 0.4f, MagnetColor, 16f, 0.8f);
+            effects.Twirl(heroPosition + Vector3.up * 0.9f, Color.white, 8f, 0.6f);
+            effects.Rune(heroPosition, MagnetColor, 13f, 1f);
+            effects.AreaFill(heroPosition, MagnetColor, 9f, 1.1f);
+            effects.Flash(heroPosition + Vector3.up, MagnetColor, 6f, 0.3f);
+            // Streaks rushing in from all around, like everything being pulled to the hero.
+            for (int i = 0; i < 20; i++)
+            {
+                float angle = i * Mathf.PI * 2f / 20f;
+                Vector3 rim = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
+                float reach = 6f + 4f * (i % 3);
+                effects.Sparks(heroPosition + rim * reach + Vector3.up * 0.6f, -rim, MagnetColor, 3, reach * 2.6f, 0.08f);
+            }
+            effects.Sparkle(heroPosition, MagnetColor, 34, 2.4f, 2.6f, 0.3f);
             effects.Text(heroPosition + Vector3.up * 2.4f, "NAM CHÂM!", MagnetColor, 1.2f, 1.1f);
         }
 
@@ -751,6 +775,7 @@ namespace PersonalArena.View
             PresentWave();
             PresentSpit();
             PresentM9Weapons();
+            PresentBuffAuras(realDelta);
         }
 
         private void PresentSpears(float realDelta)
@@ -852,6 +877,12 @@ namespace PersonalArena.View
                     continue;
                 }
                 view.Root.localPosition = Vector3.LerpUnclamped(view.Previous, view.Current, interpolationAlpha);
+                // Enemy shots drip poison behind them.
+                if (projectileFxLeft > 0 && Random.value < Time.deltaTime * 22f)
+                {
+                    projectileFxLeft--;
+                    effects.Sparkle(view.Root.position, SpitColor, 1, 0.12f, -0.6f, 0.2f);
+                }
             }
         }
     }

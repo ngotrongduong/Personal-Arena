@@ -16,7 +16,8 @@ namespace PersonalArena.View
         public static readonly string[] TextureNames =
         {
             "muzzle_02", "fire_01", "smoke_07", "dirt_02", "scorch_03", "light_01", "twirl_01", "spark_07",
-            "circle_05", "magic_03", "star_09"
+            "circle_05", "magic_03", "star_09",
+            "magic_01", "magic_02", "circle_01", "circle_03", "light_03", "twirl_02", "twirl_03", "star_06"
         };
 
         private static readonly Dictionary<string, Material> Materials = new Dictionary<string, Material>();

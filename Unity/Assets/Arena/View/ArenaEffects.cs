@@ -145,7 +145,7 @@ namespace PersonalArena.View
             {
                 position = new Vector3(position.x, position.y + 0.06f, position.z),
                 velocity = Vector3.zero,
-                startLifetime = lifetime,
+                startLifetime = lifetime * AreaLinger,
                 startSize = size,
                 startColor = color
             };
