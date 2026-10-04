@@ -279,7 +279,10 @@ namespace PersonalArena.View
                     case WeaponVisual.Purge:
                         effects.Shockwave(point, Color.white, radius * RingQuadPerRadius, 0.7f);
                         effects.Rune(point, new Color(1f, 0.95f, 0.65f), radius * 2.4f, 0.9f);
-                        effects.AreaFill(point, new Color(1f, 0.95f, 0.65f), radius, 1.1f);
+                        if (!StoreArea(StoreFx.Explode5, point + Vector3.up * 0.5f, radius, 1.5f))
+                        {
+                            effects.AreaFill(point, new Color(1f, 0.95f, 0.65f), radius, 1.1f);
+                        }
                         effects.Flash(point + Vector3.up, new Color(1f, 0.95f, 0.65f), radius * 2f, 0.3f);
                         effects.Sparkle(point, Color.white, 20, radius * 0.8f, 2f, 0.24f);
                         return true;
@@ -308,14 +311,20 @@ namespace PersonalArena.View
                 case SkillKind.AreaBurst when skill != null && skill.Id == "war-cry":
                     effects.Shockwave(heroPosition, WhirlColor, radius * RingQuadPerRadius, 0.55f);
                     effects.Rune(heroPosition, WhirlColor, radius * 2.3f, 0.8f);
-                    effects.AreaFill(heroPosition, WhirlColor, radius, 0.9f);
+                    if (!StoreArea(StoreFx.RedBlast, heroPosition, radius, 1.6f))
+                    {
+                        effects.AreaFill(heroPosition, WhirlColor, radius, 0.9f);
+                    }
                     effects.Sparks(heroPosition + Vector3.up * 0.5f, Vector3.up, WhirlColor, 14, 8f, 1.2f);
                     return true;
                 case SkillKind.Leap:
                     effects.Shockwave(point, WhirlColor, radius * RingQuadPerRadius, 0.5f);
                     effects.Puff(point, DustColor, 12, 1f, radius, 0.8f, 0.25f);
                     effects.Rune(point, WhirlColor, radius * 2.3f, 0.6f);
-                    effects.AreaFill(point, WhirlColor, radius, 0.8f);
+                    if (!StoreArea(StoreFx.GroundBlast, point, radius, 1.8f))
+                    {
+                        effects.AreaFill(point, WhirlColor, radius, 0.8f);
+                    }
                     effects.Shards(point, new Color(0.55f, 0.5f, 0.45f), 10, 3.2f, 0.3f);
                     effects.Decal(point, new Color(0.06f, 0.05f, 0.04f, 0.7f), radius * 2.2f, 4f);
                     return true;

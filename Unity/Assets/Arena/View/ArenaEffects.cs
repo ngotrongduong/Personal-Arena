@@ -413,6 +413,7 @@ namespace PersonalArena.View
         {
             EnsureReady();
             ClearVfx();
+            ClearStore();
             sparks.Clear();
             puffs.Clear();
             rings.Clear();
@@ -441,6 +442,7 @@ namespace PersonalArena.View
         {
             float delta = Time.unscaledDeltaTime;
             UpdateVfx(delta);
+            UpdateStore(delta);
             Camera camera = Camera.main;
 
             for (int i = 0; i < slashes.Count; i++)

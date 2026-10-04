@@ -38,6 +38,16 @@
   quái trong bán kính 5); quái vàng hiếm (1 % quái thường, máu ×3, chắc chắn rơi vàng ×5, dòng ngẫu nhiên riêng). Quan sát giữ
   schema v5: quái mới mượn kênh của loại gần nhất (`SurvivorDefaults.ObservedType`), quái vàng bật cờ tinh anh. Tắt được bằng
   `Tuning.NewEnemies` / `GoldenChance` (test vàng dùng luật cũ). Code ở `SurvivorSim.Rares.cs`. **M11 xong cả 3 bước.**
+- **M12 (owner yêu cầu 2026-10-04: dùng 2 gói hiệu ứng Asset Store thay hiệu ứng cũ) — xong, chỉ trình xem:** gói
+  *Magic Effects FREE* (Hovl Studio) cho phép thuật và *52 Special Effects Pack* (GAPH) cho hiệu ứng đặc biệt. **Hai gói theo
+  giấy phép Asset Store nên KHÔNG nằm trong repo công khai** (đã `.gitignore`), chỉ có trên máy owner; máy không có gói (CI) tự
+  dùng lại hiệu ứng Kenney cũ. `StoreVfxBuilder` (chạy trong build trình xem) gom prefab đã chọn vào
+  `Assets/ThirdPartyLocal/Resources/StoreVfxSet.asset`; `ArenaEffects.Store.cs` phát theo pool (`Store`, `StoreAttach`, tối đa
+  6 bản mỗi loại, hết pool thì dùng hiệu ứng cũ); bảng "tình huống → hiệu ứng" ở `SurvivorRenderer.Store.cs` và các chỗ gọi
+  `StoreArea` / `StoreAt`. Đã gắn: nổ lửa/bom, nổ độc của quái tự nổ, băng (nova, đóng băng, bùng băng), sét, thanh tẩy, tiếng
+  thét, nhảy bổ, sóng chấn động, dịch chuyển, lên cấp, nhặt đồ, rương, buff (cuồng nộ/khiên/tốc độ), bình mana, tinh anh/trùm
+  xuất hiện và chết, gọi quái, phân thân, thầy cúng hồi máu, quái vàng, hào quang buff dưới chân, cầu phép và cầu lửa. Cờ
+  `-vfxGallery` (kèm `-perfLog`) chụp lần lượt mọi hiệu ứng của gói để chọn/chỉnh cỡ.
 - **Test:** CoreTests 629/629, pytest 204/204, EditMode 300/300 (PC, 2026-10-04).
 
 ## Việc tiếp theo (theo thứ tự)

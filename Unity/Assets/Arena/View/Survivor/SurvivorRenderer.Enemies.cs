@@ -794,14 +794,20 @@ namespace PersonalArena.View
         {
             Vector3 point = ArenaSpace.ToWorld(e.Point);
             effects.Shockwave(point, HurtColor, 2.4f, 0.4f);
-            effects.Puff(point, new Color(0.75f, 0.6f, 0.5f, 0.6f), 6, 0.9f, 1f, 0.6f, 0.4f);
+            if (!StoreAt(StoreFx.DustPuff, point, 0.3f, 1.2f))
+            {
+                effects.Puff(point, new Color(0.75f, 0.6f, 0.5f, 0.6f), 6, 0.9f, 1f, 0.6f, 0.4f);
+            }
         }
 
         private void OnEnemySplit(SurvivorEvent e)
         {
             Vector3 point = ArenaSpace.ToWorld(e.Point);
             effects.Shockwave(point, SplitterTint, 3f, 0.5f);
-            effects.Puff(point, new Color(0.45f, 0.9f, 0.4f, 0.6f), 8, 0.9f, 1.4f, 0.7f, 0.6f);
+            if (!StoreArea(StoreFx.SwampBall, point + Vector3.up * 0.6f, 1.6f, 0.8f))
+            {
+                effects.Puff(point, new Color(0.45f, 0.9f, 0.4f, 0.6f), 8, 0.9f, 1.4f, 0.7f, 0.6f);
+            }
         }
 
         private void OnEnemyHealed(SurvivorEvent e)
@@ -812,7 +818,10 @@ namespace PersonalArena.View
             {
                 shaman.Animator?.PlayOneShot(WalkerThrowState, 1.2f, false);
             }
-            effects.AreaFill(point, ShamanHealColor, radius, 0.7f);
+            if (!StoreArea(StoreFx.HealCircle, point, radius, 1.6f))
+            {
+                effects.AreaFill(point, ShamanHealColor, radius, 0.7f);
+            }
             effects.Shockwave(point, ShamanHealColor, radius * RingQuadPerRadius, 0.7f);
             effects.Sparkle(point, ShamanHealColor, 14, radius * 0.7f, 1.8f, 0.22f);
         }
@@ -821,7 +830,10 @@ namespace PersonalArena.View
         {
             Vector3 point = ArenaSpace.ToWorld(e.Point);
             effects.Shockwave(point, GoldColor, 4f, 0.7f);
-            effects.Sparkle(point, GoldColor, 16, 0.8f, 2.4f, 0.28f);
+            if (!StoreAt(StoreFx.StarHit, point + Vector3.up * 1f, 2.4f, 1.4f))
+            {
+                effects.Sparkle(point, GoldColor, 16, 0.8f, 2.4f, 0.28f);
+            }
             effects.Text(point + Vector3.up * 2.8f, "QUÁI VÀNG!", GoldColor, 1.3f, 1.4f);
         }
 
@@ -830,7 +842,10 @@ namespace PersonalArena.View
             Vector3 point = ArenaSpace.ToWorld(e.Point);
             effects.Shockwave(point, GoldColor, 6f, 0.8f);
             effects.Flash(point + Vector3.up, GoldColor, 4f, 0.3f);
-            effects.Sparkle(point, GoldColor, 36, 1.5f, 3f, 0.32f);
+            if (!StoreArea(StoreFx.RainbowExplode, point + Vector3.up * 0.6f, 2.8f, 2f))
+            {
+                effects.Sparkle(point, GoldColor, 36, 1.5f, 3f, 0.32f);
+            }
             effects.Text(point + Vector3.up * 2.8f, "VÀNG x5!", GoldColor, 1.4f, 1.4f);
         }
 

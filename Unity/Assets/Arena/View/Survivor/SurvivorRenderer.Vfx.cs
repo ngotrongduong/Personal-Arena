@@ -26,7 +26,7 @@ namespace PersonalArena.View
         private int blastsThisFrame;
 
         /// <summary>A full explosion, or only a flash once this frame already drew several (bomb rings fire many at once).</summary>
-        private void Blast(Vector3 point, Color color, float radius)
+        private void Blast(Vector3 point, Color color, float radius, StoreFx store = StoreFx.Explode)
         {
             if (Time.frameCount != blastFrame)
             {
@@ -37,7 +37,10 @@ namespace PersonalArena.View
             effects.Rune(point, color, radius * 2.3f, 0.6f);
             if (blastsThisFrame++ < BlastsPerFrame)
             {
-                effects.Explosion(point, color, radius);
+                if (!StoreArea(store, point, radius, 1.6f))
+                {
+                    effects.Explosion(point, color, radius);
+                }
             }
             else
             {
@@ -318,12 +321,21 @@ namespace PersonalArena.View
         /// <summary>
         /// -fxDemo: plays every new effect once on a grid around <paramref name="center"/> so one screenshot shows them all.
         /// </summary>
+        public void PlayStoreGallery(Vector3 center, int page)
+        {
+            effects.PlayStoreGallery(center, page);
+        }
+
         public void PlayFxDemo(Vector3 center)
         {
             const float step = 5f;
             Vector3 At(int column, int row) => center + new Vector3((column - 1.5f) * step, 0f, (0.5f - row) * step);
 
-            effects.Explosion(At(0, 0), FireballColor, 2f);
+            Blast(At(0, 0), FireballColor, 2f);
+            StoreArea(StoreFx.FreezeCircle, At(1, 0), 2.2f, 1.6f);
+            StoreArea(StoreFx.LightningBall, At(3, 0) + Vector3.up * 0.5f, 1.5f, 0.7f);
+            StoreArea(StoreFx.RedBlast, At(1, 1), 2.2f, 1.6f);
+            StoreArea(StoreFx.RainbowExplode, At(0, 1) + Vector3.up * 0.6f, 2f, 2f);
             for (int i = 0; i < 40; i++)
             {
                 effects.Flame(At(1, 0) + new Vector3(Random.Range(-2f, 2f), 0f, Random.Range(-0.3f, 0.3f)), WallColor, Random.Range(0.9f, 1.5f));

@@ -22,6 +22,7 @@ namespace PersonalArena.View.Editor
         {
             try
             {
+                StoreVfxBuilder.Build();
                 PlaySceneBuilder.BuildSurvivorScene(PlaySceneBuilder.WatchScenePath);
                 BuildResult result = BuildPlayer();
                 if (Application.isBatchMode)

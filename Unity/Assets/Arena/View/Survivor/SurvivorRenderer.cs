@@ -597,7 +597,10 @@ namespace PersonalArena.View
                     {
                         Vector3 point = ArenaSpace.ToWorld(e.Point);
                         effects.Shockwave(point, EliteColor, 3.2f, 0.6f);
-                        effects.Sparkle(point, EliteColor, 18, 0.8f, 2.2f, 0.26f);
+                        if (!StoreArea(StoreFx.PoisonExplode, point + Vector3.up * 0.6f, 2.2f, 1.8f))
+                        {
+                            effects.Sparkle(point, EliteColor, 18, 0.8f, 2.2f, 0.26f);
+                        }
                         break;
                     }
                     case SurvivorEventType.BossKilled:
@@ -605,7 +608,10 @@ namespace PersonalArena.View
                         Vector3 point = ArenaSpace.ToWorld(e.Point);
                         effects.Shockwave(point, GoldColor, 9f, 1.1f);
                         effects.Flash(point + Vector3.up, Color.white, 6f, 0.4f);
-                        effects.Sparkle(point, GoldColor, 40, 2f, 3f, 0.35f);
+                        if (!StoreArea(StoreFx.MagicCircleExplode, point + Vector3.up * 0.3f, 5f, 2.6f))
+                        {
+                            effects.Sparkle(point, GoldColor, 40, 2f, 3f, 0.35f);
+                        }
                         effects.Text(point + Vector3.up * 3.5f, "TRÙM ĐÃ GỤC!", GoldColor, 2f, 2f);
                         break;
                     }
@@ -613,14 +619,20 @@ namespace PersonalArena.View
                     {
                         Vector3 point = ArenaSpace.ToWorld(e.Point);
                         effects.Shockwave(point, EliteColor, 3f, 0.7f);
-                        effects.Puff(point, new Color(0.45f, 0.3f, 0.6f, 0.6f), 10, 1f, 1.8f, 0.9f, 0.8f);
+                        if (!StoreArea(StoreFx.SummonCircle2, point + Vector3.up * 0.1f, 2f, 2f))
+                        {
+                            effects.Puff(point, new Color(0.45f, 0.3f, 0.6f, 0.6f), 10, 1f, 1.8f, 0.9f, 0.8f);
+                        }
                         break;
                     }
                     case SurvivorEventType.BossSpawned:
                     {
                         Vector3 point = ArenaSpace.ToWorld(e.Point);
                         effects.Shockwave(point, BossColor, 8f, 1.2f);
-                        effects.Puff(point, new Color(0.35f, 0.1f, 0.12f, 0.7f), 24, 1.6f, 3.5f, 1.4f, 1f);
+                        if (!StoreArea(StoreFx.SummonCircle2, point + Vector3.up * 0.1f, 4.5f, 2.6f))
+                        {
+                            effects.Puff(point, new Color(0.35f, 0.1f, 0.12f, 0.7f), 24, 1.6f, 3.5f, 1.4f, 1f);
+                        }
                         effects.Text(heroPosition + Vector3.up * 3f, "TRÙM XUẤT HIỆN!", BossColor, 1.8f, 2.2f);
                         break;
                     }
@@ -633,7 +645,10 @@ namespace PersonalArena.View
                         }
                         break;
                     case SurvivorEventType.HeroDied:
-                        effects.Puff(heroPosition, new Color(0.3f, 0.22f, 0.3f, 0.7f), 16, 1.2f, 2f, 1.2f, 0.6f);
+                        if (!StoreArea(StoreFx.SmokeBlast, heroPosition, 3f, 2f))
+                        {
+                            effects.Puff(heroPosition, new Color(0.3f, 0.22f, 0.3f, 0.7f), 16, 1.2f, 2f, 1.2f, 0.6f);
+                        }
                         break;
                     case SurvivorEventType.Blocked:
                         FlashGuard(heroHasBubble ? BubbleColor : BlockColor);
@@ -654,14 +669,20 @@ namespace PersonalArena.View
                         break;
                     case SurvivorEventType.LevelUp:
                         effects.Shockwave(heroPosition, LevelUpColor, 4.5f, 0.7f);
-                        effects.Sparkle(heroPosition, LevelUpColor, 22, 0.9f, 2.6f, 0.28f);
+                        if (!StoreAt(StoreFx.StarAura, heroPosition, 2.2f, 2f))
+                        {
+                            effects.Sparkle(heroPosition, LevelUpColor, 22, 0.9f, 2.6f, 0.28f);
+                        }
                         effects.Text(heroPosition + Vector3.up * 2.6f, "LÊN CẤP!", LevelUpColor, 1.4f, 1.3f);
                         break;
                     case SurvivorEventType.ItemPicked:
                     {
                         Color color = SurvivorViewLogic.ItemColor(e.Id);
                         effects.Shockwave(heroPosition, color, 3f, 0.5f);
-                        effects.Sparkle(heroPosition, color, 16, 0.7f, 2.4f, 0.25f);
+                        if (!StoreAt(StoreFx.StarHit, heroPosition + Vector3.up * 1f, 2.2f, 1.2f))
+                        {
+                            effects.Sparkle(heroPosition, color, 16, 0.7f, 2.4f, 0.25f);
+                        }
                         break;
                     }
                     case SurvivorEventType.ChestOpened:
@@ -716,6 +737,7 @@ namespace PersonalArena.View
                         }
                         effects.Shockwave(point, SummonColor, 3.5f * RingQuadPerRadius * 0.5f, 0.8f);
                         effects.Flash(point + Vector3.up * 1.2f, SummonColor, 2.2f, 0.3f);
+                        StoreArea(StoreFx.RuneOfMagic, point + Vector3.up * 0.1f, 1.8f, 1.6f);
                         if (puffsLeft > 0)
                         {
                             puffsLeft--;
@@ -866,8 +888,14 @@ namespace PersonalArena.View
                     effects.Sparkle(from, BlinkColor, 12, 0.6f, 1.6f, 0.22f);
                     effects.Sparkle(to, BlinkColor, 12, 0.6f, 1.6f, 0.22f);
                     effects.Shockwave(to, BlinkColor, 2.4f, 0.35f);
-                    effects.Rune(from, BlinkColor, 3f, 0.6f);
-                    effects.Rune(to, BlinkColor, 3.6f, 0.8f);
+                    if (!StoreAt(StoreFx.Portal, from + Vector3.up * 0.9f, 1.8f, 1.2f))
+                    {
+                        effects.Rune(from, BlinkColor, 3f, 0.6f);
+                    }
+                    if (!StoreAt(StoreFx.Portal, to + Vector3.up * 0.9f, 2.2f, 1.2f))
+                    {
+                        effects.Rune(to, BlinkColor, 3.6f, 0.8f);
+                    }
                     heroSnap = true;
                     break;
                 }
@@ -911,7 +939,7 @@ namespace PersonalArena.View
             Vector3 point = ArenaSpace.ToWorld(e.Point);
             float radius = Mathf.Max(0.5f, e.Value);
             effects.Shockwave(point, ExplodeColor, radius * RingQuadPerRadius, 0.45f);
-            Blast(point, ExplodeColor, radius);
+            Blast(point, ExplodeColor, radius, StoreFx.PoisonExplode);
             effects.Sparks(point + Vector3.up * 0.5f, Vector3.up, ExplodeColor, 10, 8f, 1.2f);
             if (puffsLeft > 0)
             {

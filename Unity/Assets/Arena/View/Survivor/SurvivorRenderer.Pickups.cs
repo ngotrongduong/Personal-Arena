@@ -655,6 +655,12 @@ namespace PersonalArena.View
             {
                 case ProjectileLook.MagicBolt:
                 {
+                    GameObject storeOrb = effects.StoreAttach(StoreFx.MagicBall, model, 1.3f);
+                    if (storeOrb != null)
+                    {
+                        storeOrb.SetActive(true);
+                        break;
+                    }
                     // A round orb with a bright star in it and two rune rings turning around it.
                     GameObject core = CreatePrimitive("Core", PrimitiveType.Sphere, model, boltMaterial);
                     core.transform.localScale = Vector3.one * 0.4f;
@@ -673,6 +679,12 @@ namespace PersonalArena.View
                 }
                 case ProjectileLook.Fireball:
                 {
+                    GameObject storeFire = effects.StoreAttach(StoreFx.FireBall, model, 1.3f);
+                    if (storeFire != null)
+                    {
+                        storeFire.SetActive(true);
+                        break;
+                    }
                     GameObject core = CreatePrimitive("Core", PrimitiveType.Sphere, model, fireballMaterial);
                     core.transform.localScale = Vector3.one * 0.62f;
                     Transform glow = CreateFlatQuad("Glow", model, fireballGlowMaterial);
