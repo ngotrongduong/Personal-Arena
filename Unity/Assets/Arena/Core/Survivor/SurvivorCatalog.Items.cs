@@ -233,6 +233,37 @@ namespace PersonalArena.Core.Survivor
             ProjectileSpeed = 14f, ProjectileRadius = 0.25f, ProjectileRange = 11f, CountByLevel = Array.AsReadOnly(new[] { 3, 3, 3, 3, 3 })
         };
 
+        // ---- Rings: always circling the hero at a fixed distance, in every class's pool ----
+        private static readonly ItemDef SpiritOrbs = new ItemDef
+        {
+            CatalogIndex = SpiritOrbsIndex, Id = "spirit-orbs", Name = "Spirit Orbs", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Ring,
+            BaseDamage = 9f, DamagePerLevel = 3f, BaseRange = 3.2f, Knockback = 0.25f,
+            ProjectileRadius = 0.45f, HitInterval = 0.6f, AngularSpeedDegrees = 150f,
+            CountByLevel = Array.AsReadOnly(new[] { 2, 2, 3, 3, 4 })
+        };
+        private static readonly ItemDef SawRing = new ItemDef
+        {
+            CatalogIndex = SawRingIndex, Id = "saw-ring", Name = "Saw Ring", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Ring,
+            BaseDamage = 5f, DamagePerLevel = 2f, BaseRange = 1.6f, Knockback = 0.1f,
+            ProjectileRadius = 0.4f, HitInterval = 0.3f, AngularSpeedDegrees = 420f,
+            CountByLevel = Array.AsReadOnly(new[] { 2, 3, 3, 4, 4 })
+        };
+        private static readonly ItemDef FrostHalo = new ItemDef
+        {
+            // Turns the other way and shoves enemies back: control more than damage.
+            CatalogIndex = FrostHaloIndex, Id = "frost-halo", Name = "Frost Halo", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Ring,
+            BaseDamage = 4f, DamagePerLevel = 2f, BaseRange = 2.4f, Knockback = 0.6f,
+            ProjectileRadius = 0.4f, HitInterval = 0.5f, AngularSpeedDegrees = -200f,
+            CountByLevel = Array.AsReadOnly(new[] { 3, 3, 4, 4, 5 })
+        };
+        private static readonly ItemDef Comet = new ItemDef
+        {
+            CatalogIndex = CometIndex, Id = "comet", Name = "Comet", Kind = ItemKind.Weapon, Pattern = WeaponPattern.Ring,
+            BaseDamage = 30f, DamagePerLevel = 10f, BaseRange = 5f, Knockback = 1.5f,
+            ProjectileRadius = 0.8f, HitInterval = 0.8f, AngularSpeedDegrees = 220f,
+            CountByLevel = Array.AsReadOnly(new[] { 1, 1, 2, 2, 2 })
+        };
+
         // ---- Passives ----
         private static readonly ItemDef IronHeart = Passive(IronHeartIndex, "iron-heart", "Iron Heart");
         private static readonly ItemDef BoneArmor = Passive(BoneArmorIndex, "bone-armor", "Bone Armor");

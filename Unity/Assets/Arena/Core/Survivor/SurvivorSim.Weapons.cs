@@ -21,6 +21,7 @@ namespace PersonalArena.Core.Survivor
                 switch (def.Pattern)
                 {
                     case WeaponPattern.Orbit: UpdateOrbitAxes(def, level); continue;
+                    case WeaponPattern.Ring: UpdateRing(i, def, level); continue;
                     case WeaponPattern.Shockwave: UpdateShockwave(def, level); continue;
                     case WeaponPattern.Combo: UpdateCombo(def, level); continue;
                     case WeaponPattern.Retaliate: continue;
@@ -148,6 +149,7 @@ namespace PersonalArena.Core.Survivor
         private void ResetContentState()
         {
             orbitAxeCount = 0; orbitAngle = 0f; orbitRemaining = 0f; orbitRadius = 0f; orbitAxeRadius = 0f; orbitWeaponIndex = -1;
+            ResetRings();
             comboHitsLeft = 0; comboTimer = 0f; retaliatePending = false; reflectPending = 0f; lastHeroDamage = 0f;
             barrierInit = false; barrierCharges = 0; barrierMax = 0;
             movementFactor = 0f; bombRingAngle = 0f;

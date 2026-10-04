@@ -228,6 +228,11 @@ namespace PersonalArena.View
                 case 70: return new Color(0.78f, 0.48f, 1f);
                 case 71: return new Color(0.55f, 0.95f, 0.42f);
                 case 72: return new Color(0.78f, 0.7f, 1f);
+                case SurvivorCatalog.SpiritOrbsIndex:
+                case SurvivorCatalog.SawRingIndex:
+                case SurvivorCatalog.FrostHaloIndex:
+                case SurvivorCatalog.CometIndex:
+                    return SurvivorRenderer.RingColor(catalogIndex);
                 default: return new Color(0.8f, 0.82f, 0.9f);
             }
         }

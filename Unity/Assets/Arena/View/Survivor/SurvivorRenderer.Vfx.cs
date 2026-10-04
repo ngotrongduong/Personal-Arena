@@ -12,6 +12,7 @@ namespace PersonalArena.View
         private const int BlastsPerFrame = 5;
         private const int SpikesPerTrap = 7;
         private static readonly Color SpikeColor = new Color(0.72f, 0.74f, 0.8f);
+        private static readonly Color PurgeColor = new Color(1f, 0.95f, 0.65f);
         private static readonly Color PoisonFumeColor = new Color(0.35f, 0.85f, 0.3f, 0.32f);
         private static readonly Color FrostMarkColor = new Color(0.7f, 0.9f, 1f, 0.45f);
         private static readonly Color HolyRuneColor = new Color(1f, 0.95f, 0.65f);

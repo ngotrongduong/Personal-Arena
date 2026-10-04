@@ -496,6 +496,11 @@ namespace PersonalArena.View
                 hud.ToggleSettingsPanel();
             }
 
+            if (keyboard.kKey.wasPressedThisFrame)
+            {
+                hud.ToggleCodexPanel();
+            }
+
             if (keyboard.hKey.wasPressedThisFrame)
             {
                 hud.ToggleHelp();

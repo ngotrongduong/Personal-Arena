@@ -295,14 +295,11 @@ namespace PersonalArena.View
                         }
                         return true;
                     case WeaponVisual.Purge:
-                        effects.Shockwave(point, Color.white, radius * RingQuadPerRadius, 0.7f);
-                        effects.Rune(point, new Color(1f, 0.95f, 0.65f), radius * 2.4f, 0.9f);
-                        if (!StoreArea(StoreFx.Explode5, point + Vector3.up * 0.5f, radius, 1.5f))
-                        {
-                            effects.AreaFill(point, new Color(1f, 0.95f, 0.65f), radius, 1.1f);
-                        }
-                        effects.Flash(point + Vector3.up, new Color(1f, 0.95f, 0.65f), radius * 2f, 0.3f);
-                        effects.Sparkle(point, Color.white, 20, radius * 0.8f, 2f, 0.24f);
+                        // The purge reaches far (14 m), so its effect is only the edge of what it hit: one ring at
+                        // the real radius and a faint fill inside. A blast scaled to that radius covered the screen.
+                        effects.Shockwave(point, PurgeColor, radius * RingQuadPerRadius, 0.6f);
+                        effects.AreaFill(point, PurgeColor, radius, 0.5f);
+                        effects.Flash(point + Vector3.up, PurgeColor, 2.5f, 0.25f);
                         return true;
                     case WeaponVisual.Stone:
                         StartStreak(heroPosition + Vector3.up * 0.9f, (point - heroPosition).normalized,

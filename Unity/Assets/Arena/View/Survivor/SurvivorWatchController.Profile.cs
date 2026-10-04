@@ -64,7 +64,29 @@ namespace PersonalArena.View
         /// <summary>The kit of a class (Core <see cref="SurvivorDefaults.ForClass"/>); an unknown id gives the Warrior.</summary>
         private static SurvivorClassDef ClassDefinition(string id)
         {
-            return SurvivorDefaults.ForClass(id) ?? SurvivorDefaults.Warrior();
+            SurvivorClassDef kit = SurvivorDefaults.ForClass(id) ?? SurvivorDefaults.Warrior();
+            if (!HasArgument("-perfLog"))
+            {
+                return kit;
+            }
+
+            // Checks of the build (with -perfLog only): -startWeapon <catalog index> starts the hero with that weapon;
+            // -ringDemo offers nothing but the ring weapons, so all four circle the hero within a few minutes.
+            if (int.TryParse(CommandLineValue("-startWeapon"), NumberStyles.Integer, CultureInfo.InvariantCulture, out int weapon) &&
+                SurvivorCatalog.Get(weapon) != null && SurvivorCatalog.Get(weapon).Kind == ItemKind.Weapon)
+            {
+                kit.StartingWeapon = weapon;
+            }
+            if (HasArgument("-ringDemo"))
+            {
+                kit.WeaponPool = new[]
+                {
+                    kit.StartingWeapon, SurvivorCatalog.SpiritOrbsIndex, SurvivorCatalog.SawRingIndex, SurvivorCatalog.FrostHaloIndex,
+                    SurvivorCatalog.CometIndex
+                };
+                kit.PassivePool = Array.Empty<int>();
+            }
+            return kit;
         }
 
         /// <summary>

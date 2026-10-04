@@ -15,7 +15,7 @@ namespace PersonalArena.Core.Tests.Survivor
         public void Catalog_IndicesAndPools()
         {
             SurvivorClassDef warrior = SurvivorDefaults.Warrior();
-            Assert.That(warrior.WeaponPool, Is.EqualTo(new[] { 0, 1, 2, 3, 4, 5, 26, 27, 28, 29, 30, 31, 32, 33, 64 })); Assert.That(warrior.PassivePool, Is.EqualTo(new[] { 6, 7, 8, 9, 10, 11, 12, 13, 58, 59, 60, 61, 34, 35, 36, 37 }));
+            Assert.That(warrior.WeaponPool, Is.EqualTo(new[] { 0, 1, 2, 3, 4, 5, 26, 27, 28, 29, 30, 31, 32, 33, 64, 73, 74, 75, 76 })); Assert.That(warrior.PassivePool, Is.EqualTo(new[] { 6, 7, 8, 9, 10, 11, 12, 13, 58, 59, 60, 61, 34, 35, 36, 37 }));
             Assert.That(SurvivorCatalog.Get(0).Id, Is.EqualTo("sword-sweep")); Assert.That(SurvivorCatalog.Get(1).Id, Is.EqualTo("spear-thrust")); Assert.That(SurvivorCatalog.Get(57).Kind, Is.EqualTo(ItemKind.Weapon)); Assert.That(SurvivorCatalog.Get(38), Is.Null); Assert.That(SurvivorCatalog.Get(39), Is.Null); Assert.That(SurvivorCatalog.Get(58).Kind, Is.EqualTo(ItemKind.Passive));
             Assert.That(SurvivorCatalog.Get(62).Kind, Is.EqualTo(ItemKind.Filler)); Assert.That(SurvivorCatalog.Get(63).Kind, Is.EqualTo(ItemKind.Filler));
         }

@@ -301,6 +301,7 @@ namespace PersonalArena.View
                 waveRoot.gameObject.SetActive(false);
             }
             HideAllM9Weapons();
+            HideAllRings();
         }
 
         private static void HideAxe(AxeView view)
@@ -443,6 +444,7 @@ namespace PersonalArena.View
 
             SyncSpit();
             SyncM9Weapons();
+            SyncRings();
         }
 
         private void SyncSpit()
@@ -501,6 +503,7 @@ namespace PersonalArena.View
             PresentWave();
             PresentSpit();
             PresentM9Weapons();
+            PresentRings(realDelta);
             PresentBuffAuras(realDelta);
         }
 

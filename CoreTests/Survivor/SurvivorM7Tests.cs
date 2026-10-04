@@ -16,7 +16,7 @@ namespace PersonalArena.Core.Tests.Survivor
         {
             SurvivorSim warrior = ClassSim(SurvivorDefaults.Warrior(), 1);
             Assert.That(warrior.Inventory.Level(0), Is.EqualTo(1)); Assert.That(warrior.Hero.MaxHp, Is.EqualTo(150f));
-            Assert.That(SurvivorDefaults.Warrior().WeaponPool, Is.EqualTo(new[] { 0, 1, 2, 3, 4, 5, 26, 27, 28, 29, 30, 31, 32, 33, 64 }));
+            Assert.That(SurvivorDefaults.Warrior().WeaponPool, Is.EqualTo(new[] { 0, 1, 2, 3, 4, 5, 26, 27, 28, 29, 30, 31, 32, 33, 64, 73, 74, 75, 76 }));
 
             SurvivorSim mage = ClassSim(SurvivorDefaults.Mage(), 1);
             Assert.That(mage.Inventory.Level(SurvivorCatalog.MagicBoltIndex), Is.EqualTo(1)); Assert.That(mage.Inventory.Level(0), Is.Zero);

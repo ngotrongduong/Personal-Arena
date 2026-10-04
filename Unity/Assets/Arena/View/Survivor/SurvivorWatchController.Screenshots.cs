@@ -101,7 +101,7 @@ namespace PersonalArena.View
             }
         }
 
-        /// <summary>-openPanel character|farm|compare|lineage: open that panel (farm: start a session), capture it, then optionally quit.</summary>
+        /// <summary>-openPanel character|farm|compare|lineage|settings|codex[:page[:entry]]: open that panel (farm: start a session), capture it, then optionally quit.</summary>
         private void UpdatePanelScreenshot(float real)
         {
             string panel = openPanel.Trim().ToLowerInvariant();
@@ -124,7 +124,19 @@ namespace PersonalArena.View
                         hud.ToggleSettingsPanel();
                         break;
                     default:
-                        hud.ToggleCharacterPanel();
+                        if (panel.StartsWith("codex", StringComparison.Ordinal))
+                        {
+                            // codex[:page[:entry]] with page 0..3 (weapons, passives, evolutions, skills).
+                            string[] parts = panel.Split(':');
+                            int.TryParse(parts.Length > 1 ? parts[1] : "0", NumberStyles.Integer, CultureInfo.InvariantCulture, out int page);
+                            int.TryParse(parts.Length > 2 ? parts[2] : "0", NumberStyles.Integer, CultureInfo.InvariantCulture, out int entry);
+                            hud.ToggleCodexPanel();
+                            hud.CodexPanel.ShowForChecks(page, entry);
+                        }
+                        else
+                        {
+                            hud.ToggleCharacterPanel();
+                        }
                         break;
                 }
             }

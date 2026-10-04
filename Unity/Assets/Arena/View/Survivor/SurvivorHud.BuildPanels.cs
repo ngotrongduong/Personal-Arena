@@ -82,6 +82,9 @@ namespace PersonalArena.View
             CreateMenuButton(panel, 0, 1, "CHARTS   G", ToggleHistoryPanel);
             CreateMenuButton(panel, 1, 1, "AI PROFILE   P", ToggleProfilePanel);
             CreateMenuButton(panel, 2, 1, "HISTORY   L", ToggleLineagePanel);
+            CreateMenuButton(panel, 0, 2, "CODEX   K", ToggleCodexPanel);
+            CreateMenuButton(panel, 1, 2, "SETTINGS   O", ToggleSettingsPanel);
+            CreateMenuButton(panel, 2, 2, "KEYS   H", ToggleHelp);
             LayoutRightColumn();
         }
 
@@ -132,6 +135,14 @@ namespace PersonalArena.View
                 settingsPanel = gameObject.AddComponent<SettingsPanel>();
             }
             settingsPanel.Build(canvasRoot, font);
+
+            codexPanel = GetComponent<CodexPanel>();
+            if (codexPanel == null)
+            {
+                codexPanel = gameObject.AddComponent<CodexPanel>();
+            }
+            codexPanel.Bind(() => sim);
+            codexPanel.Build(canvasRoot, font);
         }
 
         private void BuildTrainingPanel()

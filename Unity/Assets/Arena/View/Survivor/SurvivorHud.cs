@@ -194,6 +194,7 @@ namespace PersonalArena.View
         public bool PanelHandlesEscape()
         {
             return Handles(characterPanel) || Handles(farmPanel) || Handles(comparePanel) || Handles(lineagePanel) || Handles(settingsPanel) ||
+                Handles(codexPanel) ||
                 (historyPanel != null && (historyPanel.IsOpen || historyPanel.ConsumedEscapeThisFrame)) ||
                 (profilePanel != null && (profilePanel.IsOpen || profilePanel.ConsumedEscapeThisFrame));
         }
@@ -232,6 +233,10 @@ namespace PersonalArena.View
             if (settingsPanel != null && !ReferenceEquals(settingsPanel, keep))
             {
                 settingsPanel.SetOpen(false);
+            }
+            if (codexPanel != null && !ReferenceEquals(codexPanel, keep))
+            {
+                codexPanel.SetOpen(false);
             }
         }
 

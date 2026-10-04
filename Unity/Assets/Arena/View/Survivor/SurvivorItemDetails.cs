@@ -79,6 +79,10 @@ namespace PersonalArena.View
                 case "poison-pool": return "Drops a pool of poison that damages enemies standing in it.";
                 case "bounce-shot": return "A shot that bounces off walls and ricochets from enemy to enemy.";
                 case "bracelet-trio": return "Three tight shots at one random enemy in range.";
+                case "spirit-orbs": return "Orbs that never stop circling the hero at mid range.";
+                case "saw-ring": return "Saws spin close around the hero and grind whatever touches them.";
+                case "frost-halo": return "Ice shards circle the other way and shove enemies back.";
+                case "comet": return "A heavy comet sweeps a wide circle and knocks enemies away.";
                 case "bonus-gold": return "Gain 25 gold now.";
                 case "bonus-heal": return "Heal 30 HP now.";
                 default: return string.Empty;
@@ -135,6 +139,13 @@ namespace PersonalArena.View
                 builder.Append(old == null ? after[i].Value : old + " → " + after[i].Value);
             }
             return builder.ToString();
+        }
+
+        /// <summary>A passive's whole bonus at <paramref name="level"/>, e.g. "+50% max HP"; empty for other rows.</summary>
+        public static string PassiveTotal(int catalogIndex, int level)
+        {
+            ItemDef def = SurvivorCatalog.Get(catalogIndex);
+            return def != null && def.Kind == ItemKind.Passive ? PassiveEffect(def, level) : string.Empty;
         }
 
         /// <summary>How the item evolves or what it evolved from; for a passive, the weapons it evolves. Empty when none.</summary>
@@ -316,6 +327,10 @@ namespace PersonalArena.View
             {
                 Add(stats, "Lasts", def.Duration, " s");
             }
+            if (pattern == WeaponPattern.Orbit || pattern == WeaponPattern.Ring)
+            {
+                Add(stats, "Hits an enemy again after", def.HitInterval, " s");
+            }
             if (def.Chance > 0f)
             {
                 stats.Add(new Stat("Chance", Percent(System.Math.Min(1f, def.Chance + def.ChancePerLevel * step))));
@@ -358,7 +373,8 @@ namespace PersonalArena.View
         {
             switch (pattern)
             {
-                case WeaponPattern.Orbit: return "Orbiting";
+                case WeaponPattern.Orbit:
+                case WeaponPattern.Ring: return "Orbiting";
                 case WeaponPattern.Strike:
                 case WeaponPattern.BombRing: return "Blasts";
                 case WeaponPattern.Barrier: return "Charges";
@@ -376,7 +392,8 @@ namespace PersonalArena.View
                 case WeaponPattern.Sweep:
                 case WeaponPattern.Combo: return "Reach";
                 case WeaponPattern.Thrust: return "Length";
-                case WeaponPattern.Orbit: return "Orbit radius";
+                case WeaponPattern.Orbit:
+                case WeaponPattern.Ring: return "Orbit radius";
                 case WeaponPattern.BombRing: return "Ring radius";
                 case WeaponPattern.Aura:
                 case WeaponPattern.Shockwave:

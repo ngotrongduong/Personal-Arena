@@ -82,6 +82,8 @@ namespace PersonalArena.Core.Survivor
         internal float ContactCooldown;
         internal float SummonCooldown;
         internal float OrbitNextHitTime;
+        /// <summary>Earliest time each ring weapon may hit this enemy again, by the weapon's inventory slot.</summary>
+        internal readonly float[] RingNextHitTimes = new float[SurvivorCatalog.MaxWeapons];
         internal int LastShockwaveId;
         /// <summary>Run time of the last hit taken (spawn time until first hit); drives the tier-8 regen.</summary>
         internal float LastHitTime;
