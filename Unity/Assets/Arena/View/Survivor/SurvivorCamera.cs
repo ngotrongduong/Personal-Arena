@@ -18,6 +18,9 @@ namespace PersonalArena.View
         // the skill bar covers the bottom of the screen.
         private const float EdgeMarginX = 0.3f;
         private const float EdgeMarginZ = 0.2f;
+        // Fog range measured from the point the camera looks at (a little past the scene's fixed 34..80 m).
+        private const float FogStartPastFocus = 14f;
+        private const float FogEndPastFocus = 70f;
 
         [SerializeField] private SurvivorRenderer target;
         [SerializeField, Range(30f, 80f)] private float pitch = 55f;
@@ -30,8 +33,20 @@ namespace PersonalArena.View
         private Vector3 focusVelocity;
         private float zoomTarget;
         private bool snapped;
+        private Vector3 fixedFocus;
+        private bool hasFixedFocus;
 
         public Camera ViewCamera => cameraComponent;
+
+        /// <summary>Checks of the build (-cameraAt): look at this point instead of the hero, from this distance.</summary>
+        public void LookAtForChecks(Vector3 point, float fromDistance)
+        {
+            fixedFocus = point;
+            hasFixedFocus = true;
+            zoomTarget = Mathf.Clamp(fromDistance, MinimumDistance, MaximumDistance);
+            distance = zoomTarget;
+            snapped = false;
+        }
 
         public void SetTarget(SurvivorRenderer renderer)
         {
@@ -59,8 +74,14 @@ namespace PersonalArena.View
             ReadZoom();
             float delta = Time.unscaledDeltaTime;
             distance = Mathf.Lerp(distance, zoomTarget, 1f - Mathf.Exp(-10f * delta));
+            if (RenderSettings.fog)
+            {
+                // The fog follows the zoom, so zooming out does not sink the far half of the view into the dark.
+                RenderSettings.fogStartDistance = distance + FogStartPastFocus;
+                RenderSettings.fogEndDistance = distance + FogEndPastFocus;
+            }
 
-            Vector3 goal = target != null ? target.HeroWorldPosition : Vector3.zero;
+            Vector3 goal = hasFixedFocus ? fixedFocus : target != null ? target.HeroWorldPosition : Vector3.zero;
             // Near the fence the view stops short of the hero, so less of the screen shows the empty outside.
             float limitX = SurvivorRenderer.MapHalfExtent - EdgeMarginX * distance;
             float limitZ = SurvivorRenderer.MapHalfExtent - EdgeMarginZ * distance;

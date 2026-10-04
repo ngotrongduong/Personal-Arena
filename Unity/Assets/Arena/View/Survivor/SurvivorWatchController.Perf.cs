@@ -54,6 +54,19 @@ namespace PersonalArena.View
             {
                 fxDemoRound = Mathf.Max(0, firstPage);
             }
+            // -cameraAt x,z[,distance]: hold the camera on a map point (e.g. a corner) for the screenshots.
+            string[] cameraAt = (CommandLineValue("-cameraAt") ?? string.Empty).Split(',');
+            if (cameraAt.Length >= 2 &&
+                float.TryParse(cameraAt[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float cameraX) &&
+                float.TryParse(cameraAt[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float cameraZ))
+            {
+                float cameraDistance = 24f;
+                if (cameraAt.Length >= 3)
+                {
+                    float.TryParse(cameraAt[2], NumberStyles.Float, CultureInfo.InvariantCulture, out cameraDistance);
+                }
+                followCamera.LookAtForChecks(new Vector3(cameraX, 0f, cameraZ), cameraDistance);
+            }
             File.WriteAllText(perfLogPath, "simTime,enemies,avgFps,worstMs,weapons\n");
             File.WriteAllText(SiblingPath(perfLogPath, "_startup"), "step,atMs,tookMs\n");
         }
