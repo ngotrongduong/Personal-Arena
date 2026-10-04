@@ -92,13 +92,15 @@
   (build tự ghi lại scene và thêm define `SENTIS_ANALYTICS_ENABLED`). `-watchBuildOutput` tương đối tính từ `Unity/`
   → dùng đường dẫn tuyệt đối `C:\PersonalArena\Build\WatchNext`.
 - Máy không có `gh`: không có GitHub MCP thì merge ở worktree `develop` (`git merge --no-ff`) rồi `git push`.
+  **Sau mỗi lần push phải kiểm CI** qua API công khai `api.github.com/repos/ngotrongduong/Personal-Arena/actions/runs`
+  (job hỏng: `check-runs/<job id>/annotations` có tên test và thông báo).
 - Tránh hộp "Allow": gom lệnh nhiều bước vào file `.ps1` rồi chạy một lệnh đơn.
 - `arena_trainer.py` tìm `.venv-ml` ở gốc repo → chạy từ `C:\PersonalArena`, không từ worktree.
 
 ## Vướng mắc / câu hỏi mở
 
-- CI (`.github/workflows/ci.yml`) **đã chạy xanh** trên mọi lần push từ 2026-09-29 (repo public
-  nên miễn phí). Không còn vướng thanh toán.
+- CI (`.github/workflows/ci.yml`) chạy miễn phí vì repo public. Golden bit-exact chỉ so trên job Windows
+  (Linux bỏ qua vì `MathF.Sin/Cos/Atan2` của libm cho bit khác).
 - Unity MCP: đề xuất CoplayDev `unity-mcp` (D-008), chưa cài.
 - Core dùng 72 tia, video ~92. Giữ 72 cho tới khi training cho thấy cần hơn.
 - Package Inference tự thêm define `SENTIS_ANALYTICS_ENABLED` (analytics phía Editor). Xem lại
@@ -114,6 +116,9 @@
 - T-049: 13 file View > 700 dòng tách thành 36 file, file lớn nhất 647 dòng; chỉ dời code (partial class), không
   đổi logic. Kiểu dữ liệu lineage ra `LineageModels.cs`, enum của trình xem ra `SurvivorViewTypes.cs`.
 - Máy không có `gh` và phiên không có GitHub MCP → gộp bằng git ở worktree `develop` rồi push (không qua PR).
+- CI Linux đỏ từ M13/M14 mà không ai thấy: golden `Tier1_ScriptedRun` lệch bit trên Linux sau khi kiếm thành sóng
+  bay (libm khác Windows) → golden này giờ chỉ chạy trên Windows như 2 golden dài. CI ghi tên test hỏng vào
+  annotation, đọc được qua API công khai không cần đăng nhập.
 
 ### 2026-10-05 — Claude (PC): M15 vũ khí tiến hóa có hình ảnh riêng
 - Owner: giữ điều kiện tiến hóa, mỗi bản tiến hóa phải khác hẳn bản thường, không chỉ đổi màu vàng; chỉ sửa trình xem.
