@@ -9,21 +9,21 @@
 - **Hướng đi:** chỉ làm Personal Arena (D-016), game giống **Vampire Survivors** nhất có thể; AI tự học chơi
   (owner chỉ xem, D-019). Repo public để CI miễn phí (D-015) → không bao giờ commit secret.
 - **Milestone:** M0–M8 xong (lịch sử ở `docs/archive/SESSIONS.md`). **M9 (D-041)** đang làm trên nhánh
-  `claude/serene-sagan-3a70q5` (PR #7, CI xanh): Core + Trainer xong, **Unity chưa** (cần PC).
+  `claude/serene-sagan-3a70q5` (PR #7): Core + Trainer + Unity xong (T-041, T-037), chờ merge vào `develop`.
 - **M9 đã có trong Core:** 6 + 6 ô mang theo; vũ khí mới 26–33, 64–72; phụ kiện 34–37, 58–61; tiến hóa 112–127;
   6 skill chủ động mỗi class; schema **v5** (quan sát 2592, hành động 9/7/5, danh mục 128);
   `brain_upgrade` v4 → v5. Đá không choáng trùm (D-042). Core chia file theo cơ chế (T-046).
-- **Chưa chạy được:** bản xem/bản train cũ không hợp với Core mới (khác schema) → **đừng build/train từ nhánh này
-  trước khi T-041 xong**.
-- **Test:** CoreTests 627/627 (Linux; 2 golden chỉ-Windows do job Windows của CI kiểm), pytest 203/203.
+- **Bản build (2026-10-04, Claude trên PC):** `Build/WatchNext` + `Build/TrainingNext` v0.8.147 theo schema v5,
+  smoke test 3 class đạt; tự thay vào khi mở trình xem / bấm TRAIN lần tới. Codex hết token nên Claude làm nốt T-037.
+- **Test:** CoreTests 629/629, pytest 204/204, EditMode 299/299 (PC, 2026-10-04).
 
 ## Việc tiếp theo (theo thứ tự)
 
-1. **T-041 (Codex trên PC):** trình xem + bản train theo schema v5 (thanh skill 6 ô, 6 + 6 món, phím 5–6),
-   EditMode xanh, build `Build/TrainingNext` + `Build/WatchNext`, tách các file View lớn. Owner checkout nhánh
-   trước (lệnh trong task).
-2. **T-037 (Codex trên PC, sau T-041):** icon, hiệu ứng, âm thanh cho mọi món/skill M9.
-3. Claude review kết quả Codex (owner push lên nhánh hoặc Claude chạy trên PC), commit, merge PR #7 vào `develop`.
+1. Merge PR #7 vào `develop` khi CI xanh.
+2. **Icon M9:** 32 icon mới đang là bản chép icon cũ (nhiều món trùng hình). Thay bằng icon riêng từ game-icons.net
+   (CC BY 3.0; script sẵn ở scratchpad `m9_icons.py`, lần chạy đầu bị chặn quyền tải — cần owner cho phép).
+3. **Mượt và đẹp (ưu tiên của owner 2026-10-04):** đo FPS trình xem lúc đông quái, xem tận mắt từng hiệu ứng M9;
+   tách (chỉ dời code) các file View > 700 dòng còn lại của T-041.
 4. Owner bấm TRAIN: não Warrior/Mage/Archer tự nâng v4 → v5 (`brain_upgrade`) và học tiếp. Theo dõi AI có dùng
    skill 5–6 và vũ khí mới không; cân bằng bằng `Tools/SurvivorEval --set`.
 5. Nợ nhỏ (chưa sửa, ghi ở nhật ký 2026-10-02 trong archive): rẽ nhánh từ champion cũ thiếu `training_status.json`,
@@ -62,7 +62,7 @@
 | M6: Lịch sử não (T-028, T-029, D-037) | code xong — chờ nghiệm thu: mở bảng `L`, chọn não cũ, bấm "Xem ngay" |
 | M7: class mua được, tiến hóa vũ khí, quái mới (T-030..T-032, D-038) | xong — owner đã mua Pháp sư + Cung thủ, chạy tốt (não nền Mage/Archer vẫn đang học) |
 | M8: đánh bóng — âm thanh, cài đặt + phiên bản + smoke test, cân bằng (T-033..T-035, D-039) | code xong — chờ owner nghiệm thu bản build mới |
-| M9: nội dung kiểu Vampire Survivors (6 + 6 ô, vũ khí/phụ kiện/tiến hóa mới, 6 skill, schema v5) | Core + Trainer xong (T-036, T-038..T-040, T-042..T-046); Unity chờ Codex trên PC (T-041 → T-037) |
+| M9: nội dung kiểu Vampire Survivors (6 + 6 ô, vũ khí/phụ kiện/tiến hóa mới, 6 skill, schema v5) | Core + Trainer + Unity xong (T-036..T-046); còn icon riêng và tách file View lớn |
 
 
 ## Cách làm trên PC (Claude)

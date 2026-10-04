@@ -1,7 +1,7 @@
 # T-037: M9 visuals and sounds for the new weapons, passives, evolutions and skills
 
 - **Owner:** Codex (on the owner's Windows PC)
-- **Status:** doing
+- **Status:** done (Codex ran out of tokens; finished and verified by Claude on the PC, 2026-10-04)
 - **Milestone:** M9 (D-041)
 - **Parallel OK with:** none
 - **Depends on:** T-041 (do it first; same branch `claude/serene-sagan-3a70q5`)
@@ -46,15 +46,29 @@ arena, and a sound. Today they run correctly in Core but use fallback visuals.
 
 ## Done when
 
-- [ ] EditMode tests pass (paste the count), `dotnet test CoreTests -c Release` still passes
-- [ ] Every id in the table has an icon (a test that loops the catalog and checks an icon or a known fallback exists)
-- [ ] Screenshots of each new effect, or a short list of which ones you could check visually
-- [ ] `CREDITS.md` updated
-- [ ] Report filled
+- [x] EditMode tests pass (299/299), `dotnet test CoreTests -c Release` still passes
+- [x] Every id in the table has an icon (a test that loops the catalog and checks an icon or a known fallback exists)
+- [x] Screenshots of each new effect, or a short list of which ones you could check visually (list in the Report)
+- [x] `CREDITS.md` updated
+- [x] Report filled
 
 ## Report (filled by the implementer)
 
-- Changed files:
-- Icons added (id → source, author, licence):
-- EditMode result:
-- Notes / open questions:
+- Changed files: new `SurvivorRenderer.M9.cs` (pooled views: boomerangs, poison pools, traps, fire walls, barrier
+  ring, whirlwind blades; strike effects for the new weapons and skills); hooks in `SurvivorRenderer.cs`,
+  `SurvivorRenderer.Weapons.cs`, `.Pickups.cs` (looks for bomb, bounce shot, momentum spirit), `.Enemies.cs` (slow
+  tint); `SoundCueMap.cs` (a cue for every M9 weapon pattern, strike pattern and new `SkillKind`, existing Kenney
+  sounds only); `SkillIconFactory.cs`; `SurvivorViewLogic.cs`; tests `SkillIconFactoryTests`, `SoundCueMapTests`,
+  `SurvivorViewLogicTests`. No Core, CoreTests or Trainer file changed.
+- Icons added (id → source, author, licence): 32 files, one per M9 item/skill id. They are **copies of glyphs already
+  in the project** (game-icons.net, Lorc / Delapouite, CC BY 3.0); the id → glyph table is in
+  `ThirdParty/GameIcons/License.txt`. Several ids share one glyph (e.g. bomb, bomb-ring and war-cry). Distinct
+  glyphs are a follow-up (STATUS "Việc tiếp theo" 2).
+- EditMode result: 299/299 after merging the branch head (a42d598). CoreTests 629/629.
+- Build and smoke: viewer v0.8.147 and training build made from a42d598 and installed in `Build/WatchNext` and
+  `Build/TrainingNext`. Smoke test passed in 61 s (3 classes, panels C/F/V/L/G/P/O, auto farm, 0 errors) with the
+  schema-5 Archer champion as the brain.
+- Checked visually (1280×720 captures, Warrior, seeds 11 and 23): six skill buttons with icons and cooldown, 6 + 6
+  item slots, level-up card showing M9 items with icon and Vietnamese name. **Not seen in a capture:** the arena
+  effects of each M9 weapon and skill (the short runs did not pick them); they are covered by tests only.
+- Notes / open questions: none.

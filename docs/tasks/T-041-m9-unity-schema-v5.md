@@ -1,7 +1,7 @@
 # T-041: M9 Unity side of schema v5 — six skills in the viewer, EditMode green, new builds
 
 - **Owner:** Codex (on the owner's Windows PC)
-- **Status:** review
+- **Status:** done (file split left for a later task)
 - **Milestone:** M9 (D-041)
 - **Parallel OK with:** none (do this before T-037)
 - **Depends on:** T-036..T-046 (all in Core/Trainer on branch `claude/serene-sagan-3a70q5`, PR #7)
