@@ -37,6 +37,7 @@ namespace PersonalArena.View
         private static readonly bool[] HeroLoops = { true, true, true, false, false, false, false, false, false, false, false, false };
 
         private static readonly Color StrikeColor = new Color(0.78f, 0.9f, 1f, 0.95f);
+        private static readonly Color DaggerSlashColor = new Color(1f, 0.22f, 0.18f, 0.95f);
         private static readonly Color KickColor = new Color(1f, 0.6f, 0.25f);
         private static readonly Color BlockColor = new Color(0.4f, 0.75f, 1f);
         private static readonly Color ParryColor = new Color(1f, 0.85f, 0.3f);
@@ -782,7 +783,7 @@ namespace PersonalArena.View
                     bool mirror = (strikeCount & 1) == 1;
                     PlayHeroOneShot(mirror ? HeroStrikeB : HeroStrikeA, dagger ? 2.3f : 1.7f, false);
                     strikeCount++;
-                    Color color = FxColor(e.Id, StrikeColor);
+                    Color color = dagger ? DaggerSlashColor : FxColor(e.Id, StrikeColor);
                     float life = dagger ? 0.16f : 0.22f;
                     Vector3 origin = heroPosition + Vector3.up * 0.85f;
                     effects.Slash(origin, yaw, color, mirror, reach, life);
@@ -802,15 +803,22 @@ namespace PersonalArena.View
                     PlayHeroOneShot(HeroCast, 2.1f, false);
                     Vector3 origin = heroPosition + Vector3.up * 0.8f;
                     Color color = FxColor(e.Id, FireballColor);
-                    effects.Slash(origin, yaw - 22f, color, false, 2.2f, 0.16f);
-                    effects.Slash(origin, yaw, color, true, 2.8f, 0.2f);
-                    effects.Slash(origin, yaw + 22f, color, false, 2.2f, 0.16f);
-                    Vector3 side = Vector3.Cross(Vector3.up, direction);
-                    for (int k = 0; k < 12; k++)
+                    // A spray of fire filling the real cone: flames grow with the distance from the hero.
+                    int level = Mathf.Max(1, sim.Inventory.Level(e.Id));
+                    float range = SurvivorViewLogic.SweepRange(e.Id, level, sim.DerivedStats.AreaMul);
+                    ItemDef cone = SurvivorCatalog.Get(e.Id);
+                    float halfArc = (cone != null ? cone.ArcDegrees : 60f) * 0.5f * 0.85f;
+                    const int Rows = 5;
+                    for (int row = 0; row < Rows; row++)
                     {
-                        float reach = Random.Range(0.8f, 4.5f);
-                        effects.Flame(heroPosition + direction * reach + side * (Random.Range(-0.4f, 0.4f) * reach),
-                            color, Random.Range(0.8f, 1.4f), 0.5f);
+                        float along = range * (row + 1f) / Rows;
+                        int across = 1 + row / 2;
+                        for (int k = 0; k < across; k++)
+                        {
+                            float t = across == 1 ? 0f : k / (across - 1f) * 2f - 1f;
+                            Vector3 spray = Quaternion.AngleAxis(t * halfArc + Random.Range(-5f, 5f), Vector3.up) * direction;
+                            effects.Flame(origin + spray * along, color, 0.7f + 0.9f * (row + 1f) / Rows, 0.45f, false);
+                        }
                     }
                     break;
                 }
@@ -854,8 +862,7 @@ namespace PersonalArena.View
                 case SkillKind.Kick:
                     PlayHeroOneShot(HeroKick, 1.5f, true);
                     effects.Shockwave(heroPosition + forward * 1f, KickColor, 2.6f, 0.35f);
-                    effects.Twirl(heroPosition + forward * 0.8f + Vector3.up * 0.5f, KickColor, 2.6f, 0.3f);
-                    effects.Sparks(heroPosition + Vector3.up * 0.6f + forward * 0.9f, forward, KickColor, 10, 7f, 0.9f);
+                    effects.Sparks(heroPosition + Vector3.up * 0.6f + forward * 0.9f, forward, KickColor, 6, 7f, 0.9f);
                     break;
                 case SkillKind.Dash:
                     PlayHeroOneShot(skill.DashBackward ? HeroDodgeBack : HeroDash, 1.6f, true);
@@ -869,8 +876,6 @@ namespace PersonalArena.View
                     // Fireball for the mage, power shot for the archer.
                     bool fire = SurvivorViewLogic.ProjectileLookOf(-1 - slot, sim.Config.ClassDef) == ProjectileLook.Fireball;
                     PlayHeroOneShot(fire ? HeroCast : HeroThrow, 1.8f, true);
-                    Color color = fire ? FireballColor : SurvivorViewLogic.EvolutionGold;
-                    effects.Flash(heroPosition + Vector3.up * 1f + forward * 0.7f, color, 1.8f, 0.2f);
                     break;
                 }
                 case SkillKind.AreaBurst:
@@ -917,8 +922,8 @@ namespace PersonalArena.View
                     RememberM9Skill(kind);
                     break;
                 case SkillKind.Barrage:
+                    // The arrows themselves are the whole effect.
                     PlayHeroOneShot(HeroThrow, 2.2f, true);
-                    effects.Sparkle(heroPosition + forward, SurvivorViewLogic.ItemColor(SurvivorCatalog.QuadShotIndex), 9, 0.8f, 1.5f, 0.17f);
                     RememberM9Skill(kind);
                     break;
                 case SkillKind.Wall:
@@ -928,7 +933,6 @@ namespace PersonalArena.View
                     break;
                 case SkillKind.Chain:
                     PlayHeroOneShot(HeroCast, 2.2f, true);
-                    effects.Flash(heroPosition + Vector3.up, LightningColor, 2f, 0.18f);
                     RememberM9Skill(kind);
                     break;
             }
@@ -938,14 +942,8 @@ namespace PersonalArena.View
         {
             Vector3 point = ArenaSpace.ToWorld(e.Point);
             float radius = Mathf.Max(0.5f, e.Value);
-            effects.Shockwave(point, ExplodeColor, radius * RingQuadPerRadius, 0.45f);
+            // Only the explosion, sized to the real radius: extra sparks and smoke made the screen noisy.
             Blast(point, ExplodeColor, radius, StoreFx.PoisonExplode);
-            effects.Sparks(point + Vector3.up * 0.5f, Vector3.up, ExplodeColor, 10, 8f, 1.2f);
-            if (puffsLeft > 0)
-            {
-                puffsLeft--;
-                effects.Puff(point, SmokeColor, 10, 1.1f, radius, 0.9f, 0.9f);
-            }
             // The exploder is gone at once (no death animation, no EnemyKilled follows).
             if (enemiesById.TryGetValue(e.Id, out EnemyView view))
             {

@@ -56,7 +56,16 @@
   phép của gói; hào quang diện rộng dùng vòng phép; bong bóng khiên cũ ẩn khi có khiên của gói. Giữ nguyên có chủ ý: mũi tên
   và bom (đã là model), vòng báo bán kính, số sát thương, vết cháy trên đất, tia sét. Không có gói thì mọi thứ về hiệu ứng cũ.
   Cờ `-vfxGalleryFrom <trang>` để chụp gallery từ trang bất kỳ.
-- **Test:** CoreTests 629/629, pytest 204/204, EditMode 300/300 (PC, 2026-10-04).
+- **M13 (owner phản hồi 2026-10-04 sau khi xem v0.8.167: quá nhiều hiệu ứng trên thân nhân vật, rối mắt) — xong:**
+  nguyên tắc mới: mỗi đòn một hiệu ứng rõ, đúng cỡ vùng sát thương, đúng hệ. Trình xem: `Sparks` / `Flash` / `Sparkle` /
+  `Shards` / `Slash` về lại hiệu ứng gốc (bỏ các vụ nổ nhỏ của gói và vệt chém Hovl có vòng tụ lực + bay đi làm tưởng kiếm
+  không gây sát thương); dao găm chém màu đỏ; phun lửa là luồng lửa hình nón đúng tầm, không còn vệt chém; mưa tên chỉ còn
+  mũi tên; sét dùng tia sét (bỏ quả cầu xanh); Lôi liên hoàn là dòng sét dày nhảy từ nhân vật qua từng quái; nổ băng bỏ vòng
+  phép tím (vòng phép màu xanh dương giờ dùng vòng băng); mọi vụ nổ (bom, mưa bom, hỏa cầu, cầu lửa, quái tự nổ) chỉ còn vụ
+  nổ đúng bán kính; bỏ vòng/lấp lánh trên người khi vũ khí xoay, hào quang, vòng bảo hộ, mưa bom bắn. **Core:** Đạn nảy trúng
+  quái thì bật sang quái gần nhất chưa trúng (trong 8 m), không có thì dội ngược; không tốn lượt nảy tường
+  (`RicochetOffEnemy`, `BounceRicochetRange`). Schema vẫn v5; cân bằng Đạn nảy đổi nhẹ.
+- **Test:** CoreTests 642/642, pytest 204/204, EditMode 300/300 (PC, 2026-10-04).
 
 ## Việc tiếp theo (theo thứ tự)
 

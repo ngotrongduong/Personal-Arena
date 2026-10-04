@@ -510,13 +510,11 @@ namespace PersonalArena.View
                 case WeaponVisual.OrbitAxe:
                 case WeaponVisual.FireOrb:
                 case WeaponVisual.OrbitKnife:
-                    effects.Sparkle(heroPosition, FxColor(e.Id, AxeTrailColor), 8, 1.6f, 1.2f, 0.2f);
-                    effects.Twirl(heroPosition + Vector3.up * 0.8f, FxColor(e.Id, AxeTrailColor), 4.5f, 0.45f);
+                    // The orbiting blades are the effect; nothing extra on the hero.
                     break;
                 case WeaponVisual.Aura:
                 case WeaponVisual.HolyField:
                     auraPulse = 1f;
-                    effects.Rune(heroPosition, FxColor(e.Id, HolyRuneColor), visual == WeaponVisual.HolyField ? 7f : 5f, 0.9f);
                     break;
                 case WeaponVisual.Shockwave:
                 case WeaponVisual.FrostNova:
@@ -559,8 +557,6 @@ namespace PersonalArena.View
                     break;
                 case WeaponVisual.Barrier:
                     effects.Shockwave(heroPosition, BarrierColor, 4.4f, 0.4f);
-                    effects.Sparkle(heroPosition, BarrierColor, 8, 0.9f, 1.4f, 0.18f);
-                    effects.Rune(heroPosition, BarrierColor, 4.4f, 0.9f);
                     break;
                 case WeaponVisual.Boomerang:
                     PlayHeroOneShot(HeroThrow, 2f, false);
@@ -577,7 +573,6 @@ namespace PersonalArena.View
                     effects.Crystals(heroPosition, FrostColor, 22, 9f, 1.6f, 3f);
                     MarkElement(heroPosition, 14f, ElementIce);
                     effects.Decal(heroPosition, FrostMarkColor, 20f, 5f);
-                    effects.Rune(heroPosition, FrostColor, 22f, 1.2f);
                     effects.AreaFill(heroPosition, FrostColor, 14f, 1.4f);
                     StoreArea(StoreFx.SnowArea, heroPosition, 8f, 2.2f);
                     break;
@@ -586,8 +581,6 @@ namespace PersonalArena.View
                     break;
                 case WeaponVisual.BombRing:
                     PlayHeroOneShot(HeroThrow, 2f, false);
-                    effects.Shockwave(heroPosition, FireballColor, 10f, 0.45f);
-                    effects.Rune(heroPosition, FireballColor, 9f, 0.6f);
                     break;
                 case WeaponVisual.FireballNova:
                 case WeaponVisual.Stone:
@@ -621,7 +614,7 @@ namespace PersonalArena.View
                     effects.Crystals(heroPosition, FrostColor, 16, radius * 0.9f, 1.6f, 3f);
                     MarkElement(heroPosition, radius, ElementIce);
                     effects.Decal(heroPosition, FrostMarkColor, radius * 2.4f, 5f);
-                    effects.Rune(heroPosition, FrostColor, radius * 2.3f, 1f);
+                    // No rune here: the frost burst is ice only (ring, crystals, snow).
                     if (!StoreArea(StoreFx.SnowArea, heroPosition, radius, 2f))
                     {
                         effects.AreaFill(heroPosition, FrostColor, radius, 1.2f);
@@ -629,14 +622,7 @@ namespace PersonalArena.View
                 }
                 else
                 {
-                    effects.Shockwave(point, FireballColor, radius * RingQuadPerRadius, 0.45f);
                     Blast(point, FireballColor, radius);
-                    effects.Sparks(point + Vector3.up * 0.6f, Vector3.up, FireballColor, 12, 8f, 1.2f);
-                    if (puffsLeft > 0)
-                    {
-                        puffsLeft--;
-                        effects.Puff(point, SmokeColor, 8, 1f, radius, 0.8f, 0.8f);
-                    }
                 }
                 return;
             }
@@ -646,8 +632,8 @@ namespace PersonalArena.View
             if (visual == WeaponVisual.ArrowRain)
             {
                 Color color = FxColor(e.Id, LightningColor);
-                // A rain over the whole blast area: streaks falling steeply on a spiral that fills the radius, then a ring of the real radius.
-                int arrows = Mathf.Clamp(Mathf.RoundToInt(radius * (evolved ? 4f : 3f)), 4, 14);
+                // A rain over the whole blast area: only arrows, falling steeply on a spiral that fills the radius.
+                int arrows = Mathf.Clamp(Mathf.RoundToInt(radius * (evolved ? 5f : 4f)), 6, 16);
                 for (int k = 0; k < arrows; k++)
                 {
                     float a = k * 2.399963f + e.Point.X; // golden angle: evenly spread without a pattern
@@ -659,22 +645,14 @@ namespace PersonalArena.View
                     // The arrow stays stuck in the ground for a moment.
                     effects.Crystals(land, ArrowShaftColor, 1, 0f, 0.9f, 1.3f, 0.07f);
                 }
-                effects.Shockwave(point, color, radius * RingQuadPerRadius, 0.4f);
-                effects.Rune(point, color, radius * 2.3f, 0.7f);
-                effects.AreaFill(point, color, radius, 0.8f);
-                if (puffsLeft > 0)
-                {
-                    puffsLeft--;
-                    effects.Puff(point, DustColor, 5, 0.6f, radius, 0.5f, 0.3f);
-                }
             }
             else
             {
                 Color color = FxColor(e.Id, LightningColor);
-                // Lightning: a vertical bolt from the sky, a flash and a ring of the real radius.
+                // Lightning: bolts from the sky (no orb), a flash and a ring of the real radius.
                 Vector3 top = point + Vector3.up * LightningHeight;
-                effects.Bolt(top, point, color, evolved ? 1.5f : 1.1f);
-                StoreArea(StoreFx.LightningBall, point + Vector3.up * 0.5f, Mathf.Max(1.2f, radius), 0.7f);
+                effects.Bolt(top, point, color, evolved ? 1.7f : 1.3f);
+                effects.Bolt(top + new Vector3(0.6f, 0f, 0.3f), point, color, 0.7f);
                 MarkElement(point, radius, ElementLightning);
                 effects.Decal(point, new Color(0.05f, 0.05f, 0.08f, 0.6f), radius * 1.6f, 2.5f);
                 effects.Flash(point + Vector3.up * 0.8f, color, radius * 2.8f, 0.25f);
@@ -682,11 +660,6 @@ namespace PersonalArena.View
                 effects.AreaFill(point, color, radius, 0.7f);
                 effects.Bolt(point + new Vector3(-radius, 0.3f, 0f), point + new Vector3(radius, 0.3f, 0f), color, 0.6f);
                 effects.Bolt(point + new Vector3(0f, 0.3f, -radius), point + new Vector3(0f, 0.3f, radius), color, 0.6f);
-                if (sparksLeft > 0)
-                {
-                    sparksLeft--;
-                    effects.Sparks(point + Vector3.up * 0.3f, Vector3.up, color, 8, 7f, 1.1f);
-                }
             }
         }
 

@@ -102,13 +102,16 @@ namespace PersonalArena.Core.Survivor
                 Vec2 pushDirection = p.Velocity.Normalized();
                 if (p.Bouncing)
                 {
+                    bool struck = false; Vec2 struckAt = Vec2.Zero;
                     for (int n = 0; n < found; n++)
                     {
                         SurvivorEnemy e = enemies[enemyScratch[n]];
                         if (!RecordBounceHit(p, e.Id)) continue;
+                        if (!struck) { struck = true; struckAt = e.Position; }
                         DamageEnemy(e, p.Damage, p.Knockback, pushDirection);
                     }
                     if (IsEnded) return;
+                    if (struck) RicochetOffEnemy(p, struckAt);
                     continue;
                 }
                 for (int n = 0; n < found; n++)
@@ -304,6 +307,28 @@ namespace PersonalArena.Core.Survivor
             if (p.BouncesLeft <= 0) return false;
             p.BouncesLeft--; p.BounceCount++; p.Position = position; p.Velocity = velocity;
             return true;
+        }
+
+        /// <summary>
+        /// Bounce shot hit an enemy: it turns toward the nearest enemy it has not hit lately (within
+        /// <see cref="SurvivorCatalog.BounceRicochetRange"/>), or reflects off the struck enemy when there is none.
+        /// Unlike wall bounces this uses up no bounce.
+        /// </summary>
+        private void RicochetOffEnemy(SurvivorProjectile p, Vec2 struckAt)
+        {
+            float speed = p.Velocity.Length;
+            if (speed < 1e-4f) return;
+            SurvivorEnemy target = null; float nearest = SurvivorCatalog.BounceRicochetRange * SurvivorCatalog.BounceRicochetRange;
+            for (int i = 0; i < enemyLimit; i++)
+            {
+                SurvivorEnemy enemy = enemies[i]; if (!enemy.Active || AlreadyHit(p, enemy.Id)) continue;
+                float distanceSquared = (enemy.Position - p.Position).LengthSquared;
+                if (distanceSquared < nearest && distanceSquared > 1e-6f) { nearest = distanceSquared; target = enemy; }
+            }
+            if (target != null) { p.Velocity = (target.Position - p.Position).Normalized() * speed; return; }
+            Vec2 normal = AwayFromPoint(p.Position, struckAt);
+            float along = Vec2.Dot(p.Velocity, normal);
+            if (along < 0f) p.Velocity -= normal * (2f * along);
         }
 
         /// <summary>Index of an obstacle that a disc at <paramref name="point"/> overlaps (first in grid order), or −1.</summary>

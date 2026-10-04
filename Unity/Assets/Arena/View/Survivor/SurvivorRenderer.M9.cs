@@ -264,9 +264,8 @@ namespace PersonalArena.View
                     case WeaponVisual.Bomb:
                     case WeaponVisual.BombRing:
                     case WeaponVisual.FireballNova:
-                        effects.Shockwave(point, color, radius * RingQuadPerRadius, 0.45f);
+                        // Only the explosion, sized to the real radius.
                         Blast(point, color, radius);
-                        effects.Sparks(point + Vector3.up * 0.4f, Vector3.up, color, 9, 7f, 1.1f);
                         return true;
                     case WeaponVisual.Retaliate:
                         effects.Shockwave(heroPosition, color, radius * RingQuadPerRadius, 0.4f);
@@ -346,11 +345,13 @@ namespace PersonalArena.View
                     Vector3 delta = to - from;
                     if (delta.sqrMagnitude > 0.01f)
                     {
-                        effects.Bolt(from, to, LightningColor, 0.8f);
+                        // One stream of lightning jumping from the hero to each enemy in turn: a thick bolt with a thin
+                        // second strand, so each link reads as a single jagged arc.
+                        effects.Bolt(from, to, LightningColor, 1.5f);
+                        effects.Bolt(from, to, Color.white, 0.6f);
                         MarkElement(to, 0.8f, ElementLightning);
                         effects.Sparks(to, Vector3.up, LightningColor, 4, 5f, 1f);
                     }
-                    effects.Flash(to, LightningColor, 1.4f, 0.14f);
                     chainStrikePoint = to;
                     chainStrikeValid = true;
                     return true;

@@ -99,6 +99,8 @@ namespace PersonalArena.Core.Survivor
         public const float ComboFinisherMul = 2f;
         /// <summary>Bounce shot: an enemy is hit at most once per this many seconds by one projectile.</summary>
         public const float BounceRehitSeconds = 0.5f;
+        /// <summary>Bounce shot: after hitting an enemy it turns toward another enemy within this distance.</summary>
+        public const float BounceRicochetRange = 8f;
         /// <summary>Momentum spirit: the hero counts as moving above this speed (m/s); the factor is an EMA with this time constant (s); damage × (Min + Span × factor).</summary>
         public const float MomentumSpeedThreshold = 0.5f;
         public const float MomentumTimeConstant = 1.5f;
