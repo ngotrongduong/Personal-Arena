@@ -21,3 +21,18 @@ Allowed licenses: CC0, MIT and CC BY with credit given here (see docs/DECISIONS.
 | `../Arena/View/Art/AppIcon.png` | Viewer app icon (M8 build), composed from the "spinning-sword" glyph (Lorc) and the "two-coins" glyph (Delapouite), recoloured on a dark round badge | Lorc, Delapouite | https://game-icons.net/1x1/lorc/spinning-sword.html, https://game-icons.net/1x1/delapouite/two-coins.html | CC BY 3.0 |
 
 Each pack keeps its original license text (the music folder's `License.txt` lists both tracks). CC0 needs no attribution but it is given anyway; CC BY icons must stay credited here.
+
+## Local-only store packs (not in this repository)
+
+The viewer can also use two free Unity Asset Store packs. They are under the Unity Asset Store EULA, which does not
+allow redistribution, so they are **never committed** (see `.gitignore`); each build machine imports them from its own
+Asset Store account. Without them the viewer falls back to the effects listed above.
+
+| Pack | Author | Source | Local folder |
+| --- | --- | --- | --- |
+| Magic Effects FREE | Hovl Studio | https://assetstore.unity.com/packages/vfx/particles/spells/magic-effects-free-247933 | `Unity/Assets/Hovl Studio/` |
+| 52 Special Effects Pack | GAPH | https://assetstore.unity.com/packages/vfx/particles/spells/52-special-effects-pack-10419 | `Unity/Assets/52SpecialEffectPack/` |
+
+`StoreVfxBuilder` (menu *Personal Arena / Rebuild Store Effect Set*, also run by the viewer build) collects the chosen
+prefabs into `Assets/ThirdPartyLocal/Resources/StoreVfxSet.asset`, which is local-only too. The 52 pack's demo scripts
+`csShowAllEffect.cs` and `csMouseOrbit.cs` must be deleted after import (they use the removed `GUIText`).

@@ -523,13 +523,19 @@ namespace PersonalArena.View
                         effects.Crystals(center, FrostColor, 9, 2.6f, 1.4f, 2.6f);
                         MarkElement(center, 4f, ElementIce);
                         effects.Decal(center, FrostMarkColor, 7f, 4f);
-                        effects.AreaFill(center, FrostColor, 3.5f, 1f);
+                        if (!StoreArea(StoreFx.FreezeCircle, center, 3.5f, 1.6f))
+                        {
+                            effects.AreaFill(center, FrostColor, 3.5f, 1f);
+                        }
                         PlayHeroOneShot(HeroCast, 1.8f, false);
                     }
                     else
                     {
                         effects.Puff(center, DustColor, 10, 0.9f, 2.4f, 0.6f, 0.3f);
-                        effects.AreaFill(center, color, 3f, 0.7f);
+                        if (!StoreArea(StoreFx.GroundBlast, center, 3f, 1.6f))
+                        {
+                            effects.AreaFill(center, color, 3f, 0.7f);
+                        }
                         PlayHeroOneShot(HeroKick, 1.6f, false);
                     }
                     break;
@@ -565,6 +571,7 @@ namespace PersonalArena.View
                     effects.Decal(heroPosition, FrostMarkColor, 20f, 5f);
                     effects.Rune(heroPosition, FrostColor, 22f, 1.2f);
                     effects.AreaFill(heroPosition, FrostColor, 14f, 1.4f);
+                    StoreArea(StoreFx.SnowArea, heroPosition, 8f, 2.2f);
                     break;
                 case WeaponVisual.Purge:
                     PlayHeroOneShot(HeroCast, 2f, false);
@@ -607,7 +614,10 @@ namespace PersonalArena.View
                     MarkElement(heroPosition, radius, ElementIce);
                     effects.Decal(heroPosition, FrostMarkColor, radius * 2.4f, 5f);
                     effects.Rune(heroPosition, FrostColor, radius * 2.3f, 1f);
-                    effects.AreaFill(heroPosition, FrostColor, radius, 1.2f);
+                    if (!StoreArea(StoreFx.SnowArea, heroPosition, radius, 2f))
+                    {
+                        effects.AreaFill(heroPosition, FrostColor, radius, 1.2f);
+                    }
                 }
                 else
                 {
@@ -656,6 +666,7 @@ namespace PersonalArena.View
                 // Lightning: a vertical bolt from the sky, a flash and a ring of the real radius.
                 Vector3 top = point + Vector3.up * LightningHeight;
                 effects.Bolt(top, point, color, evolved ? 1.5f : 1.1f);
+                StoreArea(StoreFx.LightningBall, point + Vector3.up * 0.5f, Mathf.Max(1.2f, radius), 0.7f);
                 MarkElement(point, radius, ElementLightning);
                 effects.Decal(point, new Color(0.05f, 0.05f, 0.08f, 0.6f), radius * 1.6f, 2.5f);
                 effects.Flash(point + Vector3.up * 0.8f, color, radius * 2.8f, 0.25f);
@@ -733,7 +744,10 @@ namespace PersonalArena.View
             Vector3 point = ArenaSpace.ToWorld(e.Point);
             effects.Shockwave(point, GoldColor, 4f, 0.7f);
             effects.Flash(point + Vector3.up * 0.8f, GoldColor, 3.5f, 0.3f);
-            effects.Sparkle(point, GoldColor, 26, 1f, 3f, 0.3f);
+            if (!StoreArea(StoreFx.RainbowExplode, point + Vector3.up * 0.6f, 2.2f, 2f))
+            {
+                effects.Sparkle(point, GoldColor, 26, 1f, 3f, 0.3f);
+            }
             string label = "RƯƠNG! +" + NumberText(Mathf.RoundToInt(e.Value)) + " vàng";
             effects.Text(point + Vector3.up * 2.6f, label, GoldColor, 1.3f, 1.6f);
             if (e.Id >= 0 && e.Extra > 0f)

@@ -27,6 +27,7 @@ namespace PersonalArena.View
         private float fxDemoAt = -1f;
         private int fxDemoShots;
         private int fxDemoRound;
+        private bool vfxGallery;
         private readonly StringBuilder perfLine = new StringBuilder(160);
 
         private void BeginPerfLog()
@@ -44,7 +45,8 @@ namespace PersonalArena.View
                 perfQuitAfter = seconds;
             }
             perfNextShot = perfShotEvery;
-            fxDemo = HasArgument("-fxDemo");
+            vfxGallery = HasArgument("-vfxGallery");
+            fxDemo = vfxGallery || HasArgument("-fxDemo");
             File.WriteAllText(perfLogPath, "simTime,enemies,avgFps,worstMs,weapons\n");
         }
 
@@ -101,15 +103,22 @@ namespace PersonalArena.View
                 {
                     fxDemoAt = real;
                     fxDemoShots = 0;
-                    survivorRenderer.PlayFxDemo(survivorRenderer.HeroWorldPosition);
+                    if (vfxGallery)
+                    {
+                        survivorRenderer.PlayStoreGallery(survivorRenderer.HeroWorldPosition, fxDemoRound);
+                    }
+                    else
+                    {
+                        survivorRenderer.PlayFxDemo(survivorRenderer.HeroWorldPosition);
+                    }
                 }
-                else if (fxDemoAt >= 0f && fxDemoShots < 2 && real - fxDemoAt >= (fxDemoShots == 0 ? 0.05f : 0.3f))
+                else if (fxDemoAt >= 0f && fxDemoShots < 2 && real - fxDemoAt >= (fxDemoShots == 0 ? (vfxGallery ? 0.45f : 0.05f) : (vfxGallery ? 1.2f : 0.3f)))
                 {
                     fxDemoShots++;
                     Capture(SiblingPath(Path.ChangeExtension(perfLogPath, ".png"),
                         "_fx" + fxDemoRound.ToString(CultureInfo.InvariantCulture) + (fxDemoShots == 1 ? "a" : "b")));
                 }
-                else if (fxDemoAt >= 0f && fxDemoShots >= 2 && real - fxDemoAt >= 2.5f && fxDemoRound < 1)
+                else if (fxDemoAt >= 0f && fxDemoShots >= 2 && real - fxDemoAt >= (vfxGallery ? 2.6f : 2.5f) && fxDemoRound < (vfxGallery ? (ArenaEffects.StoreCount - 1) / ArenaEffects.GalleryPerPage : 1))
                 {
                     fxDemoRound++;
                     fxDemoAt = -1f;

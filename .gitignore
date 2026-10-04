@@ -54,3 +54,11 @@ create.log
 
 # Local player builds
 /Build/
+
+# Unity Asset Store packs: licence forbids redistribution, they stay on the build machine (see CREDITS.md).
+/Unity/Assets/Hovl Studio/
+/Unity/Assets/Hovl Studio.meta
+/Unity/Assets/52SpecialEffectPack/
+/Unity/Assets/52SpecialEffectPack.meta
+/Unity/Assets/ThirdPartyLocal/
+/Unity/Assets/ThirdPartyLocal.meta

@@ -32,6 +32,8 @@ namespace PersonalArena.View
             public float Spin;
             public float Alpha;
             public bool On;
+            public GameObject Store;
+            public float StoreScale;
         }
 
         private readonly BuffAuraView[] buffAuras = new BuffAuraView[BuffAuraCount];
@@ -47,6 +49,25 @@ namespace PersonalArena.View
             buffAuras[(int)BuffAura.Area] = BuildBuffAura("Area", "light_03", "magic_01", new Color(1f, 0.88f, 0.4f), 4f, 28f);
             buffAuras[(int)BuffAura.Speed] = BuildBuffAura("Speed", "twirl_03", "twirl_02", new Color(0.45f, 1f, 0.55f), 2.6f, 220f);
             buffAuras[(int)BuffAura.Heal] = BuildBuffAura("Heal", "circle_01", "star_06", new Color(0.4f, 1f, 0.5f), 3.2f, 55f);
+            // M12: the store packs' looping auras replace the two quads where the packs are installed.
+            UseStoreAura(BuffAura.Damage, StoreFx.BuffAura, 1.6f, 0f);
+            UseStoreAura(BuffAura.Defense, StoreFx.ShieldBlue, 0.85f, 0.9f);
+            UseStoreAura(BuffAura.Speed, StoreFx.LightningAura, 1.6f, 0f);
+            UseStoreAura(BuffAura.Heal, StoreFx.HealAura, 1.6f, 0f);
+        }
+
+        private void UseStoreAura(BuffAura aura, StoreFx slot, float scale, float height)
+        {
+            BuffAuraView view = buffAuras[(int)aura];
+            view.Store = effects.StoreAttach(slot, view.Root, scale, height);
+            if (view.Store == null)
+            {
+                return;
+            }
+            view.StoreScale = scale;
+            view.Store.SetActive(true);
+            view.Inner.gameObject.SetActive(false);
+            view.Outer.gameObject.SetActive(false);
         }
 
         private BuffAuraView BuildBuffAura(string label, string innerTexture, string outerTexture, Color color, float size, float spin)
@@ -133,7 +154,13 @@ namespace PersonalArena.View
             effects.Shockwave(heroPosition, color, 9f, 0.6f);
             effects.Rune(heroPosition, color, 6f, 0.8f);
             effects.Flash(heroPosition + Vector3.up, color, 4f, 0.25f);
-            effects.Sparkle(heroPosition, color, 22, 1.2f, 2.4f, 0.26f);
+            StoreFx burst = (BuffKind)e.Id == BuffKind.Rage ? StoreFx.RedBlast
+                : (BuffKind)e.Id == BuffKind.Shield ? StoreFx.Explode5
+                : StoreFx.LightningBall;
+            if (!StoreArea(burst, heroPosition + Vector3.up * 0.3f, 2.8f, 1.5f))
+            {
+                effects.Sparkle(heroPosition, color, 22, 1.2f, 2.4f, 0.26f);
+            }
             effects.Text(heroPosition + Vector3.up * 2.5f, label, color, 1.3f, 1.2f);
         }
 
@@ -155,7 +182,10 @@ namespace PersonalArena.View
         private void OnManaRestored(SurvivorEvent e, Vector3 heroPosition)
         {
             effects.Shockwave(heroPosition, ManaColor, 4f, 0.5f);
-            effects.Sparkle(heroPosition, ManaColor, 18, 0.8f, 2.2f, 0.24f);
+            if (!StoreAt(StoreFx.MagicCircle, heroPosition, 1.6f, 1.5f))
+            {
+                effects.Sparkle(heroPosition, ManaColor, 18, 0.8f, 2.2f, 0.24f);
+            }
             effects.Text(heroPosition + Vector3.up * 2.2f, "+" + NumberText(Mathf.RoundToInt(e.Value)) + " năng lượng", ManaColor, 1.1f, 1f);
         }
     }
