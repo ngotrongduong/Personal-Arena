@@ -757,6 +757,13 @@ namespace PersonalArena.View
                     effects.Slash(origin, yaw - 22f, color, false, 2.2f, 0.16f);
                     effects.Slash(origin, yaw, color, true, 2.8f, 0.2f);
                     effects.Slash(origin, yaw + 22f, color, false, 2.2f, 0.16f);
+                    Vector3 side = Vector3.Cross(Vector3.up, direction);
+                    for (int k = 0; k < 12; k++)
+                    {
+                        float reach = Random.Range(0.8f, 4.5f);
+                        effects.Flame(heroPosition + direction * reach + side * (Random.Range(-0.4f, 0.4f) * reach),
+                            color, Random.Range(0.8f, 1.4f), 0.5f);
+                    }
                     break;
                 }
                 case WeaponVisual.Combo:
@@ -799,6 +806,7 @@ namespace PersonalArena.View
                 case SkillKind.Kick:
                     PlayHeroOneShot(HeroKick, 1.5f, true);
                     effects.Shockwave(heroPosition + forward * 1f, KickColor, 2.6f, 0.35f);
+                    effects.Twirl(heroPosition + forward * 0.8f + Vector3.up * 0.5f, KickColor, 2.6f, 0.3f);
                     effects.Sparks(heroPosition + Vector3.up * 0.6f + forward * 0.9f, forward, KickColor, 10, 7f, 0.9f);
                     break;
                 case SkillKind.Dash:
@@ -832,6 +840,8 @@ namespace PersonalArena.View
                     effects.Sparkle(from, BlinkColor, 12, 0.6f, 1.6f, 0.22f);
                     effects.Sparkle(to, BlinkColor, 12, 0.6f, 1.6f, 0.22f);
                     effects.Shockwave(to, BlinkColor, 2.4f, 0.35f);
+                    effects.Rune(from, BlinkColor, 3f, 0.6f);
+                    effects.Rune(to, BlinkColor, 3.6f, 0.8f);
                     heroSnap = true;
                     break;
                 }
@@ -844,6 +854,7 @@ namespace PersonalArena.View
                 case SkillKind.Whirlwind:
                     PlayHeroOneShot(HeroStrikeA, 2.4f, true);
                     effects.Shockwave(heroPosition, WhirlColor, 5.5f, 0.35f);
+                    effects.Twirl(heroPosition + Vector3.up * 0.7f, WhirlColor, 5.5f, 0.5f);
                     RememberM9Skill(kind);
                     break;
                 case SkillKind.Trap:
@@ -874,7 +885,7 @@ namespace PersonalArena.View
             Vector3 point = ArenaSpace.ToWorld(e.Point);
             float radius = Mathf.Max(0.5f, e.Value);
             effects.Shockwave(point, ExplodeColor, radius * RingQuadPerRadius, 0.45f);
-            effects.Flash(point + Vector3.up * 0.7f, ExplodeColor, radius * 1.8f, 0.24f);
+            Blast(point, ExplodeColor, radius);
             effects.Sparks(point + Vector3.up * 0.5f, Vector3.up, ExplodeColor, 10, 8f, 1.2f);
             if (puffsLeft > 0)
             {

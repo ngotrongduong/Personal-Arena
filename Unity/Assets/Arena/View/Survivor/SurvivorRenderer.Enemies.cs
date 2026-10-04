@@ -608,6 +608,10 @@ namespace PersonalArena.View
                 if (onScreen)
                 {
                     visible++;
+                    if (enemy.SlowRemaining > 0f)
+                    {
+                        PresentChill(position, view.HeightScale, realDelta);
+                    }
                 }
                 TickEnemyAnimation(view, onScreen, stride);
             }

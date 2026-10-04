@@ -503,10 +503,12 @@ namespace PersonalArena.View
                 case WeaponVisual.FireOrb:
                 case WeaponVisual.OrbitKnife:
                     effects.Sparkle(heroPosition, FxColor(e.Id, AxeTrailColor), 8, 1.6f, 1.2f, 0.2f);
+                    effects.Twirl(heroPosition + Vector3.up * 0.8f, FxColor(e.Id, AxeTrailColor), 4.5f, 0.45f);
                     break;
                 case WeaponVisual.Aura:
                 case WeaponVisual.HolyField:
                     auraPulse = 1f;
+                    effects.Rune(heroPosition, FxColor(e.Id, HolyRuneColor), visual == WeaponVisual.HolyField ? 7f : 5f, 0.9f);
                     break;
                 case WeaponVisual.Shockwave:
                 case WeaponVisual.FrostNova:
@@ -541,6 +543,7 @@ namespace PersonalArena.View
                 case WeaponVisual.Barrier:
                     effects.Shockwave(heroPosition, BarrierColor, 4.4f, 0.4f);
                     effects.Sparkle(heroPosition, BarrierColor, 8, 0.9f, 1.4f, 0.18f);
+                    effects.Rune(heroPosition, BarrierColor, 4.4f, 0.9f);
                     break;
                 case WeaponVisual.Boomerang:
                     PlayHeroOneShot(HeroThrow, 2f, false);
@@ -626,8 +629,11 @@ namespace PersonalArena.View
                     Vector3 top = land + new Vector3(-0.8f, 4.5f, -0.8f);
                     Vector3 fall = land - top;
                     StartStreak(top, fall.normalized, fall.magnitude, color, evolved ? 0.5f : 0.38f, StreakUp(fall), false);
+                    // The arrow stays stuck in the ground for a moment.
+                    effects.Crystals(land, ArrowShaftColor, 1, 0f, 0.9f, 1.3f, 0.07f);
                 }
                 effects.Shockwave(point, color, radius * RingQuadPerRadius, 0.4f);
+                effects.Rune(point, color, radius * 2f, 0.5f);
                 if (puffsLeft > 0)
                 {
                     puffsLeft--;

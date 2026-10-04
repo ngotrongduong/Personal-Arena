@@ -272,7 +272,7 @@ namespace PersonalArena.View
         }
 
         /// <summary>Crystals that shoot up out of the ground in a patch, stand for a while, then shrink away (ice, stone).</summary>
-        public void Crystals(Vector3 position, Color color, int count, float radius, float height, float lifetime)
+        public void Crystals(Vector3 position, Color color, int count, float radius, float height, float lifetime, float thickness = 0.38f)
         {
             EnsureVfx();
             float lean = 22f / Mathf.Max(radius, 0.1f);
@@ -284,7 +284,7 @@ namespace PersonalArena.View
                 emit.position = position + new Vector3(ring.x, tall * 0.3f, ring.y);
                 emit.velocity = Vector3.zero;
                 emit.startLifetime = lifetime * Random.Range(0.8f, 1.1f);
-                emit.startSize3D = new Vector3(tall * 0.38f, tall, tall * 0.38f);
+                emit.startSize3D = new Vector3(tall * thickness, tall, tall * thickness);
                 // Lean away from the centre like a cluster.
                 emit.rotation3D = new Vector3(ring.y * lean, Random.Range(0f, 360f), -ring.x * lean);
                 emit.startColor = Color.Lerp(color, Color.white, Random.Range(0.1f, 0.6f));
