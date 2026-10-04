@@ -18,7 +18,19 @@ jobs:
         with:
           dotnet-version: 10.0.x
       - name: Core tests
-        run: dotnet test CoreTests -c Release --logger "console;verbosity=normal"
+        run: dotnet test CoreTests -c Release --logger "console;verbosity=normal" --logger "trx;LogFileName=core.trx" --results-directory TestResults
+      # Annotations are readable without signing in (the log is not), so agents can see what failed.
+      - name: Name the failed tests
+        if: failure()
+        shell: pwsh
+        run: |
+          [xml]$trx = Get-Content TestResults/core.trx -Raw
+          $trx.TestRun.Results.UnitTestResult | Where-Object { $_.outcome -eq 'Failed' } | ForEach-Object {
+            $title = $_.testName -replace '%', '%25' -replace ',', '%2C' -replace ':', '%3A'
+            $message = ($_.Output.ErrorInfo.Message -replace '\s+', ' ') -replace '%', '%25'
+            if ($message.Length -gt 400) { $message = $message.Substring(0, 400) }
+            Write-Output "::error title=$title::$message"
+          }
 
   guardrails:
     runs-on: ubuntu-latest

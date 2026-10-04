@@ -20,6 +20,7 @@ namespace PersonalArena.Core.Tests.Survivor
         [Test]
         public void Tier1_ScriptedRun_MatchesPreM5Golden()
         {
+            RequireWindowsGolden();
             SurvivorSim sim = new SurvivorSim(PreM8(SurvivorTestHelpers.Config()), 99);
             long hash = 17;
             for (int tick = 0; tick < 10800 && !sim.IsEnded; tick++)
@@ -50,8 +51,9 @@ namespace PersonalArena.Core.Tests.Survivor
         }
 
         /// <summary>
-        /// These two goldens hash every float bit and were recorded on Windows. MathF.Sin/Cos/Atan2 come from the
-        /// platform libm, so the long chaotic runs drift apart on Linux (the shorter goldens agree on both).
+        /// These goldens hash every float bit and were recorded on Windows. MathF.Sin/Cos/Atan2 come from the
+        /// platform libm, so the chaotic runs drift apart on Linux (the short evaluator golden agrees on both;
+        /// the scripted run stopped agreeing once the sword became a flying wave).
         /// CI runs them on a Windows job; on other platforms they are skipped rather than failing.
         /// </summary>
         private static void RequireWindowsGolden()
