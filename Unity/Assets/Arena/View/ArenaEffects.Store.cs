@@ -62,7 +62,67 @@ namespace PersonalArena.View
         Hole,
         FlameEmission,
         Kunai,
-        ElementalArrow
+        ElementalArrow,
+        SparksBlue,
+        SparksGreen,
+        SparksPink,
+        SparksRed,
+        SparksWhite,
+        TwinkleBlue,
+        TwinkleGreen,
+        TwinklePink,
+        TwinkleRed,
+        TwinkleWhite,
+        TwinkleYellow,
+        SlashBlue,
+        SlashPurple,
+        SlashRed,
+        SlashElectro,
+        SlashSnow,
+        SlashStone,
+        TwirlBlue,
+        TwirlGreen,
+        TwirlOrange,
+        SmokePuff,
+        LoveHit,
+        PortalBlue,
+        PortalGreen,
+        PortalYellow,
+        ShieldPink,
+        DebuffAura,
+        LoveAura,
+        PlexusAura,
+        CrystalsCross,
+        CrystalBlue,
+        CrystalGreen,
+        CrystalRed,
+        DustGround,
+        SmokeGround,
+        ElementalArrow2,
+        LightningArrow,
+        Kunai2,
+        Kunai3,
+        Kunai4,
+        Kunai5,
+        ElementalBall2,
+        ElementalBall3,
+        ElementalBall4,
+        Explode2,
+        Explode3,
+        Explode4,
+        Explode6,
+        Explode8,
+        Explode9,
+        Explode10,
+        Explode11,
+        LightningBall2,
+        LightningRotateBall,
+        MagicCircleRelease,
+        MagicCube,
+        Portal2,
+        RainbowExplode2,
+        SummonCircle3,
+        LaserFire
     }
 
     /// <summary>
@@ -88,10 +148,36 @@ namespace PersonalArena.View
 
         public static int StoreCount => StoreSlotCount;
 
-        // The second pack is authored about five times larger than this game's units.
-        private static float StoreBaseScale(StoreFx slot)
+        private const int StorePerSmallSlot = 10;
+
+        // The small bursts that replace sparks, puffs, flames and slashes start many times a second.
+        private static int StoreCap(StoreFx slot)
         {
-            return slot >= StoreFx.MagicBall ? 0.22f : 1f;
+            switch (slot)
+            {
+                case StoreFx.Explode2:
+                case StoreFx.Explode3:
+                case StoreFx.Explode4:
+                case StoreFx.Explode6:
+                case StoreFx.Explode10:
+                case StoreFx.Explode11:
+                case StoreFx.RainbowExplode2:
+                case StoreFx.StonesHit:
+                case StoreFx.DustPuff:
+                case StoreFx.SmokePuff:
+                case StoreFx.FlameEmission:
+                case StoreFx.SwampBall:
+                    return StorePerSmallSlot;
+                default:
+                    return slot >= StoreFx.SlashBlue && slot <= StoreFx.TwirlOrange ? StorePerSmallSlot : StorePerSlot;
+            }
+        }
+
+        private float[] storeScales;
+
+        private float StoreBaseScale(StoreFx slot)
+        {
+            return storeScales[(int)slot];
         }
 
         private void EnsureStore()
@@ -104,8 +190,10 @@ namespace PersonalArena.View
             EnsureReady();
             storePrefabs = new GameObject[StoreSlotCount];
             storePools = new List<StoreInstance>[StoreSlotCount];
+            storeScales = new float[StoreSlotCount];
             for (int i = 0; i < StoreSlotCount; i++)
             {
+                storeScales[i] = 1f;
                 storePools[i] = new List<StoreInstance>(StorePerSlot);
             }
             StoreVfxSet set = Resources.Load<StoreVfxSet>(StoreVfxSet.ResourceName);
@@ -119,6 +207,10 @@ namespace PersonalArena.View
                 if (Enum.TryParse(set.Names[i], out StoreFx slot))
                 {
                     storePrefabs[(int)slot] = set.Prefabs[i];
+                    if (i < set.Scales.Length && set.Scales[i] > 0f)
+                    {
+                        storeScales[(int)slot] = set.Scales[i];
+                    }
                 }
             }
         }
@@ -182,7 +274,7 @@ namespace PersonalArena.View
                     return pool[i];
                 }
             }
-            if (pool.Count >= StorePerSlot)
+            if (pool.Count >= StoreCap(slot))
             {
                 return null;
             }

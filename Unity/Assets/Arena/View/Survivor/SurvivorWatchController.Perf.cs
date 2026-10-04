@@ -47,6 +47,10 @@ namespace PersonalArena.View
             perfNextShot = perfShotEvery;
             vfxGallery = HasArgument("-vfxGallery");
             fxDemo = vfxGallery || HasArgument("-fxDemo");
+            if (vfxGallery && int.TryParse(CommandLineValue("-vfxGalleryFrom"), NumberStyles.Integer, CultureInfo.InvariantCulture, out int firstPage))
+            {
+                fxDemoRound = Mathf.Max(0, firstPage);
+            }
             File.WriteAllText(perfLogPath, "simTime,enemies,avgFps,worstMs,weapons\n");
         }
 
@@ -112,7 +116,7 @@ namespace PersonalArena.View
                         survivorRenderer.PlayFxDemo(survivorRenderer.HeroWorldPosition);
                     }
                 }
-                else if (fxDemoAt >= 0f && fxDemoShots < 2 && real - fxDemoAt >= (fxDemoShots == 0 ? (vfxGallery ? 0.45f : 0.05f) : (vfxGallery ? 1.2f : 0.3f)))
+                else if (fxDemoAt >= 0f && fxDemoShots < 2 && real - fxDemoAt >= (fxDemoShots == 0 ? (vfxGallery ? 0.15f : 0.05f) : (vfxGallery ? 0.5f : 0.3f)))
                 {
                     fxDemoShots++;
                     Capture(SiblingPath(Path.ChangeExtension(perfLogPath, ".png"),

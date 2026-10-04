@@ -100,6 +100,8 @@ namespace PersonalArena.View
             public TrailRenderer Trail;
             public readonly GameObject[] Models = new GameObject[ProjectileLookCount];
             public readonly Transform[] Orbits = new Transform[ProjectileLookCount];
+            // Looks shown by a store effect, which brings its own particles.
+            public readonly bool[] StoreModel = new bool[ProjectileLookCount];
             public float Emit;
             public Renderer[] Renderers;
             public ProjectileLook Look = ProjectileLook.Hammer;
@@ -659,6 +661,7 @@ namespace PersonalArena.View
                     if (storeOrb != null)
                     {
                         storeOrb.SetActive(true);
+                        view.StoreModel[index] = true;
                         break;
                     }
                     // A round orb with a bright star in it and two rune rings turning around it.
@@ -683,6 +686,7 @@ namespace PersonalArena.View
                     if (storeFire != null)
                     {
                         storeFire.SetActive(true);
+                        view.StoreModel[index] = true;
                         break;
                     }
                     GameObject core = CreatePrimitive("Core", PrimitiveType.Sphere, model, fireballMaterial);
@@ -718,6 +722,13 @@ namespace PersonalArena.View
                 }
                 case ProjectileLook.Bounce:
                 {
+                    GameObject storeIce = effects.StoreAttach(StoreFx.IceBall, model, 1.1f);
+                    if (storeIce != null)
+                    {
+                        storeIce.SetActive(true);
+                        view.StoreModel[index] = true;
+                        break;
+                    }
                     // A cut crystal that tumbles, with a star flare.
                     GameObject core = CreateMeshObject("Ricochet Crystal", model, gemMesh, bounceMaterial);
                     core.transform.localScale = new Vector3(0.42f, 0.6f, 0.42f);
@@ -728,6 +739,13 @@ namespace PersonalArena.View
                 }
                 case ProjectileLook.Momentum:
                 {
+                    GameObject storeSpirit = effects.StoreAttach(StoreFx.ElementalBall2, model, 1.2f);
+                    if (storeSpirit != null)
+                    {
+                        storeSpirit.SetActive(true);
+                        view.StoreModel[index] = true;
+                        break;
+                    }
                     // A long spearhead of light pointing where it flies.
                     GameObject core = CreateMeshObject("Spirit Lance", model, gemMesh, momentumMaterial);
                     core.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
@@ -999,7 +1017,7 @@ namespace PersonalArena.View
             }
 
             float rate = ProjectileFxRate(view.Look);
-            if (rate <= 0f)
+            if (rate <= 0f || view.StoreModel[(int)view.Look])
             {
                 return;
             }

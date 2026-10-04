@@ -12,5 +12,7 @@ namespace PersonalArena.View
         public const string ResourceName = "StoreVfxSet";
         public string[] Names = new string[0];
         public GameObject[] Prefabs = new GameObject[0];
+        /// <summary>Scale that brings each prefab to this game's units (the packs are authored at different sizes).</summary>
+        public float[] Scales = new float[0];
     }
 }

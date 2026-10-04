@@ -186,6 +186,10 @@ namespace PersonalArena.View
         public void AreaFill(Vector3 position, Color color, float radius, float lifetime)
         {
             EnsureVfx();
+            if (StoreAreaDrawnAt(position))
+            {
+                return;
+            }
             ParticleSystem.EmitParams emit = new ParticleSystem.EmitParams
             {
                 position = new Vector3(position.x, position.y + 0.055f, position.z),
@@ -201,6 +205,10 @@ namespace PersonalArena.View
         public void Flame(Vector3 position, Color color, float size, float lifetime = 0.7f)
         {
             EnsureVfx();
+            if (StoreFlame(position, size, lifetime))
+            {
+                return;
+            }
             ParticleSystem.EmitParams emit = new ParticleSystem.EmitParams
             {
                 position = position + Vector3.up * (size * 0.45f),
@@ -216,6 +224,10 @@ namespace PersonalArena.View
         public void Smoke(Vector3 position, Color color, int count, float size, float lifetime = 1.2f)
         {
             EnsureVfx();
+            if (StoreSmoke(position, color, size, lifetime))
+            {
+                return;
+            }
             ParticleSystem.EmitParams emit = new ParticleSystem.EmitParams();
             for (int i = 0; i < count; i++)
             {
@@ -250,6 +262,10 @@ namespace PersonalArena.View
         public void Rune(Vector3 position, Color color, float size, float lifetime)
         {
             EnsureVfx();
+            if (StoreRune(position, color, size / 2.3f, lifetime))
+            {
+                return;
+            }
             ParticleSystem.EmitParams emit = new ParticleSystem.EmitParams
             {
                 position = new Vector3(position.x, position.y + 0.07f, position.z),
@@ -266,6 +282,10 @@ namespace PersonalArena.View
         public void Twirl(Vector3 position, Color color, float size, float lifetime = 0.35f)
         {
             EnsureVfx();
+            if (StoreTwirl(position, color, size))
+            {
+                return;
+            }
             ParticleSystem.EmitParams emit = new ParticleSystem.EmitParams
             {
                 position = position,
@@ -282,6 +302,10 @@ namespace PersonalArena.View
         public void Shards(Vector3 position, Color color, int count, float speed, float size)
         {
             EnsureVfx();
+            if (StoreShards(position, color, count, size))
+            {
+                return;
+            }
             ParticleSystem.EmitParams emit = new ParticleSystem.EmitParams();
             for (int i = 0; i < count; i++)
             {
@@ -300,6 +324,10 @@ namespace PersonalArena.View
         public void Crystals(Vector3 position, Color color, int count, float radius, float height, float lifetime, float thickness = 0.38f)
         {
             EnsureVfx();
+            if (StoreCrystals(position, color, count, radius, lifetime))
+            {
+                return;
+            }
             float lean = 22f / Mathf.Max(radius, 0.1f);
             ParticleSystem.EmitParams emit = new ParticleSystem.EmitParams();
             for (int i = 0; i < count; i++)
