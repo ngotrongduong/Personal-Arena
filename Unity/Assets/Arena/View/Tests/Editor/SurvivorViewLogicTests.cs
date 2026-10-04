@@ -170,6 +170,41 @@ namespace PersonalArena.View.Tests
         }
 
         [Test]
+        public void EveryEvolution_HasItsOwnElementAndColour_NotGold()
+        {
+            int evolutions = 0;
+            var seen = new System.Collections.Generic.HashSet<string>();
+            for (int item = 0; item < SurvivorCatalog.CatalogSize; item++)
+            {
+                ItemDef definition = SurvivorCatalog.Get(item);
+                EvolutionStyle style = SurvivorEvolutionStyles.Of(item);
+                if (definition == null || definition.EvolvesFrom < 0)
+                {
+                    Assert.That(style.Element, Is.EqualTo(EvolutionElement.None), "item " + item);
+                    continue;
+                }
+                evolutions++;
+                Assert.That(style.Element, Is.Not.EqualTo(EvolutionElement.None), definition.Name);
+                Assert.That(style.Color, Is.Not.EqualTo(SurvivorViewLogic.EvolutionGold), definition.Name);
+                // No two evolutions share both element and colour.
+                Assert.That(seen.Add(style.Element + "/" + style.Color), Is.True, definition.Name);
+            }
+            Assert.That(evolutions, Is.EqualTo(34));
+        }
+
+        [Test]
+        public void BuffChip_ShowsNameAndSecondsLeft_AndHidesWhenOver()
+        {
+            Assert.That(SurvivorViewLogic.BuffChipText(BuffKind.Rage, 9.2f), Is.EqualTo("CUỒNG NỘ  10s"));
+            Assert.That(SurvivorViewLogic.BuffChipText(BuffKind.Shield, 0.1f), Is.EqualTo("KHIÊN  1s"));
+            Assert.That(SurvivorViewLogic.BuffChipText(BuffKind.Haste, 3f), Is.EqualTo("TỐC ĐỘ  3s"));
+            Assert.That(SurvivorViewLogic.BuffChipText(BuffKind.Haste, 0f), Is.Null);
+            Assert.That(SurvivorViewLogic.BuffChipText(BuffKind.Rage, float.NaN), Is.Null);
+            Assert.That(SurvivorViewLogic.BuffSeconds(BuffKind.Rage), Is.EqualTo(SurvivorSim.RageSeconds));
+            Assert.That(SurvivorViewLogic.BuffSeconds(BuffKind.Shield), Is.EqualTo(SurvivorSim.ShieldSeconds));
+        }
+
+        [Test]
         public void ProjectileLook_FollowsTheSourceWeaponOrSkill()
         {
             SurvivorClassDef mage = SurvivorDefaults.Mage();

@@ -748,7 +748,7 @@ namespace PersonalArena.View
                     }
                     case SurvivorEventType.WeaponEvolved:
                     {
-                        Color gold = SurvivorViewLogic.EvolutionGold;
+                        Color gold = SurvivorViewLogic.IsEvolution(e.Id) ? EvolutionColor(e.Id) : SurvivorViewLogic.EvolutionGold;
                         effects.Shockwave(heroPosition, gold, 6f, 0.8f);
                         effects.Flash(heroPosition + Vector3.up, gold, 4f, 0.35f);
                         effects.Sparkle(heroPosition, gold, 32, 1.2f, 3f, 0.3f);
@@ -788,7 +788,7 @@ namespace PersonalArena.View
                         // The sword throws a flying wave (a projectile draws it): nothing is painted on the hero.
                         break;
                     }
-                    Color color = dagger ? DaggerSlashColor : FxColor(e.Id, StrikeColor);
+                    Color color = SurvivorViewLogic.IsEvolution(e.Id) ? EvolutionColor(e.Id) : DaggerSlashColor;
                     float life = dagger ? 0.16f : 0.22f;
                     Vector3 origin = heroPosition + Vector3.up * 0.85f;
                     effects.Slash(origin, yaw, color, mirror, reach, life);
@@ -796,10 +796,9 @@ namespace PersonalArena.View
                     {
                         effects.Slash(origin, yaw + 180f, color, !mirror, reach, life);
                     }
-                    if (SurvivorViewLogic.IsEvolution(e.Id) && sparksLeft > 0)
+                    if (SurvivorViewLogic.IsEvolution(e.Id))
                     {
-                        sparksLeft--;
-                        effects.Sparkle(origin + direction * reach * 0.6f, SurvivorViewLogic.EvolutionGold, 6, reach * 0.4f, 1f, 0.18f);
+                        EvolutionMark(e.Id, heroPosition + direction * reach * 0.65f, reach * 0.45f);
                     }
                     break;
                 }
@@ -825,6 +824,12 @@ namespace PersonalArena.View
                             effects.Flame(origin + spray * along, color, 0.7f + 0.9f * (row + 1f) / Rows, 0.45f, false);
                         }
                     }
+                    if (SurvivorViewLogic.IsEvolution(e.Id))
+                    {
+                        // Hellfire leaves the ground burnt along the cone.
+                        effects.Decal(heroPosition + direction * range * 0.6f, ScorchColor, range * 0.9f, 2.5f);
+                        effects.Smoke(heroPosition + direction * range * 0.8f + Vector3.up * 0.8f, new Color(0.12f, 0.08f, 0.08f, 0.45f), 2, 1.1f, 0.9f);
+                    }
                     break;
                 }
                 case WeaponVisual.Combo:
@@ -834,6 +839,10 @@ namespace PersonalArena.View
                     PlayHeroOneShot(mirror ? HeroStrikeB : HeroStrikeA, finisher ? 2.2f : 2.5f, false);
                     effects.Slash(heroPosition + Vector3.up * 0.85f, yaw, FxColor(e.Id, StrikeColor), mirror,
                         finisher ? 3f : 2.2f, finisher ? 0.28f : 0.16f);
+                    if (finisher && SurvivorViewLogic.IsEvolution(e.Id))
+                    {
+                        EvolutionMark(e.Id, heroPosition + direction * 1.8f, 1.4f);
+                    }
                     break;
                 }
                 case WeaponVisual.Hammer:
@@ -958,7 +967,7 @@ namespace PersonalArena.View
 
         /// <summary>
         /// Effect colour of a weapon: the renderer's own colour for the warrior's weapons, the item colour for the
-        /// mage and archer weapons, pulled toward gold for an evolution.
+        /// mage and archer weapons, the element colour for an evolution.
         /// </summary>
         private static Color FxColor(int catalogIndex, Color original)
         {
@@ -968,7 +977,8 @@ namespace PersonalArena.View
             }
             int baseIndex = SurvivorViewLogic.BaseWeapon(catalogIndex);
             Color color = baseIndex <= 5 ? original : SurvivorViewLogic.ItemColor(baseIndex);
-            return SurvivorViewLogic.IsEvolution(catalogIndex) ? Color.Lerp(color, SurvivorViewLogic.EvolutionGold, 0.6f) : color;
+            // An evolution has its own colour (its element), not a gold copy of the base weapon's.
+            return SurvivorViewLogic.IsEvolution(catalogIndex) ? EvolutionColor(catalogIndex) : color;
         }
 
         private void OnDamageDealt(SurvivorEvent e, bool crit)

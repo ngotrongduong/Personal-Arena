@@ -573,6 +573,44 @@ namespace PersonalArena.View
                 shownKills = sim.Kills;
                 killsText.text = sim.Kills.ToString();
             }
+            RefreshBuffChips();
+        }
+
+        /// <summary>Effect demo (`-fxDemo`): show all three buff chips at fixed times so a screenshot can check them.</summary>
+        public bool BuffDemo { get; set; }
+
+        /// <summary>Shows a chip per running pickup buff (rage, shield, haste), stacked without gaps, with its time left.</summary>
+        private void RefreshBuffChips()
+        {
+            int row = 0;
+            for (int i = 0; i < BuffChipCount; i++)
+            {
+                BuffKind kind = (BuffKind)i;
+                float remaining = kind == BuffKind.Rage ? sim.RageRemaining : kind == BuffKind.Shield ? sim.ShieldRemaining : sim.HasteRemaining;
+                if (BuffDemo)
+                {
+                    remaining = SurvivorViewLogic.BuffSeconds(kind) * (0.9f - 0.3f * i);
+                }
+                bool active = remaining > 0f;
+                if (buffChips[i].gameObject.activeSelf != active)
+                {
+                    buffChips[i].gameObject.SetActive(active);
+                    shownBuffSeconds[i] = -1;
+                }
+                if (!active)
+                {
+                    continue;
+                }
+                buffChips[i].anchoredPosition = new Vector2(470f, -40f - row * 38f);
+                row++;
+                buffFills[i].anchorMax = new Vector2(Mathf.Clamp01(remaining / SurvivorViewLogic.BuffSeconds(kind)), 1f);
+                int seconds = Mathf.CeilToInt(remaining);
+                if (seconds != shownBuffSeconds[i])
+                {
+                    shownBuffSeconds[i] = seconds;
+                    buffTexts[i].text = SurvivorViewLogic.BuffChipText(kind, remaining);
+                }
+            }
         }
 
         private void RefreshItems()

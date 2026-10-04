@@ -146,6 +146,7 @@ namespace PersonalArena.View
                 SetMovingM9View(view, state.Active, ArenaSpace.ToWorld(state.Position, 0.85f));
                 if (state.Active)
                 {
+                    SetBoomerangLook(state.SourceIndex);
                     float scale = Mathf.Max(0.65f, state.Radius * 1.6f);
                     view.Spinner.localScale = Vector3.one * scale;
                 }
@@ -233,6 +234,15 @@ namespace PersonalArena.View
                 if (!view.Active) continue;
                 view.Root.position = Vector3.LerpUnclamped(view.Previous, view.Current, interpolationAlpha);
                 view.Spinner.localRotation = Quaternion.Euler(0f, spin + i * 37f, 0f);
+                if (boomerangLook >= 0 && SurvivorViewLogic.IsEvolution(boomerangLook))
+                {
+                    view.Emit += Time.unscaledDeltaTime * EvolutionTrailRate;
+                    if (view.Emit >= 1f)
+                    {
+                        view.Emit = 0f;
+                        EvolutionTrail(boomerangLook, view.Root.position);
+                    }
+                }
             }
             if (whirlRoot.gameObject.activeSelf)
             {
@@ -259,13 +269,18 @@ namespace PersonalArena.View
             {
                 WeaponVisual visual = SurvivorViewLogic.WeaponVisualOf(e.Id);
                 Color color = FxColor(e.Id, FireballColor);
+                bool evolved = SurvivorViewLogic.IsEvolution(e.Id);
                 switch (visual)
                 {
                     case WeaponVisual.Bomb:
                     case WeaponVisual.BombRing:
                     case WeaponVisual.FireballNova:
-                        // Only the explosion, sized to the real radius.
+                        // Only the explosion, sized to the real radius (an evolution adds its element's mark under it).
                         Blast(point, color, radius);
+                        if (evolved)
+                        {
+                            EvolutionMark(e.Id, point, radius);
+                        }
                         return true;
                     case WeaponVisual.Retaliate:
                         effects.Shockwave(heroPosition, color, radius * RingQuadPerRadius, 0.4f);
@@ -274,6 +289,10 @@ namespace PersonalArena.View
                         effects.Crystals(heroPosition, SpikeColor, 14, Mathf.Max(1.2f, radius * 0.85f), 1.2f, 1f, 0.16f);
                         effects.AreaFill(heroPosition, color, radius, 0.7f);
                         effects.Shards(heroPosition, SpikeColor, 8, 3.5f, 0.4f);
+                        if (evolved)
+                        {
+                            EvolutionMark(e.Id, heroPosition, radius);
+                        }
                         return true;
                     case WeaponVisual.Purge:
                         effects.Shockwave(point, Color.white, radius * RingQuadPerRadius, 0.7f);
@@ -289,9 +308,17 @@ namespace PersonalArena.View
                         StartStreak(heroPosition + Vector3.up * 0.9f, (point - heroPosition).normalized,
                             Mathf.Max(0.5f, Vector3.Distance(heroPosition, point)), color, 0.7f, Vector3.up, true);
                         effects.Flash(point + Vector3.up * 0.4f, color, 1.5f, 0.16f);
+                        if (evolved)
+                        {
+                            EvolutionMark(e.Id, point, 1f);
+                        }
                         return true;
                     case WeaponVisual.Bounce:
                         effects.Sparkle(point, color, 5, 0.3f, 1f, 0.14f);
+                        if (evolved)
+                        {
+                            EvolutionMark(e.Id, point, 0.8f);
+                        }
                         return true;
                 }
                 return false;

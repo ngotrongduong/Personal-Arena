@@ -82,6 +82,15 @@ namespace PersonalArena.View
         private Text energyText;
         private Text goldText;
         private Text killsText;
+        private const int BuffChipCount = 3;
+        private static readonly Color[] BuffChipColors =
+        {
+            new Color(0.85f, 0.3f, 0.12f, 0.85f), new Color(0.25f, 0.55f, 0.9f, 0.85f), new Color(0.25f, 0.7f, 0.35f, 0.85f)
+        };
+        private readonly RectTransform[] buffChips = new RectTransform[BuffChipCount];
+        private readonly RectTransform[] buffFills = new RectTransform[BuffChipCount];
+        private readonly Text[] buffTexts = new Text[BuffChipCount];
+        private readonly int[] shownBuffSeconds = new int[BuffChipCount];
         private readonly ItemSlotView[] itemSlots = new ItemSlotView[WeaponSlots + PassiveSlots];
         private readonly SkillSlotView[] skillSlots = new SkillSlotView[SkillSlots];
         private RectTransform skillsPanel;
@@ -402,6 +411,29 @@ namespace PersonalArena.View
             killsText = CreateText("Kills", vitals, 20, TextAnchor.MiddleLeft, Color.white);
             killsText.fontStyle = FontStyle.Bold;
             SetRect(killsText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(290f, -110f), new Vector2(130f, 24f), new Vector2(0f, 1f));
+
+            // Running pickup buffs: one chip each to the right of the panel, shown only while the buff lasts.
+            for (int i = 0; i < BuffChipCount; i++)
+            {
+                RectTransform chip = CreatePanel("Buff Chip " + i, canvasRoot, PanelColor);
+                SetRect(chip, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(470f, -40f - i * 38f), new Vector2(170f, 32f), new Vector2(0f, 1f));
+                RectTransform fill = CreateSliced("Fill", chip, BuffChipColors[i]);
+                fill.anchorMin = Vector2.zero;
+                fill.anchorMax = Vector2.one;
+                fill.offsetMin = Vector2.zero;
+                fill.offsetMax = Vector2.zero;
+                fill.GetComponent<Image>().raycastTarget = false;
+                Text label = CreateText("Label", chip, 16, TextAnchor.MiddleCenter, Color.white);
+                label.fontStyle = FontStyle.Bold;
+                label.rectTransform.anchorMin = Vector2.zero;
+                label.rectTransform.anchorMax = Vector2.one;
+                label.rectTransform.offsetMin = Vector2.zero;
+                label.rectTransform.offsetMax = Vector2.zero;
+                chip.gameObject.SetActive(false);
+                buffChips[i] = chip;
+                buffFills[i] = fill;
+                buffTexts[i] = label;
+            }
 
             Text weaponsLabel = CreateText("Weapons Label", vitals, 13, TextAnchor.UpperLeft, new Color(0.65f, 0.7f, 0.8f));
             weaponsLabel.text = "VŨ KHÍ";

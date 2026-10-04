@@ -78,6 +78,23 @@ namespace PersonalArena.View
     /// </summary>
     public static class SurvivorViewLogic
     {
+        /// <summary>HUD chip of a running pickup buff: its name and the whole seconds left (rounded up); null once it ran out.</summary>
+        public static string BuffChipText(BuffKind kind, float remaining)
+        {
+            if (float.IsNaN(remaining) || remaining <= 0f)
+            {
+                return null;
+            }
+            string name = kind == BuffKind.Rage ? "CUỒNG NỘ" : kind == BuffKind.Shield ? "KHIÊN" : "TỐC ĐỘ";
+            return name + "  " + Mathf.CeilToInt(remaining) + "s";
+        }
+
+        /// <summary>Full length in seconds of a pickup buff (for the HUD timer bar).</summary>
+        public static float BuffSeconds(BuffKind kind)
+        {
+            return kind == BuffKind.Rage ? SurvivorSim.RageSeconds : kind == BuffKind.Shield ? SurvivorSim.ShieldSeconds : SurvivorSim.HasteSeconds;
+        }
+
         /// <summary>Formats seconds as "mm:ss" (whole seconds, rounded down); invalid or negative values show "00:00".</summary>
         public static string FormatClock(float seconds)
         {

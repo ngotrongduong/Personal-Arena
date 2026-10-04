@@ -108,6 +108,8 @@ namespace PersonalArena.View
             public Renderer[] Renderers;
             public ProjectileLook Look = ProjectileLook.Hammer;
             public bool Evolved;
+            // Catalog index of the evolved weapon that threw it (its element decides tint and trail); -1 otherwise.
+            public int Source = -1;
             public int Id = -1;
             public Vector3 Previous;
             public Vector3 Current;
@@ -830,13 +832,23 @@ namespace PersonalArena.View
             return created;
         }
 
-        /// <summary>Shows the model of <paramref name="look"/> (gold and larger for an evolved weapon) and recolours the trail.</summary>
-        private void SetProjectileLook(HammerView view, ProjectileLook look, bool evolved)
+        /// <summary>
+        /// Shows the model of <paramref name="look"/> and recolours the trail. A projectile of an evolved weapon
+        /// (<paramref name="source"/> is its catalog index, −1 otherwise) is larger and takes its element's colour.
+        /// </summary>
+        private void SetProjectileLook(HammerView view, ProjectileLook look, int source)
         {
-            if (view.Look == look && view.Evolved == evolved && view.Renderers != null)
+            bool evolved = source >= 0 && SurvivorViewLogic.IsEvolution(source);
+            if (!evolved)
+            {
+                source = -1;
+            }
+            if (view.Look == look && view.Source == source && view.Renderers != null)
             {
                 return;
             }
+            view.Source = source;
+            Color element = evolved ? SurvivorEvolutionStyles.Of(source).Color : Color.white;
             GameObject shown = EnsureProjectileModel(view, look);
             for (int i = 0; i < view.Models.Length; i++)
             {
@@ -850,24 +862,26 @@ namespace PersonalArena.View
             view.Renderers = shown.GetComponentsInChildren<Renderer>(true);
             view.Spinner.localScale = Vector3.one * (evolved ? SurvivorViewLogic.EvolutionScale : 1f);
             view.Spinner.localRotation = Quaternion.identity;
-            SetRendererTint(view.Renderers, EvolvedTint, evolved);
+            SetRendererTint(view.Renderers, new Color(element.r * 1.3f, element.g * 1.3f, element.b * 1.3f, 1f), evolved);
             if (look == ProjectileLook.SwordWave)
             {
-                // The ghost material is white: the wave takes the sword's slash colour (gold once evolved).
-                SetRendererTint(view.Renderers, evolved ? SurvivorViewLogic.EvolutionGold : StrikeColor, true);
+                // The ghost material is white: the wave takes the sword's slash colour (its element once evolved).
+                SetRendererTint(view.Renderers, evolved ? element : StrikeColor, true);
             }
 
-            int key = (int)look * 2 + (evolved ? 1 : 0);
-            if (projectileTrails[key] == null)
+            if (evolved)
             {
-                Color color = ProjectileTrailColor(look);
-                if (evolved)
-                {
-                    color = Color.Lerp(color, SurvivorViewLogic.EvolutionGold, 0.7f);
-                }
-                projectileTrails[key] = TrailGradient(color);
+                view.Trail.colorGradient = EvolutionTrailGradient(source);
             }
-            view.Trail.colorGradient = projectileTrails[key];
+            else
+            {
+                int key = (int)look;
+                if (projectileTrails[key] == null)
+                {
+                    projectileTrails[key] = TrailGradient(ProjectileTrailColor(look));
+                }
+                view.Trail.colorGradient = projectileTrails[key];
+            }
             float scale = evolved ? SurvivorViewLogic.EvolutionScale : 1f;
             switch (look)
             {
@@ -985,7 +999,7 @@ namespace PersonalArena.View
                 {
                     view.Id = projectile.Id;
                     ProjectileLook look = SurvivorViewLogic.ProjectileLookOf(projectile.SourceIndex, sim.Config.ClassDef);
-                    SetProjectileLook(view, look, projectile.SourceIndex >= 0 && SurvivorViewLogic.IsEvolution(projectile.SourceIndex));
+                    SetProjectileLook(view, look, projectile.SourceIndex);
                     if (look == ProjectileLook.SwordWave)
                     {
                         // As wide as the wave really cuts (area bonuses and the evolution widen it).
@@ -1045,8 +1059,9 @@ namespace PersonalArena.View
                 orbit.rotation = Quaternion.Euler(0f, spin * (view.Look == ProjectileLook.Fireball ? 1.3f : 0.6f), 0f);
             }
 
-            float rate = ProjectileFxRate(view.Look);
-            if (rate <= 0f || view.StoreModel[(int)view.Look])
+            // An evolved projectile always sheds its element, whatever the base weapon does.
+            float rate = view.Evolved ? EvolutionTrailRate : ProjectileFxRate(view.Look);
+            if (rate <= 0f || (!view.Evolved && view.StoreModel[(int)view.Look]))
             {
                 return;
             }
@@ -1061,10 +1076,15 @@ namespace PersonalArena.View
                 }
                 projectileFxLeft--;
                 Vector3 behind = position - view.Direction * 0.25f;
+                if (view.Evolved)
+                {
+                    EvolutionTrail(view.Source, behind);
+                    continue;
+                }
                 switch (view.Look)
                 {
                     case ProjectileLook.Fireball:
-                        effects.Flame(behind - Vector3.up * 0.3f, FireballColor, view.Evolved ? 0.95f : 0.7f, 0.32f);
+                        effects.Flame(behind - Vector3.up * 0.3f, FireballColor, 0.7f, 0.32f);
                         if (Random.value < 0.18f)
                         {
                             effects.Smoke(behind, new Color(0.14f, 0.13f, 0.13f, 0.4f), 1, 0.6f, 0.6f);
@@ -1132,11 +1152,39 @@ namespace PersonalArena.View
                 HammerView hammer = CreateHammerView();
                 hammer.Id = int.MaxValue - i;
                 hammer.Direction = Vector3.right;
-                SetProjectileLook(hammer, looks[i], false);
+                SetProjectileLook(hammer, looks[i], -1);
                 hammer.Previous = hammer.Current = center + new Vector3(2.4f + i * 1.6f, HammerHeight, 0f);
                 hammer.Root.gameObject.SetActive(true);
                 demoHammers.Add(hammer);
             }
+            // One projectile of every evolved thrower, in a row below, each with its own element.
+            int shown = 0;
+            for (int index = 0; index < SurvivorCatalog.CatalogSize; index++)
+            {
+                if (!SurvivorViewLogic.IsEvolution(index))
+                {
+                    continue;
+                }
+                ProjectileLook look = SurvivorViewLogic.ProjectileLookOf(index, sim.Config.ClassDef);
+                WeaponVisual visual = SurvivorViewLogic.WeaponVisualOf(index);
+                bool thrower = visual == WeaponVisual.Sweep || visual == WeaponVisual.Hammer || visual == WeaponVisual.MagicBolt
+                    || visual == WeaponVisual.Arrow || visual == WeaponVisual.MultiShot || visual == WeaponVisual.Bomb
+                    || visual == WeaponVisual.Bounce || visual == WeaponVisual.Momentum || visual == WeaponVisual.Trio
+                    || visual == WeaponVisual.Quad;
+                if (!thrower)
+                {
+                    continue;
+                }
+                HammerView hammer = CreateHammerView();
+                hammer.Id = int.MaxValue - 100 - shown;
+                hammer.Direction = Vector3.right;
+                SetProjectileLook(hammer, look, index);
+                hammer.Previous = hammer.Current = center + new Vector3(-12f + shown * 2.2f, HammerHeight, -2.4f);
+                hammer.Root.gameObject.SetActive(true);
+                demoHammers.Add(hammer);
+                shown++;
+            }
+            PlayEvolutionDemo(center);
         }
 
         private void DestroyOwnedMaterials()

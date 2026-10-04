@@ -34,7 +34,6 @@ namespace PersonalArena.View
         private static readonly Color LightningColor = new Color(0.75f, 0.85f, 1f, 1f);
         private static readonly Color SpitColor = new Color(0.55f, 1f, 0.3f, 1f);
         private static readonly Color MagnetColor = new Color(0.5f, 0.7f, 1f, 1f);
-        private static readonly Color EvolvedTint = new Color(1.35f, 1.12f, 0.55f, 1f);
 
         private readonly SpearFx[] spears = new SpearFx[SpearPool];
         private readonly AxeView[] axes = new AxeView[AxePool];
@@ -46,6 +45,7 @@ namespace PersonalArena.View
         private Material auraDiscMaterial;
         private Material auraRingMaterial;
         private float auraPulse;
+        private float orbitEmit;
         private Transform waveRoot;
         private Material waveMaterial;
         private float wavePrevious;
@@ -330,12 +330,34 @@ namespace PersonalArena.View
                 : AxeTrailColor;
             if (evolved)
             {
-                trail = Color.Lerp(trail, SurvivorViewLogic.EvolutionGold, 0.7f);
-                trail.a = 0.65f;
+                trail = SurvivorEvolutionStyles.Of(catalogIndex).Color;
+                trail.a = 0.7f;
             }
             for (int i = 0; i < axes.Length; i++)
             {
                 ApplyOrbitLook(axes[i], visual, evolved, trail);
+            }
+        }
+
+        /// <summary>Evolved orbit weapons shed their element as they circle (wind off the axes, sun fire off the orbs).</summary>
+        private void PresentOrbitElement(float realDelta)
+        {
+            if (orbitLookIndex < 0 || !SurvivorViewLogic.IsEvolution(orbitLookIndex))
+            {
+                return;
+            }
+            orbitEmit += realDelta * 12f;
+            if (orbitEmit < 1f)
+            {
+                return;
+            }
+            orbitEmit = 0f;
+            for (int i = 0; i < axes.Length; i++)
+            {
+                if (axes[i].Active)
+                {
+                    EvolutionTrail(orbitLookIndex, axes[i].Root.position);
+                }
             }
         }
 
@@ -350,7 +372,7 @@ namespace PersonalArena.View
             view.Spinner.localScale = Vector3.one * scale;
             view.Trail.colorGradient = TrailGradient(trail);
             view.Trail.widthMultiplier = (orb ? 0.7f : 0.55f) * scale;
-            SetRendererTint(view.Renderers, EvolvedTint, evolved);
+            SetRendererTint(view.Renderers, new Color(trail.r * 1.3f, trail.g * 1.3f, trail.b * 1.3f, 1f), evolved);
         }
 
         private void SyncWeapons()
@@ -504,6 +526,10 @@ namespace PersonalArena.View
                         // Positive offsets turn counter-clockwise in sim space (x, y) = world (x, z).
                         Vector3 spearDirection = Quaternion.AngleAxis(-angle * Mathf.Rad2Deg, Vector3.up) * direction;
                         StartStreak(heroPosition + Vector3.up * SpearHeight, spearDirection, length, color, width, Vector3.up, true);
+                        if (evolved)
+                        {
+                            EvolutionLine(e.Id, heroPosition + Vector3.up * SpearHeight, spearDirection, length);
+                        }
                     }
                     break;
                 }
@@ -515,6 +541,11 @@ namespace PersonalArena.View
                 case WeaponVisual.Aura:
                 case WeaponVisual.HolyField:
                     auraPulse = 1f;
+                    if (evolved && sim.AuraRadius > 0f)
+                    {
+                        // The holy aura writes its circle on the ground it really burns.
+                        EvolutionMark(e.Id, heroPosition, sim.AuraRadius);
+                    }
                     break;
                 case WeaponVisual.Shockwave:
                 case WeaponVisual.FrostNova:
@@ -544,6 +575,10 @@ namespace PersonalArena.View
                         }
                         PlayHeroOneShot(HeroKick, 1.6f, false);
                     }
+                    if (evolved)
+                    {
+                        EvolutionMark(e.Id, center, visual == WeaponVisual.FrostNova ? 3.5f : 3f);
+                    }
                     break;
                 }
                 case WeaponVisual.Lightning:
@@ -556,14 +591,18 @@ namespace PersonalArena.View
                     PlayHeroOneShot(HeroStrikeB, 2f, false);
                     break;
                 case WeaponVisual.Barrier:
-                    effects.Shockwave(heroPosition, BarrierColor, 4.4f, 0.4f);
+                    effects.Shockwave(heroPosition, evolved ? EvolutionColor(e.Id) : BarrierColor, 4.4f, 0.4f);
+                    if (evolved)
+                    {
+                        EvolutionMark(e.Id, heroPosition, 1.9f);
+                    }
                     break;
                 case WeaponVisual.Boomerang:
                     PlayHeroOneShot(HeroThrow, 2f, false);
                     break;
                 case WeaponVisual.Zone:
                     PlayHeroOneShot(HeroThrow, 1.8f, false);
-                    effects.Shockwave(ArenaSpace.ToWorld(e.Point), PoisonColor, 3f, 0.35f);
+                    effects.Shockwave(ArenaSpace.ToWorld(e.Point), evolved ? EvolutionColor(e.Id) : PoisonColor, 3f, 0.35f);
                     break;
                 case WeaponVisual.Freeze:
                     PlayHeroOneShot(HeroCast, 1.9f, false);
@@ -575,6 +614,11 @@ namespace PersonalArena.View
                     effects.Decal(heroPosition, FrostMarkColor, 20f, 5f);
                     effects.AreaFill(heroPosition, FrostColor, 14f, 1.4f);
                     StoreArea(StoreFx.SnowArea, heroPosition, 8f, 2.2f);
+                    if (evolved)
+                    {
+                        // The eternal corridor: a clock face over the whole frozen field.
+                        EvolutionMark(e.Id, heroPosition, 9f);
+                    }
                     break;
                 case WeaponVisual.Purge:
                     PlayHeroOneShot(HeroCast, 2f, false);
@@ -645,6 +689,10 @@ namespace PersonalArena.View
                     // The arrow stays stuck in the ground for a moment.
                     effects.Crystals(land, ArrowShaftColor, 1, 0f, 0.9f, 1.3f, 0.07f);
                 }
+                if (evolved)
+                {
+                    EvolutionMark(e.Id, point, radius);
+                }
             }
             else
             {
@@ -660,6 +708,10 @@ namespace PersonalArena.View
                 effects.AreaFill(point, color, radius, 0.7f);
                 effects.Bolt(point + new Vector3(-radius, 0.3f, 0f), point + new Vector3(radius, 0.3f, 0f), color, 0.6f);
                 effects.Bolt(point + new Vector3(0f, 0.3f, -radius), point + new Vector3(0f, 0.3f, radius), color, 0.6f);
+                if (evolved)
+                {
+                    EvolutionMark(e.Id, point, radius);
+                }
             }
         }
 
@@ -815,6 +867,7 @@ namespace PersonalArena.View
                 view.Root.position = heroDisplayPosition + offset + Vector3.up * AxeHeight;
                 view.Spinner.localRotation = Quaternion.Euler(0f, -spin, 0f);
             }
+            PresentOrbitElement(Time.unscaledDeltaTime);
         }
 
         private void PresentAura(float realDelta)

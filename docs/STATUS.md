@@ -2,7 +2,7 @@
 
 > "Bộ nhớ" giữa các phiên. Đọc đầu tiên, cập nhật cuối cùng. **Giữ file dưới 200 dòng** (CI kiểm):
 > nhật ký cũ chuyển sang `docs/archive/SESSIONS.md`, task xong sang `docs/archive/BOARD-DONE.md`.
-> Cập nhật lần cuối: 2026-10-05 (phiên Claude trên PC: M10–M14 xong, bản xem v0.8.171).
+> Cập nhật lần cuối: 2026-10-05 (phiên Claude trên PC: M15 hình ảnh riêng cho vũ khí tiến hóa + đồng hồ buff, bản xem v0.8.175).
 
 ## Đang ở đâu (đọc phần này là đủ để bắt đầu)
 
@@ -21,19 +21,21 @@
   ứng lên thân nhân vật. Đạn nảy trúng quái thì bật sang quái gần nhất (`RicochetOffEnemy`).
 - **M14:** Kiếm quét (catalog 0) phóng **sóng kiếm bay** chém mọi quái trên đường bay, cấp 5 thêm sóng ra sau
   (`LaunchSwordWaves`, `ProjectileLook.SwordWave`); 4 golden tier-1 ghi lại.
-- **Bản cài (2026-10-05):** `Build/WatchNext` + `Build/TrainingNext` v0.8.171; smoke test 3 class đạt; 60 FPS
+- **M15:** mỗi vũ khí tiến hóa (34 cái) có **hệ và màu riêng** thay cho màu vàng chung
+  (`SurvivorEvolutionStyle.cs`, `SurvivorRenderer.Evolutions.cs`): vệt bay, màu, dấu trên đất ở đúng vùng trúng;
+  chỉ sửa trình xem, điều kiện tiến hóa và Core giữ nguyên. HUD có đồng hồ buff (T-047).
+- **Bản cài (2026-10-05):** `Build/WatchNext` + `Build/TrainingNext` v0.8.175; smoke test 3 class đạt; 60 FPS
   (riêng khung hình đầu khựng ~3 s do nạp hiệu ứng).
-- **Test:** CoreTests 644/644, pytest 204/204, EditMode 300/300 (PC, 2026-10-05).
+- **Test:** CoreTests 644/644, pytest 204/204, EditMode 302/302 (PC, 2026-10-05).
 
 ## Việc tiếp theo (theo thứ tự)
 
-1. **Owner:** mở `Xem-AI.cmd` (bản xem v0.8.171), xem hiệu ứng M13/M14 trong trận thật và bấm TRAIN — não cần học
+1. **Owner:** mở `Xem-AI.cmd` (bản xem v0.8.175), xem hiệu ứng M13–M15 trong trận thật và bấm TRAIN — não cần học
    tiếp để quen Kiếm quét mới, quái mới, vật phẩm mới (điểm số sẽ dao động một thời gian).
-2. **Claude — T-047:** đồng hồ buff trên HUD (hiện chỉ có chữ nổi + hào quang).
-3. **Claude — T-048:** giảm khựng ~3 s ở khung hình đầu của trình xem.
-4. **Claude — T-049:** tách (chỉ dời code) các file View > 700 dòng (nợ của T-041).
-5. **Claude:** trình xem đẹp hơn — vùng tối ngoài hàng rào khi AI bị dồn vào góc; ngọc EXP rải kín đất nhìn rối.
-6. Nợ nhỏ (nhật ký 2026-10-02 trong archive): rẽ nhánh từ champion cũ thiếu `training_status.json`,
+2. **Claude — T-048:** giảm khựng ~3 s ở khung hình đầu của trình xem.
+3. **Claude — T-049:** tách (chỉ dời code) các file View > 700 dòng (nợ của T-041).
+4. **Claude:** trình xem đẹp hơn — vùng tối ngoài hàng rào khi AI bị dồn vào góc; ngọc EXP rải kín đất nhìn rối.
+5. Nợ nhỏ (nhật ký 2026-10-02 trong archive): rẽ nhánh từ champion cũ thiếu `training_status.json`,
    khóa `brain_lineage` khi chạy song song, walker triệu hồi ngoài bản đồ 1 tick.
 
 ## Cách tiết kiệm token (áp dụng cho mọi agent)
@@ -71,6 +73,7 @@
 | M8: đánh bóng — âm thanh, cài đặt + phiên bản + smoke test, cân bằng (T-033..T-035, D-039) | code xong — chờ owner nghiệm thu bản build mới |
 | M9: nội dung kiểu Vampire Survivors (6 + 6 ô, vũ khí/phụ kiện/tiến hóa mới, 6 skill, schema v5) | xong (T-036..T-046); tách file View lớn chuyển sang T-049 |
 | M10–M14: hiệu ứng, vật phẩm rơi, quái mới, gói Asset Store, sóng kiếm bay | xong (PR #8–#17) — chờ owner xem bản v0.8.171 và train tiếp |
+| M15: hình ảnh riêng cho 34 vũ khí tiến hóa + đồng hồ buff HUD (T-047) | xong — chờ owner xem bản v0.8.175 |
 
 
 ## Cách làm trên PC (Claude)
@@ -100,6 +103,14 @@
 
 ## Nhật ký phiên (mới nhất trên cùng; giữ ~3 mục, cũ hơn → archive)
 
+### 2026-10-05 — Claude (PC): M15 vũ khí tiến hóa có hình ảnh riêng
+- Owner: giữ điều kiện tiến hóa, mỗi bản tiến hóa phải khác hẳn bản thường, không chỉ đổi màu vàng; chỉ sửa trình xem.
+- Bảng kiểu `SurvivorEvolutionStyles` (hệ + màu cho 34 bản): sét, lửa, băng, gió, đất, thánh, phép, bóng tối, độc,
+  sao, hỗn loạn, thiên thạch. Đạn/vũ khí xoay mang màu hệ và rải vệt của hệ; đòn diện rộng thêm một dấu của hệ
+  đúng cỡ vùng trúng (theo D-047, không vẽ lên thân nhân vật).
+- T-047: 3 ô đồng hồ buff (cuồng nộ, khiên, tốc độ) trên HUD, có thanh cạn dần và số giây.
+- Bản xem + bản train v0.8.175 đã cài; EditMode 302; Core và schema v5 không đổi.
+
 ### 2026-10-04 → 05 — Claude (PC): M10–M14
 - M9 Unity làm nốt (T-037, T-041; Codex hết token), PR #7 merge vào `develop`.
 - M10 hiệu ứng Kenney; M11 hiệu ứng nổi bật hơn + vật phẩm rơi mới + 3 quái mới + quái vàng (PR #8–#13).
@@ -114,10 +125,3 @@
 - Sửa Mưa tên: rơi vào chỗ quái đông nhất, vùng 2,6 m, 1–3 vùng theo cấp; hiệu ứng trình xem rải tên khắp vùng.
 - Sửa loạt chẵn (Nỏ, Giáo, Tia ma thuật, Đạn nảy, Boomerang 2 mũi): 1 mũi luôn thẳng vào mục tiêu. Nỏ cấp 5 từ 68 → 234 sát thương/giây khi quái đứng thưa.
 - Skill `arrow-barrage` đổi tên tiếng Việt thành "Loạt tên". CoreTests 627/627. Hiệu ứng Mưa tên mới cần build lại trên PC (T-041).
-
-### 2026-10-03 — Claude (cloud): cơ chế tiết kiệm token
-- STATUS từ 498 → dưới 200 dòng; lịch sử chuyển `docs/archive/SESSIONS.md`, task xong `docs/archive/BOARD-DONE.md`.
-- Hook chặn đọc file sinh ra / file lớn, CI kiểm STATUS ≤ 200 dòng, `Tools/unity-run.ps1` cho Codex,
-  T-041 thêm yêu cầu tách các file View > 700 dòng.
-- Tắt 23 skill claude.ai không dùng cho dự án này (`skillOverrides` trong `.claude/settings.json`), bớt ~4.500 token
-  mỗi tin nhắn. Phiên sau chạy `/skill-doctor` để kiểm tra chúng đã ẩn chưa. CI xanh trên `9ebf35c`.
