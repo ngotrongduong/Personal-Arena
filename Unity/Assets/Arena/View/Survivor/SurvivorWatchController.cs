@@ -44,7 +44,7 @@ namespace PersonalArena.View
         };
 
         [SerializeField] private int seed = 1;
-        [Tooltip("Optional fixed brain file; otherwise the newest Trainer/runs/*/Warrior/latest.brain (schema 4) is used.")]
+        [Tooltip("Optional fixed brain file; otherwise the newest brain matching the current schema and class is used.")]
         [SerializeField] private string brainFile = string.Empty;
 
         [Header("Scene References")]

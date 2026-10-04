@@ -15,7 +15,7 @@ namespace PersonalArena.View.Tests
             Assert.That(SkillIconFactory.ClassSkillIds.Count, Is.EqualTo(3));
             foreach (IReadOnlyList<string> row in SkillIconFactory.ClassSkillIds)
             {
-                Assert.That(row.Count, Is.EqualTo(4));
+                Assert.That(row.Count, Is.InRange(5, 6));
                 for (int i = 0; i < row.Count; i++)
                 {
                     SkillDef skill = new SkillDef { Id = row[i] };
@@ -87,11 +87,41 @@ namespace PersonalArena.View.Tests
         }
 
         [Test]
+        public void EveryM9ItemAndSkill_HasAShippedReadableGlyph()
+        {
+            int[] itemRanges = { 26, 37, 58, 61, 64, 72 };
+            for (int pair = 0; pair < itemRanges.Length; pair += 2)
+            {
+                for (int item = itemRanges[pair]; item <= itemRanges[pair + 1]; item++)
+                {
+                    string key = SkillIconFactory.ItemGlyphKey(item);
+                    Texture2D glyph = Resources.Load<Texture2D>(SkillIconFactory.GlyphFolder + key);
+                    Assert.That(glyph, Is.Not.Null, key);
+                    Assert.That(glyph.isReadable, Is.True, key);
+                }
+            }
+            foreach (IReadOnlyList<string> row in SkillIconFactory.ClassSkillIds)
+            {
+                for (int i = 0; i < row.Count; i++)
+                {
+                    Texture2D glyph = Resources.Load<Texture2D>(SkillIconFactory.GlyphFolder + row[i]);
+                    Assert.That(glyph, Is.Not.Null, row[i]);
+                    Assert.That(glyph.isReadable, Is.True, row[i]);
+                }
+            }
+            for (int evolution = 112; evolution <= 127; evolution++)
+            {
+                Assert.That(SkillIconFactory.LoadGlyph(SkillIconFactory.ItemGlyphKey(evolution)), Is.Not.Null, "evolution " + evolution);
+                Assert.That(SkillIconFactory.IconForItem(evolution), Is.Not.Null, "evolution " + evolution);
+            }
+        }
+
+        [Test]
         public void Evolutions_UseTheBaseGlyphInAGoldFrame()
         {
-            for (int i = 0; i < SurvivorCatalog.EvolutionCount; i++)
+            for (int evolution = 0; evolution < SurvivorCatalog.CatalogSize; evolution++)
             {
-                int evolution = SurvivorCatalog.FirstEvolutionIndex + i;
+                if (!SurvivorViewLogic.IsEvolution(evolution)) continue;
                 int weapon = SurvivorViewLogic.BaseWeapon(evolution);
                 Assert.That(SkillIconFactory.ItemGlyphKey(evolution), Is.EqualTo(SkillIconFactory.ItemGlyphKey(weapon)), "item " + evolution);
                 Sprite icon = SkillIconFactory.IconForItem(evolution);

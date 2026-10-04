@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using NUnit.Framework;
 using PersonalArena.Core.Survivor;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace PersonalArena.View.Tests
 {
@@ -245,14 +246,14 @@ namespace PersonalArena.View.Tests
                 Assert.That(title, Is.Not.EqualTo(skill.Id), skill.Id + " needs a Vietnamese title");
                 Assert.That(SurvivorViewLogic.SkillDescription(skill.Id), Is.Not.Empty, skill.Id);
             }
-            Assert.That(shown, Is.EqualTo(classId == "mage" ? 4 : 3));
+            Assert.That(shown, Is.EqualTo(classId == "archer" ? 5 : 6));
             Assert.That(SurvivorViewLogic.SkillVisible(null), Is.False);
             Assert.That(SurvivorViewLogic.SkillTitle(null), Is.Empty);
             Assert.That(SurvivorViewLogic.SkillDescription("unknown"), Is.Empty);
         }
 
         [Test]
-        public void SkillBar_CentresThreeOrFourSlots()
+        public void SkillBar_CentresUpToSixSlots()
         {
             Assert.That(SurvivorViewLogic.SkillPanelWidth(3), Is.EqualTo(456f), "three slots keep the old bar width");
             Assert.That(SurvivorViewLogic.SkillPanelWidth(4), Is.EqualTo(600f));
@@ -262,6 +263,10 @@ namespace PersonalArena.View.Tests
             Assert.That(SurvivorViewLogic.SkillSlotX(2, 3), Is.EqualTo(144f));
             Assert.That(SurvivorViewLogic.SkillSlotX(0, 4), Is.EqualTo(-216f));
             Assert.That(SurvivorViewLogic.SkillSlotX(3, 4), Is.EqualTo(216f));
+            Assert.That(SurvivorViewLogic.SkillPanelWidth(5), Is.EqualTo(744f));
+            Assert.That(SurvivorViewLogic.SkillPanelWidth(6), Is.EqualTo(888f));
+            Assert.That(SurvivorViewLogic.SkillSlotX(0, 6), Is.EqualTo(-360f));
+            Assert.That(SurvivorViewLogic.SkillSlotX(5, 6), Is.EqualTo(360f));
         }
 
         [Test]
@@ -270,6 +275,138 @@ namespace PersonalArena.View.Tests
             Assert.That(SurvivorViewLogic.HeroNameLine("mage"), Is.EqualTo("PHÁP SƯ  (AI điều khiển)"));
             Assert.That(SurvivorViewLogic.HeroNameLine("archer"), Is.EqualTo("CUNG THỦ  (AI điều khiển)"));
             Assert.That(SurvivorViewLogic.HeroNameLine("warrior"), Is.EqualTo("CHIẾN BINH  (AI điều khiển)"));
+        }
+
+        [Test]
+        public void Hud_RebindsSixSkillsAndCompactsArcherWithoutMovingCooldowns()
+        {
+            GameObject root = new GameObject("Schema v5 HUD test");
+            try
+            {
+                SurvivorHud hud = root.AddComponent<SurvivorHud>();
+                foreach (string classId in new[] { "warrior", "archer", "mage", "warrior" })
+                {
+                    SurvivorClassDef kit = SurvivorDefaults.ForClass(classId);
+                    SurvivorSim sim = new SurvivorSim(new SurvivorConfig { ClassDef = kit }, 7);
+                    sim.Hero.SkillCooldowns[4] = kit.ActiveSkills[4].Cooldown * 0.5f;
+                    sim.Hero.SkillCooldowns[5] = kit.ActiveSkills[5].Cooldown * 0.25f;
+                    hud.Bind(sim, null);
+                    Transform canvas = root.transform.Find("Survivor HUD Canvas");
+                    RectTransform panel = canvas.Find("Skills").GetComponent<RectTransform>();
+                    int shown = classId == "archer" ? 5 : 6;
+                    int column = 0;
+                    for (int slot = 0; slot < SurvivorInput.SkillSlotCount; slot++)
+                    {
+                        RectTransform view = panel.Find("Skill " + (slot + 1)).GetComponent<RectTransform>();
+                        bool visible = kit.ActiveSkills[slot].Kind != PersonalArena.Core.SkillKind.None;
+                        Assert.That(view.gameObject.activeSelf, Is.EqualTo(visible), classId + " slot " + slot);
+                        if (!visible) continue;
+                        Assert.That(view.anchoredPosition.x, Is.EqualTo(SurvivorViewLogic.SkillSlotX(column++, shown)));
+                        float expected = slot == 4 ? 0.5f : slot == 5 ? 0.25f : 0f;
+                        Assert.That(view.Find("Cooldown").GetComponent<Image>().fillAmount, Is.EqualTo(expected).Within(0.001f));
+                    }
+                    Assert.That(column, Is.EqualTo(shown));
+                    Assert.That(panel.sizeDelta.x, Is.EqualTo(SurvivorViewLogic.SkillPanelWidth(shown)));
+                    RectTransform vitals = canvas.Find("Vitals").GetComponent<RectTransform>();
+                    foreach (string row in new[] { "Weapon", "Passive" })
+                    {
+                        for (int slot = 1; slot <= 6; slot++)
+                        {
+                            RectTransform item = vitals.Find(row + " " + slot).GetComponent<RectTransform>();
+                            Assert.That(item.gameObject.activeSelf, Is.True);
+                            Assert.That(item.anchoredPosition.x + item.sizeDelta.x, Is.LessThan(vitals.sizeDelta.x));
+                            Assert.That(-item.anchoredPosition.y + item.sizeDelta.y, Is.LessThan(vitals.sizeDelta.y));
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [TestCase("warrior", 1920, 1080)]
+        [TestCase("mage", 1920, 1080)]
+        [TestCase("archer", 1920, 1080)]
+        [TestCase("warrior", 1280, 720)]
+        [TestCase("mage", 1280, 720)]
+        [TestCase("archer", 1280, 720)]
+        public void Hud_FitsBothTargetResolutions(string classId, int width, int height)
+        {
+            GameObject root = new GameObject("HUD layout test");
+            RenderTexture target = null;
+            Texture2D shot = null;
+            RenderTexture previous = RenderTexture.active;
+            try
+            {
+                SurvivorHud hud = root.AddComponent<SurvivorHud>();
+                hud.Bind(new SurvivorSim(new SurvivorConfig { ClassDef = SurvivorDefaults.ForClass(classId) }, 7), null);
+                Canvas canvas = root.GetComponentInChildren<Canvas>();
+                GameObject cameraObject = new GameObject("HUD test camera", typeof(Camera));
+                cameraObject.transform.SetParent(root.transform);
+                Camera camera = cameraObject.GetComponent<Camera>();
+                camera.enabled = false;
+                camera.clearFlags = CameraClearFlags.SolidColor;
+                camera.backgroundColor = new Color(0.12f, 0.14f, 0.18f);
+                target = new RenderTexture(width, height, 24);
+                camera.targetTexture = target;
+                canvas.GetComponent<CanvasScaler>().enabled = false;
+                canvas.renderMode = RenderMode.ScreenSpaceCamera;
+                canvas.worldCamera = camera;
+                canvas.planeDistance = 1f;
+                canvas.scaleFactor = width / 1920f;
+                Canvas.ForceUpdateCanvases();
+                RectTransform skills = canvas.transform.Find("Skills").GetComponent<RectTransform>();
+                RectTransform vitals = canvas.transform.Find("Vitals").GetComponent<RectTransform>();
+                Rect skillBounds = ScreenBounds(skills, camera);
+                Rect vitalBounds = ScreenBounds(vitals, camera);
+                Assert.That(skillBounds.xMin, Is.GreaterThanOrEqualTo(0));
+                Assert.That(skillBounds.xMax, Is.LessThanOrEqualTo(width));
+                Assert.That(skillBounds.yMin, Is.GreaterThanOrEqualTo(0));
+                Assert.That(skillBounds.yMax, Is.LessThanOrEqualTo(height));
+                Assert.That(skillBounds.Overlaps(vitalBounds), Is.False);
+                for (int slot = 1; slot <= 6; slot++)
+                {
+                    foreach (string row in new[] { "Weapon", "Passive" })
+                    {
+                        Rect bounds = ScreenBounds(vitals.Find(row + " " + slot).GetComponent<RectTransform>(), camera);
+                        Assert.That(vitalBounds.Contains(bounds.min), Is.True);
+                        Assert.That(vitalBounds.Contains(bounds.max), Is.True);
+                    }
+                }
+
+                // Opt-in review artifacts; ordinary test runs do not write screenshots.
+                string[] args = System.Environment.GetCommandLineArgs();
+                int capture = System.Array.IndexOf(args, "-hudCaptureDirectory");
+                if (capture >= 0 && capture + 1 < args.Length)
+                {
+                    camera.Render();
+                    RenderTexture.active = target;
+                    shot = new Texture2D(width, height, TextureFormat.RGB24, false);
+                    shot.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+                    shot.Apply();
+                    System.IO.Directory.CreateDirectory(args[capture + 1]);
+                    System.IO.File.WriteAllBytes(System.IO.Path.Combine(args[capture + 1],
+                        classId + "-" + width + "x" + height + ".png"), shot.EncodeToPNG());
+                }
+            }
+            finally
+            {
+                RenderTexture.active = previous;
+                Object.DestroyImmediate(root);
+                if (shot != null) Object.DestroyImmediate(shot);
+                if (target != null) Object.DestroyImmediate(target);
+            }
+        }
+
+        private static Rect ScreenBounds(RectTransform rect, Camera camera)
+        {
+            Vector3[] corners = new Vector3[4];
+            rect.GetWorldCorners(corners);
+            Vector2 min = RectTransformUtility.WorldToScreenPoint(camera, corners[0]);
+            Vector2 max = RectTransformUtility.WorldToScreenPoint(camera, corners[2]);
+            return Rect.MinMaxRect(min.x, min.y, max.x, max.y);
         }
 
         [Test]
@@ -318,9 +455,10 @@ namespace PersonalArena.View.Tests
                 Assert.That(SurvivorViewLogic.LevelLabel(item, 1), Is.EqualTo("MỚI"));
             }
 
-            for (int i = 0; i < SurvivorCatalog.EvolutionCount; i++)
+            for (int item = 0; item < SurvivorCatalog.CatalogSize; item++)
             {
-                int item = SurvivorCatalog.FirstEvolutionIndex + i;
+                ItemDef definition = SurvivorCatalog.Get(item);
+                if (definition == null || definition.EvolvesFrom < 0) continue;
                 Assert.That(SurvivorViewLogic.IsEvolution(item), Is.True, "item " + item);
                 Assert.That(SurvivorViewLogic.ItemName(item), Is.Not.Empty, "item " + item);
                 Assert.That(SurvivorViewLogic.ItemDescription(item, 1), Is.Not.Empty, "item " + item);

@@ -1,7 +1,7 @@
 # T-037: M9 visuals and sounds for the new weapons, passives, evolutions and skills
 
 - **Owner:** Codex (on the owner's Windows PC)
-- **Status:** todo
+- **Status:** doing
 - **Milestone:** M9 (D-041)
 - **Parallel OK with:** none
 - **Depends on:** T-041 (do it first; same branch `claude/serene-sagan-3a70q5`)

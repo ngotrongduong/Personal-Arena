@@ -328,14 +328,14 @@ namespace PersonalArena.View.Tests
         private void BuildTree()
         {
             // warrior-s001: current schema, checkpoint.pt, numbered checkpoints, latest.brain.
-            string s001 = MakeRun("warrior-s001", "4");
+            string s001 = MakeRun("warrior-s001", BrainLocator.CurrentSchemaVersion.ToString());
             File.WriteAllText(Path.Combine(s001, "checkpoint.pt"), "pt");
             File.WriteAllText(Path.Combine(s001, "Warrior-500.pt"), "pt");
             File.WriteAllText(Path.Combine(s001, "Warrior-96999889.pt"), "pt");
             WriteBrain(Path.Combine(s001, "latest.brain"), 97000000L);
 
             // warrior-s002: current schema, only latest.brain (cannot be trained on).
-            string s002 = MakeRun("warrior-s002", "4");
+            string s002 = MakeRun("warrior-s002", BrainLocator.CurrentSchemaVersion.ToString());
             WriteBrain(Path.Combine(s002, "latest.brain"), 1500000L);
 
             // warrior-s003: old schema, not a branch even with a checkpoint.
@@ -344,7 +344,7 @@ namespace PersonalArena.View.Tests
             WriteBrain(Path.Combine(s003, "latest.brain"), 5000L);
 
             // Folders that are never branches.
-            MakeRun(".hidden", "4");
+            MakeRun(".hidden", BrainLocator.CurrentSchemaVersion.ToString());
             string lineage = Path.Combine(ChampionDirectory(), "lineage");
             string versions = Directory.CreateDirectory(Path.Combine(lineage, "versions")).FullName;
 

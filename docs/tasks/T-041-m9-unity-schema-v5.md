@@ -1,7 +1,7 @@
 # T-041: M9 Unity side of schema v5 — six skills in the viewer, EditMode green, new builds
 
 - **Owner:** Codex (on the owner's Windows PC)
-- **Status:** todo
+- **Status:** review
 - **Milestone:** M9 (D-041)
 - **Parallel OK with:** none (do this before T-037)
 - **Depends on:** T-036..T-046 (all in Core/Trainer on branch `claude/serene-sagan-3a70q5`, PR #7)
@@ -64,16 +64,32 @@ Graphics for the new items are T-037, not this task (missing icons may use the e
 
 ## Done when
 
-- [ ] `dotnet test CoreTests -c Release` still passes (nothing in Core changed)
-- [ ] Unity EditMode tests all pass (paste the count)
-- [ ] `Build/TrainingNext` and `Build/WatchNext` built without errors
-- [ ] Screenshots (or a description) of the HUD at 1920×1080 and 1280×720 for Warrior, Mage and Archer with 6 skills shown
-- [ ] Report filled
+- [x] `dotnet test CoreTests -c Release` still passes (nothing in Core changed)
+- [x] Unity EditMode tests all pass (296/296)
+- [x] `Build/TrainingNext` and `Build/WatchNext` built without errors
+- [x] HUD render captures at 1920×1080 and 1280×720 for Warrior, Mage and Archer; all rows fit without overlap
+- [x] Report filled
 
 ## Report (filled by the implementer)
 
-- Changed files:
-- EditMode result:
-- Build result:
-- Smoke test result:
-- Notes / open questions:
+- Changed files: `SurvivorHud.cs`, `SurvivorHud.Build.cs` (6 skills, 6 weapon + 6 passive slots, compact `none` slots),
+  `SurvivorViewLogic.cs` (Vietnamese text for seven M9 skills), `SoundCueMap.cs` (safe existing fallback cues for the new
+  skill kinds), `SurvivorWatchController.cs` (schema-neutral tooltip), `WatchBuild.cs` (`-skipGitVersion` for no-git
+  agent builds), and View EditMode tests (`SurvivorViewLogicTests.cs`, `SkillIconFactoryTests.cs`,
+  `LineageStoreTests.cs`). `docs/STATUS.md` and `docs/tasks/BOARD.md` were updated. No Core, CoreTests, Trainer, or
+  `Trainer/runs/` file was changed.
+- EditMode result: 296/296 passed. Added runtime-built HUD coverage that rebinds Warrior → Archer → Mage → Warrior,
+  verifies Archer slot 3 is hidden without a visual gap, and proves cooldown fills for source slots 4–5 remain attached
+  to the correct buttons. Added 1920×1080 and 1280×720 bounds/overlap tests for all three classes and both 6-item rows.
+  `dotnet test CoreTests -c Release`: 627/627 passed.
+- Build result: `Build/TrainingNext/PersonalArenaTraining.exe` succeeded (132,340,332 bytes) and
+  `Build/WatchNext/PersonalArenaWatch.exe` succeeded (149,780,184 bytes). `ProjectSettings.asset` was restored byte-for-byte
+  after EditMode (`SENTIS_ANALYTICS_ENABLED` retained).
+- Smoke test result: passed in 141 s with isolated TEMP schema-v5 copies of Warrior/Mage/Archer brains. All 3 classes
+  loaded and completed a 120 s run, showed and picked offers, booked/saved gold, and started the next run; panels
+  C/F/V/L/G/P/O and the 2-run Auto Farm passed; 0 errors. The owner's `Trainer/runs/` and running training were untouched.
+- Notes / open questions: the viewer has no manual skill hotkeys; digits in `HeroAgent` are only the existing four-card
+  level-up heuristic, so no 1–6 viewer mapping applies. Render captures in `results/t041-hud/` show Warrior/Mage with six
+  contiguous skill buttons and Archer with five contiguous buttons at both target resolutions; the two new skill icons
+  intentionally use fallback glyphs until T-037. BrainLocator tests confirm only schema 5 is selected and old/future
+  schemas are skipped. No open question.

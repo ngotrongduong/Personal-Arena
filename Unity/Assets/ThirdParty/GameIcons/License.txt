@@ -46,3 +46,37 @@ Resources/SkillIcons/arrow-rain       arrow-cluster         Lorc
 Resources/SkillIcons/orbit-knife      thrown-daggers        Lorc
 Resources/SkillIcons/dagger           plain-dagger          Lorc
 Resources/SkillIcons/crossbow         crossbow              Carl Olsen (https://github.com/carl-olsen)
+
+M9 aliases below reuse the credited glyph artwork above, copied under the exact item/skill id:
+Resources/SkillIcons/flame-cone        fireball              Lorc
+Resources/SkillIcons/combo-blade       spinning-sword        Lorc
+Resources/SkillIcons/heavy-hammer      hammer-drop           Lorc
+Resources/SkillIcons/bomb              sonic-boom            Lorc
+Resources/SkillIcons/retaliate         shield-impact         Delapouite
+Resources/SkillIcons/barrier           magic-shield          Delapouite
+Resources/SkillIcons/boomerang         thrown-daggers        Lorc
+Resources/SkillIcons/poison-pool       aura                  Lorc
+Resources/SkillIcons/duration-charm    sands-of-time         Lorc
+Resources/SkillIcons/duplicator        striking-arrows       Lorc
+Resources/SkillIcons/spiked-armor      ribcage               Lorc
+Resources/SkillIcons/omni-box          mailed-fist           Lorc
+Resources/SkillIcons/recovery          heart-bottle          Lorc
+Resources/SkillIcons/clover            archery-target        Lorc
+Resources/SkillIcons/greed             two-coins             Delapouite
+Resources/SkillIcons/crown             heart-organ           Lorc
+Resources/SkillIcons/bounce-shot       bolt-spell-cast       Delapouite
+Resources/SkillIcons/momentum-spirit   sprint                Lorc
+Resources/SkillIcons/time-clock        sands-of-time         Lorc
+Resources/SkillIcons/purge             sunbeams              Lorc
+Resources/SkillIcons/bomb-ring         sonic-boom            Lorc
+Resources/SkillIcons/fireball-nova     fireball              Lorc
+Resources/SkillIcons/bracelet-trio     thrown-daggers        Lorc
+Resources/SkillIcons/quad-shot         striking-arrows       Lorc
+Resources/SkillIcons/magi-stone        bolt-spell-cast       Delapouite
+Resources/SkillIcons/war-cry           sonic-boom            Lorc
+Resources/SkillIcons/leap-slam         sprint                Lorc
+Resources/SkillIcons/whirlwind         spinning-blades       Lorc
+Resources/SkillIcons/caltrop-trap      ribcage               Lorc
+Resources/SkillIcons/arrow-barrage     striking-arrows       Lorc
+Resources/SkillIcons/fire-wall         three-burning-balls   Lorc
+Resources/SkillIcons/chain-lightning   lightning-tree        Lorc

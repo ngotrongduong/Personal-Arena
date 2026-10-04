@@ -16,7 +16,7 @@ Allowed licenses: CC0, MIT and CC BY with credit given here (see docs/DECISIONS.
 | `Audio/KenneyDigitalAudio` | Digital Audio — lightning zaps, blink, heal, magnet, level-up, summon | Kenney | https://kenney.nl/assets/digital-audio | CC0 1.0 |
 | `Audio/KenneyMusicJingles` | Music Jingles — victory, defeat, end-of-run and evolution jingles | Kenney | https://kenney.nl/assets/music-jingles | CC0 1.0 |
 | `Audio/Music` | Run loop "When the Shadows Gather" (Tsorthan Grove) and boss loop "Heavy Boss Battle 2" (MintoDog) | Tsorthan Grove, MintoDog | https://opengameart.org/content/when-the-shadows-gather, https://opengameart.org/content/heavy-boss-battle-2 | CC0 1.0 |
-| `GameIcons` | 38 skill and survivor item icons (per-icon list in `GameIcons/License.txt`) | Lorc, Delapouite, Carl Olsen | https://game-icons.net | CC BY 3.0 |
+| `GameIcons` | 70 skill and survivor item icon files (38 source glyphs plus 32 M9 id-specific copies; per-file list in `GameIcons/License.txt`) | Lorc, Delapouite, Carl Olsen | https://game-icons.net | CC BY 3.0 |
 | `../Arena/View/Art/AppIcon.png` | Viewer app icon (M8 build), composed from the "spinning-sword" glyph (Lorc) and the "two-coins" glyph (Delapouite), recoloured on a dark round badge | Lorc, Delapouite | https://game-icons.net/1x1/lorc/spinning-sword.html, https://game-icons.net/1x1/delapouite/two-coins.html | CC BY 3.0 |
 
 Each pack keeps its original license text (the music folder's `License.txt` lists both tracks). CC0 needs no attribution but it is given anyway; CC BY icons must stay credited here.

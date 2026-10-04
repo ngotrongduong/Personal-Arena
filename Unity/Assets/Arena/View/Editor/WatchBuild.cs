@@ -86,7 +86,11 @@ namespace PersonalArena.View.Editor
                 PlayerSettings.defaultScreenWidth = 1600;
                 PlayerSettings.defaultScreenHeight = 900;
                 PlayerSettings.resizableWindow = true;
-                PlayerSettings.bundleVersion = VersionFromCommitCount(GitCommitCount(repositoryRoot));
+                // Restricted build sessions can preserve the current version without invoking git.
+                if (Array.IndexOf(Environment.GetCommandLineArgs(), "-skipGitVersion") < 0)
+                {
+                    PlayerSettings.bundleVersion = VersionFromCommitCount(GitCommitCount(repositoryRoot));
+                }
                 ApplyIcon();
                 Debug.Log($"Watch build identity: {PlayerSettings.productName} v{PlayerSettings.bundleVersion} ({PlayerSettings.companyName}).");
 

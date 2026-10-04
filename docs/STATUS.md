@@ -1,7 +1,7 @@
 # Trạng thái dự án
 
 > File này là "bộ nhớ" giữa các phiên. Đọc đầu tiên, cập nhật cuối cùng.
-> Cập nhật lần cuối: 2026-10-02 (phiên Claude cloud: CI xanh, review M5–M8). Trước đó 2026-10-01 đêm (phiên Claude, PC — M7 owner đã nghiệm thu; M8 đánh bóng code xong: T-033..T-035).
+> Cập nhật lần cuối: 2026-10-04 (Codex PC: T-041, trình xem và build schema v5).
 
 ## Hướng đi
 
@@ -10,6 +10,9 @@
 - Repo để **public** để CI trên GitHub chạy miễn phí (D-015) → không bao giờ commit secret.
 
 ## Đang ở đâu
+
+- **M9 / T-041:** HUD dùng 6 ô skill, 6 ô vũ khí + 6 ô phụ kiện theo Core; Archer có 5 skill thật, bỏ ô `none` và giữ đúng cooldown. `Build/TrainingNext` và `Build/WatchNext` đã build thành công; CoreTests Release 627/627, smoke test 3/3 class + 7 bảng + Farm đạt. Chi tiết EditMode và kiểm tra bố cục trong Report T-041.
+- Core hiện là **schema v5: 2592 quan sát, action 9/7/5, danh mục 128**. Các mốc schema v4 bên dưới là lịch sử. Não nâng cấp để kiểm thử nằm trong TEMP; không sửa `Trainer/runs/` và không dừng training của owner.
 
 - **Milestone:** M0–M3 xong. **M4A (lát cắt dọc Survivor) code xong** (T-014..T-017); đang train
   `warrior-s001` tới nghiệm thu đánh giá 100 seed. Chi tiết milestone ở `docs/PLAN.md`, thiết kế ở
@@ -127,6 +130,8 @@
 
 ## Việc tiếp theo (theo thứ tự)
 
+**Ưu tiên hiện tại:** Claude review T-041; tiếp theo mới làm T-037 (icon/hiệu ứng/âm thanh M9). Khi dùng build schema v5, não schema v4 cần đi qua cơ chế `brain_upgrade`; các ghi chú “schema không đổi” của M4–M8 bên dưới chỉ áp dụng cho các phiên cũ.
+
 Owner đổi hướng ngày 2026-09-30: game thành kiểu **Vampire Survivors**, AI tự học farm vàng, chọn
 nâng cấp, thích nghi theo build; não học tiếp khi game cập nhật. Thiết kế đầy đủ: **`docs/GDD.md`**.
 Lộ trình mới M4A–M8 ở `docs/PLAN.md` (owner góp ý thiết kế → D-030: chia M4 thành M4A/M4B/M4C,
@@ -224,6 +229,15 @@ thưởng theo thứ bậc, nghiệm thu bằng đánh giá 100 seed). Đấu tr
   trước khi phát hành để đảm bảo game không gọi mạng.
 
 ## Nhật ký phiên (mới nhất trên cùng)
+
+### 2026-10-04 — Codex (PC): T-041 Unity schema v5
+- HUD trình xem nay theo hằng số Core: 6 skill, 6 vũ khí + 6 phụ kiện. Warrior/Mage hiện đủ 6 skill;
+  Archer ẩn slot `none` và dồn 5 skill thật liền nhau, cooldown vẫn theo đúng slot Core.
+- Bổ sung tên/mô tả tiếng Việt cho 7 skill M9, fallback âm thanh an toàn và test lịch sử não theo schema hiện tại.
+- Kiểm: CoreTests Release 627/627; Unity EditMode 296/296; smoke test bản build đạt 3/3 class, 7 bảng và Farm,
+  0 lỗi. Render HUD ở 1920×1080 và 1280×720 cho cả ba class không tràn hoặc chồng nhau.
+- Build mới đã tạo ở `Build/TrainingNext` và `Build/WatchNext`. Não schema v5 dùng cho smoke chỉ là bản sao trong
+  TEMP; không đổi `Trainer/runs/`, không dừng training. T-041 chuyển `review`; việc Codex tiếp theo là T-037 sau review.
 
 ### 2026-10-02 (sau) — Claude (cloud): M9 đợt 1a, nội dung Warrior (T-036)
 - Owner chốt: chia 2 đợt, ô mang theo 6 + 6 như Vampire Survivors, bắt đầu với Warrior, không ngại AI học lại.
