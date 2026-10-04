@@ -87,7 +87,9 @@ namespace PersonalArena.View
 
             Mesh gem = BuildGemMesh();
             ownedObjects.Add(gem);
-            float[] gemSizes = { 0.36f, 0.5f, 0.7f };
+            // The common small gem is kept small and faint: late in a run hundreds of them cover the ground.
+            float[] gemSizes = { 0.27f, 0.5f, 0.7f };
+            float[] glowAlphas = { 0.28f, 0.55f, 0.55f };
             for (int size = 0; size < 3; size++)
             {
                 Color color = GemColors[size];
@@ -95,8 +97,8 @@ namespace PersonalArena.View
                 pickupMaterials[size] = Own(CreateEmissive("Gem " + size, color, color * 0.9f, 0.85f, 0.1f));
                 pickupScales[size] = new Vector3(gemSizes[size] * 0.75f, gemSizes[size], gemSizes[size] * 0.75f);
                 pickupGlowMaterials[size] = Own(FxAssets.Create("Gem Glow " + size, FxAssets.RadialGlow, true));
-                pickupGlowMaterials[size].color = new Color(color.r, color.g, color.b, 0.55f);
-                glowSizes[size] = 0.9f + 0.45f * size;
+                pickupGlowMaterials[size].color = new Color(color.r, color.g, color.b, glowAlphas[size]);
+                glowSizes[size] = size == 0 ? 0.65f : 0.9f + 0.45f * size;
             }
 
             pickupMeshes[KeyGold] = BuiltinMesh(PrimitiveType.Cylinder);

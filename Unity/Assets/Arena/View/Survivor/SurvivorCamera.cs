@@ -14,6 +14,10 @@ namespace PersonalArena.View
     {
         public const float MinimumDistance = 12f;
         public const float MaximumDistance = 45f;
+        // How far (as a share of the camera distance) the view centre stays inside the fence. Less along Z:
+        // the skill bar covers the bottom of the screen.
+        private const float EdgeMarginX = 0.3f;
+        private const float EdgeMarginZ = 0.2f;
 
         [SerializeField] private SurvivorRenderer target;
         [SerializeField, Range(30f, 80f)] private float pitch = 55f;
@@ -57,6 +61,11 @@ namespace PersonalArena.View
             distance = Mathf.Lerp(distance, zoomTarget, 1f - Mathf.Exp(-10f * delta));
 
             Vector3 goal = target != null ? target.HeroWorldPosition : Vector3.zero;
+            // Near the fence the view stops short of the hero, so less of the screen shows the empty outside.
+            float limitX = SurvivorRenderer.MapHalfExtent - EdgeMarginX * distance;
+            float limitZ = SurvivorRenderer.MapHalfExtent - EdgeMarginZ * distance;
+            goal.x = Mathf.Clamp(goal.x, -limitX, limitX);
+            goal.z = Mathf.Clamp(goal.z, -limitZ, limitZ);
             if (!snapped || (goal - focus).sqrMagnitude > 400f)
             {
                 focus = goal;
