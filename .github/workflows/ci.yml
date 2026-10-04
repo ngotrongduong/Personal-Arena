@@ -6,7 +6,12 @@ on:
 
 jobs:
   core-tests:
-    runs-on: ubuntu-latest
+    # Windows too: the bit-exact goldens in SurvivorM5GoldenTests were recorded on Windows.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -31,3 +36,10 @@ jobs:
           fi
       - name: Trainer configs parse
         run: python3 -c "import glob,yaml;[yaml.safe_load(open(f)) for f in glob.glob('Trainer/config/*.yaml')]"
+      - name: STATUS and BOARD stay short (token budget for every agent session)
+        run: |
+          s=$(wc -l < docs/STATUS.md); b=$(wc -l < docs/tasks/BOARD.md)
+          echo "STATUS.md: $s lines (max 200), BOARD.md: $b lines (max 60)"
+          if [ "$s" -gt 200 ] || [ "$b" -gt 60 ]; then
+            echo "::error::Move old session logs to docs/archive/SESSIONS.md and done tasks to docs/archive/BOARD-DONE.md"; exit 1
+          fi

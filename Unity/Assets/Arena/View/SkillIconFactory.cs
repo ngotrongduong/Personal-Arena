@@ -22,12 +22,12 @@ namespace PersonalArena.View
         private static readonly Dictionary<string, Sprite> Cache = new Dictionary<string, Sprite>();
         private static readonly Color GoldFrame = new Color(1f, 0.82f, 0.3f);
 
-        /// <summary>Skill ids with a shipped glyph, one row of four slots per class: warrior, mage, archer.</summary>
+        /// <summary>Skill ids with a shipped glyph, one row per class: warrior, mage, archer.</summary>
         public static readonly IReadOnlyList<IReadOnlyList<string>> ClassSkillIds = new IReadOnlyList<string>[]
         {
-            new[] { "spear-strike", "kick", "shield-block", "dash" },
-            new[] { "fireball", "frost-nova", "mana-shield", "blink" },
-            new[] { "arrow", "piercing-arrow", "leap-back", "concussive-arrow" }
+            new[] { "spear-strike", "kick", "shield-block", "war-cry", "leap-slam", "whirlwind" },
+            new[] { "fireball", "frost-nova", "mana-shield", "blink", "fire-wall", "chain-lightning" },
+            new[] { "arrow", "piercing-arrow", "leap-back", "concussive-arrow", "caltrop-trap", "arrow-barrage" }
         };
 
         /// <summary>Icon key for a skill; an empty slot falls back to the warrior skill of that slot.</summary>
@@ -58,6 +58,13 @@ namespace PersonalArena.View
                 case "frost-burst": return new Color(0.6f, 0.9f, 1f);
                 case "power-shot": return new Color(1f, 0.82f, 0.35f);
                 case "roll-back": return new Color(0.4f, 0.92f, 0.72f);
+                case "war-cry": return new Color(1f, 0.62f, 0.25f);
+                case "leap-slam": return new Color(1f, 0.72f, 0.32f);
+                case "whirlwind": return new Color(1f, 0.82f, 0.42f);
+                case "caltrop-trap": return new Color(0.72f, 0.78f, 0.62f);
+                case "arrow-barrage": return new Color(0.55f, 0.9f, 0.42f);
+                case "fire-wall": return new Color(1f, 0.32f, 0.12f);
+                case "chain-lightning": return new Color(0.62f, 0.82f, 1f);
                 default: return new Color(0.8f, 0.82f, 0.9f);
             }
         }

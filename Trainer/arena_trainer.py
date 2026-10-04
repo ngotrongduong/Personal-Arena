@@ -16,7 +16,7 @@ DEFAULT_CONFIG = Path("Trainer/config/warrior_survivor_ppo.yaml")
 CONFIG_DIRECTORY = Path("Trainer/config")
 DEFAULT_ENVIRONMENT = Path("Build/Training/PersonalArenaTraining.exe")
 DEFAULT_RESULTS_DIRECTORY = Path("Trainer/runs")
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 SCHEMA_FILE = "schema_version.txt"
 SCHEMAS_DIR = Path(__file__).resolve().parent / "schemas"
 

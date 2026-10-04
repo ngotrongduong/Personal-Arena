@@ -44,7 +44,7 @@ namespace PersonalArena.View
         };
 
         [SerializeField] private int seed = 1;
-        [Tooltip("Optional fixed brain file; otherwise the newest Trainer/runs/*/Warrior/latest.brain (schema 4) is used.")]
+        [Tooltip("Optional fixed brain file; otherwise the newest brain matching the current schema and class is used.")]
         [SerializeField] private string brainFile = string.Empty;
 
         [Header("Scene References")]
@@ -254,7 +254,9 @@ namespace PersonalArena.View
             // M8 settings: quality and window mode apply at start (automated runs keep their window as launched).
             PlayerPrefsSoundStorage prefs = new PlayerPrefsSoundStorage();
             viewerSettings = ViewerSettings.Load(prefs);
-            bool applyWindowMode = string.IsNullOrEmpty(screenshotPath) && !quitAfterScreenshot && smoke == null;
+            BeginPerfLog();
+            bool applyWindowMode = string.IsNullOrEmpty(screenshotPath) && !quitAfterScreenshot && smoke == null &&
+                string.IsNullOrEmpty(perfLogPath);
             SettingsPanel.ApplyDisplay(viewerSettings, applyWindowMode);
             SettingsPanel settingsPanel = hud.SettingsPanel;
             if (settingsPanel != null)
@@ -621,6 +623,7 @@ namespace PersonalArena.View
             float realDelta = Time.unscaledDeltaTime;
             UpdateScreenshots();
             UpdateSmokeTest();
+            UpdatePerfLog();
 
             if (sim.IsEnded)
             {

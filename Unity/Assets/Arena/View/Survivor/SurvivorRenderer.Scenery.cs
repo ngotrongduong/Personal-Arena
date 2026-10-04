@@ -34,6 +34,9 @@ namespace PersonalArena.View
             public Transform Root;
         }
 
+        /// <summary>Half the side of the fenced map, in metres (the map is centred on the origin).</summary>
+        public const float MapHalfExtent = 50f;
+
         private void BuildScenery()
         {
             sceneryRoot = CreateChild("Graveyard", transform);
@@ -46,7 +49,7 @@ namespace PersonalArena.View
             }
             obstacleFallbackMaterial = Own(CreateStandard("Obstacle Fallback", new Color(0.42f, 0.42f, 0.46f), 0.1f));
 
-            float half = 50f;
+            float half = MapHalfExtent;
             BuildGround(half);
             if (survivorArt == null)
             {

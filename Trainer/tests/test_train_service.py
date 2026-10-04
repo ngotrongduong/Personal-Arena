@@ -151,7 +151,7 @@ def test_plan_run_does_not_resume_an_unmarked_or_older_schema_run(
 
     plan = train_service.plan_run(tmp_path, "Warrior")
 
-    assert arena_trainer.SCHEMA_VERSION == 4
+    assert arena_trainer.SCHEMA_VERSION == 5
     assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-s001", "new", 0)
 
 
@@ -202,6 +202,37 @@ def test_plan_run_upgrades_the_newest_older_schema(tmp_path: Path, monkeypatch):
         "Não AI được nâng cấp lên luật mới (schema v4 → v5) "
         "và học tiếp từ bước 800."
     )
+
+
+def test_plan_run_upgrades_when_the_viewer_requests_the_older_schema_run(tmp_path: Path, monkeypatch):
+    # The viewer always passes the profile's run id, which still names the schema-4 run after an update.
+    schema_dir = tmp_path / "schemas"
+    schema_dir.mkdir()
+    write_fake_schema(schema_dir, 4)
+    write_fake_schema(schema_dir, 5)
+    monkeypatch.setattr(arena_trainer, "SCHEMAS_DIR", schema_dir)
+    monkeypatch.setattr(arena_trainer, "SCHEMA_VERSION", 5)
+    make_checkpoint(tmp_path, "warrior-s001", 800, schema_version=4)
+    calls = []
+
+    def fake_upgrade(runs_dir, source_run, behavior, new_run, old_version, new_version):
+        calls.append((source_run, behavior, new_run, old_version, new_version))
+        make_checkpoint(runs_dir, new_run, 800, schema_version=5, behavior=behavior)
+        return runs_dir / new_run / behavior
+
+    monkeypatch.setattr(train_service.brain_upgrade, "upgrade_run", fake_upgrade)
+
+    plan = train_service.plan_run(tmp_path, "Warrior", "warrior-s001")
+
+    assert calls == [("warrior-s001", "Warrior", "warrior-s002", 4, 5)]
+    assert (plan.run_id, plan.mode, plan.last_step) == ("warrior-s002", "resume", 800)
+    assert "học tiếp từ bước 800" in plan.message
+
+    # The next TRAIN still names the old run: it resumes the upgraded run, with no second upgrade.
+    again = train_service.plan_run(tmp_path, "Warrior", "warrior-s001")
+
+    assert len(calls) == 1
+    assert (again.run_id, again.mode, again.last_step) == ("warrior-s002", "resume", 800)
 
 
 def test_plan_run_missing_old_schema_falls_back_to_new(tmp_path: Path, monkeypatch):
@@ -329,7 +360,7 @@ def write_config(path: Path) -> None:
 
 @pytest.mark.parametrize(
     ("mode", "initial_marker", "expected_marker"),
-    [("new", None, "4"), ("force", "1", "4"), ("resume", "4", "4")],
+    [("new", None, "5"), ("force", "1", "5"), ("resume", "5", "5")],
 )
 def test_service_marks_new_and_forced_runs_without_overwriting_resumed_runs(
     tmp_path: Path, mode: str, initial_marker: str | None, expected_marker: str
@@ -885,3 +916,15 @@ def test_install_staged_build_keeps_current_build_on_error(tmp_path: Path, monke
     assert "could not install" in message
     assert (tmp_path / "Build" / "Training" / "PersonalArenaTraining.exe").read_text(encoding="utf-8") == "old"
     assert (tmp_path / "Build" / "TrainingNext" / "PersonalArenaTraining.exe").is_file()
+
+
+@pytest.mark.parametrize("name", ["../victim", "..", "a/b", "Champions", "warrior-s001.", "con\n"])
+def test_plan_run_rejects_run_names_that_could_leave_the_runs_folder(tmp_path: Path, name: str):
+    victim = tmp_path.parent / "victim"
+    make_checkpoint(tmp_path.parent, "victim", 5)
+
+    plan = train_service.plan_run(tmp_path, "Warrior", name)
+
+    assert (plan.run_id, plan.mode) == ("warrior-s001", "new")
+    assert "không hợp lệ" in plan.message
+    assert victim.is_dir()

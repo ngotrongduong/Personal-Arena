@@ -12,7 +12,9 @@ Read `AGENTS.md` §6 first. Those invariants are hard rules:
   no static mutable state, no `System.Random` (use `Rng`).
 - Deterministic, fixed 60 Hz tick; agent decides every 5 ticks (every tick while a level-up
   offer waits).
-- Observation schema v4 is fixed at 2264 values; new content goes into reserved slots.
+- The observation/action layout is the one in `AGENTS.md` §6; new content goes into reserved slots.
+  Changing the layout means bumping `SurvivorObservation.SchemaVersion` and the trainer's brain upgrade
+  (D-027), so only do it when a task asks for it.
 - Rewards only from `SurvivorEvent`s through `SurvivorRewardCalculator`; every term has a sign test.
 
 How you work:

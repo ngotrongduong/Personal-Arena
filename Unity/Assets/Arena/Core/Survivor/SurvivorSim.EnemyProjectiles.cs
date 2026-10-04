@@ -42,7 +42,7 @@ namespace PersonalArena.Core.Survivor
                     AddEvent(SurvivorEventType.Blocked, id: projectile.SourceId);
                     continue;
                 }
-                if (testInvulnerable) continue;
+                if (testInvulnerable || TryAbsorbHit()) continue;
                 bool killed = ApplyHeroDamage(projectile.Damage, projectile.SourceId);
                 LastHitCause = DeathCause.Projectile;
                 if (killed)

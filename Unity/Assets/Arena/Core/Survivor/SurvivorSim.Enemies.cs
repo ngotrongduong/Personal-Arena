@@ -162,7 +162,7 @@ namespace PersonalArena.Core.Survivor
             e.Hp = e.MaxHp; e.Damage = def.AttackDamage * damageTime * damageTier * (elite ? tuning.EliteDamageMul : 1f);
             e.KnockbackResist = elite ? MathF.Max(def.KnockbackResist, tuning.EliteMinKnockbackResist) : def.KnockbackResist;
             e.Elite = elite; e.IsBoss = boss; e.WindupRemaining = 0f; e.StunRemaining = 0f;
-            e.OrbitNextHitTime = 0f; e.LastShockwaveId = 0; e.LastHitTime = Time;
+            e.OrbitNextHitTime = 0f; e.LastShockwaveId = 0; e.LastHitTime = Time; e.SlowRemaining = 0f; e.SlowMultiplier = 1f;
             e.RelocatedThisTick = false; e.Separated = false; enemyPreviousPositions[slot] = point;
             e.AttackCooldown = 0f; e.ContactCooldown = 0f; e.SummonCooldown = boss ? EffectiveBossSummonInterval : def.SummonInterval;
             if (e.Radius > maxEnemyRadius) maxEnemyRadius = e.Radius;
@@ -207,6 +207,7 @@ namespace PersonalArena.Core.Survivor
                 if (!e.Active) continue;
                 SurvivorEnemyDef def = SurvivorDefaults.EnemyDef(e.TypeIndex);
                 float speed = EnemyMoveSpeed(e, def);
+                if (e.SlowRemaining > 0f) { speed *= e.SlowMultiplier; e.SlowRemaining = MathF.Max(0f, e.SlowRemaining - FixedDeltaTime); }
                 e.ContactCooldown = MathF.Max(0f, e.ContactCooldown - FixedDeltaTime);
                 e.AttackCooldown = MathF.Max(0f, e.AttackCooldown - FixedDeltaTime);
                 if (regen && !e.IsBoss && e.Hp < e.MaxHp && Time - e.LastHitTime >= tuning.RegenDelaySeconds)
@@ -418,8 +419,10 @@ namespace PersonalArena.Core.Survivor
                 PushEnemy(source, AwayFromHero(source), block.BlockPushback);
                 AddEvent(SurvivorEventType.Parry, id: source.Id); return;
             }
+            if (TryAbsorbHit()) return;
             float multiplier = covered ? block.BlockDamageMultiplier : 1f;
             bool killed = ApplyHeroDamage(raw * multiplier, source.Id);
+            if (contact && !killed && stats.ReflectFraction > 0f) reflectPending += lastHeroDamage * stats.ReflectFraction;
             LastHitCause = explosion ? DeathCause.Explosion : source.IsBoss ? DeathCause.Boss : swing && source.TypeIndex == BruteTypeIndex ? DeathCause.Brute : DeathCause.Contact;
             if (covered)
             {
@@ -432,10 +435,11 @@ namespace PersonalArena.Core.Survivor
         private bool ApplyHeroDamage(float raw, int sourceId)
         {
             float damage = MathF.Max(1f, raw - stats.Armor);
-            damage = MathF.Min(damage, Hero.Hp); Hero.Hp -= damage; DamageTaken += damage;
+            damage = MathF.Min(damage, Hero.Hp); Hero.Hp -= damage; DamageTaken += damage; lastHeroDamage = damage;
             float hpRatio = Hero.MaxHp > 0f ? Hero.Hp / Hero.MaxHp : 0f;
             if (hpRatio < MinHpRatio) { MinHpRatio = hpRatio; MinHpTime = Time; }
             AddEvent(SurvivorEventType.HeroDamaged, damage, damage / Hero.MaxHp, sourceId, Hero.Position);
+            retaliatePending = true;
             return Hero.Hp <= 0f;
         }
 

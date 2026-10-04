@@ -64,7 +64,7 @@ namespace PersonalArena.View
             public float Phase;
         }
 
-        private const int ProjectileLookCount = 5;
+        private const int ProjectileLookCount = 8;
 
         private sealed class HammerView
         {
@@ -87,7 +87,9 @@ namespace PersonalArena.View
 
             Mesh gem = BuildGemMesh();
             ownedObjects.Add(gem);
-            float[] gemSizes = { 0.36f, 0.5f, 0.7f };
+            // The common small gem is kept small and faint: late in a run hundreds of them cover the ground.
+            float[] gemSizes = { 0.27f, 0.5f, 0.7f };
+            float[] glowAlphas = { 0.28f, 0.55f, 0.55f };
             for (int size = 0; size < 3; size++)
             {
                 Color color = GemColors[size];
@@ -95,8 +97,8 @@ namespace PersonalArena.View
                 pickupMaterials[size] = Own(CreateEmissive("Gem " + size, color, color * 0.9f, 0.85f, 0.1f));
                 pickupScales[size] = new Vector3(gemSizes[size] * 0.75f, gemSizes[size], gemSizes[size] * 0.75f);
                 pickupGlowMaterials[size] = Own(FxAssets.Create("Gem Glow " + size, FxAssets.RadialGlow, true));
-                pickupGlowMaterials[size].color = new Color(color.r, color.g, color.b, 0.55f);
-                glowSizes[size] = 0.9f + 0.45f * size;
+                pickupGlowMaterials[size].color = new Color(color.r, color.g, color.b, glowAlphas[size]);
+                glowSizes[size] = size == 0 ? 0.65f : 0.9f + 0.45f * size;
             }
 
             pickupMeshes[KeyGold] = BuiltinMesh(PrimitiveType.Cylinder);
@@ -410,6 +412,32 @@ namespace PersonalArena.View
                     glow.localScale = new Vector3(2.2f, 1f, 2.2f);
                     break;
                 }
+                case ProjectileLook.Bomb:
+                {
+                    GameObject shell = CreatePrimitive("Shell", PrimitiveType.Sphere, model, hammerHeadMaterial);
+                    shell.transform.localScale = Vector3.one * 0.62f;
+                    GameObject fuse = CreatePrimitive("Fuse", PrimitiveType.Cylinder, model, fireballMaterial);
+                    fuse.transform.localPosition = new Vector3(0f, 0.36f, 0f);
+                    fuse.transform.localScale = new Vector3(0.06f, 0.16f, 0.06f);
+                    break;
+                }
+                case ProjectileLook.Bounce:
+                {
+                    GameObject core = CreatePrimitive("Ricochet Core", PrimitiveType.Sphere, model, boltMaterial);
+                    core.transform.localScale = Vector3.one * 0.45f;
+                    Transform glow = CreateFlatQuad("Glow", model, boltGlowMaterial);
+                    glow.localScale = new Vector3(1.45f, 1f, 1.45f);
+                    break;
+                }
+                case ProjectileLook.Momentum:
+                {
+                    GameObject core = CreatePrimitive("Spirit", PrimitiveType.Capsule, model, powerShotMaterial);
+                    core.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                    core.transform.localScale = new Vector3(0.22f, 0.42f, 0.22f);
+                    Transform glow = CreateFlatQuad("Glow", model, boltGlowMaterial);
+                    glow.localScale = new Vector3(1.1f, 1f, 1.7f);
+                    break;
+                }
                 case ProjectileLook.Arrow:
                 case ProjectileLook.PowerShot:
                 {
@@ -512,6 +540,18 @@ namespace PersonalArena.View
                     view.Trail.widthMultiplier = 0.35f * scale;
                     view.Trail.time = 0.16f;
                     break;
+                case ProjectileLook.Bomb:
+                    view.Trail.widthMultiplier = 0.24f * scale;
+                    view.Trail.time = 0.2f;
+                    break;
+                case ProjectileLook.Bounce:
+                    view.Trail.widthMultiplier = 0.32f * scale;
+                    view.Trail.time = 0.35f;
+                    break;
+                case ProjectileLook.Momentum:
+                    view.Trail.widthMultiplier = 0.42f * scale;
+                    view.Trail.time = 0.28f;
+                    break;
                 default:
                     view.Trail.widthMultiplier = 0.4f * scale;
                     view.Trail.time = 0.16f;
@@ -527,6 +567,9 @@ namespace PersonalArena.View
                 case ProjectileLook.Fireball: return new Color(1f, 0.45f, 0.12f, 0.75f);
                 case ProjectileLook.Arrow: return new Color(0.85f, 0.9f, 0.8f, 0.45f);
                 case ProjectileLook.PowerShot: return new Color(1f, 0.85f, 0.35f, 0.7f);
+                case ProjectileLook.Bomb: return new Color(1f, 0.35f, 0.15f, 0.65f);
+                case ProjectileLook.Bounce: return new Color(0.25f, 0.95f, 1f, 0.75f);
+                case ProjectileLook.Momentum: return new Color(0.35f, 1f, 0.65f, 0.75f);
                 default: return new Color(1f, 0.7f, 0.35f, 0.5f);
             }
         }
@@ -618,7 +661,7 @@ namespace PersonalArena.View
                 Vector3 position = Vector3.LerpUnclamped(view.Previous, view.Current, interpolationAlpha);
                 view.Root.SetPositionAndRotation(position, Quaternion.LookRotation(view.Direction, Vector3.up));
                 // Hammers tumble; bolts, fireballs and arrows fly straight along their direction.
-                if (view.Look == ProjectileLook.Hammer)
+                if (view.Look == ProjectileLook.Hammer || view.Look == ProjectileLook.Bomb)
                 {
                     view.Spinner.localRotation = Quaternion.Euler(spin, 0f, 0f);
                 }

@@ -83,7 +83,7 @@ namespace PersonalArena.Core.Tests.Survivor
         [Test]
         public void LevelUpFillerGold_GoesToFiller()
         {
-            SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.Config(), 7);
+            SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.OldConfig(), 7);
             // Every slot full and maxed: the offer falls back to the fillers (bonus gold first).
             foreach (int index in new[] { 0, 1, 2, 3, 6, 7, 8, 9 }) sim.GiveItemForTests(index, SurvivorCatalog.Get(index).MaxLevel);
             sim.GiveXpForTests(5f);

@@ -34,6 +34,34 @@ namespace PersonalArena.View.Tests
         }
 
         [Test]
+        public void EveryM9WeaponPatternHasASoundAndEvolutionsReuseIt()
+        {
+            int[] ranges = { 26, 33, 64, 72 };
+            for (int pair = 0; pair < ranges.Length; pair += 2)
+            {
+                for (int weapon = ranges[pair]; weapon <= ranges[pair + 1]; weapon++)
+                {
+                    Assert.That(SoundCueMap.WeaponCue(weapon), Is.Not.EqualTo(SoundCue.None), "weapon " + weapon);
+                    int evolution = SurvivorCatalog.EvolutionOf(weapon);
+                    if (evolution >= 0)
+                    {
+                        Assert.That(SoundCueMap.WeaponCue(evolution), Is.EqualTo(SoundCueMap.WeaponCue(weapon)), "evolution " + evolution);
+                    }
+                }
+            }
+        }
+
+        [Test]
+        public void M9GroundStrikesUsePatternSpecificSounds()
+        {
+            SurvivorClassDef warrior = SurvivorDefaults.Warrior();
+            Assert.That(SoundCueMap.StrikeCue(SurvivorCatalog.BombIndex, warrior), Is.EqualTo(SoundCue.Explosion));
+            Assert.That(SoundCueMap.StrikeCue(SurvivorCatalog.RetaliateIndex, warrior), Is.EqualTo(SoundCue.ShieldBlock));
+            Assert.That(SoundCueMap.StrikeCue(SurvivorCatalog.PurgeIndex, warrior), Is.EqualTo(SoundCue.FrostBurst));
+            Assert.That(SoundCueMap.StrikeCue(SurvivorCatalog.BounceShotIndex, warrior), Is.EqualTo(SoundCue.MagicBolt));
+        }
+
+        [Test]
         public void EvolutionsSoundLikeTheirBaseWeapon()
         {
             int[] bases =

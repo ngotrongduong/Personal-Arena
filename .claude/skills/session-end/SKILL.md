@@ -11,10 +11,12 @@ description: Close a Personal Arena session so the next one starts exactly where
    - "Việc tiếp theo": ordered, each line names an owner (Claude / Codex / Owner) and a task id.
    - "Vướng mắc": blockers and open questions.
    - "Nhật ký phiên": add an entry on top — date, who, where (cloud/PC), 3–6 bullets of what
-     changed. Keep only the last ~10 entries; move older ones to `docs/archive/SESSIONS.md`.
+     changed. Keep only the last ~3 entries; move older ones to `docs/archive/SESSIONS.md`. STATUS must stay
+     under 200 lines (CI fails otherwise): rewrite "Đang ở đâu"/"Việc tiếp theo" short, do not append history there.
    - Set "Cập nhật lần cuối".
 2. `docs/tasks/BOARD.md`: every task's status matches its file. New work discovered → new task
    file from `TEMPLATE.md` + board row.
+   Move `done` rows of finished milestones to `docs/archive/BOARD-DONE.md` (BOARD < 60 lines).
 3. `docs/DECISIONS.md`: add any choice made this session that later work depends on.
 4. `docs/TRAINING.md`: log any real training run.
 5. Git: commit on the current branch (`docs(status): session YYYY-MM-DD` if only docs), merge

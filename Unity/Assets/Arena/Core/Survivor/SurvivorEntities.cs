@@ -15,7 +15,7 @@ namespace PersonalArena.Core.Survivor
         public float Energy { get; internal set; }
         public float MaxEnergy { get; internal set; }
         public float Radius { get; internal set; }
-        public float[] SkillCooldowns { get; } = new float[4];
+        public float[] SkillCooldowns { get; } = new float[SurvivorInput.SkillSlotCount];
         public bool Blocking { get; internal set; }
         public bool Dashing { get; internal set; }
         public bool Alive { get; internal set; }
@@ -44,6 +44,12 @@ namespace PersonalArena.Core.Survivor
         public float GreedMul { get; internal set; }
         public float GrowthMul { get; internal set; }
         public float TierGold { get; internal set; }
+        /// <summary>Multiplier on volley durations (orbit, poison zone); 1 + duration-charm + omni-box.</summary>
+        public float DurationMul { get; internal set; }
+        /// <summary>Extra projectiles per volley from the duplicator (0 without it).</summary>
+        public int Amount { get; internal set; }
+        /// <summary>Share of each contact hit taken that is reflected to touching enemies (spiked armor).</summary>
+        public float ReflectFraction { get; internal set; }
     }
 
     public sealed class SurvivorEnemy
@@ -74,6 +80,9 @@ namespace PersonalArena.Core.Survivor
         internal float LastHitTime;
         internal bool RelocatedThisTick;
         internal bool Separated;
+        /// <summary>Seconds of slow left and its speed multiplier (a trap refreshes it every tick while the enemy is inside); 0 = not slowed.</summary>
+        public float SlowRemaining { get; internal set; }
+        public float SlowMultiplier { get; internal set; }
     }
 
     public sealed class SurvivorProjectile
@@ -92,8 +101,86 @@ namespace PersonalArena.Core.Survivor
         /// <summary>When above 0 the first hit blows up: every enemy within this radius takes the damage.</summary>
         public float ExplodeRadius { get; internal set; }
         internal float StunSeconds;
-        internal readonly int[] HitIds = new int[3];
+        internal readonly int[] HitIds = new int[8];
+        /// <summary>A weapon bomb also blows up when its range runs out (a skill fireball just vanishes).</summary>
+        internal bool ExplodeOnExpire;
         internal int HitCount;
+        /// <summary>Bounce shot: bounces off walls and obstacles (BouncesLeft more allowed) and re-hits an enemy only after its BounceUntil time.</summary>
+        internal bool Bouncing;
+        internal int BouncesLeft;
+        internal int BounceCount;
+        internal readonly int[] BounceIds = new int[16];
+        internal readonly float[] BounceUntil = new float[16];
+        /// <summary>Walls and obstacles hit so far (lets the view and tests count bounces).</summary>
+        public int Bounces => BounceCount;
+    }
+
+    /// <summary>A flying boomerang: out toward its target, then back to the hero. Each enemy is hit at most once per direction.</summary>
+    public sealed class SurvivorBoomerang
+    {
+        public const int HitCapacity = 48;
+        public bool Active { get; internal set; }
+        public Vec2 Position { get; internal set; }
+        public Vec2 Direction { get; internal set; }
+        public float Radius { get; internal set; }
+        public float Damage { get; internal set; }
+        /// <summary>True once it turned around and flies back to the hero.</summary>
+        public bool Returning { get; internal set; }
+        public int SourceIndex { get; internal set; }
+        internal float Travelled;
+        internal float MaxRange;
+        internal float Age;
+        internal int OutCount;
+        internal int BackCount;
+        internal readonly int[] OutIds = new int[HitCapacity];
+        internal readonly int[] BackIds = new int[HitCapacity];
+    }
+
+    /// <summary>A poison pool on the ground: hurts every enemy inside every tick interval until it runs out.</summary>
+    public sealed class SurvivorZone
+    {
+        public bool Active { get; internal set; }
+        public Vec2 Position { get; internal set; }
+        public float Radius { get; internal set; }
+        public float Remaining { get; internal set; }
+        public float Duration { get; internal set; }
+        public float Damage { get; internal set; }
+        public int SourceIndex { get; internal set; }
+        internal float TickTimer;
+    }
+
+    /// <summary>A caltrop trap on the ground: hurts and slows every enemy inside until it runs out.</summary>
+    public sealed class SurvivorTrap
+    {
+        public bool Active { get; internal set; }
+        public Vec2 Position { get; internal set; }
+        public float Radius { get; internal set; }
+        public float Remaining { get; internal set; }
+        public float Duration { get; internal set; }
+        public float Damage { get; internal set; }
+        internal float TickTimer;
+        internal float TickSeconds;
+        internal float SlowFactor;
+        internal float SlowSeconds;
+        /// <summary>Creation order; the smallest alive value is the oldest.</summary>
+        internal int Order;
+    }
+
+    /// <summary>A flame wall: a rectangle (Width across, Depth along <see cref="Direction"/>) that hurts every enemy inside.</summary>
+    public sealed class SurvivorWall
+    {
+        public bool Active { get; internal set; }
+        public Vec2 Position { get; internal set; }
+        /// <summary>Unit vector of the hero's facing when cast (the depth axis).</summary>
+        public Vec2 Direction { get; internal set; }
+        public float Width { get; internal set; }
+        public float Depth { get; internal set; }
+        public float Remaining { get; internal set; }
+        public float Duration { get; internal set; }
+        public float Damage { get; internal set; }
+        internal float TickTimer;
+        internal float TickSeconds;
+        internal int Order;
     }
 
     public sealed class SurvivorEnemyProjectile
@@ -133,7 +220,7 @@ namespace PersonalArena.Core.Survivor
     public sealed class SurvivorInventory
     {
         private readonly int[] levels = new int[SurvivorCatalog.CatalogSize];
-        // Storage covers test/debug grants beyond the gameplay slot caps; offers still enforce 4 + 4.
+        // Storage covers test/debug grants beyond the gameplay slot caps; offers enforce the tuning slot caps (default 6 + 6).
         private readonly int[] weapons = new int[SurvivorCatalog.CatalogSize];
         private readonly int[] passives = new int[SurvivorCatalog.CatalogSize];
         public int WeaponCount { get; internal set; }

@@ -82,7 +82,7 @@ namespace PersonalArena.View
         private Text energyText;
         private Text goldText;
         private Text killsText;
-        private readonly ItemSlotView[] itemSlots = new ItemSlotView[ItemSlots * 2];
+        private readonly ItemSlotView[] itemSlots = new ItemSlotView[WeaponSlots + PassiveSlots];
         private readonly SkillSlotView[] skillSlots = new SkillSlotView[SkillSlots];
         private RectTransform skillsPanel;
         private Text heroName;
@@ -409,10 +409,13 @@ namespace PersonalArena.View
             Text passivesLabel = CreateText("Passives Label", vitals, 13, TextAnchor.UpperLeft, new Color(0.65f, 0.7f, 0.8f));
             passivesLabel.text = "BỊ ĐỘNG";
             SetRect(passivesLabel.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -226f), new Vector2(120f, 18f), new Vector2(0f, 1f));
-            for (int i = 0; i < ItemSlots; i++)
+            for (int i = 0; i < WeaponSlots; i++)
             {
                 itemSlots[i] = CreateItemSlot(vitals, "Weapon " + (i + 1), new Vector2(20f + i * 64f, -162f));
-                itemSlots[ItemSlots + i] = CreateItemSlot(vitals, "Passive " + (i + 1), new Vector2(20f + i * 64f, -244f));
+            }
+            for (int i = 0; i < PassiveSlots; i++)
+            {
+                itemSlots[WeaponSlots + i] = CreateItemSlot(vitals, "Passive " + (i + 1), new Vector2(20f + i * 64f, -244f));
             }
         }
 

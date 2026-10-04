@@ -412,3 +412,22 @@ def test_cli_prints_json_on_success_and_error(tmp_path: Path, capsys):
     error = json.loads(capsys.readouterr().out.strip().splitlines()[-1])
     assert error["ok"] is False
     assert "Không tìm thấy" in error["error"]
+
+
+@pytest.mark.parametrize("name", ["abc\n", "warrior-s001.", "warrior-s001 ", "../x", "Champions"])
+def test_check_id_rejects_aliasing_names(name: str):
+    with pytest.raises(brain_lineage.LineageError):
+        brain_lineage.check_id(name, "nhánh")
+
+
+def test_version_metadata_keeps_a_stored_score_without_scoring_the_summary():
+    metadata = brain_lineage._version_metadata(
+        run_id="warrior-s001",
+        step=10,
+        source="eval",
+        evaluation={"score": 123.0, "summary": {"Behavior": {}}},
+        schema_version=arena_trainer.SCHEMA_VERSION,
+        champion_flag=False,
+    )
+
+    assert metadata["score"] == 123.0

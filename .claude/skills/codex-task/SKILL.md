@@ -11,7 +11,8 @@ reviews, commits.
 ## Write tasks
 
 1. Pick work that is self-contained: Core types + tests, trainer Python + pytest, pure
-   refactors. Keep Unity scene/prefab work and git for Claude.
+   refactors, and Unity work on the PC (View/ML code, batchmode EditMode tests, builds into the
+   `Build/*Next` folders). Git always stays with Claude.
 2. Copy `docs/tasks/TEMPLATE.md` → `docs/tasks/T-<next>-<slug>.md`. Fill:
    - exact files to create/edit (disjoint from other open tasks if marked parallel);
    - exact public API (C# signatures) and behaviour, including edge cases and exceptions;

@@ -21,7 +21,7 @@ namespace PersonalArena.Core.Survivor
             for (int i = 0; i < move.Length && i < SurvivorInput.MoveBranchSize; i++) move[i] = true;
             skill[0] = true; pick[0] = true;
             if (sim.Hero.Dashing || sim.Hero.StunRemaining > 0f) return;
-            for (int slot = 0; slot < 4; slot++)
+            for (int slot = 0; slot < SurvivorInput.SkillSlotCount; slot++)
             {
                 SkillDef def = sim.Config.ClassDef.ActiveSkills[slot];
                 if (def == null || def.Kind == SkillKind.None) continue;

@@ -38,6 +38,7 @@ namespace PersonalArena.View
         private const int TintStun = 3;
         private const int TintElite = 4;
         private const int TintBoss = 5;
+        private const int TintSlow = 6;
 
         private static readonly bool[] WalkerLoops = { true, true, false, false, false, false, true, false };
         private static readonly int[] PrewarmCounts = { 40, 20, 10, 1, 8, 6, 6, 2 };
@@ -54,7 +55,8 @@ namespace PersonalArena.View
             new Color(1.45f, 1.1f, 0.55f),
             new Color(0.7f, 0.9f, 1.5f),
             new Color(1.3f, 0.9f, 1.7f),
-            new Color(1.45f, 0.8f, 0.75f)
+            new Color(1.45f, 0.8f, 0.75f),
+            new Color(0.55f, 0.8f, 1.35f)
         };
 
         private readonly Stack<EnemyView>[] enemyPools = new Stack<EnemyView>[LookCount];
@@ -587,6 +589,7 @@ namespace PersonalArena.View
                 int tint = view.Flash > 0f ? TintFlash
                     : enemy.WindingUp ? TintWindup
                     : enemy.StunRemaining > 0f ? TintStun
+                    : enemy.SlowRemaining > 0f ? TintSlow
                     : view.Boss ? TintBoss
                     : view.Elite ? TintElite
                     : TintNone;

@@ -144,6 +144,7 @@ namespace PersonalArena.View
             {
                 spitViews[i] = CreateSpitView();
             }
+            BuildM9Weapons();
         }
 
         private static Transform CreateFlatQuad(string objectName, Transform parent, Material material)
@@ -291,6 +292,7 @@ namespace PersonalArena.View
             {
                 waveRoot.gameObject.SetActive(false);
             }
+            HideAllM9Weapons();
         }
 
         private static void HideAxe(AxeView view)
@@ -410,6 +412,7 @@ namespace PersonalArena.View
             }
 
             SyncSpit();
+            SyncM9Weapons();
         }
 
         private void SyncSpit()
@@ -529,6 +532,36 @@ namespace PersonalArena.View
                 case WeaponVisual.ArrowRain:
                     PlayHeroOneShot(HeroThrow, 1.9f, false);
                     break;
+                case WeaponVisual.Retaliate:
+                    PlayHeroOneShot(HeroStrikeB, 2f, false);
+                    break;
+                case WeaponVisual.Barrier:
+                    effects.Shockwave(heroPosition, BarrierColor, 4.4f, 0.4f);
+                    effects.Sparkle(heroPosition, BarrierColor, 8, 0.9f, 1.4f, 0.18f);
+                    break;
+                case WeaponVisual.Boomerang:
+                    PlayHeroOneShot(HeroThrow, 2f, false);
+                    break;
+                case WeaponVisual.Zone:
+                    PlayHeroOneShot(HeroThrow, 1.8f, false);
+                    effects.Shockwave(ArenaSpace.ToWorld(e.Point), PoisonColor, 3f, 0.35f);
+                    break;
+                case WeaponVisual.Freeze:
+                    PlayHeroOneShot(HeroCast, 1.9f, false);
+                    effects.Shockwave(heroPosition, FrostColor, 14f * RingQuadPerRadius, 0.65f);
+                    effects.Flash(heroPosition + Vector3.up, FrostColor, 5f, 0.25f);
+                    break;
+                case WeaponVisual.Purge:
+                    PlayHeroOneShot(HeroCast, 2f, false);
+                    break;
+                case WeaponVisual.BombRing:
+                    PlayHeroOneShot(HeroThrow, 2f, false);
+                    effects.Shockwave(heroPosition, FireballColor, 10f, 0.45f);
+                    break;
+                case WeaponVisual.FireballNova:
+                case WeaponVisual.Stone:
+                    PlayHeroOneShot(HeroCast, 2f, false);
+                    break;
             }
         }
 
@@ -541,6 +574,10 @@ namespace PersonalArena.View
         {
             Vector3 point = ArenaSpace.ToWorld(e.Point);
             float radius = Mathf.Max(0.3f, e.Value);
+            if (OnM9StrikeLanded(e, events, index, heroPosition, point, radius))
+            {
+                return;
+            }
             if (e.Id < 0)
             {
                 if (IsFrostBurst(e, events, index))
@@ -569,12 +606,13 @@ namespace PersonalArena.View
             if (visual == WeaponVisual.ArrowRain)
             {
                 Color color = FxColor(e.Id, LightningColor);
-                // A volley: a few streaks falling steeply onto the target, then a ring of the real radius.
-                int arrows = evolved ? 5 : 3;
+                // A rain over the whole blast area: streaks falling steeply on a spiral that fills the radius, then a ring of the real radius.
+                int arrows = Mathf.Clamp(Mathf.RoundToInt(radius * (evolved ? 4f : 3f)), 4, 14);
                 for (int k = 0; k < arrows; k++)
                 {
-                    float a = (k + 0.5f) / arrows * Mathf.PI * 2f + e.Point.X;
-                    Vector3 land = point + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * (radius * 0.55f);
+                    float a = k * 2.399963f + e.Point.X; // golden angle: evenly spread without a pattern
+                    float r = radius * Mathf.Sqrt((k + 0.5f) / arrows) * 0.9f;
+                    Vector3 land = point + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * r;
                     Vector3 top = land + new Vector3(-0.8f, 4.5f, -0.8f);
                     Vector3 fall = land - top;
                     StartStreak(top, fall.normalized, fall.magnitude, color, evolved ? 0.5f : 0.38f, StreakUp(fall), false);
@@ -623,7 +661,7 @@ namespace PersonalArena.View
                     continue;
                 }
                 int slot = (int)events[i].Value;
-                if (slot >= 0 && slot < skills.Length && skills[slot] != null && skills[slot].Kind == SkillKind.AreaBurst)
+                if (slot >= 0 && slot < skills.Length && skills[slot] != null && skills[slot].Id == "frost-burst")
                 {
                     return true;
                 }
@@ -691,6 +729,7 @@ namespace PersonalArena.View
             PresentAura(realDelta);
             PresentWave();
             PresentSpit();
+            PresentM9Weapons();
         }
 
         private void PresentSpears(float realDelta)

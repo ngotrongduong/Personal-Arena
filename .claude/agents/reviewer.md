@@ -14,7 +14,7 @@ Check, in this order:
 2. **Core invariants (AGENTS.md §6):** no `UnityEngine`/`System.Numerics`/`System.Random`/LINQ
    in Core, no static mutable state, determinism (no time, no hash-order dependence, no
    `Dictionary` iteration affecting results), fixed tick.
-3. **Rewards:** every term has a sign test; no reward computed outside `RewardCalculator`.
+3. **Rewards:** every term has a sign test; no reward computed outside `SurvivorRewardCalculator`.
 4. **Tests:** each behaviour and edge case covered; tests assert values, not just "no throw".
 5. **Hot paths:** no allocation per tick in `Step` or per-decision code.
 6. **Repo hygiene:** no models, results, logs, `Library/`; `.meta` files present for new

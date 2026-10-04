@@ -54,7 +54,11 @@ def check_id(value: str | None, what: str) -> str | None:
     """Reject names that could leave the runs folder (``..``, slashes) or hit reserved folders."""
     if value is None:
         return None
-    if not _ID_PATTERN.match(value) or value.lower() == champion.CHAMPIONS_DIR.lower():
+    if (
+        not _ID_PATTERN.fullmatch(value)
+        or value.endswith((".", " "))  # Windows silently strips these, aliasing another name
+        or value.lower() == champion.CHAMPIONS_DIR.lower()
+    ):
         raise LineageError(f"Tên {what} không hợp lệ: {value}")
     return value
 
@@ -448,7 +452,9 @@ def _version_metadata(
     if evaluation is not None and isinstance(evaluation.get("summary"), dict):
         data.update({
             "evaluated": True,
-            "score": float(evaluation.get("score", champion.calculate_score(evaluation["summary"]))),
+            "score": float(
+                evaluation["score"] if "score" in evaluation else champion.calculate_score(evaluation["summary"])
+            ),
             "passes_m4a": bool(evaluation.get("passes_m4a", False)),
             "summary": evaluation["summary"],
             "behavior": evaluation.get("behavior") or evaluation["summary"].get("Behavior", {}),
@@ -466,7 +472,7 @@ def _write_version(
     metadata: dict,
 ) -> None:
     """Build the version in a hidden ``.<id>.partial`` folder, then move it into place whole."""
-    staging = target.parent / f".{target.name}.partial"
+    staging = target.parent / f".{target.name}.{os.getpid()}-{uuid.uuid4().hex[:8]}.partial"
     if staging.exists():
         shutil.rmtree(staging)
     try:

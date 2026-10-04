@@ -10,7 +10,13 @@ namespace PersonalArena.Core
         Dash,
         Projectile,
         AreaBurst,
-        Teleport
+        Teleport,
+        Leap,
+        Whirlwind,
+        Trap,
+        Barrage,
+        Wall,
+        Chain
     }
 
     /// <summary>Data-only skill definition.</summary>
@@ -42,5 +48,21 @@ namespace PersonalArena.Core
         public bool Pierce;
         public bool DashBackward;
         public bool BlockAllDirections;
+        // M9 skills 5-6 (unused fields stay 0).
+        /// <summary>Arrows (Barrage) or targets (Chain).</summary>
+        public int Count;
+        /// <summary>Most traps or walls alive at once; a new one replaces the oldest.</summary>
+        public int MaxAlive;
+        /// <summary>Seconds a spin, trap or wall lasts.</summary>
+        public float Duration;
+        /// <summary>Seconds between damage ticks of a spin, trap or wall.</summary>
+        public float TickSeconds;
+        /// <summary>Wall width (perpendicular to the facing) and depth (along it, m).</summary>
+        public float Width;
+        public float Depth;
+        /// <summary>Chain: longest jump between two targets (m).</summary>
+        public float JumpRange;
+        /// <summary>Chain: damage multiplier per jump.</summary>
+        public float Falloff;
     }
 }

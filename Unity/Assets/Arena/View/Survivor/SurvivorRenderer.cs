@@ -574,6 +574,7 @@ namespace PersonalArena.View
         {
             IReadOnlyList<SurvivorEvent> events = sim.Events;
             Vector3 heroPosition = heroCurrent;
+            BeginM9Events();
             for (int i = 0; i < events.Count; i++)
             {
                 SurvivorEvent e = events[i];
@@ -748,8 +749,32 @@ namespace PersonalArena.View
                     }
                     break;
                 }
+                case WeaponVisual.FlameCone:
+                {
+                    PlayHeroOneShot(HeroCast, 2.1f, false);
+                    Vector3 origin = heroPosition + Vector3.up * 0.8f;
+                    Color color = FxColor(e.Id, FireballColor);
+                    effects.Slash(origin, yaw - 22f, color, false, 2.2f, 0.16f);
+                    effects.Slash(origin, yaw, color, true, 2.8f, 0.2f);
+                    effects.Slash(origin, yaw + 22f, color, false, 2.2f, 0.16f);
+                    break;
+                }
+                case WeaponVisual.Combo:
+                {
+                    bool finisher = e.Extra >= 3f;
+                    bool mirror = ((int)e.Extra & 1) == 0;
+                    PlayHeroOneShot(mirror ? HeroStrikeB : HeroStrikeA, finisher ? 2.2f : 2.5f, false);
+                    effects.Slash(heroPosition + Vector3.up * 0.85f, yaw, FxColor(e.Id, StrikeColor), mirror,
+                        finisher ? 3f : 2.2f, finisher ? 0.28f : 0.16f);
+                    break;
+                }
                 case WeaponVisual.Hammer:
                 case WeaponVisual.Arrow:
+                case WeaponVisual.Bomb:
+                case WeaponVisual.Bounce:
+                case WeaponVisual.Momentum:
+                case WeaponVisual.Trio:
+                case WeaponVisual.Quad:
                     PlayHeroOneShot(HeroThrow, 1.9f, false);
                     break;
                 case WeaponVisual.MagicBolt:
@@ -810,6 +835,37 @@ namespace PersonalArena.View
                     heroSnap = true;
                     break;
                 }
+                case SkillKind.Leap:
+                    PlayHeroOneShot(HeroDash, 1.8f, true);
+                    effects.Afterimage(heroRenderers, WhirlColor, 0.4f);
+                    effects.Puff(heroPosition, DustColor, 8, 0.8f, 1.5f, 0.65f, 0.25f);
+                    RememberM9Skill(kind);
+                    break;
+                case SkillKind.Whirlwind:
+                    PlayHeroOneShot(HeroStrikeA, 2.4f, true);
+                    effects.Shockwave(heroPosition, WhirlColor, 5.5f, 0.35f);
+                    RememberM9Skill(kind);
+                    break;
+                case SkillKind.Trap:
+                    PlayHeroOneShot(HeroThrow, 2f, true);
+                    effects.Flash(heroPosition + forward * 0.8f + Vector3.up * 0.4f, TrapColor, 1.2f, 0.18f);
+                    RememberM9Skill(kind);
+                    break;
+                case SkillKind.Barrage:
+                    PlayHeroOneShot(HeroThrow, 2.2f, true);
+                    effects.Sparkle(heroPosition + forward, SurvivorViewLogic.ItemColor(SurvivorCatalog.QuadShotIndex), 9, 0.8f, 1.5f, 0.17f);
+                    RememberM9Skill(kind);
+                    break;
+                case SkillKind.Wall:
+                    PlayHeroOneShot(HeroCast, 2f, true);
+                    effects.Flash(heroPosition + forward * 1.2f + Vector3.up * 0.5f, WallColor, 2f, 0.2f);
+                    RememberM9Skill(kind);
+                    break;
+                case SkillKind.Chain:
+                    PlayHeroOneShot(HeroCast, 2.2f, true);
+                    effects.Flash(heroPosition + Vector3.up, LightningColor, 2f, 0.18f);
+                    RememberM9Skill(kind);
+                    break;
             }
         }
 

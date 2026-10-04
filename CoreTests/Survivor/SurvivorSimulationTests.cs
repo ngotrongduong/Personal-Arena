@@ -308,7 +308,7 @@ namespace PersonalArena.Core.Tests.Survivor
         [Test]
         public void LastSkill_OnlyAppliedSkills()
         {
-            SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.Config(), 3);
+            SurvivorSim sim = new SurvivorSim(SurvivorTestHelpers.OldConfig(), 3);
             sim.Step(new SurvivorInput(0, 1, 0)); Assert.That(sim.LastSkill, Is.EqualTo(1));
             sim.Step(new SurvivorInput(0, 1, 0)); Assert.That(sim.LastSkill, Is.EqualTo(0), "kick on cooldown is not applied");
             sim.Step(new SurvivorInput(0, 4, 0)); Assert.That(sim.LastSkill, Is.EqualTo(0), "empty slot is masked");

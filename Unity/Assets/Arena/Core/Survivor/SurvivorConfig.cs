@@ -32,7 +32,7 @@ namespace PersonalArena.Core.Survivor
             if (Build == null || ClassDef == null || Rewards == null) throw new ArgumentNullException();
             Build.Validate();
             Rewards.Validate();
-            if (ClassDef.ActiveSkills == null || ClassDef.ActiveSkills.Length != 4) throw new ArgumentException("Class needs four active skill slots.");
+            if (ClassDef.ActiveSkills == null || ClassDef.ActiveSkills.Length != SurvivorInput.SkillSlotCount) throw new ArgumentException("Class needs six active skill slots.");
         }
 
         private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
@@ -48,6 +48,10 @@ namespace PersonalArena.Core.Survivor
         /// <summary>The hero faces the nearest enemy within this distance (m).</summary>
         public float FacingRange = 12f;
         public float HeroTurnRateDegPerSec = 720f;
+
+        /// <summary>Weapon and passive slots the hero may fill (1..<see cref="SurvivorCatalog.MaxWeapons"/>); M9 default 6 + 6, the old rules used 4 + 4.</summary>
+        public int MaxWeaponSlots = SurvivorCatalog.MaxWeapons;
+        public int MaxPassiveSlots = SurvivorCatalog.MaxPassives;
 
         // Enemy scaling at spawn time (t = run seconds, N = tier).
         /// <summary>HP × (1 + HpPerMinute · t / 60).</summary>
@@ -66,6 +70,10 @@ namespace PersonalArena.Core.Survivor
         public float BossHpMul = 0.4f;
         /// <summary>Every XP gem dropped by a kill × this.</summary>
         public float XpMul = 1.5f;
+        /// <summary>Pre-M9 rule: the kick skill also stunned the boss. Now off: like weapon stuns, a kick never stuns the boss.</summary>
+        public bool KickStunsBoss = false;
+        /// <summary>Even volleys (2 or 4 spears, beams, bouncing shots, boomerangs) keep one member on the target (D-045). False = old symmetric spread.</summary>
+        public bool CenteredEvenVolleys = true;
 
         // Elites.
         public float EliteRadiusMul = 1.6f;
@@ -166,6 +174,8 @@ namespace PersonalArena.Core.Survivor
             Check(DenserSpawnsMul); Check(EarlyEliteSeconds); Check(FastRunnerSpeedMul); Check(LessMeatMul); Check(EarlyBruteFromSeconds);
             Check(RegenDelaySeconds); Check(RegenFractionPerSecond); Check(BossSummonFasterMul); Check(NightmareSpeedMul); Check(NightmareEliteHpMul);
             Check(BossHpMul); Check(XpMul);
+            if (MaxWeaponSlots < 1 || MaxWeaponSlots > SurvivorCatalog.MaxWeapons) throw new ArgumentOutOfRangeException(nameof(MaxWeaponSlots));
+            if (MaxPassiveSlots < 1 || MaxPassiveSlots > SurvivorCatalog.MaxPassives) throw new ArgumentOutOfRangeException(nameof(MaxPassiveSlots));
             if (BossHpMul <= 0f) throw new ArgumentOutOfRangeException(nameof(BossHpMul));
             if (EarlyBruteMinWeight < 0 || DoubleEliteCount < 1 || BossSummonFasterMul <= 0f) throw new ArgumentOutOfRangeException(nameof(DoubleEliteCount));
             if (SpawnRingMax < SpawnRingMin || GoldMax < GoldMin || EliteGoldMax < EliteGoldMin) throw new ArgumentOutOfRangeException(nameof(SpawnRingMax), "A range has max < min.");
@@ -183,7 +193,9 @@ namespace PersonalArena.Core.Survivor
     public readonly struct SurvivorInput
     {
         public const int MoveBranchSize = 9;
-        public const int SkillBranchSize = 5;
+        /// <summary>Active skill slots per class (schema v5: 6).</summary>
+        public const int SkillSlotCount = 6;
+        public const int SkillBranchSize = SkillSlotCount + 1;
         public const int PickBranchSize = 5;
         public readonly int Move;
         public readonly int Skill;
