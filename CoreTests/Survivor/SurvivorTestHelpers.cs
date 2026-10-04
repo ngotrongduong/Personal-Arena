@@ -11,7 +11,15 @@ namespace PersonalArena.Core.Tests.Survivor
         public static SurvivorConfig Config(int tier = 1, float runSeconds = 900f)
         {
             SurvivorConfig config = new SurvivorConfig { ObstacleCount = 0, RunSeconds = runSeconds };
+            // The weapon and skill tables in the tests are written at area x1; M11 raised the live base to 1.2 (see SurvivorM11DropTests).
+            config.Tuning.AreaBaseMul = 1f;
             config.Build.Tier = tier; return config;
+        }
+
+        /// <summary>The drop table before M11: meat at 0.5 %, no mana potions and no power-ups.</summary>
+        public static SurvivorConfig PreM11Drops(SurvivorConfig config)
+        {
+            config.Tuning.MeatChance = 0.005f; config.Tuning.ManaChance = 0f; config.Tuning.PowerUpChance = 0f; return config;
         }
 
         /// <summary>
@@ -20,6 +28,7 @@ namespace PersonalArena.Core.Tests.Survivor
         /// </summary>
         public static SurvivorConfig OldRules(SurvivorConfig config)
         {
+            config.Tuning.AreaBaseMul = 1f; PreM11Drops(config);
             config.Tuning.MaxWeaponSlots = 4; config.Tuning.MaxPassiveSlots = 4; config.Tuning.KickStunsBoss = true; config.Tuning.CenteredEvenVolleys = false;
             config.ClassDef.PassivePool = new[] { 6, 7, 8, 9, 10, 11, 12, 13 };
             for (int slot = 4; slot < SurvivorInput.SkillSlotCount; slot++) config.ClassDef.ActiveSkills[slot] = new SkillDef { Id = "none", Kind = SkillKind.None };

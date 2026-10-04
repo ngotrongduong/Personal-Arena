@@ -59,6 +59,7 @@ namespace PersonalArena.Core.Survivor
                 else if (p.Kind == PickupKind.Meat) { DropsCollected++; Heal(tuning.MeatHeal, true); }
                 else if (p.Kind == PickupKind.Magnet) CollectMagnet();
                 else if (p.Kind == PickupKind.Chest) OpenChest(p.Position);
+                else CollectBonus(p);
             }
         }
 

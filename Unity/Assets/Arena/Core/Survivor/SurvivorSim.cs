@@ -157,6 +157,7 @@ namespace PersonalArena.Core.Survivor
         {
             Config.Validate();
             rng = new Rng(seed);
+            ResetBuffs(seed);
             if (MathF.Abs(Config.MapHalfSize * 2f / SpatialHash.CellSize - spatialHash.Side) > 0.01f)
                 spatialHash = new SpatialHash(Config.MapHalfSize, EnemyCapacity);
             ClearPools();
@@ -205,6 +206,7 @@ namespace PersonalArena.Core.Survivor
             LastMove = input.Move >= 0 && input.Move < SurvivorInput.MoveBranchSize ? input.Move : 0;
             Time += FixedDeltaTime;
             TickCooldowns();
+            TickBuffs();
             UpdateFacing();
             ApplySkill(input);
             MoveHero(input.Move);
@@ -319,6 +321,7 @@ namespace PersonalArena.Core.Survivor
             {
                 Vec2 target = MoveDirection(move) * stats.MoveSpeed * (Hero.Blocking && Hero.BlockSkill != null ? Hero.BlockSkill.BlockMoveMultiplier : 1f);
                 if (whirlRemaining > 0f) target *= whirlSkill.SlowFactor;
+                if (HasteRemaining > 0f) target *= HasteSpeedMul;
                 Vec2 delta = target - Hero.Velocity;
                 float maxChange = Config.ClassDef.Acceleration * FixedDeltaTime;
                 if (delta.Length > maxChange) delta = delta.Normalized() * maxChange;
@@ -384,7 +387,7 @@ namespace PersonalArena.Core.Survivor
             stats.CritDamage = c.CritDamage + Point(b, StatId.CritDamage);
             // Hourglass lowers the cooldown multiplier; the Cooldown stat's per-point value is already negative.
             stats.CooldownMul = MathF.Max(0.4f, 1f - Passive(SurvivorCatalog.HourglassIndex) + Point(b, StatId.Cooldown));
-            stats.AreaMul = 1f + Passive(SurvivorCatalog.AreaCharmIndex) + Point(b, StatId.Area) + Passive(SurvivorCatalog.OmniBoxIndex);
+            stats.AreaMul = Config.Tuning.AreaBaseMul + Passive(SurvivorCatalog.AreaCharmIndex) + Point(b, StatId.Area) + Passive(SurvivorCatalog.OmniBoxIndex);
             stats.MoveSpeed = c.MoveSpeed * (1f + Passive(SurvivorCatalog.WindBootsIndex) + Point(b, StatId.MoveSpeed) + Passive(SurvivorCatalog.OmniBoxIndex));
             stats.PickupRadius = c.PickupRadius * (1f + Passive(SurvivorCatalog.MagnetCharmIndex) + Point(b, StatId.Magnet));
             stats.Luck = Point(b, StatId.Luck) + Passive(SurvivorCatalog.CloverIndex);

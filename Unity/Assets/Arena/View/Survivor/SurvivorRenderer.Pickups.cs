@@ -14,7 +14,11 @@ namespace PersonalArena.View
         private const int KeyChest = 5;
         private const int KeyMagnet = 6;
         private const int KeyMana = 7;
-        private const int PickupKeyCount = 8;
+        private const int KeyBomb = 8;
+        private const int KeyRage = 9;
+        private const int KeyShield = 10;
+        private const int KeyHaste = 11;
+        private const int PickupKeyCount = 12;
         private const int ProjectileFxPerFrame = 26;
         private const int PickupPrewarm = 160;
         private const int HammerPrewarm = 12;
@@ -180,10 +184,46 @@ namespace PersonalArena.View
             pickupExtraMaterials[KeyMagnet] = Own(CreateEmissive("Magnet Tips", new Color(0.9f, 0.92f, 0.96f), new Color(0.55f, 0.6f, 0.7f), 0.9f, 0.2f));
             pickupExtraScales[KeyMagnet] = Vector3.one;
 
+            // Short power-ups: a small bomb, a red rage crystal, a blue shield disc, a green haste dart.
+            Mesh sphere = BuiltinMesh(PrimitiveType.Sphere);
+            pickupMeshes[KeyBomb] = sphere;
+            pickupMaterials[KeyBomb] = Own(CreateEmissive("Bomb Pickup", new Color(0.14f, 0.14f, 0.17f), new Color(0.05f, 0.05f, 0.06f), 0.85f, 0.3f));
+            pickupScales[KeyBomb] = Vector3.one * 0.55f;
+            pickupExtraMeshes[KeyBomb] = sphere;
+            pickupExtraMaterials[KeyBomb] = Own(CreateEmissive("Bomb Pickup Ember", new Color(1f, 0.55f, 0.15f), new Color(2.4f, 1f, 0.2f), 0.6f, 0f));
+            pickupExtraPositions[KeyBomb] = new Vector3(0.12f, 0.55f, 0f);
+            pickupExtraScales[KeyBomb] = Vector3.one * 0.32f;
+            SetPickupGlow(KeyBomb, new Color(1f, 0.5f, 0.15f, 0.8f), 1.8f);
+
+            pickupMeshes[KeyRage] = gem;
+            pickupMaterials[KeyRage] = Own(CreateEmissive("Rage Crystal", new Color(1f, 0.2f, 0.1f), new Color(2f, 0.35f, 0.1f), 0.9f, 0f));
+            pickupScales[KeyRage] = new Vector3(0.5f, 0.8f, 0.5f);
+            SetPickupGlow(KeyRage, new Color(1f, 0.3f, 0.1f, 0.85f), 2f);
+
+            pickupMeshes[KeyShield] = cylinder;
+            pickupMaterials[KeyShield] = Own(CreateEmissive("Shield Disc", new Color(0.25f, 0.55f, 1f), new Color(0.2f, 0.6f, 1.6f), 0.9f, 0.1f));
+            pickupScales[KeyShield] = new Vector3(0.62f, 0.05f, 0.62f);
+            pickupExtraMeshes[KeyShield] = cylinder;
+            pickupExtraMaterials[KeyShield] = pickupExtraMaterials[KeyMagnet];
+            pickupExtraScales[KeyShield] = new Vector3(0.45f, 1.6f, 0.45f);
+            SetPickupGlow(KeyShield, new Color(0.35f, 0.7f, 1f, 0.85f), 2f);
+
+            pickupMeshes[KeyHaste] = gem;
+            pickupMaterials[KeyHaste] = Own(CreateEmissive("Haste Dart", new Color(0.3f, 1f, 0.45f), new Color(0.3f, 1.8f, 0.5f), 0.9f, 0f));
+            pickupScales[KeyHaste] = new Vector3(0.3f, 0.95f, 0.3f);
+            SetPickupGlow(KeyHaste, new Color(0.4f, 1f, 0.5f, 0.85f), 2f);
+
             for (int i = 0; i < PickupPrewarm; i++)
             {
                 pickupViews[i] = CreatePickupView(i);
             }
+        }
+
+        private void SetPickupGlow(int key, Color color, float size)
+        {
+            pickupGlowMaterials[key] = Own(FxAssets.Create("Pickup Glow " + key, FxAssets.RadialGlow, true));
+            pickupGlowMaterials[key].color = color;
+            glowSizes[key] = size;
         }
 
         private T Own<T>(T asset) where T : Object
@@ -385,6 +425,11 @@ namespace PersonalArena.View
                 case PickupKind.Meat: return KeyMeat;
                 case PickupKind.Chest: return KeyChest;
                 case PickupKind.Magnet: return KeyMagnet;
+                case PickupKind.Mana: return KeyMana;
+                case PickupKind.Bomb: return KeyBomb;
+                case PickupKind.Rage: return KeyRage;
+                case PickupKind.Shield: return KeyShield;
+                case PickupKind.Haste: return KeyHaste;
                 default: return KeyNone;
             }
         }
@@ -530,6 +575,12 @@ namespace PersonalArena.View
                         break;
                     case KeyMagnet:
                         view.Model.localRotation = Quaternion.Euler(0f, spin, 0f) * Quaternion.Euler(-60f, 0f, 0f);
+                        break;
+                    case KeyShield:
+                        view.Model.localRotation = Quaternion.Euler(0f, spin, 0f) * Quaternion.Euler(90f, 0f, 0f);
+                        break;
+                    case KeyHaste:
+                        view.Model.localRotation = Quaternion.Euler(0f, spin, 0f) * Quaternion.Euler(0f, 0f, 70f);
                         break;
                     case KeyMeat:
                     case KeyMana:
@@ -1002,12 +1053,12 @@ namespace PersonalArena.View
             {
                 return;
             }
-            int[] keys = { KeyGold, KeyMeat, KeyMana, KeyMagnet };
+            int[] keys = { KeyGold, KeyMeat, KeyMana, KeyMagnet, KeyBomb, KeyRage, KeyShield, KeyHaste };
             for (int i = 0; i < keys.Length; i++)
             {
                 PickupView pickup = CreatePickupView(i);
                 SetupPickup(pickup, keys[i]);
-                pickup.Previous = pickup.Current = center + new Vector3(-7.2f + i * 1.5f, 0f, 0f);
+                pickup.Previous = pickup.Current = center + new Vector3(-7.2f + (i % 4) * 1.5f, 0f, (i / 4) * -1.8f);
                 pickup.Root.gameObject.SetActive(true);
                 demoPickups.Add(pickup);
             }

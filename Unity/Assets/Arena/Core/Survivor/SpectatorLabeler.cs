@@ -175,6 +175,6 @@ namespace PersonalArena.Core.Survivor
         }
 
         private static bool IsLoot(PickupKind kind) =>
-            kind == PickupKind.Gold || kind == PickupKind.Chest || kind == PickupKind.Magnet || kind == PickupKind.Meat;
+            kind != PickupKind.None && kind != PickupKind.Gem;
     }
 }

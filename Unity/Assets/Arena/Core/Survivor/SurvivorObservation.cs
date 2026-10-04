@@ -130,7 +130,7 @@ namespace PersonalArena.Core.Survivor
             for (int i = 0; i < sim.PickupLimit; i++)
             {
                 SurvivorPickup pickup = pickups[i];
-                if (pickup.Active) { AccumulatePickup(origin, pickup.Position, MathF.Max(pickup.Radius, 0.5f), (int)pickup.Kind); AccumulatePickupDensity(origin, pickup); }
+                if (pickup.Active) { AccumulatePickup(origin, pickup.Position, MathF.Max(pickup.Radius, 0.5f), PickupChannel(pickup.Kind)); AccumulatePickupDensity(origin, pickup); }
             }
             for (int ray = 0; ray < 72; ray++)
             {
@@ -166,6 +166,13 @@ namespace PersonalArena.Core.Survivor
         {
             ForCandidateRays(origin, center, radius, 10, null, projectile, false);
         }
+
+        /// <summary>
+        /// Schema v5 has seven pickup channels per ray (0 = none … 5 = magnet, 6 was unused). M11 keeps the schema:
+        /// the mana potion takes channel 6 and the short power-ups (bomb, rage, shield, haste) read as a magnet.
+        /// </summary>
+        internal static int PickupChannel(PickupKind kind) =>
+            kind <= PickupKind.Mana ? (int)kind : (int)PickupKind.Magnet;
 
         private void AccumulatePickup(Vec2 origin, Vec2 center, float radius, int kind)
         {
