@@ -14,6 +14,11 @@ namespace PersonalArena.View
         private static readonly Color SpikeColor = new Color(0.72f, 0.74f, 0.8f);
         private static readonly Color PoisonFumeColor = new Color(0.35f, 0.85f, 0.3f, 0.32f);
         private static readonly Color FrostMarkColor = new Color(0.7f, 0.9f, 1f, 0.45f);
+        private static readonly Color HolyRuneColor = new Color(1f, 0.95f, 0.65f);
+        private static readonly Color ArrowShaftColor = new Color(0.62f, 0.45f, 0.26f);
+        private const int FrostChipsPerFrame = 4;
+        private int frostChipFrame = -1;
+        private int frostChipsThisFrame;
         private static readonly Color EmberColor = new Color(1f, 0.6f, 0.2f);
 
         private Material spikeMaterial;
@@ -35,6 +40,25 @@ namespace PersonalArena.View
             else
             {
                 effects.Flash(point + Vector3.up * 0.7f, color, radius * 1.8f, 0.22f);
+            }
+        }
+
+        /// <summary>A slowed (chilled) enemy keeps growing small ice crystals at its feet.</summary>
+        private void PresentChill(Vector3 position, float heightScale, float delta)
+        {
+            if (Random.value > delta * 2.5f)
+            {
+                return;
+            }
+            if (Time.frameCount != frostChipFrame)
+            {
+                frostChipFrame = Time.frameCount;
+                frostChipsThisFrame = 0;
+            }
+            if (frostChipsThisFrame++ < FrostChipsPerFrame)
+            {
+                Vector2 spot = Random.insideUnitCircle * 0.35f;
+                effects.Crystals(position + new Vector3(spot.x, 0f, spot.y), FrostColor, 1, 0f, 0.55f * heightScale, 0.7f);
             }
         }
 
